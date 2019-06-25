@@ -213,6 +213,25 @@ else (RapidJSON_FOUND)
   message(FATAL_ERROR "Can't find RapidJSON. Please set RAPIDJSON_INCLUDE_DIRS to use RapidJSON.")
 endif (RapidJSON_FOUND)
 
+# PyTorch
+message("-- Check for LibTorch")
+find_package(Torch REQUIRED)
+if (Torch_FOUND)
+    message("-- Found Torch: ${RAPIDJSON_INCLUDE_DIRS}")
+else (Torch_FOUND)
+  message(FATAL_ERROR "Can't find Torch. Please set CMAKE_PREFIX_PATH to the folder containing the LibTorch files.")
+endif (Torch_FOUND)
+
+# OpeNCV
+message("-- Check for OpenCV")
+find_package(OpenCV REQUIRED)
+if (OpenCV_FOUND)
+    message("-- Found OpenCV: ${OpenCV_INCLUDE_DIRS}")
+else (OpenCV_FOUND)
+  message(FATAL_ERROR "Can't find OpenCV. Please set CMAKE_PREFIX_PATH to the folder containing the OpenCV files.")
+endif (OpenCV_FOUND)
+
+
 include_directories(
   include
   src
@@ -223,6 +242,7 @@ include_directories(
   ${RAPIDJSON_INCLUDE_DIRS}
   ${ROCKSDB_INCLUDE_DIR}
   ${SUITESPARSE_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 # NOTE: This fix came from Ceres solver with the following comment:
@@ -312,8 +332,8 @@ endif ()
 # in the export set, so when loaded later on CMake will create "imported"
 # library targets from these, which can be used in many ways in the same way
 # as a normal library target created via a normal ADD_LIBRARY().
-install(EXPORT TheiaExport
-        DESTINATION ${RELATIVE_CMAKECONFIG_INSTALL_DIR} FILE TheiaTargets.cmake)
+#install(EXPORT TheiaExport
+#        DESTINATION ${RELATIVE_CMAKECONFIG_INSTALL_DIR} FILE TheiaTargets.cmake)
 
 # Figure out the relative path from the installed Config.cmake file to the
 # install prefix (which may be at runtime different from the chosen

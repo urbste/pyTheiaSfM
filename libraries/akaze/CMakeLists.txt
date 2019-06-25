@@ -3,6 +3,7 @@ project( akaze )
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
 OPTION(OPENMP "Enable multithreading (requires OpenMP)" OFF)
+add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 # Where to output binaries and libraries
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")

@@ -59,6 +59,7 @@ set(THEIA_SRC
   image/descriptor/create_descriptor_extractor.cc
   image/descriptor/descriptor_extractor.cc
   image/descriptor/sift_descriptor.cc
+  image/descriptor/sosnet_descriptor.cc
   image/image_cache.cc
   image/image.cc
   image/keypoint_detector/sift_detector.cc
@@ -217,6 +218,8 @@ set(THEIA_LIBRARY_DEPENDENCIES
   ${OPENIMAGEIO_LIBRARIES}
   ${ROCKSDB_LIBRARIES}
   ${SUITESPARSE_LIBRARIES}
+  ${TORCH_LIBRARIES}
+  ${OpenCV_LIBS}
   akaze
   flann_cpp
   statx
@@ -258,6 +261,7 @@ if (BUILD_TESTING)
 
   gtest(image/descriptor/akaze_descriptor)
   gtest(image/descriptor/sift_descriptor)
+  gtest(image/descriptor/sosnet_descriptor)
   gtest(image/image)
   gtest(image/keypoint_detector/sift_detector)
   gtest(io/read_calibration)
