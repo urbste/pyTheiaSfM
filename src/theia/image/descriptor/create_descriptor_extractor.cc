@@ -40,6 +40,7 @@
 #include "theia/image/descriptor/akaze_descriptor.h"
 #include "theia/image/descriptor/descriptor_extractor.h"
 #include "theia/image/descriptor/sift_descriptor.h"
+#include "theia/image/descriptor/sosnet_descriptor.h"
 #include "theia/image/keypoint_detector/sift_parameters.h"
 
 namespace theia {
@@ -80,6 +81,23 @@ inline AkazeParameters FeatureDensityToAkazeParameters(
   return akaze_params;
 }
 
+inline SOSNetParameters FeatureDensityToSOSNetParameters(
+    const FeatureDensity& density) {
+  SOSNetParameters sosnet_params;
+  if (density == FeatureDensity::DENSE) {
+    sosnet_params.hessian_threshold /= 10.0;
+  } else if (density == FeatureDensity::SPARSE) {
+    sosnet_params.hessian_threshold *= 10.0;
+  } else if (density != FeatureDensity::NORMAL) {
+    // If the setting is to normal, then just use the default
+    // parameters. Otherwise, this statement will be reached, indicating that an
+    // invalid option was used.
+    LOG(FATAL) << "Invalid feature extraction density. Please use DENSE, "
+                  "NORMAL, or SPARSE.";
+  }
+  return sosnet_params;
+}
+
 }  // namespace
 
 std::unique_ptr<DescriptorExtractor> CreateDescriptorExtractor(
@@ -95,6 +113,10 @@ std::unique_ptr<DescriptorExtractor> CreateDescriptorExtractor(
       descriptor_extractor.reset(new AkazeDescriptorExtractor(
           FeatureDensityToAkazeParameters(feature_density)));
       break;
+  case DescriptorExtractorType::AKAZE_SOSNET:
+    descriptor_extractor.reset(new SOSNetDescriptorExtractor(
+        FeatureDensityToSOSNetParameters(feature_density)));
+    break;
     default:
       LOG(ERROR) << "Invalid Descriptor Extractor specified.";
   }

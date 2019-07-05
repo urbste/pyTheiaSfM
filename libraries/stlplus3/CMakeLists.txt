@@ -1,5 +1,4 @@
 project(stlplus3)
-add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 include_directories(./)
 set(stlplus3_sources

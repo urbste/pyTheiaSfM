@@ -2,7 +2,6 @@ project(vlfeat)
 
 include("${CMAKE_SOURCE_DIR}/cmake/OptimizeTheiaCompilerFlags.cmake")
 optimizetheiacompilerflags()
-add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 include_directories(./vl)
 set(vl_sources

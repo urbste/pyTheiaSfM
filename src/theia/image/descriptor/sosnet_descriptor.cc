@@ -38,8 +38,9 @@
 #include <algorithm>
 #include <vector>
 
-#include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
 
 #include "akaze/src/AKAZE.h"
 #include "glog/logging.h"
@@ -47,115 +48,69 @@
 #include "theia/image/image.h"
 #include "theia/image/keypoint_detector/keypoint.h"
 
-#include <torch/script.h>
+//#include <torch/script.h>
 
 namespace theia {
 
-// Read model
-std::shared_ptr<torch::jit::script::Module> ReadPyTorchModel(
-        const std::string& model_path, const bool use_gpu) {
-  std::shared_ptr<torch::jit::script::Module> model;
-  if (use_gpu) {
-     model = torch::jit::load(model_path,torch::kCUDA);
-  }
-  else {
-     model = torch::jit::load(model_path);
-  }
-  assert(model != nullptr);
-  return model;
-}
-
-torch::Tensor ConvertImageToTensor(const cv::Mat& image) {
-
-  const int n_channels = image.channels();
-  const int image_type = image.type();
-
-  // Image Type must be one of CV_8U, CV_32F, CV_64F
-  assert((image_type % 8 == 0) || ((image_type - 5) % 8 == 0) || ((image_type - 6) % 8 == 0));
-
-  std::vector<int64_t> dims = {1, SOSNET_PATCH_SIZE, SOSNET_PATCH_SIZE, n_channels};
-  std::vector<int64_t> permute_dims = {0, 3, 1, 2};
-
-  torch::Tensor image_as_tensor;
-  //cv::Mat image = images[i].clone();
-
-  if (image_type % 8 == 0) {
-    torch::TensorOptions options(torch::kUInt8);
-    image_as_tensor = torch::from_blob(image.data, torch::IntList(dims), options).clone();
-  } else if ((image_type - 5) % 8 == 0) {
-    torch::TensorOptions options(torch::kFloat32);
-    image_as_tensor = torch::from_blob(image.data, torch::IntList(dims), options).clone();
-  } else if ((image_type - 6) % 8 == 0) {
-    torch::TensorOptions options(torch::kFloat64);
-    image_as_tensor = torch::from_blob(image.data, torch::IntList(dims), options).clone();
-  }
-
-  image_as_tensor = image_as_tensor.permute(torch::IntList(permute_dims));
-  image_as_tensor = image_as_tensor.toType(torch::kFloat32);
-
-  //images_as_tensors.push_back(image_as_tensor);
-  //torch::Tensor output_tensor = torch::cat(images_as_tensors, 0);
-
-  return image_as_tensor;
-}
-
-void DescribeOpenCV(const cv::Mat& image,
+void ExtractPatches(const cv::Mat& image,
                     const std::vector<libAKAZE::AKAZEKeypoint>& keypoints,
-                    const std::shared_ptr<torch::jit::script::Module> model,
-                    const float mag_factor,
-                    const bool use_gpu,
-                    const bool upright,
-                    cv::Mat& descriptors) {
+                    const float mag_factor, std::vector<cv::Mat>& patches) {
   cv::Size patch_size = cv::Size(SOSNET_PATCH_SIZE, SOSNET_PATCH_SIZE);
-  std::vector<cv::Mat> patches(keypoints.size());
-  std::vector<torch::Tensor> patches_as_tensors(keypoints.size());
+  patches.resize(keypoints.size());
 
   for (size_t i = 0; i < keypoints.size(); ++i) {
-    const float s = static_cast<float>(mag_factor * keypoints[i].size) / SOSNET_PATCH_SIZE;
+    const float s =
+        static_cast<float>(mag_factor * keypoints[i].size) / SOSNET_PATCH_SIZE;
     const float angle = keypoints[i].angle * SOSNET_RHO;
     const float cos = std::cos(angle);
     const float sin = std::sin(angle);
 
-    cv::Mat A23 = cv::Mat(2,3, CV_32FC1);
-    A23.at<float>(0,0) = s * cos;
-    A23.at<float>(1,0) = s * sin;
-    A23.at<float>(0,1) =-s * sin;
-    A23.at<float>(1,1) = s * cos;
-    A23.at<float>(0,2) =(-s*cos + s * sin) * SOSNET_PATCH_SIZE_2 + keypoints[i].pt(0);
-    A23.at<float>(1,2) =(-s*sin - s * cos) * SOSNET_PATCH_SIZE_2 + keypoints[i].pt(1);
+    cv::Mat A23 = cv::Mat(2, 3, CV_32FC1);
+    A23.at<float>(0, 0) = s * cos;
+    A23.at<float>(1, 0) = s * sin;
+    A23.at<float>(0, 1) = -s * sin;
+    A23.at<float>(1, 1) = s * cos;
+    A23.at<float>(0, 2) =
+        (-s * cos + s * sin) * SOSNET_PATCH_SIZE_2 + keypoints[i].pt(0);
+    A23.at<float>(1, 2) =
+        (-s * sin - s * cos) * SOSNET_PATCH_SIZE_2 + keypoints[i].pt(1);
     cv::Mat patch;
-    cv::warpAffine(image, patch, A23, patch_size,
-                   cv::WARP_INVERSE_MAP + cv::INTER_CUBIC + cv::WARP_FILL_OUTLIERS);
-    patches_as_tensors[i] = ConvertImageToTensor(patch);
+    cv::warpAffine(
+        image, patch, A23, patch_size,
+        cv::WARP_INVERSE_MAP + cv::INTER_CUBIC + cv::WARP_FILL_OUTLIERS);
+    patches[i] = patch;
   }
-  torch::Tensor input_tensor = torch::cat(patches_as_tensors, 0);
-
-  std::vector<torch::jit::IValue> inputs;
-  if (use_gpu) {
-    input_tensor = input_tensor.to(at::kCUDA);
-  }
-  inputs.push_back(input_tensor);
-
-  // Execute the model and turn its output into a tensor.
-  torch::Tensor output = model->forward(inputs).toTensor();
-  if (use_gpu) {
-    output = output.to(torch::kCPU);
-  }
-  cv::Mat descriptors_temp = cv::Mat(cv::Size(128,keypoints.size()), CV_32FC1, output.data_ptr());
-  descriptors = descriptors_temp.clone();
 }
 
-SOSNetDescriptorExtractor::SOSNetDescriptorExtractor(const SOSNetParameters &detector_params) :
-    sosnet_params_(detector_params) {
-   LOG(INFO) << "Loading SOSNet model";
-   sosnet = ReadPyTorchModel(sosnet_params_.model_path,sosnet_params_.use_gpu);
-   LOG(INFO) << "Finished loading SOSNet model";
+void InferenceOCVBackend(const cv::Mat& image,
+                         const std::vector<libAKAZE::AKAZEKeypoint>& keypoints,
+                         cv::dnn::Net network, cv::Mat& descriptors) {
+  std::vector<cv::Mat> patches;
+  ExtractPatches(image, keypoints, 3.0f, patches);
+  descriptors.create(cv::Size(128, keypoints.size()), CV_32FC1);
+  for (int i = 0; i < keypoints.size(); ++i) {
+    cv::Mat inputBlob = cv::dnn::blobFromImage(patches[i]);
+    network.setInput(inputBlob);
+    cv::Mat descriptor = network.forward();
+    // it seams that onnx did not export  nn.LocalResponseNorm from PyTorch
+    descriptor /= cv::norm(descriptor);
+    for (int j = 0; j < SOSNET_DESCRIPTOR_SIZE; ++j) {
+      descriptors.ptr<float>(i)[j] = descriptor.ptr<float>(0)[j];
+    }
+  }
 }
 
+SOSNetDescriptorExtractor::SOSNetDescriptorExtractor(
+    const SOSNetParameters& detector_params)
+    : sosnet_params_(detector_params) {
+  LOG(INFO) << "Loading SOSNet model";
+  sosnet = cv::dnn::readNet(sosnet_params_.model_path, sosnet_params_.model_config_path);
+  LOG(INFO) << "Finished loading SOSNet model";
+}
 
 bool SOSNetDescriptorExtractor::ComputeDescriptor(const FloatImage& image,
-                                                 const Keypoint& keypoint,
-                                                 Eigen::VectorXf* descriptor) {
+                                                  const Keypoint& keypoint,
+                                                  Eigen::VectorXf* descriptor) {
   LOG(FATAL) << "SOSNet must use its own Keypoints and so calling the AKAZE "
                 "descriptor extractor with different keypoint cannot be used. "
                 "Please use "
@@ -164,8 +119,7 @@ bool SOSNetDescriptorExtractor::ComputeDescriptor(const FloatImage& image,
 }
 
 bool SOSNetDescriptorExtractor::DetectAndExtractDescriptors(
-    const FloatImage& image,
-    std::vector<Keypoint>* keypoints,
+    const FloatImage& image, std::vector<Keypoint>* keypoints,
     std::vector<Eigen::VectorXf>* descriptors) {
   // Try to convert the image to grayscale and eigen type.
   const FloatImage& gray_image = image.AsGrayscaleImage();
@@ -209,10 +163,10 @@ bool SOSNetDescriptorExtractor::DetectAndExtractDescriptors(
   cv::eigen2cv(img_32, image_cv);
 
   // Compute descriptors using SOSNet
-  //libAKAZE::AKAZEDescriptors akaze_descriptors;
-  //evolution.Compute_Descriptors(akaze_keypoints, akaze_descriptors);
+  // libAKAZE::AKAZEDescriptors akaze_descriptors;
+  // evolution.Compute_Descriptors(akaze_keypoints, akaze_descriptors);
   cv::Mat deep_descriptors;
-  DescribeOpenCV(image_cv, akaze_keypoints, sosnet, 3.0f, sosnet_params_.use_gpu, false, deep_descriptors);
+  InferenceOCVBackend(image_cv, akaze_keypoints, sosnet, deep_descriptors);
 
   // Set the output keypoints.
   keypoints->reserve(akaze_keypoints.size());
@@ -227,10 +181,10 @@ bool SOSNetDescriptorExtractor::DetectAndExtractDescriptors(
 
   // Set the output descriptors.
   descriptors->resize(akaze_keypoints.size());
-  for (int i=0; i < akaze_keypoints.size(); ++i) {
-      Eigen::Matrix<float, Eigen::Dynamic, 1> d;
-      cv::cv2eigen(deep_descriptors.row(i).t(),d);
-      (*descriptors)[i] = d;
+  for (int i = 0; i < akaze_keypoints.size(); ++i) {
+    Eigen::Matrix<float, Eigen::Dynamic, 1> d;
+    cv::cv2eigen(deep_descriptors.row(i).t(), d);
+    (*descriptors)[i] = d;
   }
   return true;
 }

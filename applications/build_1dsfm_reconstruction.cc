@@ -57,7 +57,11 @@ DEFINE_string(
 DEFINE_int32(num_threads,
              1,
              "Number of threads to use for feature extraction and matching.");
-
+DEFINE_string(
+    descriptor,
+    "SIFT",
+    "Type of feature descriptor to use. Must be one of the following: "
+    "SIFT");
 // Reconstruction building options.
 DEFINE_string(reconstruction_estimator,
               "GLOBAL",
@@ -211,10 +215,13 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
   options.num_threads = FLAGS_num_threads;
   options.min_track_length = FLAGS_min_track_length;
   options.max_track_length = FLAGS_max_track_length;
+  options.descriptor_type = StringToDescriptorExtractorType(FLAGS_descriptor);
 
   // Reconstruction Estimator Options.
   theia::ReconstructionEstimatorOptions& reconstruction_estimator_options =
       options.reconstruction_estimator_options;
+
+
   reconstruction_estimator_options.min_num_two_view_inliers =
       FLAGS_min_num_inliers_for_valid_match;
   reconstruction_estimator_options.num_threads = FLAGS_num_threads;

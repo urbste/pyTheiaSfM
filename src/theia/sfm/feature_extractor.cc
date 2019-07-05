@@ -131,7 +131,7 @@ bool FeatureExtractor::ExtractFeatures(
     LOG(ERROR) << "Could not extract descriptors in image " << filename;
     return false;
   } else {
-    VLOG(1) << "Successfully extracted " << descriptors->size()
+    std::cout << "Successfully extracted " << descriptors->size()
             << " features from image " << filename;
   }
 

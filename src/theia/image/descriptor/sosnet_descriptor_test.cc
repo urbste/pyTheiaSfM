@@ -38,7 +38,7 @@
 #include "gtest/gtest.h"
 
 #include "theia/image/image.h"
-#include "theia/image/descriptor/sosnet_descriptor.h".h"
+#include "theia/image/descriptor/sosnet_descriptor.h"
 #include "theia/image/keypoint_detector/keypoint.h"
 
 DEFINE_string(test_img, "image/descriptor/img1.png",
@@ -48,7 +48,7 @@ namespace theia {
 
 namespace {
 std::string img_filename = THEIA_DATA_DIR + std::string("/") + FLAGS_test_img;
-std::string model_path_filename = THEIA_DATA_DIR + std::string("/") + FLAGS_test_img;
+std::string model_path_filename = THEIA_DATA_DIR + std::string("/") + "sosnet/SOSNet32.pt";
 
 }  // namespace
 
@@ -57,7 +57,8 @@ TEST(SOSNetDescriptor, Sanity) {
 
   SOSNetParameters options;
   options.use_gpu = true;
-  options.model_path =
+  options.model_path = model_path_filename;
+  options.hessian_threshold = 0.005;
   SOSNetDescriptorExtractor sosnet_extractor(options);
 
   std::vector<Keypoint> keypoints;

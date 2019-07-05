@@ -47,6 +47,7 @@ class DescriptorExtractor;
 enum class DescriptorExtractorType {
   SIFT = 0,
   AKAZE = 1,
+  AKAZE_SOSNET = 2
 };
 
 // Users may specify feature density to target their specific

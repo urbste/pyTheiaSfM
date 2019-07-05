@@ -1,6 +1,5 @@
 cmake_minimum_required (VERSION 2.6.2)
 project (cereal)
-add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 option(SKIP_PORTABILITY_TEST "Skip portability tests" OFF)
 if(NOT CMAKE_VERSION VERSION_LESS 3.0) # installing cereal requires INTERFACE lib

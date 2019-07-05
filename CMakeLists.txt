@@ -214,13 +214,14 @@ else (RapidJSON_FOUND)
 endif (RapidJSON_FOUND)
 
 # PyTorch
-message("-- Check for LibTorch")
-find_package(Torch REQUIRED)
-if (Torch_FOUND)
-    message("-- Found Torch: ${RAPIDJSON_INCLUDE_DIRS}")
-else (Torch_FOUND)
-  message(FATAL_ERROR "Can't find Torch. Please set CMAKE_PREFIX_PATH to the folder containing the LibTorch files.")
-endif (Torch_FOUND)
+#message("-- Check for LibTorch")
+#set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-9.2")
+#find_package(Torch REQUIRED)
+#if (Torch_FOUND)
+#    message("-- Found Torch: ${Torch_INCLUDE_DIRS}")
+#else (Torch_FOUND)
+#  message(FATAL_ERROR "Can't find Torch. Please set CMAKE_PREFIX_PATH to the folder containing the LibTorch files.")
+#endif (Torch_FOUND)
 
 # OpeNCV
 message("-- Check for OpenCV")
@@ -242,7 +243,8 @@ include_directories(
   ${RAPIDJSON_INCLUDE_DIRS}
   ${ROCKSDB_INCLUDE_DIR}
   ${SUITESPARSE_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
+  #${OpenCV_INCLUDE_DIRS}
+  #${Torch_INCLUDE_DIRS}
 )
 
 # NOTE: This fix came from Ceres solver with the following comment:

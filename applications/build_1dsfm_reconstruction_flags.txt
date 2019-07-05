@@ -7,7 +7,7 @@
 
 ############### Multithreading ###############
 # Set to the number of threads you want to use.
---num_threads=1
+--num_threads=3
 
 ############### General SfM Options ###############
 --reconstruction_estimator=GLOBAL

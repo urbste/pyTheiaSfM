@@ -5,7 +5,6 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 project(flann)
-add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 

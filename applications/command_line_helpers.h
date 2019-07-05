@@ -57,6 +57,8 @@ inline DescriptorExtractorType StringToDescriptorExtractorType(
     return DescriptorExtractorType::SIFT;
   } else if (descriptor == "AKAZE") {
     return DescriptorExtractorType::AKAZE;
+  } else if (descriptor == "AKAZE_SOSNET") {
+    return DescriptorExtractorType::AKAZE_SOSNET;
   } else {
     LOG(FATAL) << "Invalid DescriptorExtractor specified. Using SIFT instead.";
     return DescriptorExtractorType::SIFT;

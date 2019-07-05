@@ -37,7 +37,6 @@ if (COMMAND cmake_policy)
 endif (COMMAND cmake_policy)
 
 project (statx C CXX)
-add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 include_directories(${PROJECT_SOURCE_DIR})
 

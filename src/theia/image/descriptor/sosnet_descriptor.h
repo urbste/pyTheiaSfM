@@ -42,12 +42,14 @@
 
 #include "theia/image/descriptor/descriptor_extractor.h"
 #include "theia/util/util.h"
-#include <torch/torch.h>
+//#include <torch/torch.h>
+#include <opencv2/core.hpp>
+#include <opencv2/dnn.hpp>
 
 const int SOSNET_PATCH_SIZE = 32;
 constexpr float SOSNET_PATCH_SIZE_2 = SOSNET_PATCH_SIZE / 2.0f;
 const float SOSNET_RHO = M_PI / 180.f;
-
+const int SOSNET_DESCRIPTOR_SIZE = 128;
 namespace theia {
 
 class FloatImage;
@@ -55,8 +57,9 @@ class Keypoint;
 
 // Parameters for the akaze feature extractor.
 struct SOSNetParameters {
-  std::string model_path;
-  bool use_gpu;
+  std::string model_path = THEIA_DATA_DIR + std::string("/") + "sosnet/SOSNet32.bin";
+  std::string model_config_path = THEIA_DATA_DIR + std::string("/") + "sosnet/SOSNet32.xml";
+  bool use_gpu = true;
   // AKAZE detector params
   int maximum_octave_levels = 4;
   int num_sublevels = 4;
@@ -83,7 +86,7 @@ class SOSNetDescriptorExtractor : public DescriptorExtractor {
 
  private:
   const SOSNetParameters sosnet_params_;
-  std::shared_ptr<torch::jit::script::Module> sosnet;
+  cv::dnn::Net sosnet;
 
   DISALLOW_COPY_AND_ASSIGN(SOSNetDescriptorExtractor);
 };

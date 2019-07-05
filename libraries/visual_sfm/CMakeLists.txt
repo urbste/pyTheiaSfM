@@ -1,5 +1,4 @@
 project(visual_sfm)
-add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 include_directories(./)
 set(visual_sfm_sources

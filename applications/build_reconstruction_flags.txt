@@ -1,26 +1,26 @@
 ############### Input/Output ###############
 # Input/output files.
 # Set these if a matches file is not present. Images should be a filepath with a
-# wildcard e.g., /home/my_username/my_images/*.jpg
---images=
---output_matches_file=
+# wildcard e.g., /home/my_username/my_images/test/*.jpg
+--images=/home/steffen/datasets/1dsfm/Gendarmenmarkt/*.jpg
+--output_matches_file=/home/steffen/datasets/1dsfm/Gendarmenmarkt/matches.matches
 
 # If a matches file has already been created, set the filepath here. This avoids
 # having to recompute all features and matches.
---matches_file=
+#--matches_file=
 
 # The calibration file indicates possibly known calibration e.g, from EXIF or
 # explicit calibration. Theia attempts to extract EXIF focal lengths if calibration
 # is not supplied for a given image.
---calibration_file=
---output_reconstruction=
+#--calibration_file=
+--output_reconstruction=/home/steffen/datasets/1dsfm/Gendarmenmarkt/sfm.recon
 
 ############### Multithreading ###############
 # Set to the number of threads you want to use.
 --num_threads=16
 
 ############### Feature Extraction ###############
---descriptor=SIFT
+--descriptor=AKAZE_SOSNET
 --feature_density=NORMAL
 
 ############### Matching Options ###############
@@ -32,7 +32,7 @@
 # During feature matching, features are saved to disk so that out-of-core
 # matching may be performed. This directory specifies which directory those
 # features should be saved to.
---matching_working_directory=
+--matching_working_directory=/home/steffen/datasets/1dsfm/Gendarmenmarkt/features
 
 # During feature matching we utilize an LRU cache for out-of-core matching. The size
 # of that cache (in terms of number of images) is controlled by this parameter. The
@@ -158,6 +158,7 @@
 --min_triangulation_angle_degrees=4.0
 --triangulation_reprojection_error_pixels=15.0
 --bundle_adjust_tracks=true
+
 
 ############### Logging Options ###############
 # Logging verbosity.
