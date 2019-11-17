@@ -212,9 +212,7 @@ bool ReconstructionBuilder::AddImage(
     const std::string& image_filepath,
     const CameraIntrinsicsGroupId camera_intrinsics_group) {
   image_filepaths_.emplace_back(image_filepath);
-  if (!AddViewToReconstruction(image_filepath,
-                               NULL,
-                               camera_intrinsics_group,
+  if (!AddViewToReconstruction(image_filepath, NULL, camera_intrinsics_group,
                                reconstruction_.get())) {
     return false;
   }
@@ -233,8 +231,7 @@ bool ReconstructionBuilder::AddImageWithCameraIntrinsicsPrior(
     const CameraIntrinsicsPrior& camera_intrinsics_prior,
     const CameraIntrinsicsGroupId camera_intrinsics_group) {
   image_filepaths_.emplace_back(image_filepath);
-  if (!AddViewToReconstruction(image_filepath,
-                               &camera_intrinsics_prior,
+  if (!AddViewToReconstruction(image_filepath, &camera_intrinsics_prior,
                                camera_intrinsics_group,
                                reconstruction_.get())) {
     return false;
@@ -312,6 +309,12 @@ bool ReconstructionBuilder::ExtractAndMatchFeatures() {
   }
 
   return true;
+}
+
+void ReconstructionBuilder::InitializeSequentialMatchingPairs(
+    const int sequence_length) {
+  feature_extractor_and_matcher_->CreateSequentialMatchingPairs(
+      sequence_length);
 }
 
 bool ReconstructionBuilder::AddTwoViewMatch(const std::string& image1,
@@ -415,8 +418,7 @@ bool ReconstructionBuilder::BuildReconstruction(
 }
 
 void ReconstructionBuilder::AddMatchToViewGraph(
-    const ViewId view_id1,
-    const ViewId view_id2,
+    const ViewId view_id1, const ViewId view_id2,
     const ImagePairMatch& image_matches) {
   // Add the view pair to the reconstruction. The view graph requires the two
   // view info to specify the transformation from the smaller view id to the
@@ -433,8 +435,8 @@ void ReconstructionBuilder::AddTracksForMatch(const ViewId view_id1,
                                               const ViewId view_id2,
                                               const ImagePairMatch& matches) {
   for (const auto& match : matches.correspondences) {
-    track_builder_->AddFeatureCorrespondence(
-        view_id1, match.feature1, view_id2, match.feature2);
+    track_builder_->AddFeatureCorrespondence(view_id1, match.feature1, view_id2,
+                                             match.feature2);
   }
 }
 

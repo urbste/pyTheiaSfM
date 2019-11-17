@@ -120,6 +120,11 @@ class FeatureExtractorAndMatcher {
   void SetPairsToMatch(
       const std::vector<std::pair<std::string, std::string> >& pairs_to_match);
 
+  // Reduce matching cost by creating sequential matching pairs
+  // if sequence_length = 3 then the following images are matched
+  // img1-->img2, img1-->img3, img1-->img4
+  void CreateSequentialMatchingPairs(const int sequence_length = 5);
+
   // Performs feature matching between all images provided by the image
   // filepaths. Features are extracted and matched between the images according
   // to the options passed in. Only matches that have passed geometric

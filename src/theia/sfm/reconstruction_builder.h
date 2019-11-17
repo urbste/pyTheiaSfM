@@ -125,6 +125,9 @@ struct ReconstructionBuilderOptions {
   // Options for estimating the reconstruction.
   // See //theia/sfm/reconstruction_estimator_options.h
   ReconstructionEstimatorOptions reconstruction_estimator_options;
+
+  // Sequential matching length, 2 means match 0->1 and 1->2
+  int sequential_matching_length = 5;
 };
 
 // Base class for building SfM reconstructions. This class will manage the
@@ -163,8 +166,7 @@ class ReconstructionBuilder {
 
   // Add a match to the view graph. Either this method is repeatedly called or
   // ExtractAndMatchFeatures must be called.
-  bool AddTwoViewMatch(const std::string& image1,
-                       const std::string& image2,
+  bool AddTwoViewMatch(const std::string& image1, const std::string& image2,
                        const ImagePairMatch& matches);
 
   // Assignes a mask to an image to indicate the area for keypoints extraction.
@@ -183,16 +185,17 @@ class ReconstructionBuilder {
   // successfully estimated.
   bool BuildReconstruction(std::vector<Reconstruction*>* reconstructions);
 
+  // Initialize sequential matching pairs
+  void InitializeSequentialMatchingPairs(const int sequence_length);
+
  private:
   // Adds the given matches as edges in the view graph.
-  void AddMatchToViewGraph(const ViewId view_id1,
-                           const ViewId view_id2,
+  void AddMatchToViewGraph(const ViewId view_id1, const ViewId view_id2,
                            const ImagePairMatch& image_matches);
 
   // Builds tracks from the two view inlier correspondences after geometric
   // verification.
-  void AddTracksForMatch(const ViewId view_id1,
-                         const ViewId view_id2,
+  void AddTracksForMatch(const ViewId view_id1, const ViewId view_id2,
                          const ImagePairMatch& image_matches);
 
   // Removes all uncalibrated views from the reconstruction and view graph.

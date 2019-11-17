@@ -80,6 +80,7 @@ DEFINE_string(matching_working_directory,
               "Directory used during matching to store features for "
               "out-of-core matching.");
 DEFINE_double(lowes_ratio, 0.8, "Lowes ratio used for feature matching.");
+DEFINE_int32(sequential_matching_length, 5, "Sequence lengt for sequential matching");
 DEFINE_double(max_sampson_error_for_verified_match,
               4.0,
               "Maximum sampson error for a match to be considered "
@@ -302,6 +303,11 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
   options.max_num_features_for_fisher_vector_training =
       FLAGS_max_num_features_for_fisher_vector_training;
 
+  // we do not want global descriptor matching in this case
+  if (FLAGS_sequential_matching_length > 0) {
+      options.select_image_pairs_with_global_image_descriptor_matching = false;
+  }
+  options.sequential_matching_length = FLAGS_sequential_matching_length;
   options.min_track_length = FLAGS_min_track_length;
   options.max_track_length = FLAGS_max_track_length;
 
@@ -423,7 +429,8 @@ void AddMatchesToReconstructionBuilder(
 }
 
 void AddImagesToReconstructionBuilder(
-    ReconstructionBuilder* reconstruction_builder) {
+    ReconstructionBuilder* reconstruction_builder,
+        const int sequential_matching_length) {
   std::vector<std::string> image_files;
   CHECK(theia::GetFilepathsFromWildcard(FLAGS_images, &image_files))
       << "Could not find images that matched the filepath: " << FLAGS_images
@@ -496,6 +503,9 @@ void AddImagesToReconstructionBuilder(
     }
   }
 
+  if (sequential_matching_length > 0) {
+      reconstruction_builder->InitializeSequentialMatchingPairs(sequential_matching_length);
+  }
   // Extract and match features.
   CHECK(reconstruction_builder->ExtractAndMatchFeatures());
 }
@@ -522,7 +532,7 @@ int main(int argc, char* argv[]) {
     AddMatchesToReconstructionBuilder(features_and_matches_database.get(),
                                       &reconstruction_builder);
   } else if (FLAGS_images.size() != 0) {
-    AddImagesToReconstructionBuilder(&reconstruction_builder);
+    AddImagesToReconstructionBuilder(&reconstruction_builder, FLAGS_sequential_matching_length);
   } else {
     LOG(FATAL) << "You must specifiy either images to reconstruct or supply a "
                   "database with matches stored in it.";
