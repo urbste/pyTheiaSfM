@@ -56,6 +56,10 @@ namespace theia {
 //   featureVectors: 4 vectors with image positions.
 //   worldPoints: 4 3-vectors with corresponding 3D world points
 //     (each entry is a point)
+//   max_focal_length: maximum focal length that the solver can return
+//   min_focal_length: minimum focal length that the solver can return
+//   max_distortion: maximum distortion parameter that the solver can return (e.g. -1e-5)
+//   min_distortion: minimum distortion parameter that the solver can return (e.g. -1e-9)
 // Output: bool: returns true if a solution was found
 // Return: rotations - world to camera rotations (R*X+t)
 //         translations - world to camera translations (R*X+t)
@@ -65,6 +69,8 @@ namespace theia {
 bool FourPointsPoseFocalLengthRadialDistortion(
     const std::vector<Eigen::Vector2d>& feature_vectors,
     const std::vector<Eigen::Vector3d>& world_points,
+    const double max_focal_length, const double min_focal_length,
+    const double max_distortion, const double min_distortion,
     std::vector<Eigen::Matrix3d>* rotations,
     std::vector<Eigen::Vector3d>* translations,
     std::vector<double>* radial_distortions,

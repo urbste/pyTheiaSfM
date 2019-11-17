@@ -42,6 +42,7 @@
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
 #include <vector>
+#include <iostream>
 
 namespace theia {
 

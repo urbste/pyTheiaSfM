@@ -58,19 +58,21 @@ double sgn(double val) { return (0.0 < val) - (val < 0.0); }
 using Matrix34d = Eigen::Matrix<double, 3, 4>;
 using Matrix24d = Eigen::Matrix<double, 2, 4>;
 using Matrix42d = Eigen::Matrix<double, 4, 2>;
-using Vector8d  = Eigen::Matrix<double, 8, 1>;
-using Vector5d  = Eigen::Matrix<double, 5, 1>;
+using Vector8d = Eigen::Matrix<double, 8, 1>;
+using Vector5d = Eigen::Matrix<double, 5, 1>;
 using Eigen::Map;
+using Eigen::Matrix;
+using Eigen::Matrix3d;
+using Eigen::Matrix4d;
+using Eigen::MatrixXd;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
-using Eigen::Matrix4d;
-using Eigen::Matrix3d;
-using Eigen::MatrixXd;
-using Eigen::Matrix;
 
 bool FourPointsPoseFocalLengthRadialDistortion(
     const std::vector<Eigen::Vector2d>& feature_vectors,
     const std::vector<Eigen::Vector3d>& world_points,
+    const double max_focal_length, const double min_focal_length,
+    const double max_distortion, const double min_distortion,
     std::vector<Eigen::Matrix3d>* rotations,
     std::vector<Eigen::Vector3d>* translations,
     std::vector<double>* radial_distortions,
@@ -78,6 +80,13 @@ bool FourPointsPoseFocalLengthRadialDistortion(
   // check that input size of features and world points is 4
   CHECK_GE(feature_vectors.size(), 4);
   CHECK_EQ(feature_vectors.size(), world_points.size());
+
+  CHECK_GE(min_focal_length, 0.0);
+  CHECK_GE(max_focal_length, 0.0);
+  CHECK_GE(max_focal_length, min_focal_length);
+  CHECK_LE(max_distortion, 0.0); // smaller zero means we allow only barrel distortion for this model
+  CHECK_LE(min_distortion, 0.0); // smaller zero means we allow only barrel distortion for this model
+  CHECK_LE(max_distortion, min_distortion);
 
   Vector4d d;
   Matrix34d world_points_;
@@ -207,11 +216,6 @@ bool FourPointsPoseFocalLengthRadialDistortion(
   std::vector<Vector5d> valid_solutions;
   FourPointsPoseFocalLengthRadialDistortionSolver(data, &valid_solutions);
 
-  rotations->resize(valid_solutions.size());
-  translations->resize(valid_solutions.size());
-  radial_distortions->resize(valid_solutions.size());
-  focal_lengths->resize(valid_solutions.size());
-
   for (int i = 0; i < valid_solutions.size(); ++i) {
     const double k = valid_solutions[i][3];
     const double P33 = valid_solutions[i][4];
@@ -249,23 +253,33 @@ bool FourPointsPoseFocalLengthRadialDistortion(
     K(0, 0) = 1. / f;
     K(1, 1) = 1. / f;
 
-    (*focal_lengths)[i] = f * f0;
-    (*radial_distortions)[i] = k / k0;
+    const double focal_length_estimate = f * f0;
+    if (focal_length_estimate < min_focal_length ||
+        focal_length_estimate > max_focal_length)
+      continue;
+
+    const double radial_distortion_estimate = k / k0;
+    if (radial_distortion_estimate < max_distortion ||
+        radial_distortion_estimate > min_distortion ||
+        radial_distortion_estimate > 0.0)
+      continue;
+
+    focal_lengths->emplace_back(focal_length_estimate);
+    radial_distortions->emplace_back(radial_distortion_estimate);
 
     Matrix34d Rt = K * P;
 
     if (Rt.topLeftCorner<3, 3>().determinant() < 0.0) Rt *= -1.0;
 
-    // scale radial distortion
-    // radial_distortions[i] *= (focal_lengths[i]*focal_lengths[i]);
-
+    // scale radial distortion with focal length
+    //(*radial_distortions)[i] *= ((*focal_lengths)[i]*(*focal_lengths)[i]);
     Rt.col(3) = Rt.col(3) * scale - Rt.topLeftCorner<3, 3>() * R0 * t0;
     Rt.topLeftCorner<3, 3>() = Rt.topLeftCorner<3, 3>() * R0;
 
-    (*rotations)[i] = Rt.topLeftCorner<3, 3>();
-    (*translations)[i] = Rt.col(3);
+    rotations->emplace_back(Rt.topLeftCorner<3, 3>());
+    translations->emplace_back(Rt.col(3));
   }
 
   return valid_solutions.size() > 0;
 }
-}
+}  // namespace theia
