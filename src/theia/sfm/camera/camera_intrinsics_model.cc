@@ -42,6 +42,7 @@
 #include "theia/sfm/camera/fov_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
+#include "theia/sfm/camera/double_sphere_camera_model.h"
 
 namespace theia {
 
@@ -64,6 +65,9 @@ std::shared_ptr<CameraIntrinsicsModel> CameraIntrinsicsModel::Create(
     case CameraIntrinsicsModelType::DIVISION_UNDISTORTION:
       return std::make_shared<DivisionUndistortionCameraModel>();
       break;
+  case CameraIntrinsicsModelType::DOUBLE_SPHERE:
+    return std::make_shared<DoubleSphereCameraModel>();
+    break;
     default:
       break;
   }
@@ -98,6 +102,7 @@ CameraIntrinsicsModel& CameraIntrinsicsModel::operator=(
     CAMERA_MODEL_CASE(FISHEYE, FisheyeCameraModel)                            \
     CAMERA_MODEL_CASE(FOV, FOVCameraModel)                                    \
     CAMERA_MODEL_CASE(DIVISION_UNDISTORTION, DivisionUndistortionCameraModel) \
+    CAMERA_MODEL_CASE(DOUBLE_SPHERE, DoubleSphereCameraModel) \
     default:                                                                  \
       LOG(FATAL)                                                              \
           << "Invalid camera type. Please see camera_intrinsics_model.h "     \
