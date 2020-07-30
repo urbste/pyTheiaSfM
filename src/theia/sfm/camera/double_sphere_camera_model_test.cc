@@ -210,7 +210,7 @@ TEST(DoubleSphereCameraModel, GetSubsetFromOptimizeIntrinsicsType) {
 // in the entire image to ensure that the effects of lens distortion at the
 // edges of the image are modeled correctly.
 void ReprojectionTest(const DoubleSphereCameraModel& camera) {
-  static const double kTolerance = 1e-3;
+  static const double kTolerance = 1e-6;
   const double kNormalizedTolerance = kTolerance / camera.FocalLength();
   static const int kImageWidth = 1280;
   static const int kImageHeight = 1024;
@@ -247,8 +247,8 @@ void ReprojectionTest(const DoubleSphereCameraModel& camera) {
         const Vector2d pixel = camera.CameraToImageCoordinates(point);
 
         // Get the normalized ray of that pixel.
-        const Vector3d normalized_ray = camera.ImageToCameraCoordinates(pixel);
-
+        Vector3d normalized_ray = camera.ImageToCameraCoordinates(pixel);
+        normalized_ray /= normalized_ray[2];
         // Convert it to a full 3D point in the camera coordinate system.
         const Vector3d reprojected_point = normalized_ray * depth;
 
