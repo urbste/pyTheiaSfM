@@ -97,6 +97,9 @@ struct BundleAdjustmentOptions {
   bool constant_camera_orientation = false;
   bool constant_camera_position = false;
 
+  // fix tracks
+  bool fix_tracks = false;
+
   // Indicates which intrinsics should be optimized as part of bundle
   // adjustment. By default, we do not optimize skew and aspect ratio since
   // these are almost universally constant.

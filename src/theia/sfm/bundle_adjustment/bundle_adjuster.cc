@@ -175,7 +175,11 @@ void BundleAdjuster::AddTrack(const TrackId track_id) {
     potentially_constant_camera_intrinsics_groups_.emplace(intrinsics_group_id);
   }
 
-  SetTrackVariable(track_id);
+  if (!options_.fix_tracks) {
+    SetTrackVariable(track_id);
+  } else {
+    SetTrackConstant(track_id);
+  }
   SetTrackSchurGroup(track_id);
 }
 
