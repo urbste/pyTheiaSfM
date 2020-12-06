@@ -36,6 +36,7 @@
 #define THEIA_IO_WRITE_PLY_FILE_H_
 
 #include <string>
+#include <Eigen/Core>
 
 namespace theia {
 
@@ -44,6 +45,7 @@ class Reconstruction;
 // Writes a PLY file for viewing in software such as MeshLab.
 bool WritePlyFile(const std::string& ply_file,
                   const Reconstruction& reconstruction,
+                  const Eigen::Vector3i& camera_color,
                   const int min_num_observations_per_point);
 
 }  // namespace theia

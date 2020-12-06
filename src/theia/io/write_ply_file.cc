@@ -58,6 +58,7 @@ void GatherTracks(const Reconstruction& reconstruction,
 
 // Gather camera positions.
 void GatherCameras(const Reconstruction& reconstruction,
+                   const Eigen::Vector3i& camera_color,
                    std::vector<Eigen::Vector3d>* points_to_write,
                    std::vector<Eigen::Vector3i>* colors_to_write) {
   for (const ViewId view_id : reconstruction.ViewIds()) {
@@ -66,13 +67,14 @@ void GatherCameras(const Reconstruction& reconstruction,
       continue;
     }
     points_to_write->emplace_back(view.Camera().GetPosition());
-    colors_to_write->emplace_back(0, 255, 0);
+    colors_to_write->emplace_back(camera_color);
   }
 }
 
 // Writes a PLY file for viewing in software such as MeshLab.
 bool WritePlyFile(const std::string& ply_file,
                   const Reconstruction& const_reconstruction,
+                  const Eigen::Vector3i& camera_color,
                   const int min_num_observations_per_point) {
   CHECK_GT(ply_file.length(), 0);
 
@@ -99,7 +101,7 @@ bool WritePlyFile(const std::string& ply_file,
   std::vector<Eigen::Vector3d> points_to_write;
   std::vector<Eigen::Vector3i> colors_to_write;
   GatherTracks(reconstruction, &points_to_write, &colors_to_write);
-  GatherCameras(reconstruction, &points_to_write, &colors_to_write);
+  GatherCameras(reconstruction, camera_color, &points_to_write, &colors_to_write);
 
   ply_writer << "ply"
     << '\n' << "format ascii 1.0"

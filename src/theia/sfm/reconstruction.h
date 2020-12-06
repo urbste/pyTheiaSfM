@@ -74,11 +74,11 @@ class Reconstruction {
   ViewId ViewIdFromName(const std::string& view_name) const;
 
   // Creates a new view and returns the view id.
-  ViewId AddView(const std::string& view_name);
+  ViewId AddView(const std::string& view_name, const double timestamp = -1.0);
   // Creates a new view and assigns it to the specified camera intrinsics group.
   ViewId AddView(const std::string& view_name,
-                 const CameraIntrinsicsGroupId group_id);
-
+                 const CameraIntrinsicsGroupId group_id,
+                 const double timestamp);
   // Removes the view from the reconstruction and removes all references to the
   // view in the tracks. Any tracks that have zero views after this view is
   // removed are also removed.

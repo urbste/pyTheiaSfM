@@ -60,6 +60,7 @@ class View {
 
   View();
   explicit View(const std::string& name);
+  explicit View(const std::string& name, const double timestamp);
 
   ~View() {}
 
@@ -84,6 +85,7 @@ class View {
 
   bool RemoveFeature(const TrackId track_id);
 
+  double GetTimestamp() const;
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
@@ -94,6 +96,7 @@ class View {
   }
 
   std::string name_;
+  double timestamp_;
   bool is_estimated_;
   class Camera camera_;
   struct CameraIntrinsicsPrior camera_intrinsics_prior_;

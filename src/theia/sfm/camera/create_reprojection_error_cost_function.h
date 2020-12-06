@@ -37,6 +37,7 @@
 
 #include "theia/sfm/camera/camera_intrinsics_model.h"
 #include "theia/sfm/camera/division_undistortion_camera_model.h"
+#include "theia/sfm/camera/double_sphere_camera_model.h"
 #include "theia/sfm/camera/fisheye_camera_model.h"
 #include "theia/sfm/camera/fov_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
@@ -88,6 +89,13 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
           DivisionUndistortionCameraModel::kIntrinsicsSize, kPointSize>(
           new ReprojectionError<DivisionUndistortionCameraModel>(feature));
       break;
+  case CameraIntrinsicsModelType::DOUBLE_SPHERE:
+    return new ceres::AutoDiffCostFunction<
+        ReprojectionError<DoubleSphereCameraModel>, kResidualSize,
+        Camera::kExtrinsicsSize,
+        DoubleSphereCameraModel::kIntrinsicsSize, kPointSize>(
+        new ReprojectionError<DoubleSphereCameraModel>(feature));
+    break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "
                     "for a list of valid camera models.";

@@ -41,6 +41,7 @@
 #include <stdint.h>
 #include <utility>
 #include <tuple>
+#include <unordered_map>
 
 namespace theia {
 
@@ -57,6 +58,12 @@ static const CameraIntrinsicsGroupId kInvalidCameraIntrinsicsGroupId =
 
 // Used as the projection matrix type.
 typedef Eigen::Matrix<double, 3, 4> Matrix3x4d;
+
+template <typename K, typename V>
+using aligned_unordered_map =
+    std::unordered_map<K, V, std::hash<K>, std::equal_to<K>,
+                       Eigen::aligned_allocator<std::pair<K const, V>>>;
+
 
 }  // namespace theia
 

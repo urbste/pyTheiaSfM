@@ -90,14 +90,16 @@ ViewId Reconstruction::ViewIdFromName(const std::string& view_name) const {
   return FindWithDefault(view_name_to_id_, view_name, kInvalidViewId);
 }
 
-ViewId Reconstruction::AddView(const std::string& view_name) {
-  const ViewId view_id = AddView(view_name, next_camera_intrinsics_group_id_);
+ViewId Reconstruction::AddView(const std::string& view_name,
+                               const double timestamp) {
+  const ViewId view_id = AddView(view_name, next_camera_intrinsics_group_id_, timestamp);
   ++next_camera_intrinsics_group_id_;
   return view_id;
 }
 
 ViewId Reconstruction::AddView(const std::string& view_name,
-                               const CameraIntrinsicsGroupId group_id) {
+                               const CameraIntrinsicsGroupId group_id,
+                               const double timestamp) {
   if (ContainsKey(view_name_to_id_, view_name)) {
     LOG(WARNING) << "Could not add view with the name " << view_name
                  << " because that name already exists in the reconstruction.";
@@ -110,7 +112,7 @@ ViewId Reconstruction::AddView(const std::string& view_name,
     return kInvalidViewId;
   }
 
-  class View new_view(view_name);
+  class View new_view(view_name, timestamp);
 
   // If the camera intrinsics group already exists, set the internal intrinsics
   // of each camera to point to the same underlying intrinsics.

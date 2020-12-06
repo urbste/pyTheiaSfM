@@ -46,10 +46,14 @@
 
 namespace theia {
 
-View::View() : name_(""), is_estimated_(false) {}
+View::View() : name_(""), is_estimated_(false), timestamp_(0.0) {}
 
 View::View(const std::string& name)
-    : name_(name), is_estimated_(false) {}
+    : name_(name), is_estimated_(false), timestamp_(0.0) {}
+
+View::View(const std::string& name, const double timestamp)
+    : name_(name), is_estimated_(false), timestamp_(timestamp) {}
+
 
 const std::string& View::Name() const {
   return name_;
@@ -102,6 +106,10 @@ void View::AddFeature(const TrackId track_id, const Feature& feature) {
 
 bool View::RemoveFeature(const TrackId track_id) {
   return features_.erase(track_id) > 0;
+}
+
+double View::GetTimestamp() const {
+    return timestamp_;
 }
 
 }  // namespace theia

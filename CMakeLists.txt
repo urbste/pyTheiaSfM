@@ -46,6 +46,8 @@ endif()
 project(THEIA C CXX)
 include_directories(${PROJECT_SOURCE_DIR})
 
+set(CMAKE_CXX_STANDARD 14)
+
 # Set up the git hook to make Gerrit Change-Id: lines in commit messages.
 set (LOCAL_GIT_DIRECTORY)
 if (EXISTS ${CMAKE_SOURCE_DIR}/.git)
@@ -102,6 +104,7 @@ set(THEIA_ABI_VERSION 0.7.0)
 
 # THEIA data directory
 add_definitions(-DTHEIA_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
+add_definitions(-DEIGEN_MAX_ALIGN_BYTES=0)
 
 # Eigen
 set(MIN_EIGEN_VERSION 3.2.0)
@@ -219,7 +222,7 @@ include_directories(
   ${CERES_INCLUDE_DIRS}
   ${GFLAGS_INCLUDE_DIRS}
   ${GLOG_INCLUDE_DIRS}
-  ${OPENIMAGEIO_INCLUDE_DIRS}
+  #${OPENIMAGEIO_INCLUDE_DIRS}
   ${RAPIDJSON_INCLUDE_DIRS}
   ${ROCKSDB_INCLUDE_DIR}
   ${SUITESPARSE_INCLUDE_DIRS}
@@ -255,8 +258,9 @@ include_directories(
   ${optimo_SOURCE_DIR}
   ${statx_SOURCE_DIR}
   ${stlplus3_SOURCE_DIR}
-  ${vlfeat_SOURCE_DIR}
-  ${visual_sfm_SOURCE_DIR})
+  #${vlfeat_SOURCE_DIR}
+  #${visual_sfm_SOURCE_DIR}
+  )
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(OptimizeTheiaCompilerFlags)
