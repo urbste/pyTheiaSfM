@@ -86,13 +86,15 @@ class View {
   bool RemoveFeature(const TrackId track_id);
 
   double GetTimestamp() const;
+
+  void SetTimestamp(const double timestamp);
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
   template <class Archive>
   void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
-    ar(name_, is_estimated_, camera_, camera_intrinsics_prior_, features_);
+    ar(name_, timestamp_, is_estimated_, camera_, camera_intrinsics_prior_, features_);
   }
 
   std::string name_;

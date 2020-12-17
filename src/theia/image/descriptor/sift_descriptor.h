@@ -36,7 +36,7 @@
 #define THEIA_IMAGE_DESCRIPTOR_SIFT_DESCRIPTOR_H_
 
 extern "C" {
-#include <vl/sift.h>
+#include <vlfeat/vl/sift.h>
 }
 
 #include <memory>

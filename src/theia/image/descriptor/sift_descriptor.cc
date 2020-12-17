@@ -36,7 +36,7 @@
 
 #include <algorithm>
 extern "C" {
-#include "vl/sift.h"
+#include <vlfeat/vl/sift.h>
 }
 #include <vector>
 

@@ -52,6 +52,7 @@ struct RadialDistUncalibratedAbsolutePose {
   Eigen::Vector3d translation;
   double focal_length;
   double radial_distortion;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 // use this to sort out solutions that do not make sense

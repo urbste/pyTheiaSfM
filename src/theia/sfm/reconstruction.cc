@@ -127,7 +127,7 @@ ViewId Reconstruction::AddView(const std::string& view_name,
     new_view.MutableCamera()->MutableCameraIntrinsics() =
         intrinsics_group_camera.CameraIntrinsics();
   }
-
+  new_view.SetTimestamp(timestamp);
   // Add the view to the reconstruction.
   views_.emplace(next_view_id_, new_view);
   view_name_to_id_.emplace(view_name, next_view_id_);
@@ -248,6 +248,15 @@ TrackId Reconstruction::AddTrack() {
   tracks_.emplace(new_track_id, new_track);
   ++next_track_id_;
   return new_track_id;
+}
+
+void Reconstruction::AddTrack(const theia::TrackId& track_id) {
+  CHECK(!ContainsKey(tracks_, track_id))
+      << "The reconstruction already contains a track with id: "
+      << track_id;
+
+  class Track new_track;
+  tracks_.emplace(track_id, new_track);
 }
 
 bool Reconstruction::AddObservation(const ViewId view_id,

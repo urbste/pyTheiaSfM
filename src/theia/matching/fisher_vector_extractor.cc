@@ -33,8 +33,8 @@
 // Author: Chris Sweeney (sweeney.chris.m@gmail.com)
 
 extern "C" {
-#include <vl/fisher.h>
-#include <vl/gmm.h>
+#include <vlfeat/vl/fisher.h>
+#include <vlfeat/vl/gmm.h>
 }
 
 #include <Eigen/Core>

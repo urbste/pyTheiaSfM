@@ -109,6 +109,9 @@ class Reconstruction {
   // user will manage the visibility of the track.
   TrackId AddTrack();
 
+  // This can be dangerous. The user has to manage all track ids.
+  void AddTrack(const theia::TrackId& track_id);
+
   // Adds an observation between the track and the view to the
   // reconstruction. Returns true upon successful insertion of the
   // observation. If the track already contains an observation to this view then

@@ -67,8 +67,8 @@ namespace theia {
 //         Undistortion Camera Model"
 //         focal_lengths - camera's focal length
 bool FourPointsPoseFocalLengthRadialDistortion(
-    const std::vector<Eigen::Vector2d>& feature_vectors,
-    const std::vector<Eigen::Vector3d>& world_points,
+    const Eigen::Vector2d feature_vectors[4],
+    const Eigen::Vector3d world_points[4],
     const double max_focal_length, const double min_focal_length,
     const double max_distortion, const double min_distortion,
     std::vector<Eigen::Matrix3d>* rotations,

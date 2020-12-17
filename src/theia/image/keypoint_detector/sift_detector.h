@@ -36,7 +36,7 @@
 #define THEIA_IMAGE_KEYPOINT_DETECTOR_SIFT_DETECTOR_H_
 
 extern "C" {
-#include <vl/sift.h>
+#include <vlfeat/vl/sift.h>
 }
 
 #include <vector>

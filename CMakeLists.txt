@@ -104,7 +104,8 @@ set(THEIA_ABI_VERSION 0.7.0)
 
 # THEIA data directory
 add_definitions(-DTHEIA_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
-add_definitions(-DEIGEN_MAX_ALIGN_BYTES=0)
+#add_definitions(-DEIGEN_MAX_ALIGN_BYTES=0)
+#add_definitions(-DEIGEN_MALLOC_ALREADY_ALIGNED=0)
 
 # Eigen
 set(MIN_EIGEN_VERSION 3.2.0)
@@ -117,6 +118,17 @@ endif (EIGEN_FOUND)
 # resulting in an unreasonably slow version of the blas routines. The
 # -Qunused-arguments is needed because CMake passes the inline
 # threshold to the linker and clang complains about it and dies.
+set(BUILD_WITH_MARCH_NATIVE ON CACHE BOOL "Enable architecture-aware optimization (-march=native)")
+if(BUILD_WITH_MARCH_NATIVE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native -march=native")
+    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -mtune=native -march=native")
+    message(STATUS "Architecture-aware optimization (-march=native): ENABLED")
+else()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
+    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
+    message(STATUS "Architecture-aware optimization (-march=native): DISABLED")
+endif()
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS
     "${CMAKE_CXX_FLAGS} -Qunused-arguments -mllvm -inline-threshold=600")

@@ -92,10 +92,10 @@ class RadialDistUncalibratedAbsolutePoseEstimator
   bool EstimateModel(
       const std::vector<FeatureCorrespondence2D3D>& correspondences,
       std::vector<RadialDistUncalibratedAbsolutePose>* absolute_poses) const {
-    const std::vector<Vector2d> features = {
+    const Vector2d features[4] = {
         correspondences[0].feature, correspondences[1].feature,
         correspondences[2].feature, correspondences[3].feature};
-    const std::vector<Vector3d> world_points = {
+    const Vector3d world_points[4] = {
         correspondences[0].world_point, correspondences[1].world_point,
         correspondences[2].world_point, correspondences[3].world_point};
 

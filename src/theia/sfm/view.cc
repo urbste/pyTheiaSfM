@@ -112,4 +112,8 @@ double View::GetTimestamp() const {
     return timestamp_;
 }
 
+void View::SetTimestamp(const double timestamp) {
+    timestamp_ = timestamp;
+}
+
 }  // namespace theia

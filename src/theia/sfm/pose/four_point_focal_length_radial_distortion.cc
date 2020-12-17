@@ -69,8 +69,8 @@ using Eigen::Vector3d;
 using Eigen::Vector4d;
 
 bool FourPointsPoseFocalLengthRadialDistortion(
-    const std::vector<Eigen::Vector2d>& feature_vectors,
-    const std::vector<Eigen::Vector3d>& world_points,
+    const Eigen::Vector2d feature_vectors[4],
+    const Eigen::Vector3d world_points[4],
     const double max_focal_length, const double min_focal_length,
     const double max_distortion, const double min_distortion,
     std::vector<Eigen::Matrix3d>* rotations,
@@ -78,8 +78,7 @@ bool FourPointsPoseFocalLengthRadialDistortion(
     std::vector<double>* radial_distortions,
     std::vector<double>* focal_lengths) {
   // check that input size of features and world points is 4
-  CHECK_GE(feature_vectors.size(), 4);
-  CHECK_EQ(feature_vectors.size(), world_points.size());
+  //CHECK_EQ(feature_vectors.size(), world_points.size());
 
   CHECK_GE(min_focal_length, 0.0);
   CHECK_GE(max_focal_length, 0.0);
@@ -101,7 +100,7 @@ bool FourPointsPoseFocalLengthRadialDistortion(
   Matrix34d t0_mat;
   t0_mat << t0, t0, t0, t0;
 
-  Matrix4d U;
+  Matrix<double, 4, 4, Eigen::DontAlign> U;
   U.topRows<3>() = world_points_ - t0_mat;
   U.bottomRows<1>() << 1.0, 1.0, 1.0, 1.0;
 
