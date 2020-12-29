@@ -37,6 +37,7 @@
 
 #include <ceres/types.h>
 #include <unordered_set>
+#include <vector>
 
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
 #include "theia/sfm/types.h"
@@ -97,8 +98,9 @@ struct BundleAdjustmentOptions {
   bool constant_camera_orientation = false;
   bool constant_camera_position = false;
 
-  // fix tracks
-  bool fix_tracks = false;
+  // use local parametrization for points. Apply increments in local tangent
+  // space. Reduce from dim 4 -> 3
+  bool use_homogeneous_local_point_parametrization = true;
 
   // Indicates which intrinsics should be optimized as part of bundle
   // adjustment. By default, we do not optimize skew and aspect ratio since
@@ -136,27 +138,39 @@ struct BundleAdjustmentSummary {
 };
 
 // Bundle adjust all views and tracks in the reconstruction.
-BundleAdjustmentSummary BundleAdjustReconstruction(
-    const BundleAdjustmentOptions& options, Reconstruction* reconstruction);
+BundleAdjustmentSummary
+BundleAdjustReconstruction(const BundleAdjustmentOptions &options,
+                           Reconstruction *reconstruction);
 
 // Bundle adjust the specified views and all tracks observed by those views.
 BundleAdjustmentSummary BundleAdjustPartialReconstruction(
-    const BundleAdjustmentOptions& options,
-    const std::unordered_set<ViewId>& views_to_optimize,
-    const std::unordered_set<TrackId>& tracks_to_optimize,
-    Reconstruction* reconstruction);
+    const BundleAdjustmentOptions &options,
+    const std::unordered_set<ViewId> &views_to_optimize,
+    const std::unordered_set<TrackId> &tracks_to_optimize,
+    Reconstruction *reconstruction);
 
 // Bundle adjust a single view.
-BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
+BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
                                          const ViewId view_id,
-                                         Reconstruction* reconstruction);
+                                         Reconstruction *reconstruction);
+
+// Bundle adjust a single view.
+BundleAdjustmentSummary
+BundleAdjustViews(const BundleAdjustmentOptions &options,
+                  const std::vector<ViewId> &view_ids_to_optimize,
+                  Reconstruction *reconstruction);
 
 // Bundle adjust a single track.
-BundleAdjustmentSummary BundleAdjustTrack(
-    const BundleAdjustmentOptions& options,
-    const TrackId track_id,
-    Reconstruction* reconstruction);
+BundleAdjustmentSummary
+BundleAdjustTrack(const BundleAdjustmentOptions &options,
+                  const TrackId track_id, Reconstruction *reconstruction);
 
-}  // namespace theia
+// Bundle adjust tracks.
+BundleAdjustmentSummary
+BundleAdjustTracks(const BundleAdjustmentOptions &options,
+                   const std::vector<TrackId> &tracks_to_optimize,
+                   Reconstruction *reconstruction);
 
-#endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_BUNDLE_ADJUSTMENT_H_
+} // namespace theia
+
+#endif // THEIA_SFM_BUNDLE_ADJUSTMENT_BUNDLE_ADJUSTMENT_H_

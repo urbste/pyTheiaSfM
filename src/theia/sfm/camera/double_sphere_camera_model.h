@@ -68,8 +68,8 @@ class DoubleSphereCameraModel : public CameraIntrinsicsModel {
     SKEW = 2,
     PRINCIPAL_POINT_X = 3,
     PRINCIPAL_POINT_Y = 4,
-    XI = 5, // value range 0, 1
-    ALPHA = 6 // value range -1, 1
+    XI = 5, // value range -1, 1
+    ALPHA = 6 // value range 0, 1
   };
 
   int NumParameters() const override;

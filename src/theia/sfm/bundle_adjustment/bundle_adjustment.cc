@@ -56,7 +56,7 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
     bundle_adjuster.AddView(view_id);
   }
   for (const TrackId track_id : track_ids) {
-    bundle_adjuster.AddTrack(track_id);
+    bundle_adjuster.AddTrack(track_id, options.use_homogeneous_local_point_parametrization);
   }
 
   return bundle_adjuster.Optimize();
@@ -73,7 +73,7 @@ BundleAdjustmentSummary BundleAdjustReconstruction(
     bundle_adjuster.AddView(view_id);
   }
   for (const TrackId track_id : track_ids) {
-    bundle_adjuster.AddTrack(track_id);
+    bundle_adjuster.AddTrack(track_id, options.use_homogeneous_local_point_parametrization);
   }
 
   return bundle_adjuster.Optimize();
@@ -92,6 +92,20 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
   return bundle_adjuster.Optimize();
 }
 
+// Bundle adjust views.
+BundleAdjustmentSummary BundleAdjustViews(const BundleAdjustmentOptions& options,
+                                         const std::vector<ViewId> &view_ids_to_optimize,
+                                         Reconstruction* reconstruction) {
+  BundleAdjustmentOptions ba_options = options;
+  ba_options.linear_solver_type = ceres::DENSE_QR;
+
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  for (const auto & view_id : view_ids_to_optimize) {
+      bundle_adjuster.AddView(view_id);
+  }
+  return bundle_adjuster.Optimize();
+}
+
 // Bundle adjust a single track.
 BundleAdjustmentSummary BundleAdjustTrack(
     const BundleAdjustmentOptions& options,
@@ -102,8 +116,24 @@ BundleAdjustmentSummary BundleAdjustTrack(
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  bundle_adjuster.AddTrack(track_id);
+  bundle_adjuster.AddTrack(track_id, options.use_homogeneous_local_point_parametrization);
   return bundle_adjuster.Optimize();
+}
+
+// Bundle adjust tracks.
+BundleAdjustmentSummary BundleAdjustTracks(
+    const BundleAdjustmentOptions& options,
+    const std::vector<TrackId>& tracks_to_optimize,
+        Reconstruction* reconstruction) {
+    BundleAdjustmentOptions ba_options = options;
+    ba_options.linear_solver_type = ceres::DENSE_QR;
+    ba_options.use_inner_iterations = false;
+
+    BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+    for (const auto & track_id : tracks_to_optimize) {
+        bundle_adjuster.AddTrack(track_id, options.use_homogeneous_local_point_parametrization);
+    }
+    return bundle_adjuster.Optimize();
 }
 
 }  // namespace theia

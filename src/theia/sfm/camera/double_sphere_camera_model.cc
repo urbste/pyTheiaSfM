@@ -155,8 +155,8 @@ std::vector<int> DoubleSphereCameraModel::GetSubsetFromOptimizeIntrinsicsType(
   }
   if ((intrinsics_to_optimize & OptimizeIntrinsicsType::RADIAL_DISTORTION) ==
       OptimizeIntrinsicsType::NONE) {
-    constant_intrinsics.emplace_back(ALPHA);
     constant_intrinsics.emplace_back(XI);
+    constant_intrinsics.emplace_back(ALPHA);
   }
   return constant_intrinsics;
 }

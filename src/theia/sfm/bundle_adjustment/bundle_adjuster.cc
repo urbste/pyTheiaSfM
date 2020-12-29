@@ -54,8 +54,8 @@
 namespace theia {
 namespace {
 // Set the solver options to defaults.
-void SetSolverOptions(const BundleAdjustmentOptions& options,
-                      ceres::Solver::Options* solver_options) {
+void SetSolverOptions(const BundleAdjustmentOptions &options,
+                      ceres::Solver::Options *solver_options) {
   solver_options->linear_solver_type = options.linear_solver_type;
   solver_options->preconditioner_type = options.preconditioner_type;
   solver_options->visibility_clustering_type =
@@ -77,10 +77,10 @@ void SetSolverOptions(const BundleAdjustmentOptions& options,
   solver_options->linear_solver_ordering.reset(
       new ceres::ParameterBlockOrdering);
 }
-}  // namespace
+} // namespace
 
-BundleAdjuster::BundleAdjuster(const BundleAdjustmentOptions& options,
-                               Reconstruction* reconstruction)
+BundleAdjuster::BundleAdjuster(const BundleAdjustmentOptions &options,
+                               Reconstruction *reconstruction)
     : options_(options), reconstruction_(reconstruction) {
   CHECK_NOTNULL(reconstruction);
 
@@ -100,7 +100,7 @@ BundleAdjuster::BundleAdjuster(const BundleAdjustmentOptions& options,
 }
 
 void BundleAdjuster::AddView(const ViewId view_id) {
-  View* view = CHECK_NOTNULL(reconstruction_->MutableView(view_id));
+  View *view = CHECK_NOTNULL(reconstruction_->MutableView(view_id));
 
   // Only optimize estimated views.
   if (!view->IsEstimated() || ContainsKey(optimized_views_, view_id)) {
@@ -119,12 +119,12 @@ void BundleAdjuster::AddView(const ViewId view_id) {
   optimized_camera_intrinsics_groups_.emplace(intrinsics_group_id);
 
   // Fetch the camera that will be optimized.
-  Camera* camera = view->MutableCamera();
+  Camera *camera = view->MutableCamera();
 
   // Add residuals for all tracks in the view.
   for (const TrackId track_id : view->TrackIds()) {
-    const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
-    Track* track = CHECK_NOTNULL(reconstruction_->MutableTrack(track_id));
+    const Feature *feature = CHECK_NOTNULL(view->GetFeature(track_id));
+    Track *track = CHECK_NOTNULL(reconstruction_->MutableTrack(track_id));
     // Only consider tracks with an estimated 3d point.
     if (!track->IsEstimated()) {
       continue;
@@ -138,8 +138,9 @@ void BundleAdjuster::AddView(const ViewId view_id) {
   }
 }
 
-void BundleAdjuster::AddTrack(const TrackId track_id) {
-  Track* track = CHECK_NOTNULL(reconstruction_->MutableTrack(track_id));
+void BundleAdjuster::AddTrack(const TrackId track_id,
+                              const bool use_homogeneous) {
+  Track *track = CHECK_NOTNULL(reconstruction_->MutableTrack(track_id));
   // Only optimize estimated tracks.
   if (!track->IsEstimated() || ContainsKey(optimized_tracks_, track_id)) {
     return;
@@ -149,16 +150,16 @@ void BundleAdjuster::AddTrack(const TrackId track_id) {
   optimized_tracks_.emplace(track_id);
 
   // Add all observations of the track to the problem.
-  const auto& observed_view_ids = track->ViewIds();
+  const auto &observed_view_ids = track->ViewIds();
   for (const ViewId view_id : observed_view_ids) {
-    View* view = CHECK_NOTNULL(reconstruction_->MutableView(view_id));
+    View *view = CHECK_NOTNULL(reconstruction_->MutableView(view_id));
     // Only optimize estimated views that have not already been added.
     if (ContainsKey(optimized_views_, view_id) || !view->IsEstimated()) {
       continue;
     }
 
-    const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
-    Camera* camera = view->MutableCamera();
+    const Feature *feature = CHECK_NOTNULL(view->GetFeature(track_id));
+    Camera *camera = view->MutableCamera();
 
     // Add the reprojection error to the optimization.
     AddReprojectionErrorResidual(*feature, camera, track);
@@ -175,12 +176,11 @@ void BundleAdjuster::AddTrack(const TrackId track_id) {
     potentially_constant_camera_intrinsics_groups_.emplace(intrinsics_group_id);
   }
 
-  if (!options_.fix_tracks) {
-    SetTrackVariable(track_id);
-  } else {
-    SetTrackConstant(track_id);
-  }
+  SetTrackVariable(track_id);
   SetTrackSchurGroup(track_id);
+  if (use_homogeneous) {
+    SetHomogeneousPointParametrization(track_id);
+  }
 }
 
 BundleAdjustmentSummary BundleAdjuster::Optimize() {
@@ -257,12 +257,36 @@ void BundleAdjuster::SetCameraIntrinsicsParameterization() {
         camera_intrinsics->GetSubsetFromOptimizeIntrinsicsType(
             options_.intrinsics_to_optimize);
 
+    // set lower bound for focal length optimization ( > 0)
+    const std::vector<int> focal_length_id =
+        camera_intrinsics->GetSubsetFromOptimizeIntrinsicsType(
+            OptimizeIntrinsicsType::ASPECT_RATIO |
+            OptimizeIntrinsicsType::PRINCIPAL_POINTS |
+            OptimizeIntrinsicsType::RADIAL_DISTORTION |
+            OptimizeIntrinsicsType::SKEW |
+            OptimizeIntrinsicsType::TANGENTIAL_DISTORTION);
+
+    // set lower bound for focal length (>0)
+    problem_->SetParameterLowerBound(camera_intrinsics->mutable_parameters(),
+                                     focal_length_id[0], 100.0);
+    if (camera_intrinsics->Type() ==
+        theia::CameraIntrinsicsModelType::DOUBLE_SPHERE) {
+      problem_->SetParameterLowerBound(camera_intrinsics->mutable_parameters(),
+                                       5, -1.0);
+      problem_->SetParameterUpperBound(camera_intrinsics->mutable_parameters(),
+                                       5, 1.0);
+      problem_->SetParameterLowerBound(camera_intrinsics->mutable_parameters(),
+                                       6, 0.0);
+      problem_->SetParameterUpperBound(camera_intrinsics->mutable_parameters(),
+                                       6, 1.0);
+    }
+
     // Set the constant parameters if any are requested.
     if (constant_intrinsics.size() == camera_intrinsics->NumParameters()) {
       problem_->SetParameterBlockConstant(
           camera_intrinsics->mutable_parameters());
     } else if (constant_intrinsics.size() > 0) {
-      ceres::SubsetParameterization* subset_parameterization =
+      ceres::SubsetParameterization *subset_parameterization =
           new ceres::SubsetParameterization(camera_intrinsics->NumParameters(),
                                             constant_intrinsics);
       problem_->SetParameterization(camera_intrinsics->mutable_parameters(),
@@ -294,7 +318,7 @@ std::shared_ptr<CameraIntrinsicsModel>
 BundleAdjuster::GetIntrinsicsForCameraIntrinsicsGroup(
     const CameraIntrinsicsGroupId camera_intrinsics_group) {
   // Get a representative view for the intrinsics group.
-  const auto& views_in_intrinsics_groups =
+  const auto &views_in_intrinsics_groups =
       reconstruction_->GetViewsInCameraIntrinsicGroup(camera_intrinsics_group);
   CHECK(!views_in_intrinsics_groups.empty());
   const ViewId representative_view_id = *views_in_intrinsics_groups.begin();
@@ -306,52 +330,60 @@ BundleAdjuster::GetIntrinsicsForCameraIntrinsicsGroup(
 }
 
 void BundleAdjuster::SetCameraExtrinsicsConstant(const ViewId view_id) {
-  View* view = reconstruction_->MutableView(view_id);
-  Camera* camera = view->MutableCamera();
+  View *view = reconstruction_->MutableView(view_id);
+  Camera *camera = view->MutableCamera();
   problem_->SetParameterBlockConstant(camera->mutable_extrinsics());
 }
 
 void BundleAdjuster::SetCameraPositionConstant(const ViewId view_id) {
   static const std::vector<int> position_parameters = {
       Camera::POSITION + 0, Camera::POSITION + 1, Camera::POSITION + 2};
-  ceres::SubsetParameterization* subset_parameterization =
+  ceres::SubsetParameterization *subset_parameterization =
       new ceres::SubsetParameterization(Camera::kExtrinsicsSize,
                                         position_parameters);
-  View* view = reconstruction_->MutableView(view_id);
-  Camera* camera = view->MutableCamera();
+  View *view = reconstruction_->MutableView(view_id);
+  Camera *camera = view->MutableCamera();
   problem_->SetParameterization(camera->mutable_extrinsics(),
                                 subset_parameterization);
 }
 
 void BundleAdjuster::SetCameraOrientationConstant(const ViewId view_id) {
   static const std::vector<int> orientation_parameters = {
-      Camera::ORIENTATION + 0,
-      Camera::ORIENTATION + 1,
+      Camera::ORIENTATION + 0, Camera::ORIENTATION + 1,
       Camera::ORIENTATION + 2};
-  ceres::SubsetParameterization* subset_parameterization =
+  ceres::SubsetParameterization *subset_parameterization =
       new ceres::SubsetParameterization(Camera::kExtrinsicsSize,
                                         orientation_parameters);
-  View* view = reconstruction_->MutableView(view_id);
-  Camera* camera = view->MutableCamera();
+  View *view = reconstruction_->MutableView(view_id);
+  Camera *camera = view->MutableCamera();
   problem_->SetParameterization(camera->mutable_extrinsics(),
                                 subset_parameterization);
 }
 
 void BundleAdjuster::SetTrackConstant(const TrackId track_id) {
-  Track* track = reconstruction_->MutableTrack(track_id);
+  Track *track = reconstruction_->MutableTrack(track_id);
   problem_->SetParameterBlockConstant(track->MutablePoint()->data());
 }
 
 void BundleAdjuster::SetTrackVariable(const TrackId track_id) {
-  Track* track = reconstruction_->MutableTrack(track_id);
+  Track *track = reconstruction_->MutableTrack(track_id);
   problem_->SetParameterBlockVariable(track->MutablePoint()->data());
+}
+
+void BundleAdjuster::SetHomogeneousPointParametrization(
+    const TrackId track_id) {
+  ceres::LocalParameterization *point_parametrization =
+      new ceres::HomogeneousVectorParameterization(4);
+  Track *track = reconstruction_->MutableTrack(track_id);
+  problem_->SetParameterization(track->MutablePoint()->data(),
+                                point_parametrization);
 }
 
 void BundleAdjuster::SetCameraSchurGroups(const ViewId view_id) {
   static const int kIntrinsicsParameterGroup = 1;
   static const int kExtrinsicsParameterGroup = 2;
-  View* view = reconstruction_->MutableView(view_id);
-  Camera* camera = view->MutableCamera();
+  View *view = reconstruction_->MutableView(view_id);
+  Camera *camera = view->MutableCamera();
 
   // Add camera parameters to groups 1 and 2. The extrinsics *must* belong to
   // group 2. This is because inner iterations uses a reverse ordering of
@@ -367,26 +399,24 @@ void BundleAdjuster::SetCameraSchurGroups(const ViewId view_id) {
 
 void BundleAdjuster::SetTrackSchurGroup(const TrackId track_id) {
   static const int kTrackParameterGroup = 0;
-  Track* track = reconstruction_->MutableTrack(track_id);
+  Track *track = reconstruction_->MutableTrack(track_id);
   // Set the parameter ordering for Schur elimination. We do this after the loop
   // above so that the track is already added to the problem.
   parameter_ordering_->AddElementToGroup(track->MutablePoint()->data(),
                                          kTrackParameterGroup);
 }
 
-void BundleAdjuster::AddReprojectionErrorResidual(const Feature& feature,
-                                                  Camera* camera,
-                                                  Track* track) {
+void BundleAdjuster::AddReprojectionErrorResidual(const Feature &feature,
+                                                  Camera *camera,
+                                                  Track *track) {
   // Add the residual for the track to the problem. The shared intrinsics
   // parameter block will be set to constant after the loop if no optimized
   // cameras share the same camera intrinsics.
   problem_->AddResidualBlock(
       CreateReprojectionErrorCostFunction(
           camera->GetCameraIntrinsicsModelType(), feature),
-      loss_function_.get(),
-      camera->mutable_extrinsics(),
-      camera->mutable_intrinsics(),
-      track->MutablePoint()->data());
+      loss_function_.get(), camera->mutable_extrinsics(),
+      camera->mutable_intrinsics(), track->MutablePoint()->data());
 }
 
-}  // namespace theia
+} // namespace theia
