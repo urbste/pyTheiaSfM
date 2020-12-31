@@ -109,13 +109,13 @@ class DivisionUndistortionCameraModel : public CameraIntrinsicsModel {
   // (e.g., focal length, principal point, distortion) to transform the point
   // into pixel coordinates.
   template <typename T>
-  static void CameraToPixelCoordinates(const T* intrinsic_parameters,
+  static bool CameraToPixelCoordinates(const T* intrinsic_parameters,
                                        const T* point,
                                        T* pixel);
 
   // Project the point onto the image plane without distorting the image.
   template <typename T>
-  static void CameraToUndistortedPixelCoordinates(const T* intrinsic_parameters,
+  static bool CameraToUndistortedPixelCoordinates(const T* intrinsic_parameters,
                                                   const T* point,
                                                   T* undistorted_pixel);
 
@@ -124,7 +124,7 @@ class DivisionUndistortionCameraModel : public CameraIntrinsicsModel {
   // coordinate system. The point output by this method is effectively a ray in
   // the direction of the pixel in the camera coordinate system.
   template <typename T>
-  static void PixelToCameraCoordinates(const T* intrinsic_parameters,
+  static bool PixelToCameraCoordinates(const T* intrinsic_parameters,
                                        const T* pixel,
                                        T* point);
 
@@ -132,7 +132,7 @@ class DivisionUndistortionCameraModel : public CameraIntrinsicsModel {
   // distorted point. The type of distortion (i.e. radial, tangential, fisheye,
   // etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static void DistortPoint(const T* intrinsic_parameters,
+  static bool DistortPoint(const T* intrinsic_parameters,
                            const T* undistorted_point,
                            T* distorted_point);
 
@@ -140,13 +140,13 @@ class DivisionUndistortionCameraModel : public CameraIntrinsicsModel {
   // undistorted point. The type of distortion (i.e. radial, tangential,
   // fisheye, etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static void UndistortPoint(const T* intrinsic_parameters,
+  static bool UndistortPoint(const T* intrinsic_parameters,
                              const T* distorted_point,
                              T* undistorted_point);
 
   // Transform the distorted pixel to the undistorted pixel.
   template <typename T>
-  static void DistortedPixelToUndistortedPixel(const T* intrinsic_parameters,
+  static bool DistortedPixelToUndistortedPixel(const T* intrinsic_parameters,
                                                const T* distorted_pixel,
                                                T* undistorted_pixel);
 
@@ -170,7 +170,7 @@ class DivisionUndistortionCameraModel : public CameraIntrinsicsModel {
 // In the division model, the distortion is applied after the focal length is
 // first applied to the undistorted pixel.
 template <typename T>
-void DivisionUndistortionCameraModel::CameraToPixelCoordinates(
+bool DivisionUndistortionCameraModel::CameraToPixelCoordinates(
     const T* intrinsic_parameters, const T* point, T* pixel) {
   // Get normalized pixel projection at image plane depth = 1.
   const T& depth = point[2];
@@ -199,10 +199,12 @@ void DivisionUndistortionCameraModel::CameraToPixelCoordinates(
   // Add the principal point.
   pixel[0] += principal_point_x;
   pixel[1] += principal_point_y;
+
+  return true;
 }
 
 template <typename T>
-void DivisionUndistortionCameraModel::CameraToUndistortedPixelCoordinates(
+bool DivisionUndistortionCameraModel::CameraToUndistortedPixelCoordinates(
     const T* intrinsic_parameters, const T* point, T* undistorted_pixel) {
   // Get normalized pixel projection at image plane depth = 1.
   const T& depth = point[2];
@@ -223,10 +225,12 @@ void DivisionUndistortionCameraModel::CameraToUndistortedPixelCoordinates(
   undistorted_pixel[0] = focal_length * normalized_pixel[0] + principal_point_x;
   undistorted_pixel[1] =
       focal_length_y * normalized_pixel[1] + principal_point_y;
+
+  return true;
 }
 
 template <typename T>
-void DivisionUndistortionCameraModel::PixelToCameraCoordinates(
+bool DivisionUndistortionCameraModel::PixelToCameraCoordinates(
     const T* intrinsic_parameters, const T* pixel, T* point) {
   const T& focal_length =
       intrinsic_parameters[DivisionUndistortionCameraModel::FOCAL_LENGTH];
@@ -251,10 +255,12 @@ void DivisionUndistortionCameraModel::PixelToCameraCoordinates(
   point[0] /= focal_length;
   point[1] /= focal_length_y;
   point[2] = T(1.0);
+
+  return true;
 }
 
 template <typename T>
-void DivisionUndistortionCameraModel::DistortPoint(
+bool DivisionUndistortionCameraModel::DistortPoint(
     const T* intrinsic_parameters,
     const T* undistorted_point,
     T* distorted_point) {
@@ -286,10 +292,12 @@ void DivisionUndistortionCameraModel::DistortPoint(
     distorted_point[0] = undistorted_point[0] * scale;
     distorted_point[1] = undistorted_point[1] * scale;
   }
+
+  return true;
 }
 
 template <typename T>
-void DivisionUndistortionCameraModel::UndistortPoint(
+bool DivisionUndistortionCameraModel::UndistortPoint(
     const T* intrinsic_parameters,
     const T* distorted_point,
     T* undistorted_point) {
@@ -308,11 +316,13 @@ void DivisionUndistortionCameraModel::UndistortPoint(
   const T undistortion = 1.0 / (1.0 + k * r_d_sq);
   undistorted_point[0] = distorted_point[0] * undistortion;
   undistorted_point[1] = distorted_point[1] * undistortion;
+
+  return true;
 }
 
 // Transform the distorted pixel to the undistorted pixel.
 template <typename T>
-void DivisionUndistortionCameraModel::DistortedPixelToUndistortedPixel(
+bool DivisionUndistortionCameraModel::DistortedPixelToUndistortedPixel(
     const T* intrinsic_parameters,
     const T* distorted_pixel,
     T* undistorted_pixel) {
@@ -332,6 +342,8 @@ void DivisionUndistortionCameraModel::DistortedPixelToUndistortedPixel(
 
   undistorted_pixel[0] += principal_point_x;
   undistorted_pixel[1] += principal_point_y;
+
+  return true;
 }
 
 }  // namespace theia

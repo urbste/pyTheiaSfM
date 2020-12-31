@@ -36,6 +36,7 @@
 #define THEIA_SFM_CAMERA_CREATE_REPROJECTION_ERROR_COST_FUNCTION_H_
 
 #include "theia/sfm/camera/camera_intrinsics_model.h"
+#include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/sfm/camera/division_undistortion_camera_model.h"
 #include "theia/sfm/camera/double_sphere_camera_model.h"
 #include "theia/sfm/camera/fisheye_camera_model.h"
@@ -95,6 +96,13 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
         Camera::kExtrinsicsSize,
         DoubleSphereCameraModel::kIntrinsicsSize, kPointSize>(
         new ReprojectionError<DoubleSphereCameraModel>(feature));
+    break;
+  case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
+    return new ceres::AutoDiffCostFunction<
+        ReprojectionError<ExtendedUnifiedCameraModel>, kResidualSize,
+        Camera::kExtrinsicsSize,
+        ExtendedUnifiedCameraModel::kIntrinsicsSize, kPointSize>(
+        new ReprojectionError<ExtendedUnifiedCameraModel>(feature));
     break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "

@@ -108,6 +108,7 @@ set(THEIA_SRC
   sfm/camera/camera_intrinsics_model.cc
   sfm/camera/camera.cc
   sfm/camera/division_undistortion_camera_model.cc
+  sfm/camera/extended_unified_camera_model.cc
   sfm/camera/double_sphere_camera_model.cc
   sfm/camera/fisheye_camera_model.cc
   sfm/camera/fov_camera_model.cc
@@ -293,6 +294,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/camera/camera)
   gtest(sfm/camera/division_undistortion_camera_model)
   gtest(sfm/camera/double_sphere_camera_model)
+  gtest(sfm/camera/extended_unified_camera_model)
 #  gtest(sfm/camera/fisheye_camera_model)
 #  gtest(sfm/camera/fov_camera_model)
 #  gtest(sfm/camera/pinhole_camera_model)

@@ -32,7 +32,7 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include "theia/sfm/camera/double_sphere_camera_model.h"
+#include "theia/sfm/camera/extended_unified_camera_model.h"
 
 #include <ceres/rotation.h>
 #include <Eigen/Core>
@@ -53,25 +53,25 @@ using Eigen::Vector2d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
 
-DoubleSphereCameraModel::DoubleSphereCameraModel() {
+ExtendedUnifiedCameraModel::ExtendedUnifiedCameraModel() {
   parameters_.resize(kIntrinsicsSize);
   SetFocalLength(1.0);
   SetPrincipalPoint(0.0, 0.0);
   SetParameter(ASPECT_RATIO, 1.0);
   SetParameter(SKEW, 0.0);
-  SetParameter(XI, 0.0);
-  SetParameter(ALPHA, 0.75);
+  SetParameter(ALPHA, 0.5);
+  SetParameter(BETA, 1.0);
 }
 
-int DoubleSphereCameraModel::NumParameters() const {return kIntrinsicsSize;}
+int ExtendedUnifiedCameraModel::NumParameters() const {return kIntrinsicsSize;}
 
 // Returns the camera model type of the object.
-CameraIntrinsicsModelType DoubleSphereCameraModel::Type() const {
-  return CameraIntrinsicsModelType::DOUBLE_SPHERE;
+CameraIntrinsicsModelType ExtendedUnifiedCameraModel::Type() const {
+  return CameraIntrinsicsModelType::EXTENDED_UNIFIED;
 }
 
 // Set the intrinsic camera parameters from the priors.
-void DoubleSphereCameraModel::SetFromCameraIntrinsicsPriors(
+void ExtendedUnifiedCameraModel::SetFromCameraIntrinsicsPriors(
     const CameraIntrinsicsPrior& prior) {
   // Set the focal length.
   if (prior.focal_length.is_set) {
@@ -102,11 +102,11 @@ void DoubleSphereCameraModel::SetFromCameraIntrinsicsPriors(
   // Set radial distortion if available.
   if (prior.radial_distortion.is_set) {
     SetParameter(ALPHA, prior.radial_distortion.value[0]);
-    SetParameter(XI, prior.radial_distortion.value[1]);
+    SetParameter(BETA, prior.radial_distortion.value[1]);
   }
 }
 
-CameraIntrinsicsPrior DoubleSphereCameraModel::CameraIntrinsicsPriorFromIntrinsics()
+CameraIntrinsicsPrior ExtendedUnifiedCameraModel::CameraIntrinsicsPriorFromIntrinsics()
     const {
   CameraIntrinsicsPrior prior;
   prior.camera_intrinsics_model_type =
@@ -122,14 +122,14 @@ CameraIntrinsicsPrior DoubleSphereCameraModel::CameraIntrinsicsPriorFromIntrinsi
   prior.skew.value[0] = Skew();
   prior.radial_distortion.is_set = true;
   prior.radial_distortion.value[0] = Alpha();
-  prior.radial_distortion.value[1] = Xi();
+  prior.radial_distortion.value[1] = Beta();
 
   return prior;
 }
 
 // Returns the indices of the parameters that will be optimized during bundle
 // adjustment.
-std::vector<int> DoubleSphereCameraModel::GetSubsetFromOptimizeIntrinsicsType(
+std::vector<int> ExtendedUnifiedCameraModel::GetSubsetFromOptimizeIntrinsicsType(
     const OptimizeIntrinsicsType& intrinsics_to_optimize) const {
   std::vector<int> constant_intrinsics;
   if (intrinsics_to_optimize == OptimizeIntrinsicsType::ALL) {
@@ -155,13 +155,13 @@ std::vector<int> DoubleSphereCameraModel::GetSubsetFromOptimizeIntrinsicsType(
   }
   if ((intrinsics_to_optimize & OptimizeIntrinsicsType::RADIAL_DISTORTION) ==
       OptimizeIntrinsicsType::NONE) {
-    constant_intrinsics.emplace_back(XI);
     constant_intrinsics.emplace_back(ALPHA);
+    constant_intrinsics.emplace_back(BETA);
   }
   return constant_intrinsics;
 }
 
-void DoubleSphereCameraModel::GetCalibrationMatrix(Matrix3d* kmatrix) const {
+void ExtendedUnifiedCameraModel::GetCalibrationMatrix(Matrix3d* kmatrix) const {
   IntrinsicsToCalibrationMatrix(parameters_[FOCAL_LENGTH],
                                 parameters_[SKEW],
                                 parameters_[ASPECT_RATIO],
@@ -170,49 +170,49 @@ void DoubleSphereCameraModel::GetCalibrationMatrix(Matrix3d* kmatrix) const {
                                 kmatrix);
 }
 
-void DoubleSphereCameraModel::PrintIntrinsics() const {
+void ExtendedUnifiedCameraModel::PrintIntrinsics() const {
   LOG(INFO) << "Camera model type: "
             << CameraIntrinsicsModelTypeToString(Type())
             << "\nFocal length (pixels): " << FocalLength()
             << "\nPrincipal Point (px, py) = (" << PrincipalPointX() << ", "
             << PrincipalPointY() << ")"
             << "\nSkew: " << Skew() << "\nAspect Ratio: " << AspectRatio()
-            << "\nAlpha and Xi: " << Alpha() << ", "
-            << Xi();
+            << "\nAlpha and Beta: " << Alpha() << ", "
+            << Beta();
 }
 
 // ----------------------- Getter and Setter methods ---------------------- //
 
-void DoubleSphereCameraModel::SetAspectRatio(const double aspect_ratio) {
+void ExtendedUnifiedCameraModel::SetAspectRatio(const double aspect_ratio) {
   CHECK_GT(aspect_ratio, 0.0)
       << "Invalid aspect ratio. Aspect ratio must be greater than 0.0.";
   parameters_[ASPECT_RATIO] = aspect_ratio;
 }
-double DoubleSphereCameraModel::AspectRatio() const {
+double ExtendedUnifiedCameraModel::AspectRatio() const {
   return parameters_[ASPECT_RATIO];
 }
 
-void DoubleSphereCameraModel::SetSkew(const double skew) {
+void ExtendedUnifiedCameraModel::SetSkew(const double skew) {
   parameters_[SKEW] = skew;
 }
 
-double DoubleSphereCameraModel::Skew() const {
+double ExtendedUnifiedCameraModel::Skew() const {
   return parameters_[SKEW];
 }
 
-void DoubleSphereCameraModel::SetAlphaXiDistortion(
+void ExtendedUnifiedCameraModel::SetAlphaBetaDistortion(
         const double alpha,
-        const double xi) {
+        const double beta) {
   parameters_[ALPHA] = alpha;
-  parameters_[XI] = xi;
+  parameters_[BETA] = beta;
 }
 
-double DoubleSphereCameraModel::Alpha() const {
+double ExtendedUnifiedCameraModel::Alpha() const {
   return parameters_[ALPHA];
 }
 
-double DoubleSphereCameraModel::Xi() const {
-  return parameters_[XI];
+double ExtendedUnifiedCameraModel::Beta() const {
+  return parameters_[BETA];
 }
 
 }  // namespace theia

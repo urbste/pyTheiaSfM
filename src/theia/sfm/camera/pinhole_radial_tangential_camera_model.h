@@ -129,7 +129,7 @@ class PinholeRadialTangentialCameraModel : public CameraIntrinsicsModel {
   // (e.g., focal length, principal point, distortion) to transform the point
   // into pixel coordinates.
   template <typename T>
-  static void CameraToPixelCoordinates(const T* intrinsic_parameters,
+  static bool CameraToPixelCoordinates(const T* intrinsic_parameters,
                                        const T* point,
                                        T* pixel);
 
@@ -138,7 +138,7 @@ class PinholeRadialTangentialCameraModel : public CameraIntrinsicsModel {
   // coordinate system. The point output by this method is effectively a ray in
   // the direction of the pixel in the camera coordinate system.
   template <typename T>
-  static void PixelToCameraCoordinates(const T* intrinsic_parameters,
+  static bool PixelToCameraCoordinates(const T* intrinsic_parameters,
                                        const T* pixel,
                                        T* point);
 
@@ -146,7 +146,7 @@ class PinholeRadialTangentialCameraModel : public CameraIntrinsicsModel {
   // distorted point. The type of distortion (i.e. radial, tangential, fisheye,
   // etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static void DistortPoint(const T* intrinsic_parameters,
+  static bool DistortPoint(const T* intrinsic_parameters,
                            const T* undistorted_point,
                            T* distorted_point);
 
@@ -154,7 +154,7 @@ class PinholeRadialTangentialCameraModel : public CameraIntrinsicsModel {
   // undistorted point. The type of distortion (i.e. radial, tangential,
   // fisheye, etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static void UndistortPoint(const T* intrinsic_parameters,
+  static bool UndistortPoint(const T* intrinsic_parameters,
                              const T* distorted_point,
                              T* undistorted_point);
 
@@ -188,7 +188,7 @@ class PinholeRadialTangentialCameraModel : public CameraIntrinsicsModel {
 };
 
 template <typename T>
-void PinholeRadialTangentialCameraModel::CameraToPixelCoordinates(
+bool PinholeRadialTangentialCameraModel::CameraToPixelCoordinates(
     const T* intrinsic_parameters, const T* point, T* pixel) {
   // Get normalized pixel projection at image plane depth = 1.
   const T& depth = point[2];
@@ -216,10 +216,12 @@ void PinholeRadialTangentialCameraModel::CameraToPixelCoordinates(
              principal_point_x;
   pixel[1] = focal_length * aspect_ratio * distorted_pixel[1] +
              principal_point_y;
+
+  return true;
 }
 
 template <typename T>
-void PinholeRadialTangentialCameraModel::PixelToCameraCoordinates(
+bool PinholeRadialTangentialCameraModel::PixelToCameraCoordinates(
     const T* intrinsic_parameters, const T* pixel, T* point) {
   const T& focal_length =
       intrinsic_parameters[PinholeRadialTangentialCameraModel::FOCAL_LENGTH];
@@ -245,10 +247,12 @@ void PinholeRadialTangentialCameraModel::PixelToCameraCoordinates(
   PinholeRadialTangentialCameraModel::UndistortPoint(intrinsic_parameters,
                                                      distorted_point, point);
   point[2] = T(1.0);
+
+  return true;
 }
 
 template <typename T>
-void PinholeRadialTangentialCameraModel::DistortPoint(
+bool PinholeRadialTangentialCameraModel::DistortPoint(
     const T* intrinsic_parameters,
     const T* undistorted_point,
     T* distorted_point) {
@@ -288,10 +292,12 @@ void PinholeRadialTangentialCameraModel::DistortPoint(
   // Apply the distortion to the undistorted point.
   distorted_point[0] = undistorted_point[0] * rd + tangential_x;
   distorted_point[1] = undistorted_point[1] * rd + tangential_y;
+
+  return true;
 }
 
 template <typename T>
-void PinholeRadialTangentialCameraModel::UndistortPoint(
+bool PinholeRadialTangentialCameraModel::UndistortPoint(
     const T* intrinsic_parameters,
     const T* distorted_point,
     T* undistorted_point) {
@@ -352,6 +358,8 @@ void PinholeRadialTangentialCameraModel::UndistortPoint(
       break;
     }
   }
+
+  return true;
 }
 
 }  // namespace theia

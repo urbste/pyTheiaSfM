@@ -32,10 +32,10 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-// author: Steffen Urban (urbste@googlemail.com), juli 2020
+// author: Steffen Urban (urbste@googlemail.com), December 2020
 
-#ifndef THEIA_SFM_CAMERA_DOUBLE_SPHERE_CAMERA_MODEL_H_
-#define THEIA_SFM_CAMERA_DOUBLE_SPHERE_CAMERA_MODEL_H_
+#ifndef THEIA_SFM_CAMERA_EXTENDED_UNIFIED_CAMERA_MODEL_H_
+#define THEIA_SFM_CAMERA_EXTENDED_UNIFIED_CAMERA_MODEL_H_
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -52,14 +52,14 @@
 
 namespace theia {
 
-// This class implements the double sphere camera model presented in:
+// This class implements the extended unified camera model:
 // https://arxiv.org/pdf/1807.08957.pdf, "The Double Sphere Camera Model",
 // V.Usenko et al.
 
-class DoubleSphereCameraModel : public CameraIntrinsicsModel {
+class ExtendedUnifiedCameraModel : public CameraIntrinsicsModel {
 public:
-  DoubleSphereCameraModel();
-  ~DoubleSphereCameraModel() {}
+  ExtendedUnifiedCameraModel();
+  ~ExtendedUnifiedCameraModel() {}
 
   static const int kIntrinsicsSize = 7;
 
@@ -69,8 +69,8 @@ public:
     SKEW = 2,
     PRINCIPAL_POINT_X = 3,
     PRINCIPAL_POINT_Y = 4,
-    XI = 5,   // value range -1, 1
-    ALPHA = 6 // value range 0, 1
+    ALPHA = 5, // value range 0, 1
+    BETA = 6   // value range > 0
   };
 
   int NumParameters() const override;
@@ -133,9 +133,9 @@ public:
   void SetSkew(const double skew);
   double Skew() const;
 
-  void SetAlphaXiDistortion(const double alpha, const double xi);
+  void SetAlphaBetaDistortion(const double alpha, const double beta);
   double Alpha() const;
-  double Xi() const;
+  double Beta() const;
 
 private:
   // Templated method for disk I/O with cereal. This method tells cereal which
@@ -154,25 +154,25 @@ private:
 };
 
 template <typename T>
-bool DoubleSphereCameraModel::CameraToPixelCoordinates(
+bool ExtendedUnifiedCameraModel::CameraToPixelCoordinates(
     const T *intrinsic_parameters, const T *point, T *pixel) {
   // Get normalized pixel projection at image plane depth = 1.
 
   // Apply radial distortion.
   T distorted_pixel[2];
-  bool result = DoubleSphereCameraModel::DistortPoint(intrinsic_parameters,
-                                                      point, distorted_pixel);
+  bool result = ExtendedUnifiedCameraModel::DistortPoint(
+      intrinsic_parameters, point, distorted_pixel);
 
   // Apply calibration parameters to transform normalized units into pixels.
   const T &focal_length =
-      intrinsic_parameters[DoubleSphereCameraModel::FOCAL_LENGTH];
-  const T &skew = intrinsic_parameters[DoubleSphereCameraModel::SKEW];
+      intrinsic_parameters[ExtendedUnifiedCameraModel::FOCAL_LENGTH];
+  const T &skew = intrinsic_parameters[ExtendedUnifiedCameraModel::SKEW];
   const T &aspect_ratio =
-      intrinsic_parameters[DoubleSphereCameraModel::ASPECT_RATIO];
+      intrinsic_parameters[ExtendedUnifiedCameraModel::ASPECT_RATIO];
   const T &principal_point_x =
-      intrinsic_parameters[DoubleSphereCameraModel::PRINCIPAL_POINT_X];
+      intrinsic_parameters[ExtendedUnifiedCameraModel::PRINCIPAL_POINT_X];
   const T &principal_point_y =
-      intrinsic_parameters[DoubleSphereCameraModel::PRINCIPAL_POINT_Y];
+      intrinsic_parameters[ExtendedUnifiedCameraModel::PRINCIPAL_POINT_Y];
 
   pixel[0] = focal_length * distorted_pixel[0] + skew * distorted_pixel[1] +
              principal_point_x;
@@ -183,18 +183,18 @@ bool DoubleSphereCameraModel::CameraToPixelCoordinates(
 }
 
 template <typename T>
-bool DoubleSphereCameraModel::PixelToCameraCoordinates(
+bool ExtendedUnifiedCameraModel::PixelToCameraCoordinates(
     const T *intrinsic_parameters, const T *pixel, T *point) {
   const T &focal_length =
-      intrinsic_parameters[DoubleSphereCameraModel::FOCAL_LENGTH];
+      intrinsic_parameters[ExtendedUnifiedCameraModel::FOCAL_LENGTH];
   const T &aspect_ratio =
-      intrinsic_parameters[DoubleSphereCameraModel::ASPECT_RATIO];
+      intrinsic_parameters[ExtendedUnifiedCameraModel::ASPECT_RATIO];
   const T &focal_length_y = focal_length * aspect_ratio;
-  const T &skew = intrinsic_parameters[DoubleSphereCameraModel::SKEW];
+  const T &skew = intrinsic_parameters[ExtendedUnifiedCameraModel::SKEW];
   const T &principal_point_x =
-      intrinsic_parameters[DoubleSphereCameraModel::PRINCIPAL_POINT_X];
+      intrinsic_parameters[ExtendedUnifiedCameraModel::PRINCIPAL_POINT_X];
   const T &principal_point_y =
-      intrinsic_parameters[DoubleSphereCameraModel::PRINCIPAL_POINT_Y];
+      intrinsic_parameters[ExtendedUnifiedCameraModel::PRINCIPAL_POINT_Y];
 
   // Normalize the y coordinate first.
   T distorted_point[2];
@@ -203,80 +203,80 @@ bool DoubleSphereCameraModel::PixelToCameraCoordinates(
       (pixel[0] - principal_point_x - distorted_point[1] * skew) / focal_length;
 
   // Undo the distortion.
-  return DoubleSphereCameraModel::UndistortPoint(intrinsic_parameters,
-                                                 distorted_point, point);
+  return ExtendedUnifiedCameraModel::UndistortPoint(intrinsic_parameters,
+                                                    distorted_point, point);
 }
 
 template <typename T>
-bool DoubleSphereCameraModel::DistortPoint(const T *intrinsic_parameters,
-                                           const T *undistorted_point,
-                                           T *distorted_point) {
-  const T &alpha = intrinsic_parameters[DoubleSphereCameraModel::ALPHA];
-  const T &xi = intrinsic_parameters[DoubleSphereCameraModel::XI];
+bool ExtendedUnifiedCameraModel::DistortPoint(const T *intrinsic_parameters,
+                                              const T *undistorted_point,
+                                              T *distorted_point) {
+  const T &alpha = intrinsic_parameters[ExtendedUnifiedCameraModel::ALPHA];
+  const T &beta = intrinsic_parameters[ExtendedUnifiedCameraModel::BETA];
 
   const T xx = undistorted_point[0] * undistorted_point[0];
   const T yy = undistorted_point[1] * undistorted_point[1];
   const T zz = undistorted_point[2] * undistorted_point[2];
 
   const T r2 = xx + yy;
+  const T rho2 = beta * r2 + zz;
+  const T rho = ceres::sqrt(rho2);
 
-  const T d1_2 = r2 + zz;
-  const T d1 = sqrt(d1_2);
+  const T norm = alpha * rho + (T(1) - alpha) * undistorted_point[2];
+  distorted_point[0] = T(0);
+  distorted_point[1] = T(0);
 
-  const T w1 = alpha > T(0.5) ? (T(1) - alpha) / alpha : alpha / (T(1) - alpha);
-  const T w2 = (w1 + xi) / sqrt(T(2) * w1 * xi + xi * xi + T(1));
-
-  if (undistorted_point[2] <= -w2 * d1) {
-    return false;
+  if (norm < T(1e-3)) {
+      return true;
   }
 
-  const T k = xi * d1 + undistorted_point[2];
-  const T kk = k * k;
-
-  const T d2_2 = r2 + kk;
-  const T d2 = sqrt(d2_2);
-
-  const T norm = alpha * d2 + (T(1) - alpha) * k;
+  // Check that the point is in the upper hemisphere in case of ellipsoid
+  if (alpha > T(0.5))
+  {
+      const T zn = undistorted_point[2] / norm;
+      const T C = (alpha - T(1)) / (alpha + alpha - T(1));
+      if (zn < C) {
+          return true;
+      }
+  }
 
   distorted_point[0] = undistorted_point[0] / norm;
   distorted_point[1] = undistorted_point[1] / norm;
-
   return true;
 }
 
 template <typename T>
-bool DoubleSphereCameraModel::UndistortPoint(const T *intrinsic_parameters,
-                                             const T *distorted_point,
-                                             T *undistorted_point) {
-  const T &alpha = intrinsic_parameters[DoubleSphereCameraModel::ALPHA];
-  const T &xi = intrinsic_parameters[DoubleSphereCameraModel::XI];
+bool ExtendedUnifiedCameraModel::UndistortPoint(const T *intrinsic_parameters,
+                                                const T *distorted_point,
+                                                T *undistorted_point) {
+  const T &alpha = intrinsic_parameters[ExtendedUnifiedCameraModel::ALPHA];
+  const T &beta = intrinsic_parameters[ExtendedUnifiedCameraModel::BETA];
 
   const T r2 = distorted_point[0] * distorted_point[0] +
                distorted_point[1] * distorted_point[1];
+  const T gamma = T(1) - alpha;
 
   if (alpha > T(0.5)) {
-    if (r2 >= T(1) / (T(2) * alpha - T(1))) {
+    if (r2 >= T(1) / ((alpha - gamma) * beta)) {
       return false;
     }
   }
 
-  const T xi2_2 = alpha * alpha;
-  const T xi1_2 = xi * xi;
+  const T tmp1 = (T(1) - alpha * alpha * beta * r2);
+  const T tmp_sqrt = ceres::sqrt(T(1) - (alpha - gamma) * beta * r2);
+  const T tmp2 = (alpha * tmp_sqrt + gamma);
 
-  const T sqrt2 = ceres::sqrt(T(1) - (T(2) * alpha - T(1)) * r2);
+  const T k = tmp1 / tmp2;
 
-  const T norm2 = alpha * sqrt2 + T(1) - alpha;
+  T norm = ceres::sqrt(r2 + k * k);
 
-  const T mz = (T(1) - xi2_2 * r2) / norm2;
-  const T mz2 = mz * mz;
+  if (norm < T(1e-12)) {
+      norm = T(1e-12);
+  }
 
-  const T norm1 = mz2 + r2;
-  const T sqrt1 = ceres::sqrt(mz2 + (T(1) - xi1_2) * r2);
-  const T k = (mz * xi + sqrt1) / norm1;
-
-  undistorted_point[0] = k * distorted_point[0];
-  undistorted_point[1] = k * distorted_point[1];
-  undistorted_point[2] = k * mz - xi;
+  undistorted_point[0] = distorted_point[0] / norm;
+  undistorted_point[1] = distorted_point[1] / norm;
+  undistorted_point[2] = k / norm;
 
   return true;
 }
@@ -285,10 +285,10 @@ bool DoubleSphereCameraModel::UndistortPoint(const T *intrinsic_parameters,
 
 #include <cereal/archives/portable_binary.hpp>
 
-CEREAL_CLASS_VERSION(theia::DoubleSphereCameraModel, 1)
+CEREAL_CLASS_VERSION(theia::ExtendedUnifiedCameraModel, 1)
 // Register the polymorphic relationship for serialization.
-CEREAL_REGISTER_TYPE(theia::DoubleSphereCameraModel)
+CEREAL_REGISTER_TYPE(theia::ExtendedUnifiedCameraModel)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(theia::CameraIntrinsicsModel,
-                                     theia::DoubleSphereCameraModel)
+                                     theia::ExtendedUnifiedCameraModel)
 
-#endif // THEIA_SFM_CAMERA_DOUBLE_SPHERE_MODEL_H_
+#endif // THEIA_SFM_CAMERA_EXTENDED_UNIFIED_CAMERA_MODEL_H_

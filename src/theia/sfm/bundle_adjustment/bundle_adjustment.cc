@@ -98,6 +98,7 @@ BundleAdjustmentSummary BundleAdjustViews(const BundleAdjustmentOptions& options
                                          Reconstruction* reconstruction) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
+  ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   for (const auto & view_id : view_ids_to_optimize) {

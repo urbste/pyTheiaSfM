@@ -136,7 +136,7 @@ class CameraIntrinsicsModel {
   // (e.g., focal length, principal point, distortion) to transform the point
   // into pixel coordinates.
   template <typename T>
-  static void CameraToPixelCoordinates(const T* intrinsic_parameters,
+  static bool CameraToPixelCoordinates(const T* intrinsic_parameters,
                                        const T* point,
                                        T* pixel);
 
@@ -145,7 +145,7 @@ class CameraIntrinsicsModel {
   // coordinate system. The point output by this method is effectively a ray in
   // the direction of the pixel in the camera coordinate system.
   template <typename T>
-  static void PixelToCameraCoordinates(const T* intrinsic_parameters,
+  static bool PixelToCameraCoordinates(const T* intrinsic_parameters,
                                        const T* pixel,
                                        T* point);
 
@@ -153,7 +153,7 @@ class CameraIntrinsicsModel {
   // distorted point. The type of distortion (i.e. radial, tangential, fisheye,
   // etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static void DistortPoint(const T* intrinsic_parameters,
+  static bool DistortPoint(const T* intrinsic_parameters,
                            const T* undistorted_point,
                            T* distorted_point);
 
@@ -161,7 +161,7 @@ class CameraIntrinsicsModel {
   // undistorted point. The type of distortion (i.e. radial, tangential,
   // fisheye, etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static void UndistortPoint(const T* intrinsic_parameters,
+  static bool UndistortPoint(const T* intrinsic_parameters,
                              const T* distorted_point,
                              T* undistorted_point);
 

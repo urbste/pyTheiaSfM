@@ -132,6 +132,9 @@ class RadialDistUncalibratedAbsolutePoseEstimator
     Matrix3d K =
         Vector3d(absolute_pose.focal_length, absolute_pose.focal_length, 1.0)
             .asDiagonal();
+    if (absolute_pose.translation[2] < 0.0) {
+        return 1.0e10;
+    }
     Vector3d reproj_pt = (absolute_pose.rotation * correspondence.world_point +
                           absolute_pose.translation);
     const Eigen::Vector2d reproj_pt_2d = (K * reproj_pt).hnormalized();

@@ -279,6 +279,14 @@ void BundleAdjuster::SetCameraIntrinsicsParameterization() {
                                        6, 0.0);
       problem_->SetParameterUpperBound(camera_intrinsics->mutable_parameters(),
                                        6, 1.0);
+    } else if (camera_intrinsics->Type() ==
+               theia::CameraIntrinsicsModelType::EXTENDED_UNIFIED) {
+      problem_->SetParameterLowerBound(camera_intrinsics->mutable_parameters(),
+                                       5, 0.0);
+      problem_->SetParameterUpperBound(camera_intrinsics->mutable_parameters(),
+                                       5, 1.0);
+      problem_->SetParameterLowerBound(camera_intrinsics->mutable_parameters(),
+                                       6, 0.1);
     }
 
     // Set the constant parameters if any are requested.

@@ -104,7 +104,7 @@ class FisheyeCameraModel : public CameraIntrinsicsModel {
   // (e.g., focal length, principal point, distortion) to transform the point
   // into pixel coordinates.
   template <typename T>
-  static void CameraToPixelCoordinates(const T* intrinsic_parameters,
+  static bool CameraToPixelCoordinates(const T* intrinsic_parameters,
                                        const T* point,
                                        T* pixel);
 
@@ -113,7 +113,7 @@ class FisheyeCameraModel : public CameraIntrinsicsModel {
   // coordinate system. The point output by this method is effectively a ray in
   // the direction of the pixel in the camera coordinate system.
   template <typename T>
-  static void PixelToCameraCoordinates(const T* intrinsic_parameters,
+  static bool PixelToCameraCoordinates(const T* intrinsic_parameters,
                                        const T* pixel,
                                        T* point);
 
@@ -121,7 +121,7 @@ class FisheyeCameraModel : public CameraIntrinsicsModel {
   // distorted point. The type of distortion (i.e. radial, tangential, fisheye,
   // etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static void DistortPoint(const T* intrinsic_parameters,
+  static bool DistortPoint(const T* intrinsic_parameters,
                            const T* undistorted_point,
                            T* distorted_point);
 
@@ -129,7 +129,7 @@ class FisheyeCameraModel : public CameraIntrinsicsModel {
   // undistorted point. The type of distortion (i.e. radial, tangential,
   // fisheye, etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static void UndistortPoint(const T* intrinsic_parameters,
+  static bool UndistortPoint(const T* intrinsic_parameters,
                              const T* distorted_point,
                              T* undistorted_point);
 
@@ -160,7 +160,7 @@ class FisheyeCameraModel : public CameraIntrinsicsModel {
 };
 
 template <typename T>
-void FisheyeCameraModel::CameraToPixelCoordinates(
+bool FisheyeCameraModel::CameraToPixelCoordinates(
     const T* intrinsic_parameters, const T* point, T* pixel) {
   // Apply radial distortion. Note that we pass in the entire 3D point instead
   // of the projection onto a plane or sphere.
@@ -184,10 +184,12 @@ void FisheyeCameraModel::CameraToPixelCoordinates(
              principal_point_x;
   pixel[1] = focal_length * aspect_ratio * distorted_pixel[1] +
              principal_point_y;
+
+  return true;
 }
 
 template <typename T>
-void FisheyeCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
+bool FisheyeCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
                                                   const T* pixel,
                                                   T* point) {
   const T& focal_length =
@@ -213,6 +215,8 @@ void FisheyeCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
                                      distorted_point,
                                      point);
   point[2] = T(1.0);
+
+  return true;
 }
 
 // For fisheye distortion, we use the angle of the undistorted point with
@@ -221,7 +225,7 @@ void FisheyeCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
 // point and compute angle theta using the more stable atan2 so that we do not
 // have to perform the (potentially unstable) perspective divide by z.
 template <typename T>
-void FisheyeCameraModel::DistortPoint(const T* intrinsic_parameters,
+bool FisheyeCameraModel::DistortPoint(const T* intrinsic_parameters,
                                       const T* undistorted_point,
                                       T* distorted_point) {
   static const T kVerySmallNumber = T(1e-8);
@@ -243,7 +247,7 @@ void FisheyeCameraModel::DistortPoint(const T* intrinsic_parameters,
   if (r_sq < kVerySmallNumber) {
     distorted_point[0] = undistorted_point[0];
     distorted_point[1] = undistorted_point[1];
-    return;
+    return true;
   }
 
   const T r_numerator = ceres::sqrt(r_sq);
@@ -264,10 +268,12 @@ void FisheyeCameraModel::DistortPoint(const T* intrinsic_parameters,
     distorted_point[0] = -distorted_point[0];
     distorted_point[1] = -distorted_point[1];
   }
+
+  return true;
 }
 
 template <typename T>
-void FisheyeCameraModel::UndistortPoint(const T* intrinsic_parameters,
+bool FisheyeCameraModel::UndistortPoint(const T* intrinsic_parameters,
                                         const T* distorted_point,
                                         T* undistorted_point) {
   static const T kVerySmallNumber = T(1e-8);
@@ -303,7 +309,7 @@ void FisheyeCameraModel::UndistortPoint(const T* intrinsic_parameters,
     if (r < kVerySmallNumber) {
       undistorted_point[0] = distorted_point[0];
       undistorted_point[1] = distorted_point[1];
-      return;
+      return true;
     }
 
     const T theta = ceres::atan2(r, T(1.0));
@@ -332,6 +338,7 @@ void FisheyeCameraModel::UndistortPoint(const T* intrinsic_parameters,
       break;
     }
   }
+  return true;
 }
 
 }  // namespace theia

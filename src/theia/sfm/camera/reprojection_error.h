@@ -84,14 +84,19 @@ struct ReprojectionError {
 
     // Apply the camera intrinsics to get the reprojected pixel.
     T reprojection[2];
-    CameraModel::CameraToPixelCoordinates(intrinsic_parameters,
-                                          rotated_point,
-                                          reprojection);
-
+    const bool res = CameraModel::CameraToPixelCoordinates(intrinsic_parameters,
+                                                     rotated_point,
+                                                     reprojection);
     // Compute the reprojection error.
-    reprojection_error[0] = reprojection[0] - feature_.x();
-    reprojection_error[1] = reprojection[1] - feature_.y();
-    return true;
+    //if (res) {
+        reprojection_error[0] = reprojection[0] - feature_.x();
+        reprojection_error[1] = reprojection[1] - feature_.y();
+//    }
+//    else {
+//       reprojection_error[0] = T(1e4);
+//       reprojection_error[1] = T(1e4);
+//    }
+    return res;
   }
 
  private:
