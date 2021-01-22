@@ -34,6 +34,7 @@
 
 #ifndef THEIA_SFM_UNDISTORT_IMAGE_H_
 #define THEIA_SFM_UNDISTORT_IMAGE_H_
+#include <memory>
 
 namespace theia {
 class Camera;
@@ -56,7 +57,7 @@ bool UndistortImage(const Camera& distorted_camera,
 
 // Create the undistorted camera by removing radial distortion parameters.
 bool UndistortCamera(const Camera& distorted_camera,
-                     Camera* undistorted_camera);
+                     std::shared_ptr<Camera> undistorted_camera);
 
 // Undistorts the entire reconstruction. All features in all views are
 // undistorted, but only the features which would survive the crop of the

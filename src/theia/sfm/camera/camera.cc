@@ -34,17 +34,23 @@
 
 #include "theia/sfm/camera/camera.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <algorithm>
+#include <ceres/rotation.h>
+#include <glog/logging.h>
 
-#include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/camera/camera_intrinsics_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/projection_matrix_utils.h"
 #include "theia/sfm/camera_intrinsics_prior.h"
+
+#include "theia/sfm/camera/division_undistortion_camera_model.h"
+#include "theia/sfm/camera/double_sphere_camera_model.h"
+#include "theia/sfm/camera/extended_unified_camera_model.h"
+#include "theia/sfm/camera/fisheye_camera_model.h"
+#include "theia/sfm/camera/fov_camera_model.h"
+#include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
 
 namespace theia {
 
@@ -58,7 +64,7 @@ using Eigen::Vector4d;
 
 Camera::Camera() {
   // Set rotation and position to zero (i.e. identity).
-  Map<Matrix<double, 1, 6> >(mutable_extrinsics()).setZero();
+  Map<Matrix<double, 1, 6>>(mutable_extrinsics()).setZero();
   camera_intrinsics_ =
       std::make_shared<PinholeCameraModel>(PinholeCameraModel());
 
@@ -66,19 +72,18 @@ Camera::Camera() {
   image_size_[1] = 0;
 }
 
-Camera::Camera(const CameraIntrinsicsModelType& camera_type) {
+Camera::Camera(const CameraIntrinsicsModelType &camera_type) {
   // Set rotation and position to zero (i.e. identity).
-  Map<Matrix<double, 1, 6> >(mutable_extrinsics()).setZero();
+  Map<Matrix<double, 1, 6>>(mutable_extrinsics()).setZero();
   camera_intrinsics_ = CameraIntrinsicsModel::Create(camera_type);
 
   image_size_[0] = 0;
   image_size_[1] = 0;
 }
 
-Camera::Camera(const Camera& camera) {
+Camera::Camera(const Camera &camera) {
   // Copy the extrinsics.
-  std::copy(camera.parameters(),
-            camera.parameters() + kExtrinsicsSize,
+  std::copy(camera.parameters(), camera.parameters() + kExtrinsicsSize,
             camera_parameters_);
   // Perform a shallow copy of the camera intrinsics.
   camera_intrinsics_ = camera.camera_intrinsics_;
@@ -86,10 +91,9 @@ Camera::Camera(const Camera& camera) {
   image_size_[1] = camera.image_size_[1];
 }
 
-Camera& Camera::operator=(const Camera& camera) {
+Camera &Camera::operator=(const Camera &camera) {
   // Copy the extrinsics.
-  std::copy(camera.parameters(),
-            camera.parameters() + kExtrinsicsSize,
+  std::copy(camera.parameters(), camera.parameters() + kExtrinsicsSize,
             camera_parameters_);
   // Perform a shallow copy of the camera intrinsics.
   camera_intrinsics_ = camera.camera_intrinsics_;
@@ -98,26 +102,25 @@ Camera& Camera::operator=(const Camera& camera) {
   return *this;
 }
 
-void Camera::DeepCopy(const Camera& camera) {
+void Camera::DeepCopy(const Camera &camera) {
   // Copy the extrinsics.
-  std::copy(camera.parameters(),
-            camera.parameters() + kExtrinsicsSize,
+  std::copy(camera.parameters(), camera.parameters() + kExtrinsicsSize,
             camera_parameters_);
 
   camera_intrinsics_ =
       CameraIntrinsicsModel::Create(camera.GetCameraIntrinsicsModelType());
-  const CameraIntrinsicsModel& other_camera_intrinsics =
-      *camera.CameraIntrinsics();
-  std::copy(other_camera_intrinsics.parameters(),
-            other_camera_intrinsics.parameters() +
-                other_camera_intrinsics.NumParameters(),
+  const std::shared_ptr<CameraIntrinsicsModel> other_camera_intrinsics =
+      camera.CameraIntrinsics();
+  std::copy(other_camera_intrinsics->parameters(),
+            other_camera_intrinsics->parameters() +
+                other_camera_intrinsics->NumParameters(),
             camera_intrinsics_->mutable_parameters());
 
   image_size_[0] = camera.image_size_[0];
   image_size_[1] = camera.image_size_[1];
 }
 
-void Camera::SetFromCameraIntrinsicsPriors(const CameraIntrinsicsPrior& prior) {
+void Camera::SetFromCameraIntrinsicsPriors(const CameraIntrinsicsPrior &prior) {
   const CameraIntrinsicsModelType camera_intrinsics_model_type =
       StringToCameraIntrinsicsModelType(prior.camera_intrinsics_model_type);
   if (camera_intrinsics_->Type() != camera_intrinsics_model_type) {
@@ -142,7 +145,7 @@ CameraIntrinsicsModelType Camera::GetCameraIntrinsicsModelType() const {
 }
 
 void Camera::SetCameraIntrinsicsModelType(
-    const CameraIntrinsicsModelType& camera_model_type) {
+    const CameraIntrinsicsModelType &camera_model_type) {
   // Only change the camera model if the camera intrinsics model type has
   // changed.
   if (GetCameraIntrinsicsModelType() != camera_model_type) {
@@ -151,9 +154,8 @@ void Camera::SetCameraIntrinsicsModelType(
 }
 
 bool Camera::InitializeFromProjectionMatrix(
-      const int image_width,
-      const int image_height,
-      const Matrix3x4d projection_matrix) {
+    const int image_width, const int image_height,
+    const Matrix3x4d projection_matrix) {
   DCHECK_GT(image_width, 0);
   DCHECK_GT(image_height, 0);
   image_size_[0] = image_width;
@@ -164,10 +166,8 @@ bool Camera::InitializeFromProjectionMatrix(
 
   Vector3d orientation, position;
   Matrix3d calibration_matrix;
-  DecomposeProjectionMatrix(projection_matrix,
-                            &calibration_matrix,
-                            &orientation,
-                            &position);
+  DecomposeProjectionMatrix(projection_matrix, &calibration_matrix,
+                            &orientation, &position);
 
   Map<Vector3d>(mutable_extrinsics() + ORIENTATION) = orientation;
   Map<Vector3d>(mutable_extrinsics() + POSITION) = position;
@@ -177,10 +177,9 @@ bool Camera::InitializeFromProjectionMatrix(
     return false;
   }
 
-  double* mutable_intrinsics = camera_intrinsics_->mutable_parameters();
+  double *mutable_intrinsics = camera_intrinsics_->mutable_parameters();
   CalibrationMatrixToIntrinsics(
-      calibration_matrix,
-      mutable_intrinsics + PinholeCameraModel::FOCAL_LENGTH,
+      calibration_matrix, mutable_intrinsics + PinholeCameraModel::FOCAL_LENGTH,
       mutable_intrinsics + PinholeCameraModel::SKEW,
       mutable_intrinsics + PinholeCameraModel::ASPECT_RATIO,
       mutable_intrinsics + PinholeCameraModel::PRINCIPAL_POINT_X,
@@ -188,41 +187,38 @@ bool Camera::InitializeFromProjectionMatrix(
   return true;
 }
 
-void Camera::GetProjectionMatrix(Matrix3x4d* pmatrix) const {
+void Camera::GetProjectionMatrix(Matrix3x4d *pmatrix) const {
   Matrix3d calibration_matrix;
   camera_intrinsics_->GetCalibrationMatrix(&calibration_matrix);
-  ComposeProjectionMatrix(calibration_matrix,
-                          GetOrientationAsAngleAxis(),
-                          GetPosition(),
-                          pmatrix);
+  ComposeProjectionMatrix(calibration_matrix, GetOrientationAsAngleAxis(),
+                          GetPosition(), pmatrix);
 }
 
-void Camera::GetCalibrationMatrix(Matrix3d* kmatrix) const {
+void Camera::GetCalibrationMatrix(Matrix3d *kmatrix) const {
   camera_intrinsics_->GetCalibrationMatrix(kmatrix);
 }
 
-double Camera::ProjectPoint(const Vector4d& point, Vector2d* pixel) const {
+double Camera::ProjectPoint(const Vector4d &point, Vector2d *pixel) const {
   Eigen::Vector3d adjusted_point = point.head<3>() - point[3] * GetPosition();
   Eigen::Vector3d rotated_point;
-  ceres::AngleAxisRotatePoint(extrinsics() + ORIENTATION,
-                              adjusted_point.data(),
+  ceres::AngleAxisRotatePoint(extrinsics() + ORIENTATION, adjusted_point.data(),
                               rotated_point.data());
   *pixel = camera_intrinsics_->CameraToImageCoordinates(rotated_point);
 
   return rotated_point[2] / point[3];
 }
 
-Vector3d Camera::PixelToUnitDepthRay(const Vector2d& pixel) const {
+Vector3d Camera::PixelToUnitDepthRay(const Vector2d &pixel) const {
   // Remove the effect of calibration.
   const Vector3d undistorted_point = PixelToNormalizedCoordinates(pixel);
 
   // Apply rotation.
-  const Matrix3d& rotation = GetOrientationAsRotationMatrix();
+  const Matrix3d &rotation = GetOrientationAsRotationMatrix();
   const Vector3d direction = rotation.transpose() * undistorted_point;
   return direction;
 }
 
-Vector3d Camera::PixelToNormalizedCoordinates(const Vector2d& pixel) const {
+Vector3d Camera::PixelToNormalizedCoordinates(const Vector2d &pixel) const {
   return camera_intrinsics_->ImageToCameraCoordinates(pixel);
 }
 
@@ -231,7 +227,7 @@ void Camera::PrintCameraIntrinsics() const {
 }
 
 // ----------------------- Getter and Setter methods ---------------------- //
-void Camera::SetPosition(const Vector3d& position) {
+void Camera::SetPosition(const Vector3d &position) {
   Map<Vector3d>(mutable_extrinsics() + POSITION) = position;
 }
 
@@ -239,13 +235,13 @@ Vector3d Camera::GetPosition() const {
   return Map<const Vector3d>(extrinsics() + POSITION);
 }
 
-void Camera::SetOrientationFromRotationMatrix(const Matrix3d& rotation) {
+void Camera::SetOrientationFromRotationMatrix(const Matrix3d &rotation) {
   ceres::RotationMatrixToAngleAxis(
       ceres::ColumnMajorAdapter3x3(rotation.data()),
       mutable_extrinsics() + ORIENTATION);
 }
 
-void Camera::SetOrientationFromAngleAxis(const Vector3d& angle_axis) {
+void Camera::SetOrientationFromAngleAxis(const Vector3d &angle_axis) {
   Map<Vector3d>(mutable_extrinsics() + ORIENTATION) = angle_axis;
 }
 
@@ -265,14 +261,11 @@ void Camera::SetFocalLength(const double focal_length) {
   camera_intrinsics_->SetFocalLength(focal_length);
 }
 
-double Camera::FocalLength() const {
-  return camera_intrinsics_->FocalLength();
-}
+double Camera::FocalLength() const { return camera_intrinsics_->FocalLength(); }
 
 void Camera::SetPrincipalPoint(const double principal_point_x,
                                const double principal_point_y) {
-  camera_intrinsics_->SetPrincipalPoint(principal_point_x,
-                                        principal_point_y);
+  camera_intrinsics_->SetPrincipalPoint(principal_point_x, principal_point_y);
 }
 
 double Camera::PrincipalPointX() const {
@@ -288,4 +281,4 @@ void Camera::SetImageSize(const int image_width, const int image_height) {
   image_size_[1] = image_height;
 }
 
-}  // namespace theia
+} // namespace theia
