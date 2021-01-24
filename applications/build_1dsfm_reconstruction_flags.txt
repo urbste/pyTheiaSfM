@@ -2,12 +2,12 @@
 # Input/output files.
 # Set these if a matches file is not present. Images should be a filepath with a
 # wildcard e.g., /home/my_username/my_images/*.jpg
---1dsfm_dataset_directory=
---output_reconstruction=
+--1dsfm_dataset_directory=/home/steffen/Downloads/datasets/home/wilsonkl/projects/SfM_Init/datasets/Madrid_Metropolis
+--output_reconstruction=/home/steffen/Downloads/datasets/home/wilsonkl/projects/SfM_Init/datasets/Madrid_Metropolis/test_recon_theia
 
 ############### Multithreading ###############
 # Set to the number of threads you want to use.
---num_threads=1
+--num_threads=2
 
 ############### General SfM Options ###############
 --reconstruction_estimator=GLOBAL

@@ -55,13 +55,13 @@ file(GLOB_RECURSE THEIA_HDRS *.h)
 
 # Add sources
 set(THEIA_SRC
-  image/descriptor/akaze_descriptor.cc
-  image/descriptor/create_descriptor_extractor.cc
-  image/descriptor/descriptor_extractor.cc
-  image/descriptor/sift_descriptor.cc
-  image/image_cache.cc
-  image/image.cc
-  image/keypoint_detector/sift_detector.cc
+  #image/descriptor/akaze_descriptor.cc
+  #image/descriptor/create_descriptor_extractor.cc
+  #image/descriptor/descriptor_extractor.cc
+  #image/descriptor/sift_descriptor.cc
+  #image/image_cache.cc
+  #image/image.cc
+  #image/keypoint_detector/sift_detector.cc
   io/bundler_file_reader.cc
   io/import_nvm_file.cc
   io/populate_image_sizes.cc
@@ -133,7 +133,7 @@ set(THEIA_SRC
   sfm/estimators/estimate_triangulation.cc
   sfm/estimators/estimate_uncalibrated_absolute_pose.cc
   sfm/estimators/estimate_uncalibrated_relative_pose.cc
-  sfm/exif_reader.cc
+  #sfm/exif_reader.cc
   sfm/extract_maximally_parallel_rigid_subgraph.cc
   sfm/feature_extractor_and_matcher.cc
   sfm/feature_extractor.cc
@@ -220,7 +220,7 @@ set(THEIA_LIBRARY_DEPENDENCIES
   ${CERES_LIBRARIES}
   ${GFLAGS_LIBRARIES}
   ${GLOG_LIBRARIES}
-  ${OPENIMAGEIO_LIBRARIES}
+  #${OPENIMAGEIO_LIBRARIES}
   ${ROCKSDB_LIBRARIES}
   ${SUITESPARSE_LIBRARIES}
   akaze

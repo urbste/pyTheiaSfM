@@ -172,15 +172,17 @@ else (CERES_FOUND)
     "CERES_LIBRARY")
 endif (CERES_FOUND)
 
+# OpenCV
+
 # OpenImageIO
-message("-- Check for OpenImageIO")
-find_package(OpenImageIO REQUIRED)
-if (OPENIMAGEIO_FOUND)
-  message("-- Found OpenImageIO: ${OPENIMAGEIO_INCLUDE_DIRS}")
-else (OPENIMAGEIO_FOUND)
-  message(FATAL_ERROR "Can't find OpenImageIO. Please set OPENIMAGEIO_INCLUDE_DIR & "
-    "OPENIMAGEIO_LIBRARY")
-endif (OPENIMAGEIO_FOUND)
+#message("-- Check for OpenImageIO")
+#find_package(OpenImageIO REQUIRED)
+#if (OPENIMAGEIO_FOUND)
+#  message("-- Found OpenImageIO: ${OPENIMAGEIO_INCLUDE_DIRS}")
+#else (OPENIMAGEIO_FOUND)
+#  message(FATAL_ERROR "Can't find OpenImageIO. Please set OPENIMAGEIO_INCLUDE_DIR & "
+#    "OPENIMAGEIO_LIBRARY")
+#endif (OPENIMAGEIO_FOUND)
 
 # Suitesparse
 find_package(SuiteSparse REQUIRED)
