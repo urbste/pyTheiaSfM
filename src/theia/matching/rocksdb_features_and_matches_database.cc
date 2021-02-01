@@ -119,13 +119,13 @@ void RocksDbFeaturesAndMatchesDatabase::InitializeRocksDB() {
 
   rocksdb::BlockBasedTableOptions table_options;
   // 512 MB.
-  table_options.block_cache = rocksdb::NewLRUCache(512 << 20);
-  table_options.block_size = 16 * 1024;
-  table_options.cache_index_and_filter_blocks = true;
-  table_options.pin_l0_filter_and_index_blocks_in_cache = true;
-  table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
-  options_->table_factory.reset(
-      rocksdb::NewBlockBasedTableFactory(table_options));
+//  table_options.block_cache = rocksdb::NewLRUCache(512 << 20);
+//  table_options.block_size = 16 * 1024;
+//  table_options.cache_index_and_filter_blocks = true;
+//  table_options.pin_l0_filter_and_index_blocks_in_cache = true;
+//  table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+//  options_->table_factory.reset(
+//      rocksdb::NewBlockBasedTableFactory(table_options));
 
   // Get column family descriptors to open the database.
   std::vector<rocksdb::ColumnFamilyDescriptor> column_descriptors;

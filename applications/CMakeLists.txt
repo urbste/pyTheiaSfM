@@ -6,8 +6,8 @@
 #target_link_libraries(compute_two_view_geometry theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ## Tools for building SfM models
-#add_executable(build_reconstruction build_reconstruction.cc)
-#target_link_libraries(build_reconstruction theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+add_executable(build_reconstruction build_reconstruction.cc)
+target_link_libraries(build_reconstruction theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(build_1dsfm_reconstruction build_1dsfm_reconstruction.cc)
 target_link_libraries(build_1dsfm_reconstruction theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
