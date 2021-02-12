@@ -61,6 +61,8 @@ void GetObservationsFromTrackViews(
     std::vector<ViewId>* view_ids,
     std::vector<Eigen::Vector2d>* features,
     std::vector<Eigen::Vector3d>* origins,
+    std::vector<Matrix3x4d>* proj_matrices,
+    std::vector<Eigen::Vector2d>* normalized_features,
     std::vector<Eigen::Vector3d>* ray_directions) {
   const Track* track = reconstruction.Track(track_id);
   for (const ViewId view_id : track->ViewIds()) {
@@ -80,6 +82,10 @@ void GetObservationsFromTrackViews(
     features->emplace_back(*feature);
     view_ids->emplace_back(view_id);
     origins->emplace_back(view->Camera().GetPosition());
+    Matrix3x4d proj_mat;
+    view->Camera().GetProjectionMatrix(&proj_mat);
+    normalized_features->emplace_back(image_ray.hnormalized());
+    proj_matrices->emplace_back(proj_mat);
     ray_directions->emplace_back(image_ray);
   }
 }
@@ -211,13 +217,16 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
 
   // Gather projection matrices and features.
   std::vector<ViewId> view_ids;
-  std::vector<Eigen::Vector2d> features;
+  std::vector<Eigen::Vector2d> features, normalized_features;
   std::vector<Eigen::Vector3d> origins, ray_directions;
+  std::vector<Matrix3x4d> proj_matrices;
   GetObservationsFromTrackViews(track_id,
                                 *reconstruction_,
                                 &view_ids,
                                 &features,
                                 &origins,
+                                &proj_matrices,
+                                &normalized_features,
                                 &ray_directions);
 
   // Check the angle between views.
@@ -229,11 +238,14 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
   }
 
   // Triangulate the track.
-  if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
+  if (!TriangulateNViewSVD(proj_matrices, normalized_features, track->MutablePoint())) {
     ++num_failed_triangulations_;
     return false;
   }
-
+//  if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
+//    ++num_failed_triangulations_;
+//    return false;
+//  }
   // Bundle adjust the track.
   if (options_.bundle_adjustment) {
     track->SetEstimated(true);

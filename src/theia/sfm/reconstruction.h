@@ -180,7 +180,7 @@ class Reconstruction {
   CameraIntrinsicsGroupId next_camera_intrinsics_group_id_;
 
   std::unordered_map<std::string, ViewId> view_name_to_id_;
-  std::unordered_map<int64_t, ViewId> view_timestamp_to_id_;
+  std::unordered_map<double, ViewId> view_timestamp_to_id_;
   std::unordered_map<ViewId, class View> views_;
   std::unordered_map<TrackId, class Track> tracks_;
 
