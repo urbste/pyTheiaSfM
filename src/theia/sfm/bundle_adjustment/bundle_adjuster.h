@@ -70,7 +70,7 @@ class BundleAdjuster {
 
   // Add a track to be optimized with bundle adjustment. A residual is created
   // for each estimated view that observes the track.
-  void AddTrack(const TrackId track_id, const bool use_homogeneous = false);
+  void AddTrack(const TrackId track_id, const bool use_homogeneous = true);
 
   // After AddView and AddTrack have been called, optimize the provided views
   // and tracks with bundle adjustment.

@@ -238,14 +238,14 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
   }
 
   // Triangulate the track.
-  if (!TriangulateNViewSVD(proj_matrices, normalized_features, track->MutablePoint())) {
-    ++num_failed_triangulations_;
-    return false;
-  }
-//  if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
+//  if (!TriangulateNViewSVD(proj_matrices, normalized_features, track->MutablePoint())) {
 //    ++num_failed_triangulations_;
 //    return false;
 //  }
+  if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
+    ++num_failed_triangulations_;
+    return false;
+  }
   // Bundle adjust the track.
   if (options_.bundle_adjustment) {
     track->SetEstimated(true);
