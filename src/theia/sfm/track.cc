@@ -42,12 +42,14 @@
 namespace theia {
 
 using Eigen::Vector4d;
+using Eigen::Vector3d;
 
 Track::Track()
     : is_estimated_(false), inverse_depth_(0.0),
       reference_view_id_(theia::kInvalidViewId) {
   point_.setZero();
   color_.setZero();
+  ref_bearing_.setZero();
 }
 
 int Track::NumViews() const { return view_ids_.size(); }
@@ -90,5 +92,12 @@ ViewId Track::ReferenceViewId() const { return reference_view_id_; }
 const double &Track::InverseDepth() const { return inverse_depth_; }
 
 double *Track::MutableInverseDepth() { return &inverse_depth_; }
+
+void Track::SetRefBearingVector(const Vector3d &ref_bearing) {
+    ref_bearing_ = ref_bearing;
+}
+
+const Vector3d &Track::RefBearing() const { return ref_bearing_; }
+
 
 } // namespace theia
