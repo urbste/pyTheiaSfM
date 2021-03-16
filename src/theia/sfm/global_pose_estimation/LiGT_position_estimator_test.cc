@@ -257,9 +257,9 @@ class EstimatePositionsLinearTest : public ::testing::Test {
 
 TEST_F(EstimatePositionsLinearTest, SmallTestNoNoise) {
   static const double kTolerance = 1e-4;
-  static const int kNumViews = 4;
-  static const int kNumTracksPerView = 50;
-  static const int kNumViewPairs = 6;
+  static const int kNumViews = 3;
+  static const int kNumTracksPerView = 10;
+  static const int kNumViewPairs = 3;
   TestLinearPositionEstimator(kNumViews,
                               kNumTracksPerView,
                               kNumViewPairs,

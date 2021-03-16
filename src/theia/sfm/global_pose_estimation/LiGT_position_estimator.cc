@@ -67,11 +67,11 @@ using Eigen::Vector3d;
 namespace {
 
 
-Eigen::Matrix3d GetSkewFeature(const Eigen::Vector3d& normalized_feature) {
+Eigen::Matrix3d GetSkew(const Eigen::Vector3d& f) {
     Eigen::Matrix3d skew_mat;
-    skew_mat<<0.0, -normalized_feature(2), normalized_feature(1),
-              normalized_feature(2), 0.0, -normalized_feature(0),
-              -normalized_feature(1), normalized_feature(0), 0.0;
+    skew_mat<<0.0, -f(2), f(1),
+              f(2), 0.0, -f(0),
+              -f(1), f(0), 0.0;
     return skew_mat;
 }
 
@@ -259,6 +259,18 @@ void LiGTPositionEstimator::AddTripletConstraint(
                      linear_system_index_.size() - 1);
 }
 
+Eigen::Matrix3d RelOri(const Eigen::Matrix3d& i,const  Eigen::Matrix3d& j) {
+    return j*i.transpose();
+}
+
+double GetThetaSq(const Eigen::Vector3d& feat_i, const Eigen::Vector3d& feat_j, const Eigen::Matrix3d& Rij) {
+    return (GetSkew(feat_j) * Rij * feat_i).squaredNorm();
+}
+
+Eigen::Vector3d Get_aij(const Eigen::Matrix3d& Rij, const Eigen::Vector3d Xi, const Eigen::Vector3d Xj) {
+    return (GetSkew(Rij * Xi) * Xj).transpose() * GetSkew(Xj);
+}
+
 void LiGTPositionEstimator::ComputeBaselineRatioForTriplet(
     const ViewIdTriplet& triplet, Vector3d* baseline) {
   baseline->setZero();
@@ -274,33 +286,56 @@ void LiGTPositionEstimator::ComputeBaselineRatioForTriplet(
       FindCommonTracksInViews(reconstruction_, triplet_view_ids);
 
   // Normalize all features.
-  std::vector<Feature> feature1, feature2, feature3;
+  std::vector<Vector3d> feature1, feature2, feature3;
   feature1.reserve(common_tracks.size());
   feature2.reserve(common_tracks.size());
   feature3.reserve(common_tracks.size());
   for (const TrackId track_id : common_tracks) {
-    feature1.emplace_back(GetNormalizedFeature(view1, track_id));
-    feature2.emplace_back(GetNormalizedFeature(view2, track_id));
-    feature3.emplace_back(GetNormalizedFeature(view3, track_id));
+    feature1.emplace_back(GetNormalizedFeature(view1, track_id).homogeneous());
+    feature2.emplace_back(GetNormalizedFeature(view2, track_id).homogeneous());
+    feature3.emplace_back(GetNormalizedFeature(view3, track_id).homogeneous());
   }
 
-  // Get the baseline ratios.
-  ViewTriplet view_triplet;
-  view_triplet.view_ids[0] = std::get<0>(triplet);
-  view_triplet.view_ids[1] = std::get<1>(triplet);
-  view_triplet.view_ids[2] = std::get<2>(triplet);
-  view_triplet.info_one_two = FindOrDieNoPrint(
-      *view_pairs_,
-      ViewIdPair(view_triplet.view_ids[0], view_triplet.view_ids[1]));
-  view_triplet.info_one_three = FindOrDieNoPrint(
-      *view_pairs_,
-      ViewIdPair(view_triplet.view_ids[0], view_triplet.view_ids[2]));
-  view_triplet.info_two_three = FindOrDieNoPrint(
-      *view_pairs_,
-      ViewIdPair(view_triplet.view_ids[1], view_triplet.view_ids[2]));
+  Eigen::Matrix3d R1 = view1.Camera().GetOrientationAsRotationMatrix();
+  Eigen::Matrix3d R2 = view2.Camera().GetOrientationAsRotationMatrix();
+  Eigen::Matrix3d R3 = view3.Camera().GetOrientationAsRotationMatrix();
 
-  ComputeTripletBaselineRatios(
-      view_triplet, feature1, feature2, feature3, baseline);
+  for (int i=0; i < feature3.size(); ++i) {
+      Matrix3d R31 = RelOri(R3, R1);
+      Matrix3d R32 = RelOri(R3, R2);
+
+      Vector3d a32 = Get_aij(R32, feature3[i], feature2[i]);
+
+      Matrix3d B = GetSkew(feature1[i]) * R31 * feature3[i] * a32.transpose() * R2;
+
+      double theta = GetThetaSq(feature3[i], feature2[i], R32);
+      Matrix3d C = theta * GetSkew(feature1[i]) * view1.Camera().GetOrientationAsRotationMatrix();
+
+      Matrix3d D = -(B+C);
+
+      Eigen::Vector3d shouldbenull = B* view2.Camera().GetPosition() + C * view1.Camera().GetPosition() + D * view3.Camera().GetPosition();
+
+      std::cout<<shouldbenull<<"\n";
+  }
+
+
+//  // Get the baseline ratios.
+//  ViewTriplet view_triplet;
+//  view_triplet.view_ids[0] = std::get<0>(triplet);
+//  view_triplet.view_ids[1] = std::get<1>(triplet);
+//  view_triplet.view_ids[2] = std::get<2>(triplet);
+//  view_triplet.info_one_two = FindOrDieNoPrint(
+//      *view_pairs_,
+//      ViewIdPair(view_triplet.view_ids[0], view_triplet.view_ids[1]));
+//  view_triplet.info_one_three = FindOrDieNoPrint(
+//      *view_pairs_,
+//      ViewIdPair(view_triplet.view_ids[0], view_triplet.view_ids[2]));
+//  view_triplet.info_two_three = FindOrDieNoPrint(
+//      *view_pairs_,
+//      ViewIdPair(view_triplet.view_ids[1], view_triplet.view_ids[2]));
+
+//  ComputeTripletBaselineRatios(
+//      view_triplet, feature1, feature2, feature3, baseline);
 }
 
 // Sets up the linear system with the constraints that each triplet adds.

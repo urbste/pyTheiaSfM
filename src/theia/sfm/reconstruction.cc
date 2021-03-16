@@ -94,9 +94,16 @@ ViewId Reconstruction::ViewIdFromTimestamp(const double& timestamp_s) const {
   return FindWithDefault(view_timestamp_to_id_, timestamp_s, kInvalidViewId);
 }
 
+ViewId Reconstruction::AddView(const std::string& view_name) {
+  const ViewId view_id = AddView(
+              view_name, next_camera_intrinsics_group_id_, (double)next_view_id_);
+  ++next_camera_intrinsics_group_id_;
+  return view_id;
+}
 ViewId Reconstruction::AddView(const std::string& view_name,
                                const double timestamp) {
-  const ViewId view_id = AddView(view_name, next_camera_intrinsics_group_id_, timestamp);
+  const ViewId view_id = AddView(
+              view_name, next_camera_intrinsics_group_id_, timestamp);
   ++next_camera_intrinsics_group_id_;
   return view_id;
 }

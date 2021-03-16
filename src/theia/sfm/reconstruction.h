@@ -79,7 +79,9 @@ class Reconstruction {
   ViewId ViewIdFromTimestamp(const double &timestamp_s) const;
 
   // Creates a new view and returns the view id.
-  ViewId AddView(const std::string& view_name, const double timestamp = -1.0);
+  ViewId AddView(const std::string& view_name);
+  // Creates a new view and returns the view id.
+  ViewId AddView(const std::string& view_name, const double timestamp);
   // Creates a new view and assigns it to the specified camera intrinsics group.
   ViewId AddView(const std::string& view_name,
                  const CameraIntrinsicsGroupId group_id,
