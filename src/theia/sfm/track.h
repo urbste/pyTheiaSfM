@@ -73,19 +73,29 @@ class Track {
 
   const std::unordered_set<ViewId>& ViewIds() const;
 
+  ViewId ReferenceViewId() const;
+
+  const double& InverseDepth() const;
+  double* MutableInverseDepth();
+
+  void SetRefBearingVector(const Eigen::Vector3d& ref_bearing);
+  const Eigen::Vector3d& RefBearing() const;
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
   template <class Archive>
   void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
-    ar(is_estimated_, view_ids_, point_, color_);
+    ar(is_estimated_, view_ids_, reference_view_id_, inverse_depth_, point_, color_, ref_bearing_);
   }
 
   bool is_estimated_;
   std::unordered_set<ViewId> view_ids_;
+  ViewId reference_view_id_;
+  double inverse_depth_;
   Eigen::Vector4d point_;
   Eigen::Matrix<uint8_t, 3, 1> color_;
+  Eigen::Vector3d ref_bearing_;
 };
 
 }  // namespace theia

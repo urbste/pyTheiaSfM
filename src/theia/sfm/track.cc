@@ -42,51 +42,62 @@
 namespace theia {
 
 using Eigen::Vector4d;
+using Eigen::Vector3d;
 
 Track::Track()
-    : is_estimated_(false) {
+    : is_estimated_(false), inverse_depth_(0.0),
+      reference_view_id_(theia::kInvalidViewId) {
   point_.setZero();
   color_.setZero();
+  ref_bearing_.setZero();
 }
 
-int Track::NumViews() const {
-  return view_ids_.size();
-}
+int Track::NumViews() const { return view_ids_.size(); }
 
 void Track::SetEstimated(const bool is_estimated) {
   is_estimated_ = is_estimated;
 }
 
-bool Track::IsEstimated() const {
-  return is_estimated_;
-}
+bool Track::IsEstimated() const { return is_estimated_; }
 
-const Eigen::Vector4d& Track::Point() const {
-  return point_;
-}
+const Eigen::Vector4d &Track::Point() const { return point_; }
 
-Vector4d* Track::MutablePoint() {
-  return &point_;
-}
+Vector4d *Track::MutablePoint() { return &point_; }
 
-const Eigen::Matrix<uint8_t, 3, 1>& Track::Color() const {
-  return color_;
-}
+const Eigen::Matrix<uint8_t, 3, 1> &Track::Color() const { return color_; }
 
-Eigen::Matrix<uint8_t, 3, 1>* Track::MutableColor() {
-  return &color_;
-}
+Eigen::Matrix<uint8_t, 3, 1> *Track::MutableColor() { return &color_; }
 
 void Track::AddView(const ViewId view_id) {
   view_ids_.insert(view_id);
+  if (reference_view_id_ = theia::kInvalidViewId) {
+    reference_view_id_ = view_id;
+  }
 }
 
 bool Track::RemoveView(const ViewId view_id) {
-  return view_ids_.erase(view_id) > 0;
+  bool successfull_removed = view_ids_.erase(view_id) > 0;
+  if (successfull_removed && view_ids_.size() >= 1) {
+    reference_view_id_ = *view_ids_.begin();
+  } else {
+    reference_view_id_ = theia::kInvalidViewId;
+  }
+  return successfull_removed;
 }
 
-const std::unordered_set<ViewId>& Track::ViewIds() const {
-  return view_ids_;
+const std::unordered_set<ViewId> &Track::ViewIds() const { return view_ids_; }
+
+ViewId Track::ReferenceViewId() const { return reference_view_id_; }
+
+const double &Track::InverseDepth() const { return inverse_depth_; }
+
+double *Track::MutableInverseDepth() { return &inverse_depth_; }
+
+void Track::SetRefBearingVector(const Vector3d &ref_bearing) {
+    ref_bearing_ = ref_bearing;
 }
 
-}  // namespace theia
+const Vector3d &Track::RefBearing() const { return ref_bearing_; }
+
+
+} // namespace theia

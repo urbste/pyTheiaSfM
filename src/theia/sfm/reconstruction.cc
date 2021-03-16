@@ -90,6 +90,10 @@ ViewId Reconstruction::ViewIdFromName(const std::string& view_name) const {
   return FindWithDefault(view_name_to_id_, view_name, kInvalidViewId);
 }
 
+ViewId Reconstruction::ViewIdFromTimestamp(const double& timestamp_s) const {
+  return FindWithDefault(view_timestamp_to_id_, timestamp_s, kInvalidViewId);
+}
+
 ViewId Reconstruction::AddView(const std::string& view_name,
                                const double timestamp) {
   const ViewId view_id = AddView(view_name, next_camera_intrinsics_group_id_, timestamp);
@@ -103,6 +107,12 @@ ViewId Reconstruction::AddView(const std::string& view_name,
   if (ContainsKey(view_name_to_id_, view_name)) {
     LOG(WARNING) << "Could not add view with the name " << view_name
                  << " because that name already exists in the reconstruction.";
+    return kInvalidViewId;
+  }
+
+  if (ContainsKey(view_timestamp_to_id_, timestamp)) {
+    LOG(WARNING) << "Could not add view with the timestamp " << timestamp
+                 << " because that timestamp already exists in the reconstruction.";
     return kInvalidViewId;
   }
 
@@ -131,7 +141,7 @@ ViewId Reconstruction::AddView(const std::string& view_name,
   // Add the view to the reconstruction.
   views_.emplace(next_view_id_, new_view);
   view_name_to_id_.emplace(view_name, next_view_id_);
-
+  view_timestamp_to_id_.emplace(timestamp, next_view_id_);
   // Add this view to the camera intrinsics group, and vice versa.
   view_id_to_camera_intrinsics_group_id_.emplace(next_view_id_, group_id);
   camera_intrinsics_groups_[group_id].emplace(next_view_id_);
@@ -172,6 +182,8 @@ bool Reconstruction::RemoveView(const ViewId view_id) {
   // Remove the view name.
   const std::string& view_name = view->Name();
   view_name_to_id_.erase(view_name);
+  const double& timestamp_s = view->GetTimestamp();
+  view_timestamp_to_id_.erase(timestamp_s);
 
   // Remove the view from the camera intrinsics groups.
   const CameraIntrinsicsGroupId group_id =
@@ -490,6 +502,7 @@ void Reconstruction::GetSubReconstruction(
   // may easily retreive them below.
   subreconstruction->views_.reserve(views_in_subset.size());
   subreconstruction->view_name_to_id_.reserve(views_in_subset.size());
+  subreconstruction->view_timestamp_to_id_.reserve(views_in_subset.size());
   std::unordered_set<TrackId> tracks_in_views;
   for (const ViewId view_id : views_in_subset) {
     const class View* view = FindOrNull(views_, view_id);
@@ -501,7 +514,7 @@ void Reconstruction::GetSubReconstruction(
     // Set the view information.
     subreconstruction->views_[view_id] = *view;
     subreconstruction->view_name_to_id_[view->Name()] = view_id;
-
+    subreconstruction->view_timestamp_to_id_[view->GetTimestamp()] = view_id;
     // Set the intrinsics group id information.
     const CameraIntrinsicsGroupId& intrinsics_group_id =
         FindOrDie(view_id_to_camera_intrinsics_group_id_, view_id);
