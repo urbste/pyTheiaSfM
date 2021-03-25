@@ -1,7 +1,7 @@
 project(vlfeat)
 
-include("${CMAKE_MODULE_PATH}/OptimizeTheiaCompilerFlags.cmake")
-optimizetheiacompilerflags()
+#include("${CMAKE_MODULE_PATH}/OptimizeTheiaCompilerFlags.cmake")
+#optimizetheiacompilerflags()
 
 include_directories(./vl)
 set(vl_sources

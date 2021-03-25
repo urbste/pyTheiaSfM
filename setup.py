@@ -51,11 +51,10 @@ def build_c_extension():
 
 
 def create_package():
-    subprocess.run(['mkdir', '-p', 'pytheia_build'], cwd='.')
+    subprocess.run(['mkdir', '-p', 'pytheia'], cwd='src')
     files = glob('cmake_build/lib/*.so')
-    subprocess.run(['cp'] + files + ['pytheia_build'])
-    subprocess.run(['touch', 'pytheia_build/__init__.py'])
-
+    subprocess.run(['cp'] + files + ['src/pytheia'])
+    subprocess.run(['touch', 'src/pytheia/__init__.py'])
 
 create_package()
 configure_c_extension()
@@ -78,7 +77,7 @@ setuptools.setup(
     include_package_data=True,
 
     package_dir={
-        'pytheia': 'pytheia_build',
+        'pytheia': 'src/pytheia',
     },
 
     package_data={

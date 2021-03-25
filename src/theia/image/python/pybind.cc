@@ -3,7 +3,7 @@
 #include <pybind11/eigen.h>
 
 
-#include "theia/image/image.h"
+//#include "theia/image/image.h"
 #include "theia/image/keypoint_detector/keypoint.h"
 #include "theia/image/keypoint_detector/keypoint_detector.h"
 #include "theia/image/keypoint_detector/sift_parameters.h"

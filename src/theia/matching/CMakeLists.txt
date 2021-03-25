@@ -42,8 +42,7 @@ set_target_properties(theia_matching PROPERTIES
   SOVERSION ${THEIA_VERSION_MAJOR}
   )
 
-#target_link_libraries(theia_matching ${THEIA_MATCHING_LIBRARY_DEPENDENCIES} theia_util theia_image theia_sfm theia_io theia_math pybind11_headers)
-target_link_libraries(theia_matching ${THEIA_MATCHING_LIBRARY_DEPENDENCIES} theia_util theia_sfm theia_io theia_math pybind11_headers)
+target_link_libraries(theia_matching ${THEIA_MATCHING_LIBRARY_DEPENDENCIES} theia_util theia_image theia_sfm theia_io theia_math pybind11_headers)
 
 #install(TARGETS theia
 #  EXPORT  TheiaExport

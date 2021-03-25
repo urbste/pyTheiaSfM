@@ -38,7 +38,7 @@ set(THEIA_SFM_SRC
   estimators/estimate_triangulation.cc
   estimators/estimate_uncalibrated_absolute_pose.cc
   estimators/estimate_uncalibrated_relative_pose.cc
-  exif_reader.cc
+  #exif_reader.cc
   extract_maximally_parallel_rigid_subgraph.cc
   feature_extractor_and_matcher.cc
   feature_extractor.cc
@@ -142,8 +142,7 @@ set_target_properties(theia_sfm PROPERTIES
   SOVERSION ${THEIA_VERSION_MAJOR}
   )
 
-#target_link_libraries(theia_sfm ${THEIA_SFM_LIBRARY_DEPENDENCIES} theia_util theia_math theia_image theia_solvers theia_io theia_matching)
-target_link_libraries(theia_sfm ${THEIA_SFM_LIBRARY_DEPENDENCIES} theia_util theia_math theia_solvers theia_io theia_matching)
+target_link_libraries(theia_sfm ${THEIA_SFM_LIBRARY_DEPENDENCIES} theia_util theia_math theia_image theia_solvers theia_io theia_matching)
 
 #install(TARGETS theia
 #  EXPORT  TheiaExport

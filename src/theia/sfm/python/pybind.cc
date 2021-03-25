@@ -112,7 +112,7 @@
 
 
 #include "theia/sfm/sfm_wrapper.h"
-#include "theia/sfm/exif_reader.h"
+//#include "theia/sfm/exif_reader.h"
 #include "theia/sfm/estimate_twoview_info.h"
 #include "theia/sfm/estimate_track.h"
 #include "theia/sfm/colorize_reconstruction.h"
@@ -129,7 +129,7 @@
 #include "theia/sfm/select_good_tracks_for_bundle_adjustment.h"
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
-#include "theia/sfm/undistort_image.h"
+//#include "theia/sfm/undistort_image.h"
 #include "theia/sfm/pose/upnp.h"
 
 
