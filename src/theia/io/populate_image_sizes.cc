@@ -45,7 +45,7 @@
 #include <utility>
 #include <vector>
 
-#include "theia/image/image.h"
+//#include "theia/image/image.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/types.h"
@@ -75,11 +75,11 @@ bool PopulateImageSizesAndPrincipalPoints(const std::string& image_directory,
   for (int i = 0; i < view_ids.size(); i++) {
     const std::string file =
         directory_with_slash + reconstruction->View(view_ids[i])->Name();
-    const FloatImage image(file);
-    CHECK_GT(image.Cols(), 0);
-    Camera* camera = reconstruction->MutableView(view_ids[i])->MutableCamera();
-    camera->SetImageSize(image.Cols(), image.Rows());
-    camera->SetPrincipalPoint(image.Cols() / 2.0, image.Rows() / 2.0);
+    // const FloatImage image(file);
+    // CHECK_GT(image.Cols(), 0);
+    // Camera* camera = reconstruction->MutableView(view_ids[i])->MutableCamera();
+    // camera->SetImageSize(image.Cols(), image.Rows());
+    // camera->SetPrincipalPoint(image.Cols() / 2.0, image.Rows() / 2.0);
   }
 
   return true;

@@ -25,3 +25,6 @@ add_subdirectory(vlfeat)
 
 # Add VisualSfM files.
 add_subdirectory(visual_sfm)
+
+# Add pybind11 files.
+add_subdirectory(pybind11)

@@ -39,6 +39,7 @@
 #include <cereal/cereal.hpp>
 #include <cereal/types/string.hpp>
 #include <stdint.h>
+#include <Eigen/Core>
 
 #include "theia/sfm/camera/camera_intrinsics_model_type.h"
 
@@ -51,6 +52,22 @@ class Prior {
  public:
   bool is_set = false;
   double value[N] = {0.0};
+
+  Eigen::Matrix<double, N, 1> GetParametersValues() const {
+       Eigen::Matrix<double, N, 1> parameters;
+       for(int i=0; i < N; i++){
+           parameters[i] = this->value[i];
+       }
+       return parameters;
+  }
+
+  void SetParametersValues(const Eigen::Matrix<double, N, 1> parameters){
+      for(int i=0;i<N;i++){
+          this->value[i] = parameters[i];
+      }
+      is_set = true;
+  }
+
 
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
