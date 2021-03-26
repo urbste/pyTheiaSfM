@@ -7,7 +7,8 @@ function repair_wheel {
     if ! auditwheel show "$wheel"; then
         echo "Skipping non-platform wheel $wheel"
     else
-         auditwheel repair "$wheel" --plat "$PLAT" -w /wheelhouse/
+         #auditwheel repair "$wheel" --plat "$PLAT" -w /wheelhouse/
+         auditwheel repair "$wheel" -w /wheelhouse/
     fi
 }
 #apt-get install
@@ -89,9 +90,9 @@ mkdir -p wheelhouse
 for PYBIN in /opt/python/*/bin; do
     "${PYBIN}/pip" install nose
     "${PYBIN}/python" setup.py bdist_wheel
-    yes | rm -r cmake_build/
-    yes | rm -r src/pytheia
-    yes | rm -r pytheia.egg-info
+    rm -rf cmake_build/
+    rm -rf src/pytheia
+    rm -rf pytheia.egg-info
 done
 cp dist/*.whl wheelhouse
 

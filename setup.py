@@ -47,7 +47,7 @@ def configure_c_extension():
 def build_c_extension():
     """Compile C extension."""
     print("Compiling extension...")
-    subprocess.check_call(['make', '-j7'], cwd='cmake_build')
+    subprocess.check_call(['make', '-j20'], cwd='cmake_build')
 
 
 def create_package():
