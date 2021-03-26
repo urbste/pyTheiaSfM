@@ -8,7 +8,7 @@ function repair_wheel {
         echo "Skipping non-platform wheel $wheel"
     else
          #auditwheel repair "$wheel" --plat "$PLAT" -w /wheelhouse/
-         auditwheel repair "$wheel" -w /wheelhouse/
+         auditwheel repair "$wheel" -w /home/wheelhouse/
     fi
 }
 #apt-get install
@@ -84,20 +84,20 @@ cd /home
 git clone https://github.com/ceres-solver/ceres-solver && cd ceres-solver && git checkout 2.0.0 && mkdir -p build && cd build && \
 cmake  ../ -DBUILD_DOCUMENTATION=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DEIGENSPARSE=ON -DSUITESPARSE=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make install
 
-cd /
+cd /home
 mkdir -p wheelhouse
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
     "${PYBIN}/pip" install nose
     "${PYBIN}/python" setup.py bdist_wheel
-    rm -rf cmake_build/
-    rm -rf src/pytheia
-    rm -rf pytheia.egg-info
+    rm -rf /home/cmake_build/
+    rm -rf /home/src/pytheia
+    rm -rf /home/pytheia.egg-info
 done
-cp dist/*.whl wheelhouse
+cp /home/dist/*.whl /home/wheelhouse
 
 # Bundle external shared libraries into the wheels
-for whl in wheelhouse/*.whl; do
+for whl in /home/wheelhouse/*.whl; do
     repair_wheel "$whl"
 done
 
