@@ -16,20 +16,6 @@ function repair_wheel {
 
 yum install -y wget
 yum install -y eigen3-devel
-
-cd /home && git clone https://github.com/xianyi/OpenBLAS/ && cd OpenBLAS && USE_THREAD=0 make -j4 && make PREFIX=/usr/local install
-
-cd /home
-wget https://github.com/gflags/gflags/archive/refs/tags/v2.2.2.tar.gz
-tar xzf v2.2.2.tar.gz
-cd gflags-2.2.2 && mkdir build && cd build
-cmake ../ -DBUILD_SHARED_LIBS=ON && make -j4 && make install
-
-cd /home
-git clone https://github.com/google/glog.git
-cd glog && mkdir build && cd build
-cmake ../ -DBUILD_SHARED_LIBS=ON && make -j4 && make install
-
 #rocksdb dependencies
 yum install -y centos-release-scl
 yum install -y snappy snappy-devel
@@ -37,13 +23,29 @@ yum install -y zlib zlib-devel
 yum install -y bzip2 bzip2-devel
 yum install -y lz4-devel
 yum install -y libzstd
+yum install -y libjpeg-devel
+
+cd /home && git clone https://github.com/xianyi/OpenBLAS/ && cd OpenBLAS && USE_THREAD=0 make -j6 && make PREFIX=/usr/local install
+
+cd /home && \
+wget https://github.com/gflags/gflags/archive/refs/tags/v2.2.2.tar.gz && \
+tar xzf v2.2.2.tar.gz && \
+cd gflags-2.2.2 && mkdir build && cd build && \
+cmake ../ -DBUILD_SHARED_LIBS=ON && make -j6 && make install
+
+cd /home && \
+git clone https://github.com/google/glog.git && \
+cd glog && mkdir build && cd build && \
+cmake ../ -DBUILD_SHARED_LIBS=ON && make -j6 && make install
+
+
 
 #rocksdb
 cd /home && git clone https://github.com/facebook/rocksdb.git && cd rocksdb && git checkout v5.9.2 && \
     DEBUG_LEVEL=0 CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess' make install-shared INSTALL_PATH=/usr/local
 
 #rapidjson
-cd /home && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j4 && make PREFIX=/usr/local install
+cd /home && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j6 && make PREFIX=/usr/local install
 
 # # openimageio
 # cd /home
@@ -51,7 +53,6 @@ cd /home && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson &
 # #yum install -y libtiff-devel
 # git clone https://github.com/vadz/libtiff.git
 # cd libtiff && ./configure && make -j && make install
-yum install -y libjpeg-devel
 # cd /home
 # git clone https://github.com/libjpeg-turbo/libjpeg-turbo.git
 # cd libjpeg-turbo/
@@ -79,15 +80,11 @@ yum install -y libjpeg-devel
 
 # Build Ceres
 cd /home
-wget https://github.com/ceres-solver/ceres-solver/archive/refs/tags/2.0.0.zip &&  \
-unzip 2.0.0.zip && \
-cd ceres-solver-2.0.0/​​​​​​​​ && \
-mkdir -p build && \
+git clone https://github.com/ceres-solver/ceres-solver &&  \
+git checkout 2.0.0 && mkdir -p build && \
 cd build && \
-cmake  ../ \
--DCXX11=ON \
--DBUILD_DOCUMENTATION=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DBUILD-BENCHMARKS=OFF -DEIGENSPARSE=ON -DSUITESPARSE=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release 
-make -j​​​​4 && \
+cmake  ../ -DCXX11=ON -DBUILD_DOCUMENTATION=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DBUILD-BENCHMARKS=OFF -DEIGENSPARSE=ON -DSUITESPARSE=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release && \
+make -j​​​​6 && \
 make install
 
 
