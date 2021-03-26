@@ -17,7 +17,7 @@ class platform_bdist_wheel(bdist_wheel):
     """Patched bdist_well to make sure wheels include platform tag."""
     def finalize_options(self):
         bdist_wheel.finalize_options(self)
-        self.root_is_pure = False
+        self.root_is_pure = True
 """
 def _find_packages():
     packages = setuptools.find_packages()
@@ -56,9 +56,10 @@ def create_package():
     subprocess.run(['cp'] + files + ['src/pytheia'])
     subprocess.run(['touch', 'src/pytheia/__init__.py'])
 
-create_package()
+
 configure_c_extension()
 build_c_extension()
+create_package()
 
 setuptools.setup(
     name='pytheia',
