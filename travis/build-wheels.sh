@@ -7,7 +7,8 @@ function repair_wheel {
     if ! auditwheel show "$wheel"; then
         echo "Skipping non-platform wheel $wheel"
     else
-         auditwheel repair "$wheel" --plat "$PLAT" -w /wheelhouse/
+         #auditwheel repair "$wheel" --plat "$PLAT" -w /wheelhouse/
+         auditwheel repair "$wheel" -w /wheelhouse/
     fi
 }
 #apt-get install
@@ -25,27 +26,27 @@ yum install -y lz4-devel
 yum install -y libzstd
 yum install -y libjpeg-devel
 
-cd /home && git clone https://github.com/xianyi/OpenBLAS/ && cd OpenBLAS && USE_THREAD=0 make -j6 && make PREFIX=/usr/local install
+NUM_CORES=20
+
+cd /home && git clone https://github.com/xianyi/OpenBLAS/ && cd OpenBLAS && USE_THREAD=0 make -j$NUM_CORES && make PREFIX=/usr/local install
 
 cd /home && \
 wget https://github.com/gflags/gflags/archive/refs/tags/v2.2.2.tar.gz && \
 tar xzf v2.2.2.tar.gz && \
 cd gflags-2.2.2 && mkdir build && cd build && \
-cmake ../ -DBUILD_SHARED_LIBS=ON && make -j6 && make install
+cmake ../ -DBUILD_SHARED_LIBS=ON && make -j$NUM_CORES && make install
 
 cd /home && \
 git clone https://github.com/google/glog.git && \
 cd glog && mkdir build && cd build && \
-cmake ../ -DBUILD_SHARED_LIBS=ON && make -j6 && make install
-
-
+cmake ../ -DBUILD_SHARED_LIBS=ON && make -j$NUM_CORES && make install
 
 #rocksdb
 cd /home && git clone https://github.com/facebook/rocksdb.git && cd rocksdb && git checkout v5.9.2 && \
-    DEBUG_LEVEL=0 CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess' make install-shared INSTALL_PATH=/usr/local
+    DEBUG_LEVEL=0 CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess' make -j$NUM_CORES install-shared INSTALL_PATH=/usr/local
 
 #rapidjson
-cd /home && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j6 && make PREFIX=/usr/local install
+cd /home && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make PREFIX=/usr/local install
 
 # # openimageio
 # cd /home
@@ -80,23 +81,18 @@ cd /home && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson &
 
 # Build Ceres
 cd /home
-git clone https://github.com/ceres-solver/ceres-solver &&  \
-git checkout 2.0.0 && mkdir -p build && \
-cd build && \
-cmake  ../ -DCXX11=ON -DBUILD_DOCUMENTATION=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DBUILD-BENCHMARKS=OFF -DEIGENSPARSE=ON -DSUITESPARSE=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release && \
-make -j​​​​6 && \
-make install
-
+git clone https://github.com/ceres-solver/ceres-solver && cd ceres-solver && git checkout 2.0.0 && mkdir -p build && cd build && \
+cmake  ../ -DBUILD_DOCUMENTATION=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DEIGENSPARSE=ON -DSUITESPARSE=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make install
 
 cd /
 mkdir -p wheelhouse
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
     "${PYBIN}/pip" install nose
-    /opt/python/*/bin/python setup.py bdist_wheel
-    yes | rm -r cmake_build/
-    yes | rm -r src/pytheia
-    yes | rm -r pytheia.egg-info
+    "${PYBIN}/python" setup.py bdist_wheel
+    rm -rf cmake_build/
+    rm -rf src/pytheia
+    rm -rf pytheia.egg-info
 done
 cp dist/*.whl wheelhouse
 
