@@ -19,7 +19,6 @@ from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
 # https://stackoverflow.com/a/45150383/1255535
 class bdist_wheel(_bdist_wheel):
     def finalize_options(self):
-<<<<<<< HEAD
         _bdist_wheel.finalize_options(self)
         self.root_is_pure = False
 
@@ -113,54 +112,6 @@ class CMakeBuild(build_ext):
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
-=======
-        bdist_wheel.finalize_options(self)
-        self.root_is_pure = True
-"""
-def _find_packages():
-    packages = setuptools.find_packages()
-    packages.append('mypythonpackage.doc')
-    packages.append('matlabsources')
-    print('packages found: {}'.format(packages))
-    return packages
-""" 
-
-def configure_c_extension():
-    """Configure cmake project to C extension."""
-    print("Configuring for python {}.{}...".format(sys.version_info.major,
-                                                   sys.version_info.minor))
-    os.makedirs('cmake_build', exist_ok=True)
-    cmake_command = [
-        'cmake',
-        '../',
-        '-DBUILD_TESTING=OFF',
-        '-DPYTHON_BUILD=ON',
-        '-DPYTHON_EXECUTABLE=' + sys.executable,
-	    '-DPYTHON_LIBRARY=' + python_lib_location,
-	    '-DPYTHON_INCLUDE_DIR=' +  python_include_dir
-    ]
-    subprocess.check_call(cmake_command, cwd='cmake_build')
-
-
-def build_c_extension():
-    """Compile C extension."""
-    print("Compiling extension...")
-    subprocess.check_call(['make', '-j20'], cwd='cmake_build')
-
-
-def create_package():
-    subprocess.run(['mkdir', '-p', 'pytheia'], cwd='src')
-    files = glob('cmake_build/lib/*.so')
-    subprocess.run(['cp'] + files + ['src/pytheia'])
-    subprocess.run(['touch', 'src/pytheia/__init__.py'])
-
-
-configure_c_extension()
-build_c_extension()
-create_package()
-
-setuptools.setup(
->>>>>>> ff08927b6c71cb8c10fe7f3bc73f93461beb9064
     name='pytheia',
     version='0.1.0',
     description='A Python Structure from Motion Library',
