@@ -1,3 +1,6 @@
+#include "pytheia/matching/matching.h"
+
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
@@ -26,8 +29,11 @@
 namespace py = pybind11;
 
 
-PYBIND11_MODULE(pytheia_matching, m) {
+namespace pytheia {
+namespace matching {
 
+
+void pytheia_matching_classes(py::module &m) {
 
     //FeaturesAndMatchesDatabase
     py::class_<theia::FeaturesAndMatchesDatabase /*, theia::PyFeaturesAndMatchesDatabase */>(m, "FeaturesAndMatchesDatabase")
@@ -205,4 +211,13 @@ PYBIND11_MODULE(pytheia_matching, m) {
 
 
 
+}
+
+void pytheia_matching(py::module &m) {
+    py::module m_submodule = m.def_submodule("matching");
+    pytheia_matching_classes(m_submodule);
+}
+
+
+}
 }

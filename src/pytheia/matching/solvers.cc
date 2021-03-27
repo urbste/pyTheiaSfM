@@ -26,8 +26,10 @@
 
 namespace py = pybind11;
 
+namespace pytheia {
+namespace solvers {
 
-PYBIND11_MODULE(pytheia_solvers, m) {
+void pytheia_io_classes(py::module &m) {
 
     //RandomNumberGenerator
     py::class_<theia::RandomNumberGenerator>(m, "RandomNumberGenerator")
@@ -134,4 +136,12 @@ PYBIND11_MODULE(pytheia_solvers, m) {
 
 
 
+}
+
+void pytheia_solvers(py::module &m) {
+    py::module m_submodule = m.def_submodule("solvers");
+    pytheia_solvers_classes(m_submodule);
+}
+
+}
 }

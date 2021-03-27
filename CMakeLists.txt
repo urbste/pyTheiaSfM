@@ -79,9 +79,9 @@ endif (EXISTS ${LOCAL_GIT_DIRECTORY})
 # ==============================================================================
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-option(BUILD_TESTING "Enable testing" ON)
+option(BUILD_TESTING "Enable testing" OFF)
 option(BUILD_DOCUMENTATION "Build html User's Guide" OFF)
-option(PYTHON_BUILD "If we are building python bindings" OFF)
+option(PYTHON_BUILD "If we are building python bindings" ON)
 
 enable_testing()
 if (NOT MSVC)
@@ -108,10 +108,10 @@ add_definitions(-DTHEIA_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
 #add_definitions(-DEIGEN_MAX_ALIGN_BYTES=0)
 #add_definitions(-DEIGEN_MALLOC_ALREADY_ALIGNED=0)
 
-if (PYTHON_BUILD)
+#if (PYTHON_BUILD)
   # fPIC
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-endif(PYTHONBUILD)
+#endif (PYTHON_BUILD)
 
 # Eigen
 set(MIN_EIGEN_VERSION 3.2.0)
@@ -178,46 +178,6 @@ else (CERES_FOUND)
     "CERES_LIBRARY")
 endif (CERES_FOUND)
 
-# OpenCV
-
-# OpenImageIO
-#message("-- Check for OpenImageIO")
-#find_package(OpenImageIO REQUIRED)
-#if (OPENIMAGEIO_FOUND)
-#  message("-- Found OpenImageIO: ${OPENIMAGEIO_INCLUDE_DIRS}")
-#else (OPENIMAGEIO_FOUND)
-#  message(FATAL_ERROR "Can't find OpenImageIO. Please set OPENIMAGEIO_INCLUDE_DIR & "
-#    "OPENIMAGEIO_LIBRARY")
-#endif (OPENIMAGEIO_FOUND)
-
-# Suitesparse
-# find_package(SuiteSparse REQUIRED)
-# if (SUITESPARSE_FOUND)
-#   # On Ubuntu the system install of SuiteSparse (v3.4.0) up to at least
-#   # Ubuntu 13.10 cannot be used to link shared libraries.
-#   if (BUILD_SHARED_LIBS AND
-#       SUITESPARSE_IS_BROKEN_SHARED_LINKING_UBUNTU_SYSTEM_VERSION)
-#     message(FATAL_ERROR "You are attempting to build Theia as a shared "
-#       "library on Ubuntu using a system package install of SuiteSparse "
-#       "3.4.0. This package is broken and does not support the "
-#       "construction of shared libraries (you can still build Theia as "
-#       "a static library).  If you wish to build a shared version of Theia "
-#       "you should uninstall the system install of SuiteSparse "
-#       "(libsuitesparse-dev) and perform a source install of SuiteSparse "
-#       "(we recommend that you use the latest version), "
-#       "see http://theia-solver.org/building.html for more information.")
-#   endif (BUILD_SHARED_LIBS AND
-#     SUITESPARSE_IS_BROKEN_SHARED_LINKING_UBUNTU_SYSTEM_VERSION)
-#   message("-- Found SuiteSparse ${SUITESPARSE_VERSION}")
-#   add_definitions(-DTHEIA_SUITESPARSE_VERSION="${SUITESPARSE_VERSION}")
-# else (SUITESPARSE_FOUND)
-#   # Disable use of SuiteSparse if it cannot be found and continue.
-#   message(FATAL_ERROR "Can't find SuiteSparse. This library is required "
-#     "for bundle adjustment and for solving convex optimization problems. "
-#     "Please set SUITESPARSE_INCLUDE_DIR & SUITESPARSE_LIBRARY")
-# endif (SUITESPARSE_FOUND)
-
-
 # RocksDB
 message("-- Check for RocksDB")
 find_package(RocksDB REQUIRED)
@@ -242,10 +202,8 @@ include_directories(
   ${CERES_INCLUDE_DIRS}
   ${GFLAGS_INCLUDE_DIRS}
   ${GLOG_INCLUDE_DIRS}
-  #${OPENIMAGEIO_INCLUDE_DIRS}
   ${RAPIDJSON_INCLUDE_DIRS}
   ${ROCKSDB_INCLUDE_DIR}
-  #${SUITESPARSE_INCLUDE_DIRS}
 )
 
 # NOTE: This fix came from Ceres solver with the following comment:
@@ -278,7 +236,7 @@ include_directories(
   ${optimo_SOURCE_DIR}
   ${statx_SOURCE_DIR}
   ${stlplus3_SOURCE_DIR}
-  #${vlfeat_SOURCE_DIR}
+  ${vlfeat_SOURCE_DIR}
   #${visual_sfm_SOURCE_DIR}
   )
 
@@ -375,3 +333,9 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TheiaConfig.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindRocksDB.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindSuiteSparse.cmake"
               DESTINATION ${CMAKECONFIG_INSTALL_DIR})
+
+
+# python build
+if (PYTHON_BUILD)
+  add_subdirectory(src/pytheia)
+endif (PYTHON_BUILD)
