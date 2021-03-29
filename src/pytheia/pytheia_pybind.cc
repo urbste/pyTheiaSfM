@@ -2,7 +2,9 @@
 
 #include "pytheia/io/io.h"
 #include "pytheia/matching/matching.h"
+#include "pytheia/math/math.h"
 #include "pytheia/solvers/solvers.h"
+#include "pytheia/sfm/sfm.h"
 
 namespace pytheia {
 
@@ -23,6 +25,8 @@ PYBIND11_MODULE(pytheia, m) {
     // register all submodules here
     io::pytheia_io(m);
     matching::pytheia_matching(m);
+    math::pytheia_math(m);
+    sfm::pytheia_sfm(m);
     solvers::pytheia_solvers(m);
 }
 

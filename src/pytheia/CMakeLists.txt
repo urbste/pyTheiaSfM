@@ -4,13 +4,17 @@ set(PACKAGE_NAME pytheia)
 set(PY_ALL_SOURCE_FILES
     pytheia_pybind.cc
     matching/matching.cc
+    math/math.cc
     solvers/solvers.cc
+    sfm/sfm.cc
     io/io.cc)
 
 set(PY_ALL_HEADER_FILES
-    pytheia_pybind.cc
+    pytheia_pybind.h
     matching/matching.h
+    math/math.h
     solvers/solvers.h
+    sfm/sfm.h
     io/io.h)
 
 
