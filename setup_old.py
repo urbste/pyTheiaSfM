@@ -37,7 +37,6 @@ def configure_c_extension():
         '../',
         '-DBUILD_TESTING=OFF',
         '-DPYTHON_BUILD=ON',
-        '-DCMAKE_BUILD_TYPE=Release',
         '-DPYTHON_EXECUTABLE=' + sys.executable,
 	    '-DPYTHON_LIBRARY=' + python_lib_location,
 	    '-DPYTHON_INCLUDE_DIR=' +  python_include_dir
@@ -57,9 +56,9 @@ def create_package():
     subprocess.run(['cp'] + files + ['src/pytheia'])
     subprocess.run(['touch', 'src/pytheia/__init__.py'])
 
+create_package()
 configure_c_extension()
 build_c_extension()
-create_package()
 
 setuptools.setup(
     name='pytheia',
@@ -83,10 +82,16 @@ setuptools.setup(
 
     package_data={
         'pytheia': [
-            'pytheia.*',
+            'pytheia_sfm.*',
+            'pytheia_image.*',
+            'pytheia_io.*',
+            'pytheia_solvers.*',
+            'pytheia_matching.*',
+            'libvlfeat.*',
             'libflann_cpp.*',
         ]
     },
+
 
     cmdclass={'bdist_wheel': platform_bdist_wheel},
 )

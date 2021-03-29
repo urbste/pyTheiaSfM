@@ -1,3 +1,6 @@
+
+#include "pytheia/sfm/sfm.h"
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
@@ -12,30 +15,6 @@
 #include "theia/math/polynomial.h"
 #include "theia/sfm/pose/util.h"
 
-
-// header files
-/*
-
-#include "theia/sfm/pose/perspective_three_point.h"
-#include "theia/sfm/pose/eight_point_fundamental_matrix.h"
-#include "theia/sfm/pose/five_point_relative_pose.h"
-#include "theia/sfm/pose/five_point_focal_length_radial_distortion.h"
-#include "theia/sfm/pose/four_point_focal_length.h"
-#include "theia/sfm/pose/four_point_focal_length_radial_distortion.h"
-#include "theia/sfm/pose/four_point_homography.h"
-#include "theia/sfm/pose/four_point_relative_pose_partial_rotation.h"
-#include "theia/sfm/pose/three_point_relative_pose_partial_rotation.h"
-#include "theia/sfm/pose/two_point_pose_partial_rotation.h"
-
-#include "theia/sfm/pose/dls_pnp.h"
-#include "theia/sfm/pose/position_from_two_rays.h"
-#include "theia/sfm/pose/relative_pose_from_two_points_with_known_rotation.h"
-#include "theia/sfm/pose/seven_point_fundamental_matrix.h"
-#include "theia/sfm/pose/sim_transform_partial_rotation.h"
-#include "theia/sfm/pose/essential_matrix_utils.h"
-#include "theia/matching/feature_correspondence.h"
-#include "theia/sfm/pose/fundamental_matrix_util.h"
-*/
 #include "theia/matching/features_and_matches_database.h"
 
 #include "theia/sfm/pose/pose_wrapper.h"
@@ -55,8 +34,6 @@
 #include "theia/sfm/camera/fov_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
-
-
 
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
@@ -112,7 +89,7 @@
 
 
 #include "theia/sfm/sfm_wrapper.h"
-//#include "theia/sfm/exif_reader.h"
+#include "theia/sfm/exif_reader.h"
 #include "theia/sfm/estimate_twoview_info.h"
 #include "theia/sfm/estimate_track.h"
 #include "theia/sfm/colorize_reconstruction.h"
@@ -129,7 +106,7 @@
 #include "theia/sfm/select_good_tracks_for_bundle_adjustment.h"
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
-//#include "theia/sfm/undistort_image.h"
+#include "theia/sfm/undistort_image.h"
 #include "theia/sfm/pose/upnp.h"
 
 
@@ -155,10 +132,12 @@ void AddIntrinsicsPriorType(py::module& m, const std::string& name) {
     ;
   }
 
-PYBIND11_MODULE(pytheia_sfm, m) {
-  //msub = m.def_submodule("io", jhkl);
+namespace py = pybind11;
 
+namespace pytheia {
+namespace sfm {
 
+void pytheia_sfm_classes(py::module &m) {
 
   //camera
   AddIntrinsicsPriorType<1>(m, "Scalar");
@@ -190,10 +169,10 @@ PYBIND11_MODULE(pytheia_sfm, m) {
     .def("GetParameter", &theia::CameraIntrinsicsModel::GetParameter)
     .def("SetParameter", &theia::CameraIntrinsicsModel::SetParameter)
 
-    //.def("DistortPoint", py::overload_cast<const Eigen::Vector2d>(&theia::CameraIntrinsicsModel::DistortPoint, py::const_))
-    //.def("DistortPoint",   py::overload_cast<const Eigen::Vector2d&>(&theia::CameraIntrinsicsModel::DistortPoint, py::const_));
-    //.def("DistortPoint", static_cast<Eigen::Vector2d (theia::CameraIntrinsicsModel::*)(const Eigen::Vector2d &)>(&theia::CameraIntrinsicsModel::DistortPoint), "Set the pet's name")
-    //.def("DistortPoint", overload_cast_<const Eigen::Vector2d>()(&theia::CameraIntrinsicsModel::DistortPoint), "Set the pet's age")
+    // .def("DistortPoint", py::overload_cast<const Eigen::Vector2d>(&theia::CameraIntrinsicsModel::DistortPoint, py::const_))
+    // .def("DistortPoint",   py::overload_cast<const Eigen::Vector2d&>(&theia::CameraIntrinsicsModel::DistortPoint, py::const_));
+    // .def("DistortPoint", static_cast<Eigen::Vector2d (theia::CameraIntrinsicsModel::*)(const Eigen::Vector2d &)>(&theia::CameraIntrinsicsModel::DistortPoint), "Set the pet's name")
+    // .def("DistortPoint", overload_cast_<const Eigen::Vector2d>()(&theia::CameraIntrinsicsModel::DistortPoint), "Set the pet's age")
 
 
     // .def("DistortPoint",
@@ -203,8 +182,12 @@ PYBIND11_MODULE(pytheia_sfm, m) {
 
     //.def("UndistortPoint",(Eigen::Vector2d (theia::CameraIntrinsicsModel::*)(const Eigen::Vector2d& )) &
     //     theia::CameraIntrinsicsModel::UndistortPoint, py::arg("UndistortPoint"))
-  ;
 
+
+
+
+
+  ;
   // FisheyeCameraModel
   py::class_<theia::FisheyeCameraModel, std::shared_ptr<theia::FisheyeCameraModel>>(m, "FisheyeCameraModel", camera_intrinsics_model)
     .def(py::init<>())
@@ -868,8 +851,8 @@ PYBIND11_MODULE(pytheia_sfm, m) {
     //.def("set", static_cast<void (Pet::*)(int)>(&Pet::set), "Set the pet's age")
     //.def("AddView", static_cast<theia::ViewId (theia::Reconstruction*)(const std::string&)>(&theia::Reconstruction::AddView))
     .def("AddView", (theia::ViewId (theia::Reconstruction::*)(const std::string&)) &theia::Reconstruction::AddView, py::return_value_policy::reference_internal)
-    .def("AddView", (theia::ViewId (theia::Reconstruction::*)(const std::string&, const double timestamp)) &theia::Reconstruction::AddView, py::return_value_policy::reference_internal)
-    .def("AddView", (theia::ViewId (theia::Reconstruction::*)(const std::string&, const theia::CameraIntrinsicsGroupId, const double timestamp)) &theia::Reconstruction::AddView, py::return_value_policy::reference_internal)
+    .def("AddView", (theia::ViewId (theia::Reconstruction::*)(const std::string&, const double)) &theia::Reconstruction::AddView, py::return_value_policy::reference_internal)
+    .def("AddView", (theia::ViewId (theia::Reconstruction::*)(const std::string&, const theia::CameraIntrinsicsGroupId, const double)) &theia::Reconstruction::AddView, py::return_value_policy::reference_internal)
     .def("RemoveView", &theia::Reconstruction::RemoveView)
     .def_property_readonly("ViewIds", &theia::Reconstruction::ViewIds)
 
@@ -1080,14 +1063,12 @@ PYBIND11_MODULE(pytheia_sfm, m) {
     //.def("EstimateRotations", &theia::RobustRotationEstimator::EstimateRotations)
 
   ;
+}
 
+void pytheia_sfm(py::module &m) {
+    py::module m_submodule = m.def_submodule("sfm");
+    pytheia_sfm_classes(m_submodule);
+}
 
-
-
-
-
-
-
-
-
+}
 }

@@ -62,7 +62,7 @@ set(THEIA_SRC
   #image/image_cache.cc
   #image/image.cc
   #image/keypoint_detector/sift_detector.cc
-  io/io_wrapper.cc
+
   io/bundler_file_reader.cc
   io/import_nvm_file.cc
   io/populate_image_sizes.cc
@@ -101,14 +101,11 @@ set(THEIA_SRC
   math/probability/sequential_probability_ratio.cc
   math/qp_solver.cc
   math/rotation.cc
-  sfm/sfm_wrapper.cc
-  sfm/bundle_adjustment/bundle_adjustment_wrapper.cc
   sfm/bundle_adjustment/bundle_adjust_two_views.cc
   sfm/bundle_adjustment/bundle_adjuster.cc
   sfm/bundle_adjustment/bundle_adjustment.cc
   sfm/bundle_adjustment/create_loss_function.cc
   sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.cc
-  sfm/camera/camera_wrapper.cc
   sfm/camera/camera_intrinsics_model.cc
   sfm/camera/camera.cc
   sfm/camera/division_undistortion_camera_model.cc
@@ -122,7 +119,6 @@ set(THEIA_SRC
   sfm/colorize_reconstruction.cc
   sfm/estimate_track.cc
   sfm/estimate_twoview_info.cc
-  sfm/estimators/estimators_wrapper.cc
   sfm/estimators/estimate_absolute_pose_with_known_orientation.cc
   sfm/estimators/estimate_calibrated_absolute_pose.cc
   sfm/estimators/estimate_dominant_plane_from_points.cc
@@ -147,7 +143,6 @@ set(THEIA_SRC
   sfm/filter_view_pairs_from_relative_translation.cc
   sfm/find_common_tracks_in_views.cc
   sfm/find_common_views_by_name.cc
-  sfm/global_pose_estimation/global_pose_estimation_wrapper.cc
   sfm/global_pose_estimation/compute_triplet_baseline_ratios.cc
   sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.cc
   sfm/global_pose_estimation/LiGT_position_estimator.cc
@@ -164,7 +159,6 @@ set(THEIA_SRC
   sfm/hybrid_reconstruction_estimator.cc
   sfm/incremental_reconstruction_estimator.cc
   sfm/localize_view_to_reconstruction.cc
-  sfm/pose/pose_wrapper.cc
   sfm/pose/build_upnp_action_matrix.cc
   sfm/pose/build_upnp_action_matrix_using_symmetry.cc
   sfm/pose/dls_impl.cc
@@ -200,17 +194,15 @@ set(THEIA_SRC
   sfm/set_outlier_tracks_to_unestimated.cc
   sfm/track_builder.cc
   sfm/track.cc
-  sfm/transformation/transformation_wrapper.cc
   sfm/transformation/align_point_clouds.cc
   sfm/transformation/align_reconstructions.cc
   sfm/transformation/align_rotations.cc
   sfm/transformation/gdls_similarity_transform.cc
   sfm/transformation/transform_reconstruction.cc
-  sfm/triangulation/triangulation_wrapper.cc
   sfm/triangulation/triangulation.cc
   sfm/two_view_match_geometric_verification.cc
   sfm/twoview_info.cc
-  #sfm/undistort_image.cc
+  # sfm/undistort_image.cc
   sfm/view_graph/orientations_from_maximum_spanning_tree.cc
   sfm/view_graph/remove_disconnected_view_pairs.cc
   sfm/view_graph/view_graph.cc
@@ -224,6 +216,16 @@ set(THEIA_SRC
   util/stringprintf.cc
   util/threadpool.cc
   util/timer.cc
+  # for pytheia
+  io/io_wrapper.cc
+  sfm/sfm_wrapper.cc
+  sfm/bundle_adjustment/bundle_adjustment_wrapper.cc
+  sfm/global_pose_estimation/global_pose_estimation_wrapper.cc
+  sfm/camera/camera_wrapper.cc
+  sfm/estimators/estimators_wrapper.cc
+  sfm/pose/pose_wrapper.cc
+  sfm/transformation/transformation_wrapper.cc
+  sfm/triangulation/triangulation_wrapper.cc
   )
 
 set(THEIA_LIBRARY_DEPENDENCIES
@@ -245,14 +247,14 @@ set(THEIA_LIBRARY_SOURCE
   ${THEIA_SRC}
   ${THEIA_HDRS})
 
-add_library(theia ${THEIA_LIBRARY_SOURCE})
-set_target_properties(theia PROPERTIES
+add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
   VERSION ${THEIA_VERSION}
   SOVERSION ${THEIA_VERSION_MAJOR}
   )
-target_link_libraries(theia ${THEIA_LIBRARY_DEPENDENCIES})
+target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES})
 
-install(TARGETS theia
+install(TARGETS ${CMAKE_PROJECT_NAME}
   EXPORT  TheiaExport
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib${LIB_SUFFIX}
@@ -266,7 +268,7 @@ if (BUILD_TESTING)
     add_executable(${TEST_NAME}_test test/test_main.cc ${FILENAME}_test.cc)
     target_link_libraries(${TEST_NAME}_test
       gtest
-      theia
+      ${CMAKE_PROJECT_NAME}
       ${THEIA_LIBRARY_DEPENDENCIES})
     add_test(NAME ${TEST_NAME}_test
       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TEST_NAME}_test)
@@ -389,14 +391,3 @@ if (BUILD_TESTING)
 #  gtest(util/mutable_priority_queue)
 #  gtest(util/lru_cache)
 endif (BUILD_TESTING)
-
-#add_subdirectory(image)
-if (PYTHON_BUILD)
-    add_subdirectory(io)
-    add_subdirectory(image)
-    add_subdirectory(matching)
-    add_subdirectory(math)
-    add_subdirectory(sfm)
-    add_subdirectory(solvers)
-    add_subdirectory(util)
-endif (PYTHON_BUILD)
