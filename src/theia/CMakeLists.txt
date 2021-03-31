@@ -90,7 +90,7 @@ set(THEIA_SRC
   matching/fisher_vector_extractor.cc
   matching/guided_epipolar_matcher.cc
   matching/in_memory_features_and_matches_database.cc
-  matching/rocksdb_features_and_matches_database.cc
+  #matching/rocksdb_features_and_matches_database.cc
   math/closed_form_polynomial_solver.cc
   math/constrained_l1_solver.cc
   math/find_polynomial_roots_companion_matrix.cc
@@ -233,14 +233,14 @@ set(THEIA_LIBRARY_DEPENDENCIES
   ${GFLAGS_LIBRARIES}
   ${GLOG_LIBRARIES}
   #${OPENIMAGEIO_LIBRARIES}
-  ${ROCKSDB_LIBRARIES}
-  ${SUITESPARSE_LIBRARIES}
-  akaze
-  flann_cpp
+  #${ROCKSDB_LIBRARIES}
+  #${SUITESPARSE_LIBRARIES}
+  #akaze
+  flann_cpp_s
   statx
   stlplus3
   vlfeat
-  visual_sfm
+  #visual_sfm
 )
 
 set(THEIA_LIBRARY_SOURCE

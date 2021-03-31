@@ -25,7 +25,8 @@ if (MSVC)
   add_definitions(-DVL_DISABLE_SSE2)
 endif (MSVC)
 
-add_library(vlfeat SHARED ${vl_sources})
+#add_definitions(-DVL_DISABLE_SSE2)
+add_library(vlfeat STATIC ${vl_sources})
 install(TARGETS vlfeat
   EXPORT  TheiaExport
   RUNTIME DESTINATION bin

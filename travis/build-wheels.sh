@@ -17,36 +17,41 @@ function repair_wheel {
 
 yum install -y wget
 yum install -y eigen3-devel
+yum install -y atlas-static
+yum install -y blas-devel 
+yum install -y lapack-devel
 #rocksdb dependencies
-yum install -y centos-release-scl
-yum install -y snappy snappy-devel
-yum install -y zlib zlib-devel
-yum install -y bzip2 bzip2-devel
-yum install -y lz4-devel
-yum install -y libzstd
-yum install -y libjpeg-devel
+# yum install -y centos-release-scl
+# yum install -y snappy snappy-devel
+# yum install -y zlib zlib-devel
+# yum install -y bzip2 bzip2-devel
+# yum install -y lz4-devel
+# yum install -y libzstd
+
+# yum install -y libjpeg-devel
 
 NUM_CORES=20
 
-cd /home && git clone https://github.com/xianyi/OpenBLAS/ && cd OpenBLAS && USE_THREAD=0 make -j$NUM_CORES && make PREFIX=/usr/local install
+mkdir -p libs
 
-cd /home && \
+cd /libs && \
 wget https://github.com/gflags/gflags/archive/refs/tags/v2.2.2.tar.gz && \
 tar xzf v2.2.2.tar.gz && \
 cd gflags-2.2.2 && mkdir build && cd build && \
-cmake ../ -DBUILD_SHARED_LIBS=ON && make -j$NUM_CORES && make install
+cmake ../ -DCMAKE_CXX_FLAGS='-fPIC' -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make install
 
-cd /home && \
+cd /libs && \
 git clone https://github.com/google/glog.git && \
 cd glog && mkdir build && cd build && \
-cmake ../ -DBUILD_SHARED_LIBS=ON && make -j$NUM_CORES && make install
+cmake ../ -DCMAKE_CXX_FLAGS='-fPIC' -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make install
 
 #rocksdb
-cd /home && git clone https://github.com/facebook/rocksdb.git && cd rocksdb && git checkout v5.9.2 && \
-    DEBUG_LEVEL=0 CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess' make -j$NUM_CORES install-shared INSTALL_PATH=/usr/local
+# cd /libs && git clone https://github.com/facebook/rocksdb.git && cd rocksdb && git checkout v5.9.2 && \
+#     CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess' PORTABLE=1 make -j$NUM_CORES install-static INSTALL_PATH=/usr/local
 
 #rapidjson
-cd /home && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make PREFIX=/usr/local install
+cd /libs && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson && mkdir -p build && \
+cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make PREFIX=/usr/local install
 
 # # openimageio
 # cd /home
@@ -80,9 +85,18 @@ cd /home && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson &
 # make -j​​​ && make install && cd /home && rm -fr oiio
 
 # Build Ceres
-cd /home
+cd /libs
 git clone https://github.com/ceres-solver/ceres-solver && cd ceres-solver && git checkout 2.0.0 && mkdir -p build && cd build && \
-cmake  ../ -DBUILD_DOCUMENTATION=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DEIGENSPARSE=ON -DSUITESPARSE=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make install
+cmake  ../ -DBUILD_DOCUMENTATION=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DEIGENSPARSE=ON -DSUITESPARSE=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make install
+
+# something is still weird with librocksdb build, libs are way to large
+# for lib in /usr/local/lib/*.so*; do
+#     strip "$lib" 
+# done
+
+cd /libs
+cd ../
+rm -rf /libs
 
 cd /home
 mkdir -p wheelhouse
@@ -91,10 +105,11 @@ for PYBIN in /opt/python/*/bin; do
     "${PYBIN}/pip" install nose
     "${PYBIN}/python" setup.py bdist_wheel
     rm -rf /home/cmake_build/
-    rm -rf /home/src/pytheia
+    rm -rf /home/src/pytheia/*.so
     rm -rf /home/pytheia.egg-info
 done
 cp /home/dist/*.whl /home/wheelhouse
+rm -rf /home/dist
 
 # Bundle external shared libraries into the wheels
 for whl in /home/wheelhouse/*.whl; do

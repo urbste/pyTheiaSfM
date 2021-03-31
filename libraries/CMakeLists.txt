@@ -21,7 +21,7 @@ add_subdirectory(statx)
 add_subdirectory(stlplus3)
 
 # Add VLFeat.
-#add_subdirectory(vlfeat)
+add_subdirectory(vlfeat)
 
 # Add VisualSfM files.
 #add_subdirectory(visual_sfm)

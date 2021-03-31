@@ -89,7 +89,6 @@
 
 
 #include "theia/sfm/sfm_wrapper.h"
-#include "theia/sfm/exif_reader.h"
 #include "theia/sfm/estimate_twoview_info.h"
 #include "theia/sfm/estimate_track.h"
 #include "theia/sfm/colorize_reconstruction.h"

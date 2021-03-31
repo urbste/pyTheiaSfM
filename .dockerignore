@@ -1,6 +1,5 @@
 cmake_build/*
-src/pytheia/*
-
+wheelhouse
 *.user
 
 ### Cpp template

@@ -1,17 +1,18 @@
 import sys
 
-
-from pytheia_sfm import CameraIntrinsicsModel 
-from pytheia_sfm import Camera
-from pytheia_sfm import PinholeCameraModel
-from pytheia_sfm import CameraIntrinsicsModelType
-from pytheia_sfm import CameraIntrinsicsPrior
+from pytheia.pytheia.sfm import CameraIntrinsicsModel 
+from pytheia.pytheia.sfm import Camera
+from pytheia.pytheia.sfm import PinholeCameraModel
+from pytheia.pytheia.sfm import CameraIntrinsicsModelType
+from pytheia.pytheia.sfm import CameraIntrinsicsPrior
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 
 
 
 def test_SetCameraIntrinsicsModelType():
+    print("test_SetCameraIntrinsicsModelType()")
+
     camera = Camera()
     kFocalLength = 100.0
     print(camera.GetCameraIntrinsicsModelType())
@@ -23,6 +24,8 @@ def test_SetCameraIntrinsicsModelType():
 
 
 def test_SetFromCameraIntrinsicsPrior():
+    print("test_SetFromCameraIntrinsicsPrior()")
+
     camera = Camera()
     prior = CameraIntrinsicsPrior()
     prior.image_width = 1920
@@ -39,7 +42,7 @@ def test_SetFromCameraIntrinsicsPrior():
     
 
 def test_ExternalParameterGettersandSetters():
-
+    print("test_ExternalParameterGettersandSetters()")
     camera = Camera()
     kTolerance = 1e-15
 
@@ -78,6 +81,8 @@ def test_ExternalParameterGettersandSetters():
 
 
 def test_InternalParameterGettersandSetters():
+    print("test_InternalParameterGettersandSetters()")
+
     camera = Camera()
     assert camera.FocalLength==1.0
     assert camera.PrincipalPointX==0.0
@@ -109,3 +114,10 @@ def Test_ProjectionMatrix():
 def Test_Reprojection():
     pass
 """
+
+if __name__ == "__main__":
+    test_ExternalParameterGettersandSetters()
+    test_InternalParameterGettersandSetters()
+    test_SetCameraIntrinsicsModelType()
+    test_SetFromCameraIntrinsicsPrior()
+    print("All tests successfull.")

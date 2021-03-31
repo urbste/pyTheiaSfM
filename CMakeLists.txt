@@ -179,13 +179,13 @@ else (CERES_FOUND)
 endif (CERES_FOUND)
 
 # RocksDB
-message("-- Check for RocksDB")
-find_package(RocksDB REQUIRED)
-if (ROCKSDB_FOUND)
-  message("-- Found RocksDB: ${ROCKSDB_INCLUDE_DIR}")
-else (ROCKSDB_FOUND)
-  message(FATAL_ERROR "Can't find RocksDB. Please set ROCKSDB_INCLUDE_DIR & ROCKSDB_LIBRARY to use RocksDB.")
-endif (ROCKSDB_FOUND)
+#message("-- Check for RocksDB")
+#find_package(RocksDB REQUIRED)
+#if (ROCKSDB_FOUND)
+#  message("-- Found RocksDB: ${ROCKSDB_INCLUDE_DIR}")
+#else (ROCKSDB_FOUND)
+#  message(FATAL_ERROR "Can't find RocksDB. Please set ROCKSDB_INCLUDE_DIR & ROCKSDB_LIBRARY to use RocksDB.")
+#endif (ROCKSDB_FOUND)
 
 # RapidJSON.
 message("-- Check for RapidJSON")
@@ -203,7 +203,7 @@ include_directories(
   ${GFLAGS_INCLUDE_DIRS}
   ${GLOG_INCLUDE_DIRS}
   ${RAPIDJSON_INCLUDE_DIRS}
-  ${ROCKSDB_INCLUDE_DIR}
+  #${ROCKSDB_INCLUDE_DIR}
 )
 
 # NOTE: This fix came from Ceres solver with the following comment:
@@ -329,9 +329,9 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TheiaConfig.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindEigen.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGlog.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGflags.cmake"
-	            "${CMAKE_SOURCE_DIR}/cmake/FindOpenImageIO.cmake"
-              "${CMAKE_SOURCE_DIR}/cmake/FindRocksDB.cmake"
-              "${CMAKE_SOURCE_DIR}/cmake/FindSuiteSparse.cmake"
+	            #"${CMAKE_SOURCE_DIR}/cmake/FindOpenImageIO.cmake"
+              #"${CMAKE_SOURCE_DIR}/cmake/FindRocksDB.cmake"
+              #"${CMAKE_SOURCE_DIR}/cmake/FindSuiteSparse.cmake"
               DESTINATION ${CMAKECONFIG_INSTALL_DIR})
 
 

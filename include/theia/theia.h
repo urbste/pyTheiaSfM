@@ -81,7 +81,7 @@
 #include "theia/matching/indexed_feature_match.h"
 #include "theia/matching/in_memory_features_and_matches_database.h"
 #include "theia/matching/keypoints_and_descriptors.h"
-#include "theia/matching/rocksdb_features_and_matches_database.h"
+//#include "theia/matching/rocksdb_features_and_matches_database.h"
 #include "theia/math/closed_form_polynomial_solver.h"
 #include "theia/math/constrained_l1_solver.h"
 #include "theia/math/distribution.h"

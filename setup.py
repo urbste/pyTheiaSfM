@@ -52,10 +52,8 @@ def build_c_extension():
 
 
 def create_package():
-    subprocess.run(['mkdir', '-p', 'pytheia'], cwd='src')
-    files = glob('cmake_build/lib/*.so')
+    files = glob('cmake_build/lib/pytheia*')
     subprocess.run(['cp'] + files + ['src/pytheia'])
-    subprocess.run(['touch', 'src/pytheia/__init__.py'])
 
 configure_c_extension()
 build_c_extension()

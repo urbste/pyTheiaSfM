@@ -22,7 +22,7 @@
 #include "theia/matching/brute_force_feature_matcher.h"
 #include "theia/matching/cascade_hashing_feature_matcher.h"
 #include "theia/matching/cascade_hasher.h"
-#include "theia/matching/rocksdb_features_and_matches_database.h"
+//#include "theia/matching/rocksdb_features_and_matches_database.h"
 //#include "theia/matching/local_features_and_matches_database.h"
 #include "theia/matching/in_memory_features_and_matches_database.h"
 #include "theia/matching/create_feature_matcher.h"
@@ -43,25 +43,25 @@ void pytheia_matching_classes(py::module &m) {
 
     //RocksDbFeaturesAndMatchesDatabase
 
-    py::class_<theia::RocksDbFeaturesAndMatchesDatabase, theia::FeaturesAndMatchesDatabase>(m, "RocksDbFeaturesAndMatchesDatabase")
-      .def(py::init<std::string>())
-      .def("ContainsCameraIntrinsicsPrior", &theia::RocksDbFeaturesAndMatchesDatabase::ContainsCameraIntrinsicsPrior)
-      .def("GetCameraIntrinsicsPrior", &theia::RocksDbFeaturesAndMatchesDatabase::GetCameraIntrinsicsPrior)
-      .def("PutCameraIntrinsicsPrior", &theia::RocksDbFeaturesAndMatchesDatabase::PutCameraIntrinsicsPrior)
-      .def("ImageNamesOfCameraIntrinsicsPriors", &theia::RocksDbFeaturesAndMatchesDatabase::ImageNamesOfCameraIntrinsicsPriors)
-      .def("NumCameraIntrinsicsPrior", &theia::RocksDbFeaturesAndMatchesDatabase::NumCameraIntrinsicsPrior)
-      .def("ContainsFeatures", &theia::RocksDbFeaturesAndMatchesDatabase::ContainsFeatures)
-      .def("GetFeatures", &theia::RocksDbFeaturesAndMatchesDatabase::GetFeatures)
-      .def("PutFeatures", &theia::RocksDbFeaturesAndMatchesDatabase::PutFeatures)
-      .def("NumImages", &theia::RocksDbFeaturesAndMatchesDatabase::NumImages)
-      .def("GetImagePairMatch", &theia::RocksDbFeaturesAndMatchesDatabase::GetImagePairMatch)
-      .def("PutImagePairMatch", &theia::RocksDbFeaturesAndMatchesDatabase::PutImagePairMatch)
-      .def("ImageNamesOfMatches", &theia::RocksDbFeaturesAndMatchesDatabase::ImageNamesOfMatches)
-      .def("NumMatches", &theia::RocksDbFeaturesAndMatchesDatabase::NumMatches)
-      .def("RemoveAllMatches", &theia::RocksDbFeaturesAndMatchesDatabase::RemoveAllMatches)
-      .def("ImageNamesOfFeatures", &theia::RocksDbFeaturesAndMatchesDatabase::ImageNamesOfFeatures)
+    // py::class_<theia::RocksDbFeaturesAndMatchesDatabase, theia::FeaturesAndMatchesDatabase>(m, "RocksDbFeaturesAndMatchesDatabase")
+    //   .def(py::init<std::string>())
+    //   .def("ContainsCameraIntrinsicsPrior", &theia::RocksDbFeaturesAndMatchesDatabase::ContainsCameraIntrinsicsPrior)
+    //   .def("GetCameraIntrinsicsPrior", &theia::RocksDbFeaturesAndMatchesDatabase::GetCameraIntrinsicsPrior)
+    //   .def("PutCameraIntrinsicsPrior", &theia::RocksDbFeaturesAndMatchesDatabase::PutCameraIntrinsicsPrior)
+    //   .def("ImageNamesOfCameraIntrinsicsPriors", &theia::RocksDbFeaturesAndMatchesDatabase::ImageNamesOfCameraIntrinsicsPriors)
+    //   .def("NumCameraIntrinsicsPrior", &theia::RocksDbFeaturesAndMatchesDatabase::NumCameraIntrinsicsPrior)
+    //   .def("ContainsFeatures", &theia::RocksDbFeaturesAndMatchesDatabase::ContainsFeatures)
+    //   .def("GetFeatures", &theia::RocksDbFeaturesAndMatchesDatabase::GetFeatures)
+    //   .def("PutFeatures", &theia::RocksDbFeaturesAndMatchesDatabase::PutFeatures)
+    //   .def("NumImages", &theia::RocksDbFeaturesAndMatchesDatabase::NumImages)
+    //   .def("GetImagePairMatch", &theia::RocksDbFeaturesAndMatchesDatabase::GetImagePairMatch)
+    //   .def("PutImagePairMatch", &theia::RocksDbFeaturesAndMatchesDatabase::PutImagePairMatch)
+    //   .def("ImageNamesOfMatches", &theia::RocksDbFeaturesAndMatchesDatabase::ImageNamesOfMatches)
+    //   .def("NumMatches", &theia::RocksDbFeaturesAndMatchesDatabase::NumMatches)
+    //   .def("RemoveAllMatches", &theia::RocksDbFeaturesAndMatchesDatabase::RemoveAllMatches)
+    //   .def("ImageNamesOfFeatures", &theia::RocksDbFeaturesAndMatchesDatabase::ImageNamesOfFeatures)
 
-    ;
+    // ;
 
     //InMemoryFeaturesAndMatchesDatabase
 
