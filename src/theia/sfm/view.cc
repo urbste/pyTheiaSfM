@@ -83,6 +83,10 @@ struct CameraIntrinsicsPrior* View::MutableCameraIntrinsicsPrior() {
   return &camera_intrinsics_prior_;
 }
 
+void View::SetCameraIntrinsicsPrior(struct CameraIntrinsicsPrior prior){
+    camera_intrinsics_prior_ = prior;
+}
+
 int View::NumFeatures() const {
   return features_.size();
 }

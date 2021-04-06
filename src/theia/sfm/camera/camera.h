@@ -109,9 +109,11 @@ class Camera {
   // ---------------------------- Helper methods ---------------------------- //
   // Returns the projection matrix. Does not include radial distortion.
   void GetProjectionMatrix(Matrix3x4d* pmatrix) const;
+  Matrix3x4d GetProjectionMatrixWrapper();
 
   // Returns the calibration matrix in the form specified above.
   void GetCalibrationMatrix(Eigen::Matrix3d* kmatrix) const;
+  Eigen::Matrix3d GetCalibrationMatrixWrapper();
 
   // Projects the homogeneous 3D point into the image plane and undistorts the
   // point according to the radial distortion parameters. The function returns
@@ -120,6 +122,7 @@ class Camera {
   // infinity.
   double ProjectPoint(const Eigen::Vector4d& point,
                       Eigen::Vector2d* pixel) const;
+  std::tuple<double, Eigen::Vector2d> ProjectPointWrapper(const Eigen::Vector4d& point);
 
   // Converts the pixel point to a ray in 3D space such that the origin of the
   // ray is at the camera center and the direction is the pixel direction

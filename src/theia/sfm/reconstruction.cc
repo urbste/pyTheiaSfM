@@ -494,6 +494,12 @@ void Reconstruction::Normalize() {
   TransformReconstruction(rotation, Eigen::Vector3d::Zero(), 1.0, this);
 }
 
+Reconstruction Reconstruction::GetSubReconstructionWrapper(const std::unordered_set<ViewId>& views_in_subset) {
+    Reconstruction subreconstruction;
+    GetSubReconstruction(views_in_subset, &subreconstruction);
+    return subreconstruction;
+}
+
 void Reconstruction::GetSubReconstruction(
     const std::unordered_set<ViewId>& views_in_subset,
     Reconstruction* subreconstruction) const {

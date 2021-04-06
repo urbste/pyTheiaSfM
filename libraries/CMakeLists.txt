@@ -3,7 +3,7 @@ if (${BUILD_TESTING})
 endif (${BUILD_TESTING})
 
 # AKAZE feature extractor.
-add_subdirectory(akaze)
+#add_subdirectory(akaze)
 
 # Cereal for portable IO.
 add_subdirectory(cereal)
@@ -24,4 +24,7 @@ add_subdirectory(stlplus3)
 add_subdirectory(vlfeat)
 
 # Add VisualSfM files.
-add_subdirectory(visual_sfm)
+#add_subdirectory(visual_sfm)
+
+# Add pybind11 files.
+add_subdirectory(pybind11)

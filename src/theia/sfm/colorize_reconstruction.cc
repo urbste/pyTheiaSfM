@@ -40,7 +40,7 @@
 #include <mutex>  // NOLINT
 #include <string>
 
-#include "theia/image/image.h"
+//#include "theia/image/image.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/track.h"
 #include "theia/sfm/types.h"
@@ -57,31 +57,31 @@ void ExtractColorsFromImage(
     const View& view,
     std::unordered_map<TrackId, Eigen::Vector3f>* colors,
     std::mutex* mutex_lock) {
-  LOG(INFO) << "Extracting color for features in image: " << image_file;
-  const FloatImage image(image_file);
+  // LOG(INFO) << "Extracting color for features in image: " << image_file;
+  // const FloatImage image(image_file);
 
-  const auto& track_ids = view.TrackIds();
-  if (image.Channels() == 3) {
-    for (const TrackId track_id : track_ids) {
-      const Feature feature = *view.GetFeature(track_id);
-      const int x = static_cast<int>(feature.x());
-      const int y = static_cast<int>(feature.y());
-      std::lock_guard<std::mutex> lock(*mutex_lock);
-      (*colors)[track_id] += 255.0 * image.GetXY(x, y);
-    }
-  } else if (image.Channels() == 1) {
-    for (const TrackId track_id : track_ids) {
-      const Feature feature = *view.GetFeature(track_id);
-      const int x = static_cast<int>(feature.x());
-      const int y = static_cast<int>(feature.y());
-      std::lock_guard<std::mutex> lock(*mutex_lock);
-      (*colors)[track_id] += 255.0 * image.GetXY(x, y);
-    }
-  } else {
-    LOG(FATAL) << "The image file at: " << image_file
-               << " is not an RGB or a grayscale image so the color cannot be "
-                  "extracted.";
-  }
+  // const auto& track_ids = view.TrackIds();
+  // if (image.Channels() == 3) {
+  //   for (const TrackId track_id : track_ids) {
+  //     const Feature feature = *view.GetFeature(track_id);
+  //     const int x = static_cast<int>(feature.x());
+  //     const int y = static_cast<int>(feature.y());
+  //     std::lock_guard<std::mutex> lock(*mutex_lock);
+  //     (*colors)[track_id] += 255.0 * image.GetXY(x, y);
+  //   }
+  // } else if (image.Channels() == 1) {
+  //   for (const TrackId track_id : track_ids) {
+  //     const Feature feature = *view.GetFeature(track_id);
+  //     const int x = static_cast<int>(feature.x());
+  //     const int y = static_cast<int>(feature.y());
+  //     std::lock_guard<std::mutex> lock(*mutex_lock);
+  //     (*colors)[track_id] += 255.0 * image.GetXY(x, y);
+  //   }
+  // } else {
+  //   LOG(FATAL) << "The image file at: " << image_file
+  //              << " is not an RGB or a grayscale image so the color cannot be "
+  //                 "extracted.";
+  // }
 }
 
 }  // namespace

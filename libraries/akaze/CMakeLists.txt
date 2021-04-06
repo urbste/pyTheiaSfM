@@ -20,6 +20,8 @@ ADD_SUBDIRECTORY(cimg)
 #INCLUDE_DIRECTORIES(${cimg_INCLUDE_DIR} ${timer_INCLUDE_DIR} ./)
 INCLUDE_DIRECTORIES(./)
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+
 # Use a larger inlining threshold for Clang, since it hobbles Eigen,
 # resulting in an unreasonably slow version of the blas routines. The
 # -Qunused-arguments is needed because CMake passes the inline

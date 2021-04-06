@@ -32,19 +32,20 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+// edited by Steffen Urban 2019, January
+
+// from theis-sfm
+// however changed from cholmod to Eigen::SimplisticalLDLT
+// --> cholmod is faster (3-4x at least for big problems) but GPL
+
+
+
 #ifndef THEIA_MATH_MATRIX_SPARSE_CHOLESKY_LLT_H_
 #define THEIA_MATH_MATRIX_SPARSE_CHOLESKY_LLT_H_
 
-#include <cholmod.h>
-#include <Eigen/SparseCore>
 
-// UF_long is deprecated but SuiteSparse_long is only available in
-// newer versions of SuiteSparse. So for older versions of
-// SuiteSparse, we define SuiteSparse_long to be the same as UF_long,
-// which is what recent versions of SuiteSparse do anyways.
-#ifndef SuiteSparse_long
-#define SuiteSparse_long UF_long
-#endif
+#include <Eigen/SparseCore>
+#include <Eigen/SparseCholesky>
 
 namespace theia {
 
@@ -87,8 +88,8 @@ class SparseCholeskyLLt {
   Eigen::VectorXd Solve(const Eigen::VectorXd& rhs);
 
  private:
-  cholmod_common cc_;
-  cholmod_factor* cholmod_factor_;
+  Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Upper> solver_;
+
   bool is_factorization_ok_, is_analysis_ok_;
   Eigen::ComputationInfo info_;
 };

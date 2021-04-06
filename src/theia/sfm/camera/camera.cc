@@ -187,6 +187,7 @@ bool Camera::InitializeFromProjectionMatrix(
   return true;
 }
 
+
 void Camera::GetProjectionMatrix(Matrix3x4d *pmatrix) const {
   Matrix3d calibration_matrix;
   camera_intrinsics_->GetCalibrationMatrix(&calibration_matrix);
@@ -279,6 +280,24 @@ double Camera::PrincipalPointY() const {
 void Camera::SetImageSize(const int image_width, const int image_height) {
   image_size_[0] = image_width;
   image_size_[1] = image_height;
+}
+
+Matrix3x4d Camera::GetProjectionMatrixWrapper() {
+  Matrix3x4d pmatrix;
+  GetProjectionMatrix(&pmatrix);
+  return pmatrix;
+}
+
+Eigen::Matrix3d Camera::GetCalibrationMatrixWrapper() {
+  Eigen::Matrix3d kmatrix;
+  GetCalibrationMatrix(&kmatrix);
+  return kmatrix;
+}
+
+std::tuple<double, Eigen::Vector2d> Camera::ProjectPointWrapper(const Eigen::Vector4d& point) {
+  Eigen::Vector2d pixel;
+  double depth = ProjectPoint(point, &pixel);
+  return std::make_tuple(depth, pixel);
 }
 
 } // namespace theia
