@@ -1,4 +1,5 @@
 ## Basic programs
+
 #add_executable(extract_features extract_features.cc)
 #target_link_libraries(extract_features theia ${GFLAGS_LIBRARIES})
 
@@ -7,10 +8,10 @@
 
 ## Tools for building SfM models
 add_executable(build_reconstruction build_reconstruction.cc)
-target_link_libraries(build_reconstruction theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+target_link_libraries(build_reconstruction ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(build_1dsfm_reconstruction build_1dsfm_reconstruction.cc)
-target_link_libraries(build_1dsfm_reconstruction theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+#add_executable(build_1dsfm_reconstruction build_1dsfm_reconstruction.cc)
+#target_link_libraries(build_1dsfm_reconstruction theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 #add_executable(calibrate_camera_intrinsics calibrate_camera_intrinsics.cc)
 #target_link_libraries(calibrate_camera_intrinsics theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
@@ -98,4 +99,4 @@ target_link_libraries(build_1dsfm_reconstruction theia ${GFLAGS_LIBRARIES} ${GLO
 #target_link_libraries(create_reconstruction_from_strecha_dataset theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(estimate_covariance_for_tracks estimate_covariance_for_tracks.cc)
-target_link_libraries(estimate_covariance_for_tracks theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+target_link_libraries(estimate_covariance_for_tracks ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})

@@ -90,7 +90,7 @@ set(THEIA_SRC
   matching/fisher_vector_extractor.cc
   matching/guided_epipolar_matcher.cc
   matching/in_memory_features_and_matches_database.cc
-  #matching/rocksdb_features_and_matches_database.cc
+  matching/rocksdb_features_and_matches_database.cc
   math/closed_form_polynomial_solver.cc
   math/constrained_l1_solver.cc
   math/find_polynomial_roots_companion_matrix.cc
@@ -216,17 +216,21 @@ set(THEIA_SRC
   util/stringprintf.cc
   util/threadpool.cc
   util/timer.cc
-  # for pytheia
-  io/io_wrapper.cc
-  sfm/sfm_wrapper.cc
-  sfm/bundle_adjustment/bundle_adjustment_wrapper.cc
-  sfm/global_pose_estimation/global_pose_estimation_wrapper.cc
-  sfm/camera/camera_wrapper.cc
-  sfm/estimators/estimators_wrapper.cc
-  sfm/pose/pose_wrapper.cc
-  sfm/transformation/transformation_wrapper.cc
-  sfm/triangulation/triangulation_wrapper.cc
   )
+
+# for pytheia
+set(PYTHEIA_SRC
+    io/io_wrapper.cc
+    sfm/sfm_wrapper.cc
+    sfm/bundle_adjustment/bundle_adjustment_wrapper.cc
+    sfm/global_pose_estimation/global_pose_estimation_wrapper.cc
+    sfm/camera/camera_wrapper.cc
+    sfm/estimators/estimators_wrapper.cc
+    sfm/pose/pose_wrapper.cc
+    sfm/transformation/transformation_wrapper.cc
+    sfm/triangulation/triangulation_wrapper.cc
+    )
+
 
 set(THEIA_LIBRARY_DEPENDENCIES
   ${CERES_LIBRARIES}
@@ -243,16 +247,27 @@ set(THEIA_LIBRARY_DEPENDENCIES
   #visual_sfm
 )
 
-set(THEIA_LIBRARY_SOURCE
-  ${THEIA_SRC}
-  ${THEIA_HDRS})
 
-add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
+if (PYTHON_BUILD)
+    set(THEIA_LIBRARY_SOURCE
+      ${PYTHEIA_SRC}
+      ${THEIA_SRC}
+      ${THEIA_HDRS})
+    add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
+    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES})
+else (PYTHON_BUILD)
+    set(THEIA_LIBRARY_SOURCE
+      ${THEIA_SRC}
+      ${THEIA_HDRS})
+    add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
+    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES} ${ROCKSDB_LIBRARIES})
+endif (PYTHON_BUILD)
+
+
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
   VERSION ${THEIA_VERSION}
   SOVERSION ${THEIA_VERSION_MAJOR}
   )
-target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES})
 
 install(TARGETS ${CMAKE_PROJECT_NAME}
   EXPORT  TheiaExport

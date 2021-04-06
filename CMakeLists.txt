@@ -81,7 +81,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 option(BUILD_TESTING "Enable testing" OFF)
 option(BUILD_DOCUMENTATION "Build html User's Guide" OFF)
-option(PYTHON_BUILD "If we are building python bindings" ON)
+option(PYTHON_BUILD "If we are building python bindings" OFF)
+
+if (PYTHON_BUILD)
+    add_definitions(-DPYTHON_BUILD)
+endif()
 
 enable_testing()
 if (NOT MSVC)
@@ -110,7 +114,7 @@ add_definitions(-DTHEIA_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
 
 #if (PYTHON_BUILD)
   # fPIC
-  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 #endif (PYTHON_BUILD)
 
 # Eigen
@@ -179,13 +183,15 @@ else (CERES_FOUND)
 endif (CERES_FOUND)
 
 # RocksDB
-#message("-- Check for RocksDB")
-#find_package(RocksDB REQUIRED)
-#if (ROCKSDB_FOUND)
-#  message("-- Found RocksDB: ${ROCKSDB_INCLUDE_DIR}")
-#else (ROCKSDB_FOUND)
-#  message(FATAL_ERROR "Can't find RocksDB. Please set ROCKSDB_INCLUDE_DIR & ROCKSDB_LIBRARY to use RocksDB.")
-#endif (ROCKSDB_FOUND)
+if (NOT PYTHON_BUILD)
+    message("-- Check for RocksDB")
+    find_package(RocksDB REQUIRED)
+    if (ROCKSDB_FOUND)
+      message("-- Found RocksDB: ${ROCKSDB_INCLUDE_DIR}")
+    else (ROCKSDB_FOUND)
+      message(FATAL_ERROR "Can't find RocksDB. Please set ROCKSDB_INCLUDE_DIR & ROCKSDB_LIBRARY to use RocksDB.")
+    endif (ROCKSDB_FOUND)
+endif (NOT PYTHON_BUILD)
 
 # RapidJSON.
 message("-- Check for RapidJSON")
@@ -203,8 +209,12 @@ include_directories(
   ${GFLAGS_INCLUDE_DIRS}
   ${GLOG_INCLUDE_DIRS}
   ${RAPIDJSON_INCLUDE_DIRS}
-  #${ROCKSDB_INCLUDE_DIR}
 )
+
+if (NOT PYTHON_BUILD)
+    include_directories(${ROCKSDB_INCLUDE_DIR})
+endif (NOT PYTHON_BUILD)
+
 
 # NOTE: This fix came from Ceres solver with the following comment:
 #
@@ -329,8 +339,8 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TheiaConfig.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindEigen.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGlog.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGflags.cmake"
-	            #"${CMAKE_SOURCE_DIR}/cmake/FindOpenImageIO.cmake"
-              #"${CMAKE_SOURCE_DIR}/cmake/FindRocksDB.cmake"
+              #"${CMAKE_SOURCE_DIR}/cmake/FindOpenImageIO.cmake"
+              "${CMAKE_SOURCE_DIR}/cmake/FindRocksDB.cmake"
               #"${CMAKE_SOURCE_DIR}/cmake/FindSuiteSparse.cmake"
               DESTINATION ${CMAKECONFIG_INSTALL_DIR})
 

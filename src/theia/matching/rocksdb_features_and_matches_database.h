@@ -32,8 +32,7 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (sweeneychris@gmail.com)
 
-#ifndef THEIA_MATCHING_ROCKSDB_FEATURES_AND_MATCHES_DATABASE_H_
-#define THEIA_MATCHING_ROCKSDB_FEATURES_AND_MATCHES_DATABASE_H_
+#pragma once
 
 #include <mutex>  // NOLINT
 #include <string>
@@ -55,6 +54,8 @@ struct Options;
 }  // namespace rocksdb
 
 namespace theia {
+
+#ifndef PYTHON_BUILD
 
 // A simple implementation for storing features and feature matches. A local
 // filesystem and cache are used to retrieve the features efficiently. The
@@ -121,5 +122,7 @@ class RocksDbFeaturesAndMatchesDatabase : public FeaturesAndMatchesDatabase {
   std::unique_ptr<rocksdb::ColumnFamilyHandle> features_handle_;
   std::unique_ptr<rocksdb::ColumnFamilyHandle> matches_handle_;
 };
+
+#endif //PYTHON_BUILD
 }  // namespace theia
-#endif  // THEIA_MATCHING_LOCAL_FEATURES_AND_MATCHES_DATABASE_H_
+
