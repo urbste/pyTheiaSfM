@@ -137,4 +137,32 @@ BundleAdjustmentSummary BundleAdjustTracks(
     return bundle_adjuster.Optimize();
 }
 
+// Bundle adjust a single track.
+BundleAdjustmentSummary
+BundleAdjustTrack(const BundleAdjustmentOptions &options,
+                  const TrackId track_id, Reconstruction *reconstruction,
+                  Eigen::Matrix3d *empirical_covariance_matrix,
+                  double *empirical_variance) {
+  BundleAdjustmentOptions ba_options = options;
+  ba_options.linear_solver_type = ceres::DENSE_QR;
+  ba_options.use_inner_iterations = false;
+
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  bundle_adjuster.AddTrack(track_id);
+
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+  if (!summary.success) {
+    *empirical_covariance_matrix = Eigen::Matrix3d::Identity();
+  } else {
+    *empirical_covariance_matrix =
+        bundle_adjuster.GetCovarianceForTrack(track_id);
+    // now get redundancy
+    const double r =
+        1.0 / (reconstruction->Track(track_id)->NumViews() * 2 - 3);
+    *empirical_variance = r * summary.final_cost;
+    *empirical_covariance_matrix *= *empirical_variance;
+  }
+  return summary;
+}
+
 }  // namespace theia

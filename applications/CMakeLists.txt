@@ -96,3 +96,6 @@ target_link_libraries(build_1dsfm_reconstruction theia ${GFLAGS_LIBRARIES} ${GLO
 
 #add_executable(create_reconstruction_from_strecha_dataset create_reconstruction_from_strecha_dataset.cc)
 #target_link_libraries(create_reconstruction_from_strecha_dataset theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+add_executable(estimate_covariance_for_tracks estimate_covariance_for_tracks.cc)
+target_link_libraries(estimate_covariance_for_tracks theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})

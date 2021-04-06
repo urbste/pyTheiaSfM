@@ -427,4 +427,49 @@ void BundleAdjuster::AddReprojectionErrorResidual(const Feature &feature,
       camera->mutable_intrinsics(), track->MutablePoint()->data());
 }
 
+Eigen::Matrix3d BundleAdjuster::GetCovarianceForTrack(const TrackId track_id) {
+  const Track *track = reconstruction_->Track(track_id);
+  Eigen::Matrix3d covariance_matrix = Eigen::Matrix3d::Identity();
+  ceres::Covariance covariance_estimator(covariance_options_);
+
+  std::vector<std::pair<const double *, const double *>> covariance_blocks = {
+      std::make_pair(track->Point().data(), track->Point().data())};
+
+  if (!problem_->IsParameterBlockConstant(track->Point().data()) &&
+      problem_->HasParameterBlock(track->Point().data())) {
+    covariance_estimator.Compute(covariance_blocks, problem_.get());
+
+    covariance_estimator.GetCovarianceMatrixInTangentSpace(
+        {track->Point().data()}, covariance_matrix.data());
+  }
+
+  return covariance_matrix;
+}
+
+void BundleAdjuster::GetCovarianceForTracks(
+    std::map<TrackId, Eigen::Matrix3d> *covariance_matrices) {
+  ceres::Covariance covariance_estimator(covariance_options_);
+  const auto track_ids = reconstruction_->TrackIds();
+  std::vector<std::pair<const double *, const double *>> covariance_blocks;
+  std::vector<TrackId> est_track_ids;
+  for (const auto &t_id : track_ids) {
+    const Track *track = reconstruction_->Track(t_id);
+    if (!problem_->IsParameterBlockConstant(track->Point().data()) &&
+        problem_->HasParameterBlock(track->Point().data())) {
+      est_track_ids.push_back(t_id);
+      covariance_blocks.push_back(
+          std::make_pair(track->Point().data(), track->Point().data()));
+    }
+  }
+
+  covariance_estimator.Compute(covariance_blocks, problem_.get());
+
+  for (size_t i = 0; i < est_track_ids.size(); ++i) {
+    Eigen::Matrix3d cov_mat;
+    covariance_estimator.GetCovarianceMatrixInTangentSpace(
+        {covariance_blocks[i].first}, cov_mat.data());
+    covariance_matrices->insert(std::make_pair(est_track_ids[i], cov_mat));
+  }
+}
+
 } // namespace theia

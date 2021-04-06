@@ -76,6 +76,12 @@ class BundleAdjuster {
   // and tracks with bundle adjustment.
   BundleAdjustmentSummary Optimize();
 
+  // Get covariance for a single track
+  Eigen::Matrix3d GetCovarianceForTrack(const TrackId track_id);
+
+  // Get covariance for all tracks
+  void GetCovarianceForTracks(std::map<TrackId, Eigen::Matrix3d>* covariance_matrices);
+
  protected:
   // Add all camera extrinsics and intrinsics to the optimization problem.
   void SetCameraExtrinsicsParameterization();
@@ -130,6 +136,9 @@ class BundleAdjuster {
   // as constant during optimization.
   std::unordered_set<CameraIntrinsicsGroupId>
       potentially_constant_camera_intrinsics_groups_;
+
+  // Covariance estimator
+  ceres::Covariance::Options covariance_options_;
 };
 
 }  // namespace theia

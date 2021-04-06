@@ -171,6 +171,12 @@ BundleAdjustTracks(const BundleAdjustmentOptions &options,
                    const std::vector<TrackId> &tracks_to_optimize,
                    Reconstruction *reconstruction);
 
+// Bundle adjust a single track.
+BundleAdjustmentSummary BundleAdjustTrack(const BundleAdjustmentOptions& options,
+    const TrackId track_id,
+    Reconstruction* reconstruction,
+    Eigen::Matrix3d *empirical_covariance_matrix, double *empirical_variance);
+
 } // namespace theia
 
 #endif // THEIA_SFM_BUNDLE_ADJUSTMENT_BUNDLE_ADJUSTMENT_H_
