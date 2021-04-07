@@ -55,7 +55,7 @@ struct Options;
 
 namespace theia {
 
-#ifndef PYTHON_BUILD
+#ifdef WITH_ROCKSDB
 
 // A simple implementation for storing features and feature matches. A local
 // filesystem and cache are used to retrieve the features efficiently. The

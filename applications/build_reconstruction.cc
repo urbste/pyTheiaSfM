@@ -507,10 +507,14 @@ int main(int argc, char* argv[]) {
   CHECK_GT(FLAGS_output_reconstruction.size(), 0);
 
   // Initialize the features and matches database.
+#ifdef WITH_ROCKSDB
   std::unique_ptr<FeaturesAndMatchesDatabase> features_and_matches_database(
       new theia::RocksDbFeaturesAndMatchesDatabase(
           FLAGS_matching_working_directory));
-
+#else
+  std::unique_ptr<FeaturesAndMatchesDatabase> features_and_matches_database(
+      new theia::InMemoryFeaturesAndMatchesDatabase());
+#endif
   // Create the reconstruction builder.
   const ReconstructionBuilderOptions options =
       SetReconstructionBuilderOptions();

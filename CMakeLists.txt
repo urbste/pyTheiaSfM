@@ -82,9 +82,14 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 option(BUILD_TESTING "Enable testing" OFF)
 option(BUILD_DOCUMENTATION "Build html User's Guide" OFF)
 option(PYTHON_BUILD "If we are building python bindings" OFF)
+option(WITH_ROCKSDB "If rcocksdb should be included as a feature database" OFF)
 
 if (PYTHON_BUILD)
     add_definitions(-DPYTHON_BUILD)
+endif()
+
+if (WITH_ROCKSDB)
+    add_definitions(-DWITH_ROCKSDB)
 endif()
 
 enable_testing()
@@ -183,7 +188,7 @@ else (CERES_FOUND)
 endif (CERES_FOUND)
 
 # RocksDB
-if (NOT PYTHON_BUILD)
+if (NOT PYTHON_BUILD AND WITH_ROCKSDB)
     message("-- Check for RocksDB")
     find_package(RocksDB REQUIRED)
     if (ROCKSDB_FOUND)
@@ -191,16 +196,16 @@ if (NOT PYTHON_BUILD)
     else (ROCKSDB_FOUND)
       message(FATAL_ERROR "Can't find RocksDB. Please set ROCKSDB_INCLUDE_DIR & ROCKSDB_LIBRARY to use RocksDB.")
     endif (ROCKSDB_FOUND)
-endif (NOT PYTHON_BUILD)
+endif (NOT PYTHON_BUILD AND WITH_ROCKSDB)
 
 # RapidJSON.
-message("-- Check for RapidJSON")
-find_package(RapidJSON REQUIRED)
-if (RapidJSON_FOUND)
-  message("-- Found RapidJSON: ${RAPIDJSON_INCLUDE_DIRS}")
-else (RapidJSON_FOUND)
-  message(FATAL_ERROR "Can't find RapidJSON. Please set RAPIDJSON_INCLUDE_DIRS to use RapidJSON.")
-endif (RapidJSON_FOUND)
+#message("-- Check for RapidJSON")
+#find_package(RapidJSON REQUIRED)
+#if (RapidJSON_FOUND)
+#  message("-- Found RapidJSON: ${RAPIDJSON_INCLUDE_DIRS}")
+#else (RapidJSON_FOUND)
+#  message(FATAL_ERROR "Can't find RapidJSON. Please set RAPIDJSON_INCLUDE_DIRS to use RapidJSON.")
+#endif (RapidJSON_FOUND)
 
 include_directories(
   include
@@ -208,12 +213,11 @@ include_directories(
   ${CERES_INCLUDE_DIRS}
   ${GFLAGS_INCLUDE_DIRS}
   ${GLOG_INCLUDE_DIRS}
-  ${RAPIDJSON_INCLUDE_DIRS}
 )
 
-if (NOT PYTHON_BUILD)
+if (NOT PYTHON_BUILD AND WITH_ROCKSB)
     include_directories(${ROCKSDB_INCLUDE_DIR})
-endif (NOT PYTHON_BUILD)
+endif (NOT PYTHON_BUILD AND WITH_ROCKSB)
 
 
 # NOTE: This fix came from Ceres solver with the following comment:
