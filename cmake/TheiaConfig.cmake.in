@@ -211,11 +211,11 @@ endif (ROCKSDB_FOUND)
 #list(APPEND THEIA_INCLUDE_DIRS ${SUITESPARSE_INCLUDE_DIRS})
 
 # Import exported Theia targets.
-if (NOT TARGET theia AND NOT Theia_BINARY_DIR)
+if (NOT TARGET ${CMAKE_PROJECT_NAME} AND NOT Theia_BINARY_DIR)
   include(${THEIA_CURRENT_CONFIG_INSTALL_DIR}/TheiaTargets.cmake)
 endif (NOT TARGET theia AND NOT Theia_BINARY_DIR)
 # Set the expected XX_LIBRARIES variable for FindPackage().
-set(THEIA_LIBRARIES theia)
+set(THEIA_LIBRARIES ${CMAKE_PROJECT_NAME})
 
 # Add the libraries included with the distribution.
 set(THEIA_INTERNAL_LIB_PREFIX ${THEIA_INCLUDE_DIR}/theia/libraries)
