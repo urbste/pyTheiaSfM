@@ -79,6 +79,7 @@ set(THEIA_SRC
   io/write_calibration.cc
   io/write_colmap_files.cc
   io/write_keypoints_and_descriptors.cc
+  io/write_matches.cc
   io/write_nvm_file.cc
   io/write_ply_file.cc
   matching/brute_force_feature_matcher.cc

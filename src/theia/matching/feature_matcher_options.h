@@ -58,6 +58,11 @@ struct FeatureMatcherOptions {
   // valid writeable directory.
   std::string keypoints_and_descriptors_output_dir = "";
 
+  // We store the descriptors of up to cache_capacity images in the cache at a
+  // given time. The higher the cache capacity, the more memory is required to
+  // perform image-to-image matching.
+  int cache_capacity = 128;
+
   // Only symmetric matches are kept.
   bool keep_only_symmetric_matches = true;
 
