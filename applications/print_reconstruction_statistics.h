@@ -61,7 +61,7 @@ inline void PrintReprojectionErrors(
       }
 
       // Compute reprojection error.
-      const double reprojection_error = (*feature - projection).norm();
+      const double reprojection_error = ((*feature).point_ - projection).norm();
       reprojection_errors.emplace_back(reprojection_error);
     }
   }
