@@ -62,6 +62,7 @@
 #include "theia/io/write_bundler_files.h"
 #include "theia/io/write_calibration.h"
 #include "theia/io/write_keypoints_and_descriptors.h"
+#include "theia/io/write_matches.h"
 #include "theia/io/write_nvm_file.h"
 #include "theia/io/write_ply_file.h"
 #include "theia/matching/brute_force_feature_matcher.h"

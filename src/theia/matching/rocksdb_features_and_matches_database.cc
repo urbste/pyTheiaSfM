@@ -34,7 +34,7 @@
 
 #include "theia/matching/rocksdb_features_and_matches_database.h"
 
-#ifndef PYTHON_BUILD
+#ifdef WITH_ROCKSDB
 
 #include <cstdlib>
 #include <glog/logging.h>

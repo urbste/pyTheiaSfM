@@ -79,6 +79,7 @@ set(THEIA_SRC
   io/write_calibration.cc
   io/write_colmap_files.cc
   io/write_keypoints_and_descriptors.cc
+  io/write_matches.cc
   io/write_nvm_file.cc
   io/write_ply_file.cc
   matching/brute_force_feature_matcher.cc
@@ -253,16 +254,18 @@ if (PYTHON_BUILD)
       ${PYTHEIA_SRC}
       ${THEIA_SRC}
       ${THEIA_HDRS})
-    add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
-    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES})
 else (PYTHON_BUILD)
     set(THEIA_LIBRARY_SOURCE
       ${THEIA_SRC}
       ${THEIA_HDRS})
-    add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
-    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES} ${ROCKSDB_LIBRARIES})
 endif (PYTHON_BUILD)
 
+add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
+if (WITH_ROCKSDB)
+    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES} ${ROCKSDB_LIBRARIES})
+else (WITH_ROCKSDB)
+    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES})
+endif (WITH_ROCKSDB)
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
   VERSION ${THEIA_VERSION}
