@@ -78,7 +78,7 @@ bool AcceptableReprojectionError(
   if (camera.ProjectPoint(triangulated_point, &reprojection) < 0) {
     return false;
   }
-  const double sq_reprojection_error = (feature - reprojection).squaredNorm();
+  const double sq_reprojection_error = (feature.point_ - reprojection).squaredNorm();
   return sq_reprojection_error < sq_max_reprojection_error_pixels;
 }
 
@@ -207,8 +207,8 @@ void TwoViewMatchGeometricVerification::TriangulatePoints(
     // Make sure that there is enough baseline between the point so that the
     // triangulation is well-constrained.
     std::vector<Eigen::Vector3d> ray_directions(2);
-    ray_directions[0] = camera1_.PixelToUnitDepthRay(feature1).normalized();
-    ray_directions[1] = camera2_.PixelToUnitDepthRay(feature2).normalized();
+    ray_directions[0] = camera1_.PixelToUnitDepthRay(feature1.point_).normalized();
+    ray_directions[1] = camera2_.PixelToUnitDepthRay(feature2.point_).normalized();
     if (!SufficientTriangulationAngle(
             ray_directions, options_.min_triangulation_angle_degrees)) {
       ++num_bad_triangulation_angles;

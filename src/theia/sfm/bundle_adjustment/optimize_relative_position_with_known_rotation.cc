@@ -67,10 +67,10 @@ void CreateConstraintMatrix(
   for (int i = 0; i < correspondences.size(); i++) {
     const Eigen::Vector3d rotated_feature1 =
         rotation_matrix1.transpose() *
-        correspondences[i].feature1.homogeneous();
+        correspondences[i].feature1.point_.homogeneous();
     const Eigen::Vector3d rotated_feature2 =
         rotation_matrix2.transpose() *
-        correspondences[i].feature2.homogeneous();
+        correspondences[i].feature2.point_.homogeneous();
 
     constraint_matrix->col(i) =
         rotated_feature2.cross(rotated_feature1).transpose() *

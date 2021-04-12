@@ -71,7 +71,7 @@ Vector3d GetRotatedFeatureRay(const Camera& camera,
   Camera temp_camera = camera;
   temp_camera.SetOrientationFromAngleAxis(orientation);
   // Get the image ray rotated into the world reference frame.
-  return camera.PixelToUnitDepthRay(feature).normalized();
+  return camera.PixelToUnitDepthRay(feature.point_).normalized();
 }
 
 // Sorts the pairs such that the number of views (i.e. the int) is sorted in

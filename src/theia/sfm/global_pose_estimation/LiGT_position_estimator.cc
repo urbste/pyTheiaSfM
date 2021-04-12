@@ -271,11 +271,11 @@ void LiGTPositionEstimator::CalculateBCDForTrack(
     std::tuple<Eigen::Matrix3d, Eigen::Matrix3d, Eigen::Matrix3d> &BCD) {
 
   const Vector3d feature1 =
-      GetNormalizedFeature(*view1, track_id).homogeneous();
+      GetNormalizedFeature(*view1, track_id).point_.homogeneous();
   const Vector3d feature2 =
-      GetNormalizedFeature(*view2, track_id).homogeneous();
+      GetNormalizedFeature(*view2, track_id).point_.homogeneous();
   const Vector3d feature3 =
-      GetNormalizedFeature(*view3, track_id).homogeneous();
+      GetNormalizedFeature(*view3, track_id).point_.homogeneous();
 
   const Eigen::Matrix3d R1 = view1->Camera().GetOrientationAsRotationMatrix();
   const Eigen::Matrix3d R2 = view2->Camera().GetOrientationAsRotationMatrix();
@@ -353,9 +353,9 @@ void LiGTPositionEstimator::ComputeBaselineRatioForTriplet(
   feature2.reserve(common_tracks.size());
   feature3.reserve(common_tracks.size());
   for (const TrackId track_id : common_tracks) {
-    feature1.emplace_back(GetNormalizedFeature(view1, track_id).homogeneous());
-    feature2.emplace_back(GetNormalizedFeature(view2, track_id).homogeneous());
-    feature3.emplace_back(GetNormalizedFeature(view3, track_id).homogeneous());
+    feature1.emplace_back(GetNormalizedFeature(view1, track_id).point_.homogeneous());
+    feature2.emplace_back(GetNormalizedFeature(view2, track_id).point_.homogeneous());
+    feature3.emplace_back(GetNormalizedFeature(view3, track_id).point_.homogeneous());
   }
 
   //  Eigen::Matrix3d R1 = view1.Camera().GetOrientationAsRotationMatrix();
@@ -533,13 +533,15 @@ void LiGTPositionEstimator::AddTripletConstraintToSparseMatrix(
                                         sparse_matrix_entries);
 }
 
-Feature LiGTPositionEstimator::GetNormalizedFeature(const View &view,
-                                                    const TrackId track_id) {
+Feature LiGTPositionEstimator::GetNormalizedFeature(const View& view,
+                                                      const TrackId track_id) {
   Feature feature = *view.GetFeature(track_id);
-  const Camera &camera = view.Camera();
-  Eigen::Vector3d normalized_feature =
-      camera.PixelToNormalizedCoordinates(feature);
-  return normalized_feature.hnormalized();
+  const Camera& camera = view.Camera();
+  Eigen::Vector3d ray =
+      camera.PixelToNormalizedCoordinates(feature.point_);
+  Feature normalized_Feature(ray.hnormalized());
+  // todo normalized covariance?
+  return normalized_Feature;
 }
 
 void LiGTPositionEstimator::FlipSignOfPositionsIfNecessary(

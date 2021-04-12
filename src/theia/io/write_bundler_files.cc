@@ -143,8 +143,8 @@ bool WriteBundleFile(const Reconstruction& reconstruction,
       // Bundler has pixel coordinates with the origin at the center of the
       // image and positive x to the right, positive y is up.
       const Eigen::Vector2d adjusted_feature(
-          feature->x() - view->Camera().PrincipalPointX(),
-          -(feature->y() - view->Camera().PrincipalPointY()));
+          feature->point_.x() - view->Camera().PrincipalPointX(),
+          -(feature->point_.y() - view->Camera().PrincipalPointY()));
 
       // Note we give the keypoint index as 0 because we do not store SIFT
       // keyfiles.

@@ -119,7 +119,7 @@ bool WriteImagesFile(const Reconstruction& reconstruction,
     const auto& track_ids = view->TrackIds();
     for (auto track_id : track_ids) {
       auto feature = view->GetFeature(track_id);
-      ofs_images << feature->x() << " " << feature->y() << " " << track_id
+      ofs_images << feature->point_.x() << " " << feature->point_.y() << " " << track_id
                  << " ";
     }
     ofs_images << std::endl;

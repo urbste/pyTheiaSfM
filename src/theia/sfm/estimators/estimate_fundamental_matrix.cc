@@ -61,8 +61,8 @@ class FundamentalMatrixEstimator
                      std::vector<Eigen::Matrix3d>* fundamental_matrices) const {
     std::vector<Eigen::Vector2d> image1_points, image2_points;
     for (int i = 0; i < 8; i++) {
-      image1_points.emplace_back(correspondences[i].feature1);
-      image2_points.emplace_back(correspondences[i].feature2);
+      image1_points.emplace_back(correspondences[i].feature1.point_);
+      image2_points.emplace_back(correspondences[i].feature2.point_);
     }
 
     Eigen::Matrix3d fmatrix;
@@ -80,8 +80,8 @@ class FundamentalMatrixEstimator
   double Error(const FeatureCorrespondence& correspondence,
                const Eigen::Matrix3d& fundamental_matrix) const {
     return SquaredSampsonDistance(fundamental_matrix,
-                                  correspondence.feature1,
-                                  correspondence.feature2);
+                                  correspondence.feature1.point_,
+                                  correspondence.feature2.point_);
   }
 
  private:

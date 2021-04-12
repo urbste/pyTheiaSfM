@@ -55,47 +55,49 @@ namespace theia {
 // captured. This includes the name, EXIF metadata, and track information that
 // is found through feature matching.
 class View {
- public:
+public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   View();
-  explicit View(const std::string& name);
-  explicit View(const std::string& name, const double timestamp);
+  explicit View(const std::string &name);
+  explicit View(const std::string &name, const double timestamp);
 
   ~View() {}
 
-  const std::string& Name() const;
+  const std::string &Name() const;
 
   void SetEstimated(bool is_estimated);
   bool IsEstimated() const;
 
-  const class Camera& Camera() const;
-  class Camera* MutableCamera();
+  const class Camera &Camera() const;
+  class Camera *MutableCamera();
 
-  const struct CameraIntrinsicsPrior& CameraIntrinsicsPrior() const;
-  struct CameraIntrinsicsPrior* MutableCameraIntrinsicsPrior();
-   void SetCameraIntrinsicsPrior(struct CameraIntrinsicsPrior prior);
-   
+  const struct CameraIntrinsicsPrior &CameraIntrinsicsPrior() const;
+  struct CameraIntrinsicsPrior *MutableCameraIntrinsicsPrior();
+  void SetCameraIntrinsicsPrior(struct CameraIntrinsicsPrior prior);
+
   int NumFeatures() const;
 
   std::vector<TrackId> TrackIds() const;
 
-  const Feature* GetFeature(const TrackId track_id) const;
+  const Feature *GetFeature(const TrackId track_id) const;
 
-  void AddFeature(const TrackId track_id, const Feature& feature);
+  void AddFeature(const TrackId track_id, const Feature &feature);
 
   bool RemoveFeature(const TrackId track_id);
 
   double GetTimestamp() const;
 
   void SetTimestamp(const double timestamp);
- private:
+
+private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
   template <class Archive>
-  void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
-    ar(name_, timestamp_, is_estimated_, camera_, camera_intrinsics_prior_, features_);
+  void serialize(Archive &ar, const std::uint32_t version) { // NOLINT
+    ar(name_, timestamp_, is_estimated_, camera_, camera_intrinsics_prior_,
+       features_);
   }
 
   std::string name_;
@@ -104,10 +106,11 @@ class View {
   class Camera camera_;
   struct CameraIntrinsicsPrior camera_intrinsics_prior_;
   std::unordered_map<TrackId, Feature> features_;
+
 };
 
-}  // namespace theia
+} // namespace theia
 
 CEREAL_CLASS_VERSION(theia::View, 0);
 
-#endif  // THEIA_SFM_VIEW_H_
+#endif // THEIA_SFM_VIEW_H_

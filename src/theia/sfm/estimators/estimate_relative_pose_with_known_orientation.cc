@@ -34,10 +34,10 @@ class RelativePoseWithKnownOrientationEstimator
   bool EstimateModel(const std::vector<FeatureCorrespondence>& correspondences,
                      std::vector<Eigen::Vector3d>* relative_positions) const {
     Eigen::Vector3d position;
-    const Eigen::Vector2d rotated_features1[2] = {correspondences[0].feature1,
-                                                  correspondences[1].feature1};
-    const Eigen::Vector2d rotated_features2[2] = {correspondences[0].feature2,
-                                                  correspondences[1].feature2};
+    const Eigen::Vector2d rotated_features1[2] = {correspondences[0].feature1.point_,
+                                                  correspondences[1].feature1.point_};
+    const Eigen::Vector2d rotated_features2[2] = {correspondences[0].feature2.point_,
+                                                  correspondences[1].feature2.point_};
     if (!RelativePoseFromTwoPointsWithKnownRotation(
             rotated_features1, rotated_features2, &position)) {
       return false;
@@ -53,8 +53,8 @@ class RelativePoseWithKnownOrientationEstimator
                const Eigen::Vector3d& relative_position) const {
     static const Eigen::Matrix3d rotation = Eigen::Matrix3d::Identity();
     return SquaredSampsonDistance(CrossProductMatrix(-relative_position),
-                                  correspondence.feature1,
-                                  correspondence.feature2);
+                                  correspondence.feature1.point_,
+                                  correspondence.feature2.point_);
   }
 
  private:

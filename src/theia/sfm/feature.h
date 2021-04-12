@@ -44,15 +44,58 @@
 
 namespace theia {
 
-typedef Eigen::Vector2d Feature;
+class Feature {
+public:
+EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+  //! 2D point
+  Eigen::Vector2d point_ = Eigen::Vector2d::Identity();
+  //! 2D standard deviation
+  Eigen::Vector2d sigma_xy_ = Eigen::Vector2d::Identity();
 
-}  // namespace theia
+  Feature() {}
+  Feature(const double x, const double y) { point_ << x, y; }
+  Feature(const Eigen::Vector2d &point) : point_(point) {}
+  Feature(const Eigen::Vector2d &point, const Eigen::Vector2d &sigma_xy)
+      : point_(point), sigma_xy_(sigma_xy) {}
 
-// Templated method for disk I/O with cereal. This method tells cereal which
-// data members should be used when reading/writing to/from disk.
-template <class Archive>
-void serialize(Archive& ar, theia::Feature& feature) {  // NOLINT
-  ar(feature);
+  double x() const { return point_.x(); }
+  double y() const { return point_.y(); }
+
+  // make it hashable
+  bool operator==(const Feature &o) const {
+      return point_.x() == o.point_.x() && point_.y() == o.point_.y();
+  }
+
+  bool operator<(const Feature &o) const {
+      return point_.x() < o.point_.x() ||
+             (point_.x() == o.point_.x() && point_.y() < o.point_.y());
+  }
+
+private:
+  // Templated method for disk I/O with cereal. This method tells cereal which
+  // data members should be used when reading/writing to/from disk.
+  friend class cereal::access;
+  template <class Archive>
+  void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
+    ar(point_, sigma_xy_);
+  }
+};
+
+} // namespace theia
+
+CEREAL_CLASS_VERSION(theia::Feature, 0);
+
+namespace std
+{
+    template <>
+    struct hash<theia::Feature>
+    {
+        size_t operator()(const theia::Feature& k) const
+        {
+            // Compute individual hash values for two data members and combine them using XOR and bit shifting
+            return ((hash<double>()(k.point_.x()) ^ (hash<double>()(k.point_.y()) << 1)) >> 1);
+        }
+    };
 }
 
-#endif  // THEIA_SFM_FEATURE_H_
+#endif // THEIA_SFM_FEATURE_H_

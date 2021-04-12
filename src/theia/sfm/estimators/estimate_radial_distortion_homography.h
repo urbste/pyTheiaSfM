@@ -56,18 +56,18 @@ struct RansacSummary;
 // this is basically for radial homography matrix estimation
 struct RadialDistortionFeatureCorrespondence {
  public:
-  Feature feature_left;
-  Feature feature_right;
+  Eigen::Vector2d feature_left;
+  Eigen::Vector2d feature_right;
 
-  Feature normalized_feature_left;
-  Feature normalized_feature_right;
+  Eigen::Vector2d normalized_feature_left;
+  Eigen::Vector2d normalized_feature_right;
 
   double focal_length_estimate_left = 1000.0;
   double focal_length_estimate_right = 1000.0;
 
   double min_radial_distortion = -5.0;
   double max_radial_distortion = 0.0;
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 // Estimates the homography matrix from feature correspondences

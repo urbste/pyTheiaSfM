@@ -472,10 +472,10 @@ bool HybridReconstructionEstimator::InitializeCamerasWithKnownOrientation(
   for (const TrackId track_id : common_tracks) {
     // Retrieve the rotated and normalized correspondences.
     FeatureCorrespondence match;
-    match.feature1 =
-        camera1.PixelToUnitDepthRay(*view1->GetFeature(track_id)).hnormalized();
-    match.feature2 = camera2->PixelToUnitDepthRay(*view2->GetFeature(track_id))
-                         .hnormalized();
+    match.feature1 = Feature(
+        camera1.PixelToUnitDepthRay((*view1->GetFeature(track_id)).point_).hnormalized());
+    match.feature2 = Feature(camera2->PixelToUnitDepthRay((*view2->GetFeature(track_id)).point_)
+                         .hnormalized());
     rotated_correspondences.emplace_back(match);
   }
 
@@ -664,7 +664,7 @@ void HybridReconstructionEstimator::FindViewsToLocalize(
     for (const TrackId track_id : track_ids) {
       if (reconstruction_->Track(track_id)->IsEstimated()) {
         ++num_estimated_tracks;
-        pyramid.AddPoint(*view->GetFeature(track_id));
+        pyramid.AddPoint((*view->GetFeature(track_id)).point_);
       }
     }
 

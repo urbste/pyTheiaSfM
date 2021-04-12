@@ -38,6 +38,8 @@
 #include <Eigen/Core>
 #include <utility>
 
+#include <theia/sfm/feature.h>
+
 // This file defines hash functions for stl containers.
 namespace std {
 namespace {

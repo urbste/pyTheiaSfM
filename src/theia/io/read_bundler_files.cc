@@ -166,7 +166,7 @@ int AddTracksToReconstruction(
 
       // NOTE: We flip the pixel directions to compensate for Bundlers different
       // coordinate system in images.
-      const Feature feature(feature_info.kpt_x, -feature_info.kpt_y);
+      const Feature feature(Eigen::Vector2d(feature_info.kpt_x, -feature_info.kpt_y));
 
       // Push the sift key correspondence to the view list if the view is valid.
       if (!ContainsKey(views_to_remove, feature_info.camera_index)) {

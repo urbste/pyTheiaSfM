@@ -226,7 +226,7 @@ BundleAdjustmentSummary BundleAdjustTwoViewsAngular(
   // Add all the epipolar constraints from feature matches.
   for (const FeatureCorrespondence& match : correspondences) {
     problem.AddResidualBlock(
-        AngularEpipolarError::Create(match.feature1, match.feature2),
+        AngularEpipolarError::Create(match.feature1.point_, match.feature2.point_),
         NULL,
         info->rotation_2.data(),
         info->position_2.data());

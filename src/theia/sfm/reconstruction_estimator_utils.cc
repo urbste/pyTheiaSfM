@@ -82,10 +82,10 @@ void GetNormalizedFeatureCorrespondences(
     match.feature2 = *feature2;
 
     // Normalize for camera intrinsics.
-    match.feature1 =
-        camera1.PixelToNormalizedCoordinates(match.feature1).hnormalized();
-    match.feature2 =
-        camera2.PixelToNormalizedCoordinates(match.feature2).hnormalized();
+    match.feature1.point_ =
+        camera1.PixelToNormalizedCoordinates(match.feature1.point_).hnormalized();
+    match.feature2.point_ =
+        camera2.PixelToNormalizedCoordinates(match.feature2.point_).hnormalized();
     matches->emplace_back(match);
   }
 }

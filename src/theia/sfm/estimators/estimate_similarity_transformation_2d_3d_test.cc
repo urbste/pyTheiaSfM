@@ -91,7 +91,7 @@ void ExecuteRandomTest(
                                                1.0);
 
       depth = correspondence.camera.ProjectPoint(correspondence.point3d,
-                                                 &correspondence.observation);
+                                                 &correspondence.observation.point_);
     } while (depth < 0);
     correspondences.emplace_back(std::move(correspondence));
   }
@@ -99,14 +99,14 @@ void ExecuteRandomTest(
   // Add noise to the image observations.
   if (noise) {
     for (int i = 0; i < kNumCameras; i++) {
-      correspondences[i].observation += noise * rng.RandVector2d();
+      correspondences[i].observation.point_ += noise * rng.RandVector2d();
     }
   }
 
   // Add outliers.
   for (int i = 0; i < kNumCameras; i++) {
     if (i > inlier_ratio * kNumCameras) {
-      correspondences[i].observation = kFocalLength * rng.RandVector2d();
+      correspondences[i].observation.point_ = kFocalLength * rng.RandVector2d();
     }
   }
 

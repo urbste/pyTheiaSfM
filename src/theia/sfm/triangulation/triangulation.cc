@@ -217,9 +217,9 @@ bool IsTriangulatedPointInFrontOfCameras(
     const FeatureCorrespondence& correspondence,
     const Matrix3d& rotation,
     const Vector3d& position) {
-  const Vector3d dir1 = correspondence.feature1.homogeneous();
+  const Vector3d dir1 = correspondence.feature1.point_.homogeneous();
   const Vector3d dir2 =
-      rotation.transpose() * correspondence.feature2.homogeneous();
+      rotation.transpose() * correspondence.feature2.point_.homogeneous();
 
   const double dir1_sq = dir1.squaredNorm();
   const double dir2_sq = dir2.squaredNorm();

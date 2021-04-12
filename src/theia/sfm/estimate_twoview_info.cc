@@ -88,12 +88,12 @@ void NormalizeFeatures(
   for (const FeatureCorrespondence& correspondence : correspondences) {
     FeatureCorrespondence normalized_correspondence;
     const Eigen::Vector3d normalized_feature1 =
-        camera1.PixelToNormalizedCoordinates(correspondence.feature1);
-    normalized_correspondence.feature1 = normalized_feature1.hnormalized();
+        camera1.PixelToNormalizedCoordinates(correspondence.feature1.point_);
+    normalized_correspondence.feature1 = Feature(normalized_feature1.hnormalized());
 
     const Eigen::Vector3d normalized_feature2 =
-        camera2.PixelToNormalizedCoordinates(correspondence.feature2);
-    normalized_correspondence.feature2 = normalized_feature2.hnormalized();
+        camera2.PixelToNormalizedCoordinates(correspondence.feature2.point_);
+    normalized_correspondence.feature2 = Feature(normalized_feature2.hnormalized());
 
     normalized_correspondences->emplace_back(normalized_correspondence);
   }
@@ -121,8 +121,8 @@ int ComputeVisibilityScoreOfInliers(
       intrinsics2.image_width, intrinsics2.image_height, kNumPyramidLevels);
   for (const int i : inlier_indices) {
     const FeatureCorrespondence& match = correspondences[i];
-    pyramid1.AddPoint(match.feature1);
-    pyramid2.AddPoint(match.feature2);
+    pyramid1.AddPoint(match.feature1.point_);
+    pyramid2.AddPoint(match.feature2.point_);
   }
   // Return the summed score.
   return pyramid1.ComputeScore() + pyramid2.ComputeScore();

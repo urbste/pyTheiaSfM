@@ -71,7 +71,7 @@ inline double ComputeSqReprojectionError(const View& view,
                                          const Track& track) {
   Eigen::Vector2d reprojected_feature;
   view.Camera().ProjectPoint(track.Point(), &reprojected_feature);
-  return (reprojected_feature - feature).squaredNorm();
+  return (reprojected_feature - feature.point_).squaredNorm();
 }
 
 // Compute the reprojection error and truncated track length for this specific
@@ -169,7 +169,7 @@ void SelectBestTracksFromEachImageGridCell(
     const TrackStatistics& current_track_statistics =
         FindOrDieNoPrint(track_statistics, track_id);
     const Eigen::Vector2i grid_cell =
-        (feature * inv_grid_cell_size).cast<int>();
+        (feature.point_ * inv_grid_cell_size).cast<int>();
 
     image_grid[grid_cell].emplace_back(track_id, current_track_statistics);
   }

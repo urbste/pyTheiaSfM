@@ -87,7 +87,7 @@ class NonCentralCameraPoseEstimator
     world_points.reserve(data.size());
     for (const CameraAndFeatureCorrespondence2D3D& correspondence : data) {
       ray_directions.emplace_back(correspondence.camera.PixelToUnitDepthRay(
-          correspondence.observation).normalized());
+          correspondence.observation.point_).normalized());
       ray_origins.emplace_back(correspondence.camera.GetPosition());
       world_points.emplace_back(correspondence.point3d.hnormalized());
     }
@@ -127,7 +127,7 @@ class NonCentralCameraPoseEstimator
     }
 
     // Return the squared reprojection error.
-    return (data.observation - reprojection).squaredNorm();
+    return (data.observation.point_ - reprojection).squaredNorm();
   }
   
  private:

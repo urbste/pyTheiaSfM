@@ -267,9 +267,9 @@ void LinearPositionEstimator::ComputeBaselineRatioForTriplet(
   feature2.reserve(common_tracks.size());
   feature3.reserve(common_tracks.size());
   for (const TrackId track_id : common_tracks) {
-    feature1.emplace_back(GetNormalizedFeature(view1, track_id));
-    feature2.emplace_back(GetNormalizedFeature(view2, track_id));
-    feature3.emplace_back(GetNormalizedFeature(view3, track_id));
+    feature1.emplace_back(GetNormalizedFeature(view1, track_id).point_);
+    feature2.emplace_back(GetNormalizedFeature(view2, track_id).point_);
+    feature3.emplace_back(GetNormalizedFeature(view3, track_id).point_);
   }
 
   // Get the baseline ratios.
@@ -424,9 +424,11 @@ Feature LinearPositionEstimator::GetNormalizedFeature(const View& view,
                                                       const TrackId track_id) {
   Feature feature = *view.GetFeature(track_id);
   const Camera& camera = view.Camera();
-  Eigen::Vector3d normalized_feature =
-      camera.PixelToNormalizedCoordinates(feature);
-  return normalized_feature.hnormalized();
+  Eigen::Vector3d ray =
+      camera.PixelToNormalizedCoordinates(feature.point_);
+  Feature normalized_Feature(ray.hnormalized());
+  // todo normalized covariance?
+  return normalized_Feature;
 }
 
 void LinearPositionEstimator::FlipSignOfPositionsIfNecessary(

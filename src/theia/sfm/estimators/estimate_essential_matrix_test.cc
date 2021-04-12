@@ -90,13 +90,13 @@ void ExecuteRandomTest(const RansacParameters& options,
     // Add an inlier or outlier.
     if (i < inlier_ratio * points3d.size()) {
       // Make sure the point is in front of the camera.
-      correspondence.feature1 = points3d[i].hnormalized();
-      correspondence.feature2 =
+      correspondence.feature1.point_ = points3d[i].hnormalized();
+      correspondence.feature2.point_ =
           (rotation * points3d[i] + translation).hnormalized();
     } else {
-      correspondence.feature1 =
+      correspondence.feature1.point_ =
           Vector2d(rng.RandDouble(-1.0, 1.0), rng.RandDouble(-1.0, 1.0));
-      correspondence.feature2 =
+      correspondence.feature2.point_ =
           Vector2d(rng.RandDouble(-1.0, 1.0), rng.RandDouble(-1.0, 1.0));
     }
     correspondences.emplace_back(correspondence);
@@ -105,9 +105,9 @@ void ExecuteRandomTest(const RansacParameters& options,
   if (noise) {
     for (int i = 0; i < points3d.size(); i++) {
       AddNoiseToProjection(
-          noise / kFocalLength, &rng, &correspondences[i].feature1);
+          noise / kFocalLength, &rng, &correspondences[i].feature1.point_);
       AddNoiseToProjection(
-          noise / kFocalLength, &rng, &correspondences[i].feature2);
+          noise / kFocalLength, &rng, &correspondences[i].feature2.point_);
     }
   }
 

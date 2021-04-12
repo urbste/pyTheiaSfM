@@ -124,15 +124,15 @@ bool WriteNVMFile(const std::string& nvm_filepath,
 
       // Get the feature location normalized by the principal point.
       const Camera& camera = view->Camera();
-      const Feature feature =
-          (*view->GetFeature(track_id)) -
-          Feature(camera.PrincipalPointX(), camera.PrincipalPointY());
+      const Feature feature(
+          (*view->GetFeature(track_id)).point_ -
+          Eigen::Vector2d(camera.PrincipalPointX(), camera.PrincipalPointY()));
 
       const int track_index =
           FindOrDie(FindOrDie(feature_index_mapping, view_id), track_id);
       const int view_index = FindOrDie(view_id_to_index, view_id);
-      nvm_file << view_index << " " << track_index << " " << feature.x() << " "
-               << feature.y() << " ";
+      nvm_file << view_index << " " << track_index << " " << feature.point_.x() << " "
+               << feature.point_.y() << " ";
     }
     nvm_file << std::endl;
   }

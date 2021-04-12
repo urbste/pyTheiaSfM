@@ -103,7 +103,7 @@ int SetOutlierTracksToUnestimated(const std::unordered_set<TrackId>& track_ids,
         track->SetEstimated(false);
         break;
       }
-      mean_sq_reprojection_error += (projection - *feature).squaredNorm();
+      mean_sq_reprojection_error += (projection - (*feature).point_).squaredNorm();
       ++num_projections;
     }
 

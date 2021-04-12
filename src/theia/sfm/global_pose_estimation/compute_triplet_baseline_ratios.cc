@@ -107,9 +107,9 @@ bool ComputeTripletBaselineRatios(const ViewTriplet& triplet,
   baseline2.reserve(feature2.size());
   baseline3.reserve(feature3.size());
   for (int i = 0; i < feature1.size(); i++) {
-    const Vector3d normalized_feature1 = feature1[i].homogeneous().normalized();
-    const Vector3d normalized_feature2 = feature2[i].homogeneous().normalized();
-    const Vector3d normalized_feature3 = feature3[i].homogeneous().normalized();
+    const Vector3d normalized_feature1 = feature1[i].point_.homogeneous().normalized();
+    const Vector3d normalized_feature2 = feature2[i].point_.homogeneous().normalized();
+    const Vector3d normalized_feature3 = feature3[i].point_.homogeneous().normalized();
     if (!GetTriangulatedPointDepths(triplet.info_one_two,
                                     normalized_feature1,
                                     normalized_feature2,

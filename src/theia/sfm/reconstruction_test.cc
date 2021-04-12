@@ -70,7 +70,7 @@ TEST(Reconstruction, AddView) {
 TEST(Reconstruction, AddViewWithCameraIntrinsicsGroup) {
   Reconstruction reconstruction;
   const CameraIntrinsicsGroupId intrinsics_id = 1;
-  const ViewId view_id = reconstruction.AddView(view_names[0], intrinsics_id);
+  const ViewId view_id = reconstruction.AddView(view_names[0], intrinsics_id, 0.0);
   EXPECT_NE(view_id, kInvalidViewId);
   EXPECT_EQ(reconstruction.NumViews(), 1);
   EXPECT_EQ(reconstruction.NumTracks(), 0);
@@ -150,7 +150,7 @@ TEST(Reconstruction, GetViewsInCameraIntrinsicGroup) {
       reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id1);
 
   // Add a second view with to the same camera intrinsics group.
-  const ViewId view_id2 = reconstruction.AddView(view_names[1], intrinsics_id1);
+  const ViewId view_id2 = reconstruction.AddView(view_names[1], intrinsics_id1, view_id1+1);
   const CameraIntrinsicsGroupId intrinsics_id2 =
       reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id2);
   EXPECT_EQ(intrinsics_id1, intrinsics_id2);
@@ -185,7 +185,7 @@ TEST(Reconstruction, CameraIntrinsicsGroupIds) {
       reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id1);
 
   // Add a second view with to the same camera intrinsics group.
-  const ViewId view_id2 = reconstruction.AddView(view_names[1], intrinsics_id1);
+  const ViewId view_id2 = reconstruction.AddView(view_names[1], intrinsics_id1, view_id1+1);
   const CameraIntrinsicsGroupId intrinsics_id2 =
       reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id2);
   EXPECT_EQ(intrinsics_id1, intrinsics_id2);
@@ -232,8 +232,8 @@ TEST(Reconstruction, AddObservationValid) {
 
   const Feature* feature1 = view1->GetFeature(track_id);
   EXPECT_NE(feature1, nullptr);
-  EXPECT_EQ(feature1->x(), features[0].x());
-  EXPECT_EQ(feature1->y(), features[0].y());
+  EXPECT_EQ(feature1->point_.x(), features[0].point_.x());
+  EXPECT_EQ(feature1->point_.y(), features[0].point_.y());
 
   const Feature* feature2 = view2->GetFeature(track_id);
   EXPECT_EQ(feature2, nullptr);
@@ -400,7 +400,7 @@ TEST(Reconstruction, GetSubReconstruction) {
         EXPECT_NE(feature_in_subset, nullptr);
         EXPECT_NE(feature_in_reconstruction, nullptr);
         EXPECT_EQ(feature_in_subset->x(), feature_in_reconstruction->x());
-        EXPECT_EQ(feature_in_subset->y(), feature_in_reconstruction->y());
+        EXPECT_EQ((*feature_in_subset).y(), (*feature_in_reconstruction).y());
       }
     }
 

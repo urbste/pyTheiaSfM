@@ -77,9 +77,9 @@ void GetObservationsFromTrackViews(
     // reconstruction.
     const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
     const Eigen::Vector3d image_ray =
-        view->Camera().PixelToUnitDepthRay(*feature).normalized();
+        view->Camera().PixelToUnitDepthRay((*feature).point_).normalized();
 
-    features->emplace_back(*feature);
+    features->emplace_back((*feature).point_);
     view_ids->emplace_back(view_id);
     origins->emplace_back(view->Camera().GetPosition());
     Matrix3x4d proj_mat;

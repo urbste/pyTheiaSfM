@@ -70,8 +70,8 @@ class HomographyEstimator
                      std::vector<Eigen::Matrix3d>* homography) const {
     std::vector<Eigen::Vector2d> image1_points(4), image2_points(4);
     for (int i = 0; i < 4; i++) {
-      image1_points[i] = correspondences[i].feature1;
-      image2_points[i] = correspondences[i].feature2;
+      image1_points[i] = correspondences[i].feature1.point_;
+      image2_points[i] = correspondences[i].feature2.point_;
     }
 
     Eigen::Matrix3d homography_matrix;
@@ -90,8 +90,8 @@ class HomographyEstimator
   double Error(const FeatureCorrespondence& correspondence,
                const Eigen::Matrix3d& homography) const {
     const Eigen::Vector3d reprojected_point =
-        homography * correspondence.feature1.homogeneous();
-    return (correspondence.feature2 - reprojected_point.hnormalized())
+        homography * correspondence.feature1.point_.homogeneous();
+    return (correspondence.feature2.point_ - reprojected_point.hnormalized())
         .squaredNorm();
   }
 

@@ -83,16 +83,16 @@ void TestOptimization(const Camera& camera1,
   for (int i = 0; i < world_points.size(); i++) {
     const Eigen::Vector4d point = world_points[i].homogeneous();
     FeatureCorrespondence match;
-    camera1.ProjectPoint(point, &match.feature1);
-    camera2.ProjectPoint(point, &match.feature2);
-    AddNoiseToProjection(kPixelNoise, &rng, &match.feature1);
-    AddNoiseToProjection(kPixelNoise, &rng, &match.feature2);
+    camera1.ProjectPoint(point, &match.feature1.point_);
+    camera2.ProjectPoint(point, &match.feature2.point_);
+    AddNoiseToProjection(kPixelNoise, &rng, &match.feature1.point_);
+    AddNoiseToProjection(kPixelNoise, &rng, &match.feature2.point_);
 
     // Undo the calibration.
-    match.feature1 =
-        camera1.PixelToNormalizedCoordinates(match.feature1).hnormalized();
-    match.feature2 =
-        camera2.PixelToNormalizedCoordinates(match.feature2).hnormalized();
+    match.feature1.point_ =
+        camera1.PixelToNormalizedCoordinates(match.feature1.point_).hnormalized();
+    match.feature2.point_ =
+        camera2.PixelToNormalizedCoordinates(match.feature2.point_).hnormalized();
     matches.emplace_back(match);
   }
 

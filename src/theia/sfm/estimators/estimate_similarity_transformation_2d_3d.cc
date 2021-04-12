@@ -90,7 +90,7 @@ class GdlsSimilarityTransformationEstimator
     for (int i = 0; i < 4; i++) {
       ray_origins[i] = correspondences[i].camera.GetPosition();
       ray_directions[i] = correspondences[i].camera.PixelToUnitDepthRay(
-          correspondences[i].observation).normalized();
+          correspondences[i].observation.point_).normalized();
       world_points[i] = correspondences[i].point3d.hnormalized();
     }
 
@@ -149,7 +149,7 @@ class GdlsSimilarityTransformationEstimator
     }
 
     // Return the squared reprojection error.
-    return (correspondence.observation - reprojection).squaredNorm();
+    return (correspondence.observation.point_ - reprojection).squaredNorm();
   }
 
  private:

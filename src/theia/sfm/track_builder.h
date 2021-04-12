@@ -69,7 +69,7 @@ class TrackBuilder {
   void BuildTracks(Reconstruction* reconstruction);
 
  private:
-  uint64_t FindOrInsert(const std::pair<ViewId, Feature>& image_feature);
+  uint64_t FindOrInsert(const std::pair<ViewId, Feature> &image_feature);
 
   std::unordered_map<std::pair<ViewId, Feature>, uint64_t> features_;
   std::unique_ptr<ConnectedComponents<uint64_t> > connected_components_;

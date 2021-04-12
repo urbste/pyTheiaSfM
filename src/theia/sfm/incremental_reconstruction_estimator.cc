@@ -440,7 +440,7 @@ void IncrementalReconstructionEstimator::FindViewsToLocalize(
     for (const TrackId track_id : track_ids) {
       if (reconstruction_->Track(track_id)->IsEstimated()) {
         ++num_estimated_tracks;
-        pyramid.AddPoint(*view->GetFeature(track_id));
+        pyramid.AddPoint((*view->GetFeature(track_id)).point_);
       }
     }
 

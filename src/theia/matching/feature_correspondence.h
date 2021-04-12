@@ -58,7 +58,7 @@ struct FeatureCorrespondence {
       : feature1(feature1), feature2(feature2) {}
 
   bool operator==(const FeatureCorrespondence& other) const {
-    return (feature1 == other.feature1 && feature2 == other.feature2);
+    return (feature1.point_ == other.feature1.point_ && feature2.point_ == other.feature2.point_);
   }
 
  private:

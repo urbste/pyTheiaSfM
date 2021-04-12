@@ -124,6 +124,10 @@ class Reconstruction {
   // observation. If the track already contains an observation to this view then
   // false is returned. If the view/track does not exist, or another failure is
   // encountered then a failure is thrown.
+  // sigma squared is the approximated measurement accuracy of the image observation
+  // We set it to 1.0 pixel in the standard case. However, if you know, that
+  // you can measure the image points more accurately (e.g. aruco markers) you can
+  // set this value here
   bool AddObservation(const ViewId view_id,
                       const TrackId track_id,
                       const Feature& feature);

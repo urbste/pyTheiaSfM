@@ -65,8 +65,8 @@ class EssentialMatrixEstimator
     image1_points.reserve(correspondences.size());
     image2_points.reserve(correspondences.size());
     for (int i = 0; i < correspondences.size(); i++) {
-      image1_points.emplace_back(correspondences[i].feature1);
-      image2_points.emplace_back(correspondences[i].feature2);
+      image1_points.emplace_back(correspondences[i].feature1.point_);
+      image2_points.emplace_back(correspondences[i].feature2.point_);
     }
 
     return FivePointRelativePose(image1_points,
@@ -79,8 +79,8 @@ class EssentialMatrixEstimator
   double Error(const FeatureCorrespondence& correspondence,
                const Eigen::Matrix3d& essential_matrix) const {
     return SquaredSampsonDistance(essential_matrix,
-                                  correspondence.feature1,
-                                  correspondence.feature2);
+                                  correspondence.feature1.point_,
+                                  correspondence.feature2.point_);
   }
 
  private:

@@ -91,7 +91,7 @@ void GetNormalized2D3DMatches(const Reconstruction& reconstruction,
     const Feature& feature = *view.GetFeature(track_id);
     // Simply shift the pixel to remove the effect of the principal point.
     correspondence.feature =
-        feature -
+        feature.point_ -
         Eigen::Vector2d(camera.PrincipalPointX(), camera.PrincipalPointY());
     correspondence.world_point = track->Point().hnormalized();
     matches->emplace_back(correspondence);
@@ -116,7 +116,7 @@ void GetIntrinsicsNormalized2D3DMatches(
     const Feature& feature = *view.GetFeature(track_id);
     // Remove the camera intrinsics from the feature.
     correspondence.feature =
-        camera.PixelToNormalizedCoordinates(feature).hnormalized();
+        camera.PixelToNormalizedCoordinates(feature.point_).hnormalized();
     correspondence.world_point = track->Point().hnormalized();
     matches->emplace_back(correspondence);
   }

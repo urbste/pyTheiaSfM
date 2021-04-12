@@ -113,17 +113,17 @@ void TestTripletBaselineComputation(const double pixel_noise,
                                   Eigen::Vector4d(0, 0, scene_depth, 0);
 
     // Add the observations (plus noise if applicable).
-    camera1.ProjectPoint(point, &feature1[i]);
-    camera2.ProjectPoint(point, &feature2[i]);
-    camera3.ProjectPoint(point, &feature3[i]);
+    camera1.ProjectPoint(point, &feature1[i].point_);
+    camera2.ProjectPoint(point, &feature2[i].point_);
+    camera3.ProjectPoint(point, &feature3[i].point_);
 
     if (pixel_noise > 0) {
-      feature1[i].x() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature1[i].y() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature2[i].x() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature2[i].y() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature3[i].x() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature3[i].y() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature1[i].point_.x() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature1[i].point_.y() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature2[i].point_.x() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature2[i].point_.y() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature3[i].point_.x() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature3[i].point_.y() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
     }
   }
 

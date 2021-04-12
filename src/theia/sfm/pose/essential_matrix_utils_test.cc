@@ -146,8 +146,8 @@ void TestGetBestPoseFromEssentialMatrix(const int num_inliers,
       const Vector3d proj_3d = gt_rotation * point_3d + gt_translation;
 
       FeatureCorrespondence correspondence;
-      correspondence.feature1 = point_3d.hnormalized();
-      correspondence.feature2 = proj_3d.hnormalized();
+      correspondence.feature1.point_ = point_3d.hnormalized();
+      correspondence.feature2.point_ = proj_3d.hnormalized();
       correspondences.emplace_back(correspondence);
     }
 
@@ -158,8 +158,8 @@ void TestGetBestPoseFromEssentialMatrix(const int num_inliers,
       const Vector3d proj_3d = gt_rotation * point_3d + gt_translation;
 
       FeatureCorrespondence correspondence;
-      correspondence.feature1 = point_3d.hnormalized();
-      correspondence.feature2 = proj_3d.hnormalized();
+      correspondence.feature1.point_ = point_3d.hnormalized();
+      correspondence.feature2.point_ = proj_3d.hnormalized();
       correspondences.emplace_back(correspondence);
     }
 

@@ -79,8 +79,8 @@ class UncalibratedRelativePoseEstimator
       std::vector<UncalibratedRelativePose>* relative_poses) const {
     std::vector<Eigen::Vector2d> image1_points, image2_points;
     for (int i = 0; i < 8; i++) {
-      image1_points.emplace_back(centered_correspondences[i].feature1);
-      image2_points.emplace_back(centered_correspondences[i].feature2);
+      image1_points.emplace_back(centered_correspondences[i].feature1.point_);
+      image2_points.emplace_back(centered_correspondences[i].feature2.point_);
     }
 
     UncalibratedRelativePose relative_pose;
@@ -113,10 +113,10 @@ class UncalibratedRelativePoseEstimator
     std::vector<FeatureCorrespondence> normalized_correspondences(
         centered_correspondences.size());
     for (int i = 0; i < centered_correspondences.size(); i++) {
-      normalized_correspondences[i].feature1 =
-          centered_correspondences[i].feature1 / relative_pose.focal_length1;
-      normalized_correspondences[i].feature2 =
-          centered_correspondences[i].feature2 / relative_pose.focal_length2;
+      normalized_correspondences[i].feature1 = Feature(
+          centered_correspondences[i].feature1.point_ / relative_pose.focal_length1);
+      normalized_correspondences[i].feature2 = Feature(
+          centered_correspondences[i].feature2.point_ / relative_pose.focal_length2);
     }
 
     GetBestPoseFromEssentialMatrix(essential_matrix,
@@ -132,10 +132,10 @@ class UncalibratedRelativePoseEstimator
   double Error(const FeatureCorrespondence& centered_correspondence,
                const UncalibratedRelativePose& relative_pose) const {
     FeatureCorrespondence normalized_correspondence;
-    normalized_correspondence.feature1 =
-        centered_correspondence.feature1 / relative_pose.focal_length1;
-    normalized_correspondence.feature2 =
-        centered_correspondence.feature2 / relative_pose.focal_length2;
+    normalized_correspondence.feature1 = Feature(
+        centered_correspondence.feature1.point_ / relative_pose.focal_length1);
+    normalized_correspondence.feature2 = Feature(
+        centered_correspondence.feature2.point_ / relative_pose.focal_length2);
     if (!IsTriangulatedPointInFrontOfCameras(normalized_correspondence,
                                              relative_pose.rotation,
                                              relative_pose.position)) {
@@ -143,8 +143,8 @@ class UncalibratedRelativePoseEstimator
     }
 
     return SquaredSampsonDistance(relative_pose.fundamental_matrix,
-                                  centered_correspondence.feature1,
-                                  centered_correspondence.feature2);
+                                  centered_correspondence.feature1.point_,
+                                  centered_correspondence.feature2.point_);
   }
 
  private:

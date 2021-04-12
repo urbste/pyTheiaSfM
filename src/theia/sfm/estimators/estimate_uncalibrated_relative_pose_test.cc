@@ -78,17 +78,17 @@ void ExecuteRandomTest(const RansacParameters& options,
     if (i < inlier_ratio * kNumCorrespondences) {
       // Make sure the point is in front of the camera.
       const Vector3d point_3d = rng.RandVector3d() + Vector3d(0, 0, 4);
-      correspondence.feature1 = focal_length1 * point_3d.hnormalized();
-      correspondence.feature2 =
+      correspondence.feature1.point_ = focal_length1 * point_3d.hnormalized();
+      correspondence.feature2.point_ =
           focal_length2 * (rotation * point_3d + translation).hnormalized();
 
-      AddNoiseToProjection(noise, &rng, &correspondence.feature1);
-      AddNoiseToProjection(noise, &rng, &correspondence.feature2);
+      AddNoiseToProjection(noise, &rng, &correspondence.feature1.point_);
+      AddNoiseToProjection(noise, &rng, &correspondence.feature2.point_);
     } else {
-      correspondence.feature1 =
+      correspondence.feature1.point_ =
           focal_length1 *
           Vector2d(rng.RandDouble(-1.0, 1.0), rng.RandDouble(-1.0, 1.0));
-      correspondence.feature2 =
+      correspondence.feature2.point_ =
           focal_length2 *
           Vector2d(rng.RandDouble(-1.0, 1.0), rng.RandDouble(-1.0, 1.0));
     }

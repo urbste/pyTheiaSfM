@@ -397,8 +397,8 @@ void TestIsTriangulatedPointInFrontOfCameras(
     const Eigen::Vector3d& translation,
     const bool expected_outcome) {
   FeatureCorrespondence correspondence;
-  correspondence.feature1 = point3d.hnormalized();
-  correspondence.feature2 =
+  correspondence.feature1.point_ = point3d.hnormalized();
+  correspondence.feature2.point_ =
       (rotation * point3d + translation).hnormalized();
   const Vector3d position = -rotation.transpose() * translation;
   EXPECT_EQ(IsTriangulatedPointInFrontOfCameras(
