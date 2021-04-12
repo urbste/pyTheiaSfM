@@ -109,7 +109,7 @@ class TriangulationEstimator
 
 bool EstimateTriangulation(const RansacParameters& ransac_params,
                            const std::vector<Camera>& cameras,
-                           const std::vector<Eigen::Vector2d>& features,
+                           const std::vector<theia::Feature>& features,
                            Eigen::Vector4d* triangulated_point,
                            RansacSummary* summary) {
   CHECK_EQ(cameras.size(), features.size());
