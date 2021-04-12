@@ -41,6 +41,7 @@
 #include "theia/alignment/alignment.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/types.h"
+#include "theia/sfm/feature.h"
 
 namespace theia {
 
@@ -51,7 +52,7 @@ struct RansacSummary;
 // observations to find the point with the largest support.
 bool EstimateTriangulation(const RansacParameters& ransac_params,
                            const std::vector<Camera>& cameras,
-                           const std::vector<Eigen::Vector2d>& features,
+                           const std::vector<Feature>& features,
                            Eigen::Vector4d* triangulated_point,
                            RansacSummary* summary);
 

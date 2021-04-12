@@ -135,8 +135,8 @@ bool EstimateTriangulation(const RansacParameters& ransac_params,
     point_observations[i].projection_matrix = projection_matrix;
     point_observations[i].camera = cameras[i];
     point_observations[i].normalized_feature =
-        cameras[i].PixelToNormalizedCoordinates(features[i]).hnormalized();
-    point_observations[i].observed_pixel = features[i];
+        cameras[i].PixelToNormalizedCoordinates(features[i].point_).hnormalized();
+    point_observations[i].observed_pixel = features[i].point_;
   }
 
   // RANSAC triangulation.
