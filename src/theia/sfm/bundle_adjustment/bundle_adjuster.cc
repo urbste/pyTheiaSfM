@@ -427,9 +427,10 @@ void BundleAdjuster::AddReprojectionErrorResidual(const Feature &feature,
       camera->mutable_intrinsics(), track->MutablePoint()->data());
 }
 
-Eigen::Matrix3d BundleAdjuster::GetCovarianceForTrack(const TrackId track_id) {
+bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id,
+                                           Matrix3d *covariance_matrix) {
   const Track *track = reconstruction_->Track(track_id);
-  Eigen::Matrix3d covariance_matrix = Eigen::Matrix3d::Identity();
+  *covariance_matrix = Matrix3d::Identity();
   ceres::Covariance covariance_estimator(covariance_options_);
 
   std::vector<std::pair<const double *, const double *>> covariance_blocks = {
@@ -437,13 +438,16 @@ Eigen::Matrix3d BundleAdjuster::GetCovarianceForTrack(const TrackId track_id) {
 
   if (!problem_->IsParameterBlockConstant(track->Point().data()) &&
       problem_->HasParameterBlock(track->Point().data())) {
-    covariance_estimator.Compute(covariance_blocks, problem_.get());
-
+    if (!covariance_estimator.Compute(covariance_blocks, problem_.get())) {
+      return false;
+    }
     covariance_estimator.GetCovarianceMatrixInTangentSpace(
-        {track->Point().data()}, covariance_matrix.data());
-  }
+        {track->Point().data()}, (*covariance_matrix).data());
 
-  return covariance_matrix;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void BundleAdjuster::GetCovarianceForTracks(
@@ -469,6 +473,29 @@ void BundleAdjuster::GetCovarianceForTracks(
     covariance_estimator.GetCovarianceMatrixInTangentSpace(
         {covariance_blocks[i].first}, cov_mat.data());
     covariance_matrices->insert(std::make_pair(est_track_ids[i], cov_mat));
+  }
+}
+
+bool BundleAdjuster::GetCovarianceForView(const ViewId view_id,
+                                          Matrix6d *covariance_matrix) {
+  const auto camera = reconstruction_->View(view_id)->Camera();
+  *covariance_matrix = Matrix6d::Identity();
+
+  ceres::Covariance covariance_estimator(covariance_options_);
+
+  std::vector<std::pair<const double *, const double *>> covariance_blocks = {
+      std::make_pair(camera.extrinsics(), camera.extrinsics())};
+
+  if (!problem_->IsParameterBlockConstant(camera.extrinsics()) &&
+      problem_->HasParameterBlock(camera.extrinsics())) {
+    if (!covariance_estimator.Compute(covariance_blocks, problem_.get())) {
+      return false;
+    }
+    covariance_estimator.GetCovarianceMatrixInTangentSpace(
+        {camera.extrinsics()}, (*covariance_matrix).data());
+    return true;
+  } else {
+    return false;
   }
 }
 

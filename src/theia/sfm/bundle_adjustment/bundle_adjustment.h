@@ -45,6 +45,9 @@
 
 namespace theia {
 
+using Matrix3d = Eigen::Matrix<double, 3, 3>;
+using Matrix6d = Eigen::Matrix<double, 6, 6>;
+
 class Reconstruction;
 
 // The camera intrinsics parameters are defined by:
@@ -171,11 +174,18 @@ BundleAdjustTracks(const BundleAdjustmentOptions &options,
                    const std::vector<TrackId> &tracks_to_optimize,
                    Reconstruction *reconstruction);
 
+///////// With covariance estimation
 // Bundle adjust a single track.
 BundleAdjustmentSummary BundleAdjustTrack(const BundleAdjustmentOptions& options,
     const TrackId track_id,
     Reconstruction* reconstruction,
-    Eigen::Matrix3d *empirical_covariance_matrix, double *empirical_variance);
+    Matrix3d *empirical_covariance_matrix, double *empirical_variance);
+
+// Bundle adjust a single track.
+BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
+    const ViewId view_id,
+    Reconstruction* reconstruction,
+    Matrix6d *empirical_covariance_matrix, double *empirical_variance);
 
 } // namespace theia
 

@@ -44,11 +44,11 @@
 namespace theia {
 
 // Bundle adjust the specified views and tracks.
-BundleAdjustmentSummary BundleAdjustPartialReconstruction(
-    const BundleAdjustmentOptions& options,
-    const std::unordered_set<ViewId>& view_ids,
-    const std::unordered_set<TrackId>& track_ids,
-    Reconstruction* reconstruction) {
+BundleAdjustmentSummary
+BundleAdjustPartialReconstruction(const BundleAdjustmentOptions &options,
+                                  const std::unordered_set<ViewId> &view_ids,
+                                  const std::unordered_set<TrackId> &track_ids,
+                                  Reconstruction *reconstruction) {
   CHECK_NOTNULL(reconstruction);
 
   BundleAdjuster bundle_adjuster(options, reconstruction);
@@ -56,33 +56,36 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
     bundle_adjuster.AddView(view_id);
   }
   for (const TrackId track_id : track_ids) {
-    bundle_adjuster.AddTrack(track_id, options.use_homogeneous_local_point_parametrization);
+    bundle_adjuster.AddTrack(
+        track_id, options.use_homogeneous_local_point_parametrization);
   }
 
   return bundle_adjuster.Optimize();
 }
 
 // Bundle adjust the entire reconstruction.
-BundleAdjustmentSummary BundleAdjustReconstruction(
-    const BundleAdjustmentOptions& options, Reconstruction* reconstruction) {
-  const auto& view_ids = reconstruction->ViewIds();
-  const auto& track_ids = reconstruction->TrackIds();
+BundleAdjustmentSummary
+BundleAdjustReconstruction(const BundleAdjustmentOptions &options,
+                           Reconstruction *reconstruction) {
+  const auto &view_ids = reconstruction->ViewIds();
+  const auto &track_ids = reconstruction->TrackIds();
 
   BundleAdjuster bundle_adjuster(options, reconstruction);
   for (const ViewId view_id : view_ids) {
     bundle_adjuster.AddView(view_id);
   }
   for (const TrackId track_id : track_ids) {
-    bundle_adjuster.AddTrack(track_id, options.use_homogeneous_local_point_parametrization);
+    bundle_adjuster.AddTrack(
+        track_id, options.use_homogeneous_local_point_parametrization);
   }
 
   return bundle_adjuster.Optimize();
 }
 
 // Bundle adjust a single view.
-BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
+BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
                                          const ViewId view_id,
-                                         Reconstruction* reconstruction) {
+                                         Reconstruction *reconstruction) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
@@ -93,55 +96,57 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
 }
 
 // Bundle adjust views.
-BundleAdjustmentSummary BundleAdjustViews(const BundleAdjustmentOptions& options,
-                                         const std::vector<ViewId> &view_ids_to_optimize,
-                                         Reconstruction* reconstruction) {
+BundleAdjustmentSummary
+BundleAdjustViews(const BundleAdjustmentOptions &options,
+                  const std::vector<ViewId> &view_ids_to_optimize,
+                  Reconstruction *reconstruction) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  for (const auto & view_id : view_ids_to_optimize) {
-      bundle_adjuster.AddView(view_id);
+  for (const auto &view_id : view_ids_to_optimize) {
+    bundle_adjuster.AddView(view_id);
   }
   return bundle_adjuster.Optimize();
 }
 
 // Bundle adjust a single track.
-BundleAdjustmentSummary BundleAdjustTrack(
-    const BundleAdjustmentOptions& options,
-    const TrackId track_id,
-    Reconstruction* reconstruction) {
+BundleAdjustmentSummary
+BundleAdjustTrack(const BundleAdjustmentOptions &options,
+                  const TrackId track_id, Reconstruction *reconstruction) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  bundle_adjuster.AddTrack(track_id, options.use_homogeneous_local_point_parametrization);
+  bundle_adjuster.AddTrack(track_id,
+                           options.use_homogeneous_local_point_parametrization);
   return bundle_adjuster.Optimize();
 }
 
 // Bundle adjust tracks.
-BundleAdjustmentSummary BundleAdjustTracks(
-    const BundleAdjustmentOptions& options,
-    const std::vector<TrackId>& tracks_to_optimize,
-        Reconstruction* reconstruction) {
-    BundleAdjustmentOptions ba_options = options;
-    ba_options.linear_solver_type = ceres::DENSE_QR;
-    ba_options.use_inner_iterations = false;
+BundleAdjustmentSummary
+BundleAdjustTracks(const BundleAdjustmentOptions &options,
+                   const std::vector<TrackId> &tracks_to_optimize,
+                   Reconstruction *reconstruction) {
+  BundleAdjustmentOptions ba_options = options;
+  ba_options.linear_solver_type = ceres::DENSE_QR;
+  ba_options.use_inner_iterations = false;
 
-    BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-    for (const auto & track_id : tracks_to_optimize) {
-        bundle_adjuster.AddTrack(track_id, options.use_homogeneous_local_point_parametrization);
-    }
-    return bundle_adjuster.Optimize();
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  for (const auto &track_id : tracks_to_optimize) {
+    bundle_adjuster.AddTrack(
+        track_id, options.use_homogeneous_local_point_parametrization);
+  }
+  return bundle_adjuster.Optimize();
 }
 
 // Bundle adjust a single track.
 BundleAdjustmentSummary
 BundleAdjustTrack(const BundleAdjustmentOptions &options,
                   const TrackId track_id, Reconstruction *reconstruction,
-                  Eigen::Matrix3d *empirical_covariance_matrix,
+                  Matrix3d *empirical_covariance_matrix,
                   double *empirical_variance) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
@@ -152,17 +157,53 @@ BundleAdjustTrack(const BundleAdjustmentOptions &options,
 
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
   if (!summary.success) {
-    *empirical_covariance_matrix = Eigen::Matrix3d::Identity();
+    *empirical_covariance_matrix = Matrix3d::Identity();
   } else {
-    *empirical_covariance_matrix =
-        bundle_adjuster.GetCovarianceForTrack(track_id);
-    // now get redundancy
-    const double r =
-        1.0 / (reconstruction->Track(track_id)->NumViews() * 2 - 3);
-    *empirical_variance = r * summary.final_cost;
-    *empirical_covariance_matrix *= *empirical_variance;
+    if (!bundle_adjuster.GetCovarianceForTrack(track_id,
+                                               empirical_covariance_matrix)) {
+      summary.success = false;
+      *empirical_variance = 1.0;
+    } else {
+      // now get redundancy
+      const double r =
+          1.0 / (reconstruction->Track(track_id)->NumViews() * 2 - 3);
+      *empirical_variance = r * summary.final_cost;
+      *empirical_covariance_matrix *= *empirical_variance;
+    }
   }
   return summary;
 }
 
-}  // namespace theia
+BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
+                                         const ViewId view_id,
+                                         Reconstruction *reconstruction,
+                                         Matrix6d *empirical_covariance_matrix,
+                                         double *empirical_variance) {
+
+  BundleAdjustmentOptions ba_options = options;
+  ba_options.linear_solver_type = ceres::DENSE_QR;
+  ba_options.use_inner_iterations = false;
+
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  bundle_adjuster.AddView(view_id);
+
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+  if (!summary.success) {
+    *empirical_covariance_matrix = Matrix6d::Identity();
+  } else {
+    if (!bundle_adjuster.GetCovarianceForView(view_id,
+                                              empirical_covariance_matrix)) {
+      summary.success = false;
+      *empirical_variance = 1.0;
+    } else {
+      // now get redundancy
+      const double r =
+          1.0 / (reconstruction->View(view_id)->NumFeatures() * 2 - 6);
+      *empirical_variance = r * summary.final_cost;
+      *empirical_covariance_matrix *= *empirical_variance;
+    }
+  }
+  return summary;
+}
+
+} // namespace theia

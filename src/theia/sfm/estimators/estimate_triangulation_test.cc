@@ -56,7 +56,7 @@ RandomNumberGenerator rng(151);
 void CreateObservations(const int num_observations,
                         const int num_outliers,
                         std::vector<Camera>* cameras,
-                        std::vector<Vector2d>* features) {
+                        std::vector<Feature>* features) {
   static const double kFocalLength = 1000.0;
   static const double kPrincipalPointX = 600.0;
   static const double kPrincipalPointY = 400.0;
@@ -79,7 +79,7 @@ void CreateObservations(const int num_observations,
 
     Eigen::Vector2d observed_feature;
     camera.ProjectPoint(point3d, &observed_feature);
-    features->at(i) = observed_feature;
+    features->at(i).point_ = observed_feature;
   }
 
   for (int i = 0; i < num_outliers; i++) {
@@ -100,7 +100,7 @@ void CreateObservations(const int num_observations,
 
 TEST(EstimateTriangulation, InsufficientObservations) {
   std::vector<Camera> cameras;
-  std::vector<Vector2d> features;
+  std::vector<theia::Feature> features;
   CreateObservations(1, 0, &cameras, &features);
 
   RansacParameters params;
@@ -115,7 +115,7 @@ TEST(EstimateTriangulation, InsufficientObservations) {
 
 TEST(EstimateTriangulation, TwoViews) {
   std::vector<Camera> cameras;
-  std::vector<Vector2d> features;
+  std::vector<Feature> features;
   CreateObservations(2, 0, &cameras, &features);
 
   RansacParameters params;
@@ -137,7 +137,7 @@ TEST(EstimateTriangulation, TwoViews) {
 
 TEST(EstimateTriangulation, WithOutliers) {
   std::vector<Camera> cameras;
-  std::vector<Vector2d> features;
+  std::vector<Feature> features;
   CreateObservations(10, 2, &cameras, &features);
 
   RansacParameters params;
