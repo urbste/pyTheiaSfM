@@ -89,8 +89,9 @@ struct ReprojectionError {
                                                      reprojection);
     // Compute the reprojection error.
     //if (res) {
-        reprojection_error[0] = 1. / feature_.sigma_xy_[0] * (reprojection[0] - feature_.point_.x());
-        reprojection_error[1] = 1. / feature_.sigma_xy_[1] * (reprojection[1] - feature_.point_.y());
+    // TODO FULL COVARIANCE WEIGHTING? -> Although most of the time the off diagonal of image point covs are zero
+        reprojection_error[0] = 1. / feature_.covariance_(0,0) * (reprojection[0] - feature_.point_.x());
+        reprojection_error[1] = 1. / feature_.covariance_(1,1) * (reprojection[1] - feature_.point_.y());
 //    }
 //    else {
 //       reprojection_error[0] = T(1e4);

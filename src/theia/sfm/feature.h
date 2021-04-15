@@ -48,15 +48,15 @@ class Feature {
 public:
 EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   //! 2D point
-  Eigen::Vector2d point_ = Eigen::Vector2d::Identity();
+  Eigen::Vector2d point_ = Eigen::Vector2d::Zero();
   //! 2D standard deviation
-  Eigen::Vector2d sigma_xy_ = Eigen::Vector2d::Identity();
+  Eigen::Matrix2d covariance_ = Eigen::Matrix2d::Identity();
 
   Feature() {}
   Feature(const double x, const double y) { point_ << x, y; }
   Feature(const Eigen::Vector2d &point) : point_(point) {}
-  Feature(const Eigen::Vector2d &point, const Eigen::Vector2d &sigma_xy)
-      : point_(point), sigma_xy_(sigma_xy) {}
+  Feature(const Eigen::Vector2d &point, const Eigen::Matrix2d &covariance_)
+      : point_(point), covariance_(covariance_) {}
 
   double x() const { return point_.x(); }
   double y() const { return point_.y(); }
@@ -77,7 +77,7 @@ private:
   friend class cereal::access;
   template <class Archive>
   void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
-    ar(point_, sigma_xy_);
+    ar(point_, covariance_);
   }
 };
 

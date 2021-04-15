@@ -3,6 +3,8 @@ build/*
 *.user.*
 wheelhouse
 
+*.ply
+
 cmake_build/*
 pytheia.egg-info
 pytheia_build/*

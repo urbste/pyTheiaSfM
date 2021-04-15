@@ -76,9 +76,6 @@ def test_ExternalParameterGettersandSetters():
     assert np.linalg.norm(camera.GetOrientationAsAngleAxis() - gt_angle_axis)<kTolerance
     assert np.linalg.norm(camera.GetOrientationAsRotationMatrix() - gt_rotation_matrix)<kTolerance
 
-   
-
-
 
 def test_InternalParameterGettersandSetters():
     print("test_InternalParameterGettersandSetters()")

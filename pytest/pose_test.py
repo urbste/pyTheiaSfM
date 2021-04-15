@@ -30,19 +30,19 @@ for i in range(nr_runs):
 end = time.time()
 print("Time pytheia per pose: {:.6f}ns".format((end-start)/nr_runs*1e6))
 
+# find a pose
+for i in range(len(d[1])):
+    r_est = R.from_matrix(d[1][i])
+    r_gt = R.from_matrix(R_gt)
+    r_err = np.linalg.norm(r_gt.as_rotvec()-r_est.as_rotvec())
+    t_err = np.linalg.norm(d[2][i]-t)
 
-# for i in range(len(d[1])):
-#     r_est = R.from_matrix(d[1][i])
-#     r_gt = R.from_matrix(R_gt)
-#     r_err = np.linalg.norm(r_gt.as_rotvec()-r_est.as_rotvec())
-#     t_err = np.linalg.norm(d[2][i]-t)
+    if (r_err < 1e-4 and t_err < 1e-4):
+        print("Found a solution")
+        print("R: ", d[1][i])
+        print("t: ", d[2][i])
 
-#     if (r_err < 1e-4 and t_err < 1e-4):
-#         print("Found a solution")
-#         print("R: ", d[1][i])
-#         print("t: ", d[2][i])
-
-#         break
+        break
 
 
 start = time.time()

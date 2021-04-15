@@ -160,7 +160,11 @@ std::tuple<bool, Eigen::Vector4d, RansacSummary> EstimateTriangulationWrapper(co
                            const std::vector<Eigen::Vector2d>& features){
     Eigen::Vector4d triangulated_point;
     RansacSummary summary;
-    const bool success = EstimateTriangulation(ransac_params, cameras, features, &triangulated_point, &summary);
+    std::vector<theia::Feature> features_(features.size());
+    for (auto i = 0; i < features.size(); ++i) {
+        features_[i].point_ = features[i];
+    }
+    const bool success = EstimateTriangulation(ransac_params, cameras, features_, &triangulated_point, &summary);
     return std::make_tuple(success, triangulated_point, summary);
 
 }

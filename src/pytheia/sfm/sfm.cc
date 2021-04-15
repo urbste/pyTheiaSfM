@@ -15,6 +15,7 @@
 #include "theia/math/polynomial.h"
 #include "theia/sfm/pose/util.h"
 
+#include "theia/sfm/feature.h"
 #include "theia/matching/features_and_matches_database.h"
 
 #include "theia/sfm/pose/pose_wrapper.h"
@@ -335,6 +336,8 @@ void pytheia_sfm_classes(py::module &m) {
     .value("FISHEYE", theia::CameraIntrinsicsModelType::FISHEYE)
     .value("FOV", theia::CameraIntrinsicsModelType::FOV)
     .value("DIVISION_UNDISTORTION", theia::CameraIntrinsicsModelType::DIVISION_UNDISTORTION)
+    .value("DOUBLE_SPHERE", theia::CameraIntrinsicsModelType::DOUBLE_SPHERE)
+    .value("EXTENDED_UNIFIED", theia::CameraIntrinsicsModelType::EXTENDED_UNIFIED)
     .export_values()
   ;
 
@@ -408,6 +411,17 @@ void pytheia_sfm_classes(py::module &m) {
   ;
 
   // estimator
+
+  py::class_<theia::Feature>(m, "Feature")
+    .def(py::init<>())
+    .def(py::init<double, double>())
+    .def(py::init<Eigen::Vector2d>())
+    .def(py::init<Eigen::Vector2d,Eigen::Matrix2d>())
+    .def_readwrite("point", &theia::Feature::point_)
+    .def_readwrite("covariance", &theia::Feature::covariance_)
+    .def("x", &theia::Feature::x)
+    .def("y", &theia::Feature::y)
+  ;
 
   py::class_<theia::CameraAndFeatureCorrespondence2D3D>(m, "CameraAndFeatureCorrespondence2D3D")
     .def(py::init<>())
@@ -849,7 +863,6 @@ void pytheia_sfm_classes(py::module &m) {
     .def("ViewIdFromName", &theia::Reconstruction::ViewIdFromName)
     //.def("set", static_cast<void (Pet::*)(int)>(&Pet::set), "Set the pet's age")
     //.def("AddView", static_cast<theia::ViewId (theia::Reconstruction*)(const std::string&)>(&theia::Reconstruction::AddView))
-    .def("AddView", (theia::ViewId (theia::Reconstruction::*)(const std::string&)) &theia::Reconstruction::AddView, py::return_value_policy::reference_internal)
     .def("AddView", (theia::ViewId (theia::Reconstruction::*)(const std::string&, const double)) &theia::Reconstruction::AddView, py::return_value_policy::reference_internal)
     .def("AddView", (theia::ViewId (theia::Reconstruction::*)(const std::string&, const theia::CameraIntrinsicsGroupId, const double)) &theia::Reconstruction::AddView, py::return_value_policy::reference_internal)
     .def("RemoveView", &theia::Reconstruction::RemoveView)
@@ -873,11 +886,11 @@ void pytheia_sfm_classes(py::module &m) {
     .def("View", &theia::Reconstruction::View, py::return_value_policy::reference)
     .def("MutableView", &theia::Reconstruction::MutableView, py::return_value_policy::reference)
 
-          .def("Track", &theia::Reconstruction::Track, py::return_value_policy::reference)
+    .def("Track", &theia::Reconstruction::Track, py::return_value_policy::reference)
     .def("MutableTrack", &theia::Reconstruction::MutableTrack, py::return_value_policy::reference)
 
-          .def("GetViewsInCameraIntrinsicGroup", &theia::Reconstruction::GetViewsInCameraIntrinsicGroup)
-    .def("GetSubReconstruction", &theia::Reconstruction::GetSubReconstructionWrapper)
+    .def("GetViewsInCameraIntrinsicGroup", &theia::Reconstruction::GetViewsInCameraIntrinsicGroup)
+    //.def("GetSubReconstruction", &theia::Reconstruction::GetSubReconstructionWrapper)
   ;
 
   // Reconstruction Estimator
