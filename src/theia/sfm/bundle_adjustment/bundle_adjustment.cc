@@ -125,23 +125,6 @@ BundleAdjustTrack(const BundleAdjustmentOptions &options,
   return bundle_adjuster.Optimize();
 }
 
-// Bundle adjust tracks.
-BundleAdjustmentSummary
-BundleAdjustTracks(const BundleAdjustmentOptions &options,
-                   const std::vector<TrackId> &tracks_to_optimize,
-                   Reconstruction *reconstruction) {
-  BundleAdjustmentOptions ba_options = options;
-  ba_options.linear_solver_type = ceres::DENSE_QR;
-  ba_options.use_inner_iterations = false;
-
-  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  for (const auto &track_id : tracks_to_optimize) {
-    bundle_adjuster.AddTrack(
-        track_id, options.use_homogeneous_local_point_parametrization);
-  }
-  return bundle_adjuster.Optimize();
-}
-
 // Bundle adjust a single track.
 BundleAdjustmentSummary
 BundleAdjustTrack(const BundleAdjustmentOptions &options,
@@ -172,6 +155,72 @@ BundleAdjustTrack(const BundleAdjustmentOptions &options,
     }
   }
   return summary;
+}
+
+// Bundle adjust tracks.
+BundleAdjustmentSummary BundleAdjustTracks(
+    const BundleAdjustmentOptions &options,
+    const std::vector<TrackId> &tracks_to_optimize,
+    Reconstruction *reconstruction,
+    std::map<TrackId, Eigen::Matrix3d> *empirical_covariance_matrices,
+    double *emprical_variance_factor) {
+  BundleAdjustmentOptions ba_options = options;
+  ba_options.linear_solver_type = ceres::DENSE_QR;
+  ba_options.use_inner_iterations = false;
+
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  for (const auto &track_id : tracks_to_optimize) {
+    // set homogeneous representation to true. otherwise covariance matrix will
+    // be singular
+    bundle_adjuster.AddTrack(track_id, true);
+  }
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+
+  if (!summary.success) {
+    return summary;
+  } else {
+    if (!bundle_adjuster.GetCovarianceForTracks(
+            tracks_to_optimize, empirical_covariance_matrices)) {
+      summary.success = false;
+      *emprical_variance_factor = 1.0;
+    } else {
+      // now get redundancy to calculate empirical covariance matrix
+      int nr_obs = 0;
+      double total_nr_vars = tracks_to_optimize.size() * 3.0;
+      for (const auto &t : tracks_to_optimize) {
+        nr_obs += reconstruction->Track(t)->NumViews();
+      }
+      const double redundancy = 1.0 / (nr_obs * 2 - total_nr_vars);
+
+      LOG(INFO) << "Redundancy in BundleAdjustTracks: " << redundancy << "\n"
+                << ", final cost: " << summary.final_cost
+                << ", empirical variance factor" << *emprical_variance_factor
+                << "\n";
+
+      *emprical_variance_factor = redundancy * summary.final_cost;
+      for (auto &cov : *empirical_covariance_matrices) {
+        cov.second *= *emprical_variance_factor;
+      }
+    }
+  }
+  return summary;
+}
+
+// Bundle adjust tracks.
+BundleAdjustmentSummary
+BundleAdjustTracks(const BundleAdjustmentOptions &options,
+                   const std::vector<TrackId> &tracks_to_optimize,
+                   Reconstruction *reconstruction) {
+  BundleAdjustmentOptions ba_options = options;
+  ba_options.linear_solver_type = ceres::DENSE_QR;
+  ba_options.use_inner_iterations = false;
+
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  for (const auto &track_id : tracks_to_optimize) {
+    bundle_adjuster.AddTrack(
+        track_id, options.use_homogeneous_local_point_parametrization);
+  }
+  return bundle_adjuster.Optimize();
 }
 
 BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,

@@ -427,7 +427,8 @@ void BundleAdjuster::AddReprojectionErrorResidual(const Feature &feature,
       camera->mutable_intrinsics(), track->MutablePoint()->data());
 }
 
-bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id, Matrix3d* covariance_matrix) {
+bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id,
+                                           Matrix3d *covariance_matrix) {
   const Track *track = reconstruction_->Track(track_id);
   *covariance_matrix = Matrix3d::Identity();
   ceres::Covariance covariance_estimator(covariance_options_);
@@ -436,38 +437,42 @@ bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id, Matrix3d* cov
       std::make_pair(track->Point().data(), track->Point().data())};
 
   if (!problem_->IsParameterBlockConstant(track->Point().data()) &&
-       problem_->HasParameterBlock(track->Point().data())) {
-      if (!covariance_estimator.Compute(covariance_blocks, problem_.get())) {
-          return false;
-      }
+      problem_->HasParameterBlock(track->Point().data())) {
+    if (!covariance_estimator.Compute(covariance_blocks, problem_.get())) {
+      return false;
+    }
     covariance_estimator.GetCovarianceMatrixInTangentSpace(
         {track->Point().data()}, (*covariance_matrix).data());
 
     return true;
+  } else {
+    return false;
   }
-  else {
-      return false;
-  }
-
 }
 
-void BundleAdjuster::GetCovarianceForTracks(
+bool BundleAdjuster::GetCovarianceForTracks(
+    const std::vector<TrackId> &track_ids,
     std::map<TrackId, Eigen::Matrix3d> *covariance_matrices) {
+
   ceres::Covariance covariance_estimator(covariance_options_);
-  const auto track_ids = reconstruction_->TrackIds();
   std::vector<std::pair<const double *, const double *>> covariance_blocks;
   std::vector<TrackId> est_track_ids;
   for (const auto &t_id : track_ids) {
     const Track *track = reconstruction_->Track(t_id);
     if (!problem_->IsParameterBlockConstant(track->Point().data()) &&
-        problem_->HasParameterBlock(track->Point().data())) {
+         problem_->HasParameterBlock(track->Point().data())) {
       est_track_ids.push_back(t_id);
       covariance_blocks.push_back(
           std::make_pair(track->Point().data(), track->Point().data()));
+    } else {
+        LOG(ERROR) << "There was a track that could not be found in the reconstruction or is set to fixed! No covariance estimation possible.\n";
+        return false;
     }
   }
 
-  covariance_estimator.Compute(covariance_blocks, problem_.get());
+  if (!covariance_estimator.Compute(covariance_blocks, problem_.get())) {
+      return false;
+  }
 
   for (size_t i = 0; i < est_track_ids.size(); ++i) {
     Eigen::Matrix3d cov_mat;
@@ -475,6 +480,8 @@ void BundleAdjuster::GetCovarianceForTracks(
         {covariance_blocks[i].first}, cov_mat.data());
     covariance_matrices->insert(std::make_pair(est_track_ids[i], cov_mat));
   }
+
+  return true;
 }
 
 bool BundleAdjuster::GetCovarianceForView(const ViewId view_id,
@@ -485,13 +492,12 @@ bool BundleAdjuster::GetCovarianceForView(const ViewId view_id,
   ceres::Covariance covariance_estimator(covariance_options_);
 
   std::vector<std::pair<const double *, const double *>> covariance_blocks = {
-      std::make_pair(camera.extrinsics(),
-                     camera.extrinsics())};
+      std::make_pair(camera.extrinsics(), camera.extrinsics())};
 
   if (!problem_->IsParameterBlockConstant(camera.extrinsics()) &&
       problem_->HasParameterBlock(camera.extrinsics())) {
     if (!covariance_estimator.Compute(covariance_blocks, problem_.get())) {
-        return false;
+      return false;
     }
     covariance_estimator.GetCovarianceMatrixInTangentSpace(
         {camera.extrinsics()}, (*covariance_matrix).data());

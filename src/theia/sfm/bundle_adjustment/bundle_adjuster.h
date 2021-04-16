@@ -80,7 +80,7 @@ class BundleAdjuster {
   bool GetCovarianceForTrack(const TrackId track_id, Eigen::Matrix3d* covariance_matrix);
 
   // Get covariance for all tracks
-  void GetCovarianceForTracks(std::map<TrackId, Eigen::Matrix3d>* covariance_matrices);
+  bool GetCovarianceForTracks(const std::vector<TrackId> &track_ids, std::map<TrackId, Eigen::Matrix3d>* covariance_matrices);
 
   // Get covariance for a single view
   bool GetCovarianceForView(const ViewId view_id, Matrix6d* covariance_matrix);

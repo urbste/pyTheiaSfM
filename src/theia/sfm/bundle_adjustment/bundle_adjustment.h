@@ -37,6 +37,7 @@
 
 #include <ceres/types.h>
 #include <unordered_set>
+#include <map>
 #include <vector>
 
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
@@ -169,23 +170,33 @@ BundleAdjustTrack(const BundleAdjustmentOptions &options,
                   const TrackId track_id, Reconstruction *reconstruction);
 
 // Bundle adjust tracks.
-BundleAdjustmentSummary
-BundleAdjustTracks(const BundleAdjustmentOptions &options,
-                   const std::vector<TrackId> &tracks_to_optimize,
-                   Reconstruction *reconstruction);
+BundleAdjustmentSummary BundleAdjustTracks(
+    const BundleAdjustmentOptions &options,
+    const std::vector<TrackId> &tracks_to_optimize,
+    Reconstruction *reconstruction);
 
 ///////// With covariance estimation
 // Bundle adjust a single track.
-BundleAdjustmentSummary BundleAdjustTrack(const BundleAdjustmentOptions& options,
-    const TrackId track_id,
-    Reconstruction* reconstruction,
-    Matrix3d *empirical_covariance_matrix, double *empirical_variance);
+BundleAdjustmentSummary
+BundleAdjustTrack(const BundleAdjustmentOptions &options,
+                  const TrackId track_id, Reconstruction *reconstruction,
+                  Matrix3d *empirical_covariance_matrix,
+                  double *empirical_variance);
+
+// Bundle adjust tracks.
+BundleAdjustmentSummary BundleAdjustTracks(
+    const BundleAdjustmentOptions &options,
+    const std::vector<TrackId> &tracks_to_optimize,
+    Reconstruction *reconstruction,
+    std::map<TrackId, Eigen::Matrix3d>* empirical_covariance_matrices,
+    double* emprical_variance_factors);
 
 // Bundle adjust a single track.
-BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
-    const ViewId view_id,
-    Reconstruction* reconstruction,
-    Matrix6d *empirical_covariance_matrix, double *empirical_variance);
+BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
+                                         const ViewId view_id,
+                                         Reconstruction *reconstruction,
+                                         Matrix6d *empirical_covariance_matrix,
+                                         double *empirical_variance);
 
 } // namespace theia
 
