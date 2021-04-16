@@ -32,6 +32,8 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+// edited by Steffen Urban (urbste@gmail.com), April 2021
+
 #ifndef THEIA_SFM_FEATURE_H_
 #define THEIA_SFM_FEATURE_H_
 
@@ -58,8 +60,8 @@ EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   Feature(const Eigen::Vector2d &point, const Eigen::Matrix2d &covariance_)
       : point_(point), covariance_(covariance_) {}
 
-  double x() const { return point_.x(); }
-  double y() const { return point_.y(); }
+  double x() const { return point_[0]; }
+  double y() const { return point_[1]; }
 
   // make it hashable
   bool operator==(const Feature &o) const {
