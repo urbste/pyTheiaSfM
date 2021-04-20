@@ -106,6 +106,7 @@ for PYBIN in /opt/python/*/bin; do
     "${PYBIN}/python" setup.py bdist_wheel
     rm -rf /home/cmake_build/
     rm -rf /home/src/pytheia/*.so
+    rm -rf /home/build/lib/pytheia/*.so
     rm -rf /home/pytheia.egg-info
 done
 cp /home/dist/*.whl /home/wheelhouse
