@@ -50,8 +50,8 @@ cmake ../ -DCMAKE_CXX_FLAGS='-fPIC' -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=R
 #     CXXFLAGS='-Wno-error=deprecated-copy -Wno-error=pessimizing-move -Wno-error=class-memaccess' PORTABLE=1 make -j$NUM_CORES install-static INSTALL_PATH=/usr/local
 
 #rapidjson
-cd /libs && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson && mkdir -p build && \
-cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make PREFIX=/usr/local install
+#cd /libs && git clone https://github.com/Tencent/rapidjson.git && cd rapidjson && mkdir -p build && \
+#cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$NUM_CORES && make PREFIX=/usr/local install
 
 # # openimageio
 # cd /home
