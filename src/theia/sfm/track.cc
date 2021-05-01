@@ -70,7 +70,7 @@ Eigen::Matrix<uint8_t, 3, 1> *Track::MutableColor() { return &color_; }
 
 void Track::AddView(const ViewId view_id) {
   view_ids_.insert(view_id);
-  if (reference_view_id_ = theia::kInvalidViewId) {
+  if (reference_view_id_ == theia::kInvalidViewId) {
     reference_view_id_ = view_id;
   }
 }
@@ -98,6 +98,5 @@ void Track::SetRefBearingVector(const Vector3d &ref_bearing) {
 }
 
 const Vector3d &Track::RefBearing() const { return ref_bearing_; }
-
 
 } // namespace theia
