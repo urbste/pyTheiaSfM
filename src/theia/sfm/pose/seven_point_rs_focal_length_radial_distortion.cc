@@ -474,9 +474,9 @@ bool RSPoseFocalLengthRadialDistFromSevenPoints(
   result.rd = 0.0;
 
   int k = 0;
-  int notFound = 1;
+  bool found = false;
   // iterate solver to find a solution
-  while (notFound && k < max_iter) {
+  while (!found && k < max_iter) {
     std::vector<RSLinearizedCameraPose> results;
     double err_prev = std::numeric_limits<double>::max();
     RSPoseFocalLengthRadialDistFromSevenPointsImpl(
@@ -496,7 +496,7 @@ bool RSPoseFocalLengthRadialDistFromSevenPoints(
         err_prev = error;
       }
       if (error < 1e-10) {
-        notFound = 0;
+        found = true;
         break;
       }
     }
