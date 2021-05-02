@@ -420,6 +420,9 @@ bool RSPoseFocalLengthRadialDistFromSevenPointsImpl(
         std::abs(sols(2, i).imag()) < 1e-10) {
       RSLinearizedCameraPose res;
       double f = sols(2, i).real();
+      if (f <= 0.0) {
+          continue;
+      }
       double b = sols(0, i).real();
       double c = sols(1, i).real();
       double rd = sols(3, i).real();
