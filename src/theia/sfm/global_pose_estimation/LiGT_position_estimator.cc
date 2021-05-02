@@ -58,6 +58,7 @@
 #include "theia/sfm/view_triplet.h"
 #include "theia/util/map_util.h"
 #include "theia/util/threadpool.h"
+#include "theia/util/util.h"
 
 namespace theia {
 
@@ -66,11 +67,6 @@ using Eigen::Vector3d;
 
 namespace {
 
-Eigen::Matrix3d GetSkew(const Eigen::Vector3d &f) {
-  Eigen::Matrix3d skew_mat;
-  skew_mat << 0.0, -f(2), f(1), f(2), 0.0, -f(0), -f(1), f(0), 0.0;
-  return skew_mat;
-}
 
 Eigen::Matrix3d GetRij(const Eigen::Matrix3d &i, const Eigen::Matrix3d &j) {
   return j * i.transpose();
@@ -83,7 +79,8 @@ double GetThetaSq(const Eigen::Vector3d &feat_i, const Eigen::Vector3d &feat_j,
 
 Eigen::Vector3d Get_aij(const Eigen::Matrix3d &Rij, const Eigen::Vector3d Xi,
                         const Eigen::Vector3d Xj) {
-  return (GetSkew(Rij * Xi) * Xj).transpose() * GetSkew(Xj);
+  const Eigen::Vector3d tmp = Rij * Xi;
+  return (GetSkew(tmp) * Xj).transpose() * GetSkew(Xj);
 }
 
 std::vector<ViewIdTriplet> GetLargetConnectedTripletGraph(

@@ -36,6 +36,7 @@
 #define THEIA_UTIL_UTIL_H_
 
 #include "theia/util/map_util.h"
+#include <Eigen/Eigen>
 
 namespace theia {
 typedef unsigned char uchar;
@@ -90,6 +91,14 @@ void ContainerIntersection(const InputContainer1& in1,
       out->insert(entry);
     }
   }
+}
+
+// Teturn a skew symetric matrix version of a vector
+template <typename T>
+Eigen::Matrix<T, 3, 3> GetSkew(const Eigen::Matrix<T, 3, 1> &f) {
+  Eigen::Matrix<T, 3, 3> skew_mat;
+  skew_mat << 0.0, -f(2), f(1), f(2), 0.0, -f(0), -f(1), f(0), 0.0;
+  return skew_mat;
 }
 
 }  // namespace theia
