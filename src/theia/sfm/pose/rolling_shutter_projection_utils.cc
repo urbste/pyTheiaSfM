@@ -34,7 +34,7 @@
 
 #include "rolling_shutter_pose_utils.h"
 #include "theia/util/util.h"
-
+#include <iostream>
 #include <Eigen/Geometry>
 
 namespace theia {
@@ -52,8 +52,9 @@ bool RSLinearizedProjection(const Eigen::Vector3d &world_point,
 
   const Matrix3d I3 = Eigen::Matrix3d::Identity();
   // First initiate u with a global shutter projection
-  Matrix3d K = Matrix3d::Zero();
-  K.diagonal() << rs_camera_pose.f, rs_camera_pose.f, 1;
+  Matrix3d K = I3;
+  K(0,0) = rs_camera_pose.f;
+  K(1,1) = rs_camera_pose.f;
   Matrix3d Rv = I3;
   // how we construct the rotation depends on the linearization case
   if (proj_type == RSProjectionType::SingleLinearized) {
@@ -69,23 +70,24 @@ bool RSLinearizedProjection(const Eigen::Vector3d &world_point,
       K * (Rv * world_point + rs_camera_pose.C);
   image_point = image_point_global_shutter.hnormalized();
 
-  const double d = image_point(rs_direction) - row_col_0;
   double diff = 1e15;
   int niter = 0;
-  Vector3d temp_rs_point;
+  Vector2d temp_rs_point;
   while (diff > 1e-10) {
+    const double d = image_point(rs_direction) - row_col_0;
+
     const Matrix3d R_rs = (I3 + d * GetSkew(rs_camera_pose.w)) * Rv;
     const Vector3d t_rs = rs_camera_pose.C + d * rs_camera_pose.t;
 
-    temp_rs_point = K * (R_rs * world_point + t_rs);
-    temp_rs_point = temp_rs_point / temp_rs_point(2);
+    temp_rs_point = (K * (R_rs * world_point + t_rs)).hnormalized();
     if (rs_camera_pose.rd != 0.0) {
       const double rc2 =
           image_point(0) * image_point(0) + image_point(1) * image_point(1);
-      temp_rs_point.head(2) *= (1 + rs_camera_pose.rd * rc2);
+      temp_rs_point *= (1.0 + rs_camera_pose.rd * rc2);
     }
-    diff = (image_point - temp_rs_point.head(2)).norm();
-    image_point = temp_rs_point.head(2);
+    diff = (image_point - temp_rs_point).norm();
+    image_point = temp_rs_point;
+
     if (niter > 100) {
       return false;
     }
@@ -103,6 +105,8 @@ RSLinearizedProjectionError(const std::vector<Eigen::Vector2d> &image_points,
                             const RSDirection &rs_direction,
                             const int row_col_0) {
   const Matrix3d I3 = Eigen::Matrix3d::Identity();
+  Matrix3d K = I3;
+  K(2, 2) = 1./ rs_camera_pose.f;
   double err = 0;
   for (size_t i = 0; i < world_points.size(); ++i) {
     double z = 1.0;
@@ -112,8 +116,7 @@ RSLinearizedProjectionError(const std::vector<Eigen::Vector2d> &image_points,
     }
     Vector3d uh;
     uh << image_points[i], z;
-    Matrix3d K = I3;
-    K(2, 2) = 1 / rs_camera_pose.f;
+
     double d = (image_points[i](rs_direction) - row_col_0);
     Matrix3d Rv = I3;
     if (proj_type == RSProjectionType::SingleLinearized) {
