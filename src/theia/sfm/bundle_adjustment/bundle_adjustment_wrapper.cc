@@ -3,7 +3,6 @@
 
 namespace theia {
 
-
 std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustReconstructionWrapper(
         const BundleAdjustmentOptions& options){
     Reconstruction reconstruction;
@@ -21,22 +20,6 @@ std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustPartialReconstru
 
 }
 
-
-std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustViewWrapper(const BundleAdjustmentOptions& options,
-                                                const ViewId view_id){
-    Reconstruction reconstruction;
-    BundleAdjustmentSummary ba_summary = BundleAdjustView(options, view_id, &reconstruction);
-    return std::make_tuple(ba_summary, reconstruction);
-}
-
-
-std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustTrackWrapper(
-    const BundleAdjustmentOptions& options,
-        const TrackId track_id){
-    Reconstruction reconstruction;
-    BundleAdjustmentSummary ba_summary = BundleAdjustTrack(options, track_id, &reconstruction);
-    return std::make_tuple(ba_summary, reconstruction);
-}
 
 std::tuple<BundleAdjustmentSummary, Camera, Camera, std::vector<Eigen::Vector4d>> BundleAdjustTwoViewsWrapper(
     const TwoViewBundleAdjustmentOptions& options,
@@ -63,6 +46,39 @@ std::tuple<bool, Eigen::Vector3d> OptimizeRelativePositionWithKnownRotationWrapp
     Eigen::Vector3d relative_position;
     const bool success = OptimizeRelativePositionWithKnownRotation(correspondences, rotation1, rotation2, &relative_position);
     return std::make_tuple(success, relative_position);
+}
+
+
+std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustViewWrapper(
+    Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const ViewId view_id){
+    BundleAdjustmentSummary ba_summary = BundleAdjustView(options, view_id, &reconstruction);
+    return std::make_tuple(ba_summary, reconstruction);
+}
+
+std::tuple<BundleAdjustmentSummary, Reconstruction, 
+          Matrix6d, double> 
+          BundleAdjustViewWithCovWrapper(Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const ViewId view_id) {
+    Matrix6d cov_mat;
+    double emp_variance_factor;
+    BundleAdjustmentSummary ba_summary = BundleAdjustView(
+        options, view_id, &reconstruction, &cov_mat, &emp_variance_factor);
+    return std::make_tuple(ba_summary, reconstruction, cov_mat, emp_variance_factor);
+}
+
+std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustTrackWrapper(
+    Reconstruction& reconstruction, const BundleAdjustmentOptions& options,
+        const TrackId track_id) {
+    BundleAdjustmentSummary ba_summary = BundleAdjustTrack(options, track_id, &reconstruction);
+    return std::make_tuple(ba_summary, reconstruction);
+}
+
+std::tuple<BundleAdjustmentSummary, Reconstruction, Matrix3d, double> BundleAdjustTrackWithCovWrapper(
+    Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const TrackId track_id) {
+    Matrix3d cov_mat;
+    double emp_variance_factor;
+    BundleAdjustmentSummary ba_summary = BundleAdjustTrack(
+        options, track_id, &reconstruction, &cov_mat, &emp_variance_factor);
+    return std::make_tuple(ba_summary, reconstruction, cov_mat, emp_variance_factor);
 }
 
 }  // namespace theia
