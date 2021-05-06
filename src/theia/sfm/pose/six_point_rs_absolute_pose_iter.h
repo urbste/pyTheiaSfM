@@ -32,8 +32,8 @@
 // Please contact the author of this library if you have any questions.
 // Author: Steffen Urban (urbste@googlemail.com)
 
-#ifndef SIX_POINT_RS_POSE_ITER_H
-#define SIX_POINT_RS_POSE_ITER_H
+#ifndef SEVEN_POINT_RS_FOCAL_LENGTH_RADIAL_DISTORTION_H
+#define SEVEN_POINT_RS_FOCAL_LENGTH_RADIAL_DISTORTION_H
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -43,7 +43,7 @@
 
 namespace theia {
 
-bool RSPoseFocalLengthRadialDistFromSevenPointsImpl(
+bool RSPoseFromSixPointsIterImpl(
     const std::vector<Eigen::Vector2d> &image_points,
     const std::vector<Eigen::Vector3d> &world_points,
     const double start_row,
@@ -56,7 +56,7 @@ bool RSPoseFocalLengthRadialDistFromSevenPointsImpl(
 
 // Output
 
-bool RSPoseFocalLengthRadialDistFromSevenPoints(
+bool RSPoseFromSixPointsIter(
     const std::vector<Eigen::Vector2d> &image_points,
     const std::vector<Eigen::Vector3d> &world_points, const int row_col_0,
     const RSDirection rs_direction, const int max_iter,
@@ -64,4 +64,4 @@ bool RSPoseFocalLengthRadialDistFromSevenPoints(
 
 } // namespace theia
 
-#endif // SIX_POINT_RS_POSE_ITER_H
+#endif // SEVEN_POINT_RS_FOCAL_LENGTH_RADIAL_DISTORTION_H
