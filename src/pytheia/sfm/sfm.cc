@@ -998,6 +998,8 @@ void pytheia_sfm_classes(py::module &m) {
   m.def("BundleAdjustReconstruction", theia::BundleAdjustReconstructionWrapper);
   m.def("BundleAdjustView", theia::BundleAdjustViewWrapper);
   m.def("BundleAdjustTrack", theia::BundleAdjustTrackWrapper);
+  m.def("BundleAdjustViewWithCov", theia::BundleAdjustViewWithCovWrapper);
+  m.def("BundleAdjustTrackWithCov", theia::BundleAdjustTrackWithCovWrapper);
 
   m.def("BundleAdjustTwoViews", theia::BundleAdjustTwoViewsWrapper);
   m.def("BundleAdjustTwoViewsAngular", theia::BundleAdjustTwoViewsAngularWrapper);
