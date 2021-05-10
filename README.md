@@ -7,7 +7,6 @@ It contains Python bindings for most of the functionalities of TheiaSfM.
 
 With pyTheia you have access to a variety of different camera models, structure-from-motion pipelines and geometric vision algorithms.
 
-
 ## Example
 
 ### Create a camera
@@ -32,9 +31,9 @@ import pytheia as pt
 
 # absolute pose
 pose = pt.sfm.PoseFromThreePoints(pts2D, pts3D)
-pose = FourPointsPoseFocalLengthRadialDistortion(pts2D, pts3D)
-pose = FourPointPoseAndFocalLength(pts2D, pts3D)
-pose = DlsPnp(pts2D, pts3D)
+pose = pt.sfm.FourPointsPoseFocalLengthRadialDistortion(pts2D, pts3D)
+pose = pt.sfm.FourPointPoseAndFocalLength(pts2D, pts3D)
+pose = pt.sfm.DlsPnp(pts2D, pts3D)
 
 # relative pose
 pose = pt.sfm.NormalizedEightPointFundamentalMatrix(pts2D, pts2D)
@@ -88,4 +87,25 @@ recon_sum = reconstruction_estimator.Estimate(view_graph, recon)
 
 pt.io.WritePlyFile("test.ply", recon, [255,0,0],2)
 pt.io.WriteReconstruction(recon, "reconstruction_file")
+```
+
+
+## How to build 
+How to build the python wheels
+
+### Local build
+```bash
+python setup.py bdist_wheel
+```
+
+### With docker
+```bash
+docker build -t pytheia:0.1 .
+docker run -it pytheia:0.1
+```
+Then all the wheels will be inside the container in the folder /home/wheelhouse.
+Open a second terminal and run
+```bash
+docker ps # this will give you a list of running containers to find the correct CONTAINER_ID
+docker cp CONTAINER_ID:/home/wheelhouse /path/to/result/folder/pytheia_wheels
 ```
