@@ -97,16 +97,47 @@ bool RSLinearizedProjection(const Eigen::Vector3d &world_point,
 }
 
 double
+RSLinearizedProjectionNSError(const std::vector<Eigen::Matrix<double, 3, 2>> &nullspaces,
+                              const std::vector<Eigen::Vector2d> &image_points,
+                            const std::vector<Eigen::Vector3d> &world_points,
+                            const RSLinearizedCameraPose &rs_camera_pose,
+                            const RSProjectionType &proj_type,
+                            const RSDirection &rs_direction,
+                            const int row_col_0) {
+  const Matrix3d I3 = Eigen::Matrix3d::Identity();
+  double err = 0;
+  for (size_t i = 0; i < world_points.size(); ++i) {
+    double d = (image_points[i](rs_direction) - row_col_0);
+    Matrix3d Rv = I3;
+    if (proj_type == RSProjectionType::SingleLinearized) {
+      double norm = rs_camera_pose.v.norm();
+      if (norm > 1e-15) {
+        Rv = AngleAxisd(norm, rs_camera_pose.v / norm).toRotationMatrix();
+      }
+    } else if (proj_type == RSProjectionType::DoubleLinearized) {
+      Rv += GetSkew(rs_camera_pose.v);
+    }
+    const Matrix3d R_rs = (I3 + d * GetSkew(rs_camera_pose.w)) * Rv;
+    const Vector3d t_rs = rs_camera_pose.C + d * rs_camera_pose.t;
+    const Vector3d pt_in_cam = (R_rs * world_points[i] + t_rs);
+    const double ns_error = (nullspaces[i].transpose() * pt_in_cam).squaredNorm();
+    err += ns_error;
+  }
+
+  return err;
+}
+
+double
 RSLinearizedProjectionError(const std::vector<Eigen::Vector2d> &image_points,
                             const std::vector<Eigen::Vector3d> &world_points,
-
                             const RSLinearizedCameraPose &rs_camera_pose,
                             const RSProjectionType &proj_type,
                             const RSDirection &rs_direction,
                             const int row_col_0) {
   const Matrix3d I3 = Eigen::Matrix3d::Identity();
   Matrix3d K = I3;
-  K(2, 2) = 1./ rs_camera_pose.f;
+  K(0, 0) = rs_camera_pose.f;
+  K(1, 1) = rs_camera_pose.f;
   double err = 0;
   for (size_t i = 0; i < world_points.size(); ++i) {
     double z = 1.0;

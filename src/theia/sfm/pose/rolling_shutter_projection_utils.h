@@ -71,6 +71,15 @@ RSLinearizedProjectionError(const std::vector<Eigen::Vector2d> &image_points,
                             const RSProjectionType &proj_type,
                             const RSDirection &rs_direction,
                             const int row_col_0);
+// Evaluate reprojection error in tangent space
+double
+RSLinearizedProjectionNSError(const std::vector<Eigen::Matrix<double, 3, 2>> &nullspaces,
+                              const std::vector<Eigen::Vector2d> &image_points,
+                            const std::vector<Eigen::Vector3d> &world_points,
+                            const RSLinearizedCameraPose &rs_camera_pose,
+                            const RSProjectionType &proj_type,
+                            const RSDirection &rs_direction,
+                            const int row_col_0);
 
 } // namespace theia
 

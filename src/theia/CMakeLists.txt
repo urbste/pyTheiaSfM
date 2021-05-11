@@ -166,6 +166,7 @@ set(THEIA_SRC
   sfm/pose/dls_pnp.cc
   sfm/pose/eight_point_fundamental_matrix.cc
   sfm/pose/essential_matrix_utils.cc
+  sfm/pose/mlrpnp.cc
   sfm/pose/five_point_focal_length_radial_distortion.cc
   sfm/pose/five_point_relative_pose.cc
   sfm/pose/four_point_focal_length_helper.cc
@@ -177,6 +178,7 @@ set(THEIA_SRC
   sfm/pose/fundamental_matrix_util.cc
   sfm/pose/perspective_three_point.cc
   sfm/pose/position_from_two_rays.cc
+  sfm/pose/rsp6p_iter.cc
   sfm/pose/relative_pose_from_two_points_with_known_rotation.cc
   sfm/pose/rolling_shutter_projection_utils.cc
   sfm/pose/seven_point_fundamental_matrix.cc
@@ -388,10 +390,10 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/seven_point_fundamental_matrix)
 #  gtest(sfm/pose/sim_transform_partial_rotation)
 #  gtest(sfm/pose/six_point_radial_distortion_homography)
-
+  gtest(sfm/pose/mlrpnp)
   gtest(sfm/pose/seven_point_rs_focal_length_radial_distortion)
   gtest(sfm/pose/rolling_shutter_projection_utils)
-
+  gtest(sfm/pose/rsp6p_iter)
 #  gtest(sfm/pose/three_point_relative_pose_partial_rotation)
 #  gtest(sfm/pose/two_point_pose_partial_rotation)
 #  gtest(sfm/pose/upnp)
