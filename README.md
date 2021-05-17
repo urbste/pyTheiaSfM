@@ -7,6 +7,22 @@ It contains Python bindings for most of the functionalities of TheiaSfM.
 
 With pyTheia you have access to a variety of different camera models, structure-from-motion pipelines and geometric vision algorithms.
 
+
+# Differences to the original library TheiaSfM
+pyTheia does not aim at being an end-to-end SfM library. For example, building robust feature detection and matching pipelines is usually application and data specific (e.g. image resolution, runtime, pose priors, invariances, ...). This includes image pre- and postprocessing. 
+
+pyTheia is rather a "swiss knife" for quickly prototyping SfM related reconstruction applications without sacrificing perfomance.
+For example SOTA feature detection & matching, place recognition algorithms are based on deep learning, and easily usable from Python. However, using these algorithms from a C++ library is not always straighforward and especially quick testing and prototyping is cumbersome.
+
+## What was removed
+Hence, we removed some libaries from the original TheiaSfM:
+* SuiteSparse: Optional for ceres, however all GPL related code was removed from src/math/matrix/sparse_cholesky_llt.cc (cholmod -> Eigen::SimplicialLDLT). This will probably be slower on large problems and potentially numerically a bit more unstable.
+* OpenImageIO: was used for image in and output and for recitification
+* RapidJSON: Camera intrinsic in and output. Is part of cereal headers anyways
+* RocksDB: Used for saving and loading extracted features efficiently
+
+## What was added
+
 ## Example
 
 ### Create a camera
@@ -90,8 +106,40 @@ pt.io.WriteReconstruction(recon, "reconstruction_file")
 ```
 
 
-## How to build 
-How to build the python wheels
+## Building
+
+Build on Ubuntu locally or on WSL2 both with sudo rights.
+The basic dependency is:
+* [http://ceres-solver.org/](ceres-solver)
+
+Installing the ceres-solver will also install the neccessary dependencies for this pyTheia:
+* gflags
+* glog
+* Eigen
+
+
+```bash
+sudo apt install cmake build-essential 
+
+# cd to your favourite library folder
+mkdir LIBS
+cd LIBS
+
+# eigen
+git clone https://gitlab.com/libeigen/eigen
+cd eigen && git checkout 3.3.9
+mkdir -p build && cd build && cmake .. && sudo make install
+
+# libgflags libglog libatlas-base-dev
+sudo apt install libgflags-dev libgoogle-glog-dev libatlas-base-dev
+# ceres solver
+git clone https://ceres-solver.googlesource.com/ceres-solver
+cd ceres-solver && git checkout 2.0.0 && mkdir build && cd build
+cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF
+make -j && make install
+```
+
+## How to build Python wheels
 
 ### Local build
 ```bash
@@ -99,6 +147,7 @@ python setup.py bdist_wheel
 ```
 
 ### With docker
+The docker build will actually build manylinux wheels. (Python 3.5-3.9)
 ```bash
 docker build -t pytheia:0.1 .
 docker run -it pytheia:0.1
