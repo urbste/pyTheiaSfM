@@ -23,7 +23,7 @@ Hence, we removed some libaries from the original TheiaSfM:
 
 ## What was added
 
-## Example
+## Examples
 
 ### Create a camera
 ``` Python
@@ -107,16 +107,14 @@ pt.io.WriteReconstruction(recon, "reconstruction_file")
 
 
 ## Building
-
-Build on Ubuntu locally or on WSL2 both with sudo rights.
+This section describes how to build on Ubuntu locally or on WSL2 both with sudo rights.
 The basic dependency is:
 * [http://ceres-solver.org/](ceres-solver)
 
-Installing the ceres-solver will also install the neccessary dependencies for this pyTheia:
+Installing the ceres-solver will also install the neccessary dependencies for pyTheia:
 * gflags
 * glog
 * Eigen
-
 
 ```bash
 sudo apt install cmake build-essential 
