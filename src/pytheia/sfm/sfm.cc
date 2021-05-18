@@ -206,9 +206,8 @@ void pytheia_sfm_classes(py::module &m) {
     .def_property_readonly("RadialDistortion2", &theia::FisheyeCameraModel::RadialDistortion2)
     .def_property_readonly("RadialDistortion3", &theia::FisheyeCameraModel::RadialDistortion3)
     .def_property_readonly("RadialDistortion4", &theia::FisheyeCameraModel::RadialDistortion4)
-    .def("SetRadialDistortion", &theia::FisheyeCameraModel::SetRadialDistortion)
+    .def("SetRadialDistortion", &theia::FisheyeCameraModel::SetRadialDistortion);
 
-  ;
   // PinholeRadialTangentialCameraModel
   py::class_<theia::PinholeRadialTangentialCameraModel, std::shared_ptr<theia::PinholeRadialTangentialCameraModel>>(m, "PinholeRadialTangentialCameraModel", camera_intrinsics_model)
     .def(py::init<>())
@@ -229,9 +228,8 @@ void pytheia_sfm_classes(py::module &m) {
     .def_property_readonly("TangentialDistortion1", &theia::PinholeRadialTangentialCameraModel::TangentialDistortion1)
     .def_property_readonly("TangentialDistortion2", &theia::PinholeRadialTangentialCameraModel::TangentialDistortion2)
     .def("SetRadialDistortion", &theia::PinholeRadialTangentialCameraModel::SetRadialDistortion)
-    .def("SetTangentialDistortion", &theia::PinholeRadialTangentialCameraModel::SetTangentialDistortion)
+    .def("SetTangentialDistortion", &theia::PinholeRadialTangentialCameraModel::SetTangentialDistortion);
 
-  ;
   // DivisionUndistortionCameraModel
   py::class_<theia::DivisionUndistortionCameraModel, std::shared_ptr<theia::DivisionUndistortionCameraModel>>(m, "DivisionUndistortionCameraModel", camera_intrinsics_model)
     .def(py::init<>())
@@ -246,9 +244,7 @@ void pytheia_sfm_classes(py::module &m) {
     .def_property_readonly("kIntrinsicsSize", &theia::DivisionUndistortionCameraModel::NumParameters)
     .def_property("AspectRatio", &theia::DivisionUndistortionCameraModel::AspectRatio, &theia::DivisionUndistortionCameraModel::SetAspectRatio)
     .def_property_readonly("RadialDistortion1", &theia::DivisionUndistortionCameraModel::RadialDistortion1)
-    .def("SetRadialDistortion", &theia::DivisionUndistortionCameraModel::SetRadialDistortion)
-
-  ;
+    .def("SetRadialDistortion", &theia::DivisionUndistortionCameraModel::SetRadialDistortion);
 
   // PinholeCameraModel
   py::class_<theia::PinholeCameraModel, std::shared_ptr<theia::PinholeCameraModel>>(m, "PinholeCameraModel", camera_intrinsics_model)
@@ -266,9 +262,7 @@ void pytheia_sfm_classes(py::module &m) {
     .def_property("Skew", &theia::PinholeCameraModel::Skew, &theia::PinholeCameraModel::SetSkew)
     .def_property_readonly("RadialDistortion1", &theia::PinholeCameraModel::RadialDistortion1)
     .def_property_readonly("RadialDistortion2", &theia::PinholeCameraModel::RadialDistortion2)
-    .def("SetRadialDistortion", &theia::PinholeCameraModel::SetRadialDistortion)
-
-  ;
+    .def("SetRadialDistortion", &theia::PinholeCameraModel::SetRadialDistortion);
 
   // FOVCameraModel
   py::class_<theia::FOVCameraModel, std::shared_ptr<theia::FOVCameraModel>>(m, "FOVCameraModel", camera_intrinsics_model)
@@ -284,9 +278,7 @@ void pytheia_sfm_classes(py::module &m) {
     .def_property_readonly("kIntrinsicsSize", &theia::FOVCameraModel::NumParameters)
     .def_property("AspectRatio", &theia::FOVCameraModel::AspectRatio, &theia::FOVCameraModel::SetAspectRatio)
     .def_property_readonly("RadialDistortion1", &theia::FOVCameraModel::RadialDistortion1)
-    .def("SetRadialDistortion", &theia::FOVCameraModel::SetRadialDistortion)
-
-  ;
+    .def("SetRadialDistortion", &theia::FOVCameraModel::SetRadialDistortion);
 
   m.def("ComposeProjectionMatrix", theia::ComposeProjectionMatrixWrapper);
   m.def("DecomposeProjectionMatrix", theia::DecomposeProjectionMatrixWrapper);
@@ -488,10 +480,6 @@ void pytheia_sfm_classes(py::module &m) {
 
 
   // estimator ransac
-
-
-
-
   py::enum_<theia::RansacType>(m, "RansacType")
     .value("RANSAC", theia::RansacType::RANSAC)
     .value("PROSAC", theia::RansacType::PROSAC)
@@ -642,28 +630,28 @@ void pytheia_sfm_classes(py::module &m) {
   // Track class
   py::class_<theia::Track>(m, "Track")
     .def(py::init<>())
-
-    //.def_property_readonly("Name", &theia::View::Name)
     .def_property("IsEstimated", &theia::Track::IsEstimated, &theia::Track::SetEstimated)
     .def("NumViews", &theia::Track::NumViews)
     .def("AddView", &theia::Track::AddView)
     .def("RemoveView", &theia::Track::RemoveView)
     .def_property_readonly("ViewIds", &theia::Track::ViewIds)
-    //.def_readwrite("focal_length", &theia::View::Track)
-
-    //.def("GetFeature", &theia::View::GetFeature, py::return_value_policy::reference)
     .def("Point", &theia::Track::Point)
     .def("MutablePoint", &theia::Track::MutablePoint, py::return_value_policy::reference)
     .def("Color", &theia::Track::Color)
     .def("MutableColor", &theia::Track::MutableColor, py::return_value_policy::reference)
-  ;
+    .def("ReferenceViewId", &theia::Track::ReferenceViewId)
+    .def("InverseDepth", &theia::Track::InverseDepth)
+    .def("MutableInverseDepth", &theia::Track::MutableInverseDepth, py::return_value_policy::reference)
+    .def("SetReferenceBearingVector", &theia::Track::SetReferenceBearingVector)
+    .def("ReferenceBearingVector", &theia::Track::ReferenceBearingVector)
+    .def("SetReferenceDescriptor", &theia::Track::SetReferenceDescriptor)
+    .def("ReferenceDescriptor", &theia::Track::ReferenceDescriptor);
 
   // Track builder class
   py::class_<theia::TrackBuilder>(m, "TrackBuilder")
     .def(py::init<int, int>())
     .def("AddFeatureCorrespondence", &theia::TrackBuilder::AddFeatureCorrespondence)
-    .def("BuildTracks", &theia::TrackBuilder::BuildTracks)
-  ;
+    .def("BuildTracks", &theia::TrackBuilder::BuildTracks);
 
 
   py::class_<theia::BundleAdjustmentOptions>(m, "BundleAdjustmentOptions")

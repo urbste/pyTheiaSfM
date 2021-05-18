@@ -97,6 +97,7 @@ TEST(Track, InverseDepth) {
   const std::vector<ViewId> view_ids = {0, 1, 2};
   // Test that no views exist.
   EXPECT_EQ(track.NumViews(), 0);
+  EXPECT_TRUE(track.ReferenceViewId() == kInvalidViewId);
 
   // Add views.
   for (int i = 0; i < view_ids.size(); i++) {
@@ -104,7 +105,7 @@ TEST(Track, InverseDepth) {
     EXPECT_EQ(track.NumViews(), i + 1);
   }
 
-  EXPECT_TRUE(track.ReferenceViewId() == 0);
+  EXPECT_TRUE(track.ReferenceViewId() == view_ids[0]);
 
   *track.MutableInverseDepth() = 1.0;
   EXPECT_TRUE(track.InverseDepth() == 1.0);
@@ -112,12 +113,29 @@ TEST(Track, InverseDepth) {
   for (int i = 0; i < view_ids.size(); i++) {
     track.RemoveView(view_ids[i]);
     EXPECT_EQ(track.NumViews(), 3 - i - 1);
-    if (i == view_ids.size()) {
-      EXPECT_TRUE(tack.ReferenceViewId() == kInvalidViewId);
+    if (i == view_ids.size()-1) {
+      EXPECT_TRUE(track.ReferenceViewId() == kInvalidViewId);
     } else {
-      EXPECT_TRUE(tack.ReferenceViewId() != kInvalidViewId);
+      EXPECT_TRUE(track.ReferenceViewId() != kInvalidViewId);
     }
   }
 }
 
+TEST(Track, Descriptor) {
+  Track track;
+  // Add views.
+  track.AddView(0);
+  Eigen::Vector3f desc_test;
+  desc_test << 1.f,2.f,3.f;
+  track.SetReferenceDescriptor(desc_test);
+  for (int i=0; i < 3; ++i) {
+    EXPECT_FLOAT_EQ(track.ReferenceDescriptor()[i], desc_test[i]);
+  }
+
+  Eigen::VectorXf desc_large = Eigen::VectorXf::Random(128);
+  track.SetReferenceDescriptor(desc_large);
+  for (int i=0; i < 3; ++i) {
+    EXPECT_FLOAT_EQ(track.ReferenceDescriptor()[i], desc_large[i]);
+  }
+}
 }  // namespace theia

@@ -41,15 +41,15 @@
 
 namespace theia {
 
-using Eigen::Vector4d;
 using Eigen::Vector3d;
+using Eigen::Vector4d;
 
 Track::Track()
     : is_estimated_(false), inverse_depth_(0.0),
       reference_view_id_(theia::kInvalidViewId) {
   point_.setZero();
   color_.setZero();
-  ref_bearing_.setZero();
+  reference_bearing_.setZero();
 }
 
 int Track::NumViews() const { return view_ids_.size(); }
@@ -93,16 +93,18 @@ const double &Track::InverseDepth() const { return inverse_depth_; }
 
 double *Track::MutableInverseDepth() { return &inverse_depth_; }
 
-void Track::SetRefBearingVector(const Vector3d &ref_bearing) {
-    ref_bearing_ = ref_bearing;
+void Track::SetReferenceBearingVector(const Vector3d &ref_bearing) {
+  reference_bearing_ = ref_bearing;
 }
 
-const Vector3d &Track::RefBearing() const { return ref_bearing_; }
+const Vector3d &Track::ReferenceBearingVector() const { return reference_bearing_; }
 
-void SetReferenceDescriptor(const Eigen::MatrixXf& descriptor) {
-  ref_descriptor_ = descriptor;
+void Track::SetReferenceDescriptor(const Eigen::VectorXf &descriptor) {
+  reference_descriptor_ = descriptor;
 }
- 
-Eigen::MatrixXf GetReferenceDescriptor() const { return ref_descriptor_; }
+
+const Eigen::VectorXf &Track::ReferenceDescriptor() const {
+  return reference_descriptor_;
+}
 
 } // namespace theia

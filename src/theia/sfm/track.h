@@ -35,10 +35,10 @@
 #ifndef THEIA_SFM_TRACK_H_
 #define THEIA_SFM_TRACK_H_
 
+#include <Eigen/Core>
 #include <cereal/access.hpp>
 #include <cereal/cereal.hpp>
 #include <cereal/types/unordered_set.hpp>
-#include <Eigen/Core>
 #include <stdint.h>
 #include <unordered_set>
 
@@ -51,7 +51,7 @@ namespace theia {
 // point. This is based off of LibMV's Structure class:
 // https://github.com/libmv/libmv/blob/master/src/libmv/multiview/structure.h
 class Track {
- public:
+public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   Track();
@@ -62,34 +62,36 @@ class Track {
   void SetEstimated(const bool is_estimated);
   bool IsEstimated() const;
 
-  const Eigen::Vector4d& Point() const;
-  Eigen::Vector4d* MutablePoint();
+  const Eigen::Vector4d &Point() const;
+  Eigen::Vector4d *MutablePoint();
 
-  const Eigen::Matrix<uint8_t, 3, 1>& Color() const;
-  Eigen::Matrix<uint8_t, 3, 1>* MutableColor();
+  const Eigen::Matrix<uint8_t, 3, 1> &Color() const;
+  Eigen::Matrix<uint8_t, 3, 1> *MutableColor();
 
   void AddView(const ViewId view_id);
   bool RemoveView(const ViewId view_id);
 
-  const std::unordered_set<ViewId>& ViewIds() const;
+  const std::unordered_set<ViewId> &ViewIds() const;
 
   ViewId ReferenceViewId() const;
 
-  const double& InverseDepth() const;
-  double* MutableInverseDepth();
+  const double &InverseDepth() const;
+  double *MutableInverseDepth();
 
-  void SetRefBearingVector(const Eigen::Vector3d& ref_bearing);
-  const Eigen::Vector3d& RefBearing() const;
+  void SetReferenceBearingVector(const Eigen::Vector3d &ref_bearing);
+  const Eigen::Vector3d &ReferenceBearingVector() const;
 
-  void SetReferenceDescriptor(const Eigen::MatrixXf& descriptor);
-  Eigen::MatrixXf GetReferenceDescriptor() const;
- private:
+  void SetReferenceDescriptor(const Eigen::VectorXf &descriptor);
+  const Eigen::VectorXf &ReferenceDescriptor() const;
+
+private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
   template <class Archive>
-  void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
-    ar(is_estimated_, view_ids_, reference_view_id_, inverse_depth_, point_, color_, ref_bearing_, ref_descriptor_);
+  void serialize(Archive &ar, const std::uint32_t version) { // NOLINT
+    ar(is_estimated_, view_ids_, reference_view_id_, inverse_depth_, point_,
+       color_, reference_bearing_, reference_descriptor_);
   }
 
   bool is_estimated_;
@@ -98,12 +100,12 @@ class Track {
   double inverse_depth_;
   Eigen::Vector4d point_;
   Eigen::Matrix<uint8_t, 3, 1> color_;
-  Eigen::Vector3d ref_bearing_;
-  Eigen::MatrixXf ref_descriptor_;
+  Eigen::Vector3d reference_bearing_;
+  Eigen::VectorXf reference_descriptor_;
 };
 
-}  // namespace theia
+} // namespace theia
 
 CEREAL_CLASS_VERSION(theia::Track, 0);
 
-#endif  // THEIA_SFM_TRACK_H_
+#endif // THEIA_SFM_TRACK_H_
