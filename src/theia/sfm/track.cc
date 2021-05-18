@@ -99,4 +99,10 @@ void Track::SetRefBearingVector(const Vector3d &ref_bearing) {
 
 const Vector3d &Track::RefBearing() const { return ref_bearing_; }
 
+void SetReferenceDescriptor(const Eigen::MatrixXf& descriptor) {
+  ref_descriptor_ = descriptor;
+}
+ 
+Eigen::MatrixXf GetReferenceDescriptor() const { return ref_descriptor_; }
+
 } // namespace theia

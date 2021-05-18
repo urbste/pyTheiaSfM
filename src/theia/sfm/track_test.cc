@@ -92,4 +92,32 @@ TEST(Track, ViewIds) {
   }
 }
 
+TEST(Track, InverseDepth) {
+  Track track;
+  const std::vector<ViewId> view_ids = {0, 1, 2};
+  // Test that no views exist.
+  EXPECT_EQ(track.NumViews(), 0);
+
+  // Add views.
+  for (int i = 0; i < view_ids.size(); i++) {
+    track.AddView(view_ids[i]);
+    EXPECT_EQ(track.NumViews(), i + 1);
+  }
+
+  EXPECT_TRUE(track.ReferenceViewId() == 0);
+
+  *track.MutableInverseDepth() = 1.0;
+  EXPECT_TRUE(track.InverseDepth() == 1.0);
+
+  for (int i = 0; i < view_ids.size(); i++) {
+    track.RemoveView(view_ids[i]);
+    EXPECT_EQ(track.NumViews(), 3 - i - 1);
+    if (i == view_ids.size()) {
+      EXPECT_TRUE(tack.ReferenceViewId() == kInvalidViewId);
+    } else {
+      EXPECT_TRUE(tack.ReferenceViewId() != kInvalidViewId);
+    }
+  }
+}
+
 }  // namespace theia

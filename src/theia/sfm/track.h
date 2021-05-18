@@ -80,13 +80,16 @@ class Track {
 
   void SetRefBearingVector(const Eigen::Vector3d& ref_bearing);
   const Eigen::Vector3d& RefBearing() const;
+
+  void SetReferenceDescriptor(const Eigen::MatrixXf& descriptor);
+  Eigen::MatrixXf GetReferenceDescriptor() const;
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
   template <class Archive>
   void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
-    ar(is_estimated_, view_ids_, reference_view_id_, inverse_depth_, point_, color_, ref_bearing_);
+    ar(is_estimated_, view_ids_, reference_view_id_, inverse_depth_, point_, color_, ref_bearing_, ref_descriptor_);
   }
 
   bool is_estimated_;
@@ -96,6 +99,7 @@ class Track {
   Eigen::Vector4d point_;
   Eigen::Matrix<uint8_t, 3, 1> color_;
   Eigen::Vector3d ref_bearing_;
+  Eigen::MatrixXf ref_descriptor_;
 };
 
 }  // namespace theia
