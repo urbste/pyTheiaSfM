@@ -5,6 +5,8 @@ pyTheia - A Python Structure-from-Motion and Geometric Vision Library
 pyTheia is based on [TheiaSfM](http://www.theia-sfm.org).
 It contains Python bindings for most of the functionalities of TheiaSfM.
 
+**The library is still in active development and the interfaces are not yet all fixed**
+
 With pyTheia you have access to a variety of different camera models, structure-from-motion pipelines and geometric vision algorithms.
 
 
