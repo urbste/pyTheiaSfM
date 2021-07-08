@@ -64,9 +64,11 @@ public:
 
   const Eigen::Vector4d &Point() const;
   Eigen::Vector4d *MutablePoint();
+  void SetPoint(const Eigen::Vector4d& point);
 
   const Eigen::Matrix<uint8_t, 3, 1> &Color() const;
   Eigen::Matrix<uint8_t, 3, 1> *MutableColor();
+  void SetColor(const Eigen::Matrix<uint8_t, 3, 1>& color);
 
   void AddView(const ViewId view_id);
   bool RemoveView(const ViewId view_id);
@@ -77,6 +79,7 @@ public:
 
   const double &InverseDepth() const;
   double *MutableInverseDepth();
+  void SetInverseDepth(const double& inverse_depth);
 
   void SetReferenceBearingVector(const Eigen::Vector3d &ref_bearing);
   const Eigen::Vector3d &ReferenceBearingVector() const;

@@ -56,26 +56,23 @@ std::vector<Eigen::Vector3d> AlignRotationsWrapper(const std::vector<Eigen::Vect
     return rotation;
 }
 
-Reconstruction AlignReconstructionsWrapper(const Reconstruction& reconstruction1){
-    Reconstruction reconstruction2;
-    AlignReconstructions(reconstruction1, &reconstruction2);
-    return reconstruction2;
+void AlignReconstructionsWrapper(const Reconstruction& fixed_reconstruction,
+    Reconstruction& variable_reconstruction){
+    AlignReconstructions(fixed_reconstruction, &variable_reconstruction);
 }
 
 
-Reconstruction AlignReconstructionsRobustWrapper(const double robust_error_threshold,
-                                                 const Reconstruction& reconstruction1){
-    Reconstruction reconstruction2;
-    AlignReconstructionsRobust(robust_error_threshold, reconstruction1, &reconstruction2);
-    return reconstruction2;
+void AlignReconstructionsRobustWrapper(const double robust_error_threshold,
+                                       const Reconstruction& fixed_reconstruction,
+                                       Reconstruction& variable_reconstruction){
+    AlignReconstructionsRobust(robust_error_threshold, fixed_reconstruction, &variable_reconstruction);
 }
 
-Reconstruction TransformReconstructionWrapper(const Eigen::Matrix3d& rotation,
-                             const Eigen::Vector3d& translation,
-                             const double scale){
-    Reconstruction reconstruction;
+void TransformReconstructionWrapper(Reconstruction& reconstruction,
+    const Eigen::Matrix3d& rotation,
+    const Eigen::Vector3d& translation,
+    const double scale) {
     TransformReconstruction(rotation, translation, scale, &reconstruction);
-    return reconstruction;
 }
 
 

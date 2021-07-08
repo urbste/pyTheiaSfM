@@ -64,9 +64,17 @@ const Eigen::Vector4d &Track::Point() const { return point_; }
 
 Vector4d *Track::MutablePoint() { return &point_; }
 
+void Track::SetPoint(const Eigen::Vector4d& point) {
+  point_ = point;
+}
+
 const Eigen::Matrix<uint8_t, 3, 1> &Track::Color() const { return color_; }
 
 Eigen::Matrix<uint8_t, 3, 1> *Track::MutableColor() { return &color_; }
+
+void Track::SetColor(const Eigen::Matrix<uint8_t, 3, 1>& color) {
+  color_ = color;
+}
 
 void Track::AddView(const ViewId view_id) {
   view_ids_.insert(view_id);
@@ -92,6 +100,10 @@ ViewId Track::ReferenceViewId() const { return reference_view_id_; }
 const double &Track::InverseDepth() const { return inverse_depth_; }
 
 double *Track::MutableInverseDepth() { return &inverse_depth_; }
+
+void Track::SetInverseDepth(const double& inverse_depth) { 
+  inverse_depth_ = inverse_depth; 
+  }
 
 void Track::SetReferenceBearingVector(const Vector3d &ref_bearing) {
   reference_bearing_ = ref_bearing;
