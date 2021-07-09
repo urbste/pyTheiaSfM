@@ -47,6 +47,8 @@
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/reconstruction.h"
 
+#include "theia/util/json.h"
+
 namespace theia {
 
 bool WriteReconstruction(const Reconstruction& reconstruction,
@@ -65,6 +67,92 @@ bool WriteReconstruction(const Reconstruction& reconstruction,
     cereal::PortableBinaryOutputArchive output_archive(output_writer);
     output_archive(estimated_reconstruction);
   }
+
+  return true;
+}
+
+bool WriteReconstructionJson(const Reconstruction& reconstruction,
+                             const std::string& output_json_file) {
+
+
+  nlohmann::json calib_out_json;
+
+  nlohmann::json views_json;
+  // iterate views 
+  const auto view_ids = reconstruction.ViewIds();
+  for (const theia::ViewId view_id : view_ids) {
+    const theia::View &view = *reconstruction.View(view_id);
+    if (!view.IsEstimated()) {
+      continue;
+    }
+    const theia::Camera &camera = view.Camera();
+
+    nlohmann::json current_view;
+    current_view["timestamp"] = view.GetTimestamp();
+    current_view["numFeatures"] = view.NumFeatures();
+    current_view["trackIds"] = view.TrackIds();
+    // current_view["covariance"] = 
+    // save features and tracks ids (view graph)
+
+    // we save camera to world transformation so transpose rotation
+    nlohmann::json extrinsics;
+    const Eigen::Matrix3d rotation(
+        camera.GetOrientationAsRotationMatrix().transpose());
+    const Eigen::Vector3d position(camera.GetPosition());
+    extrinsics[0][0] = rotation(0, 0);
+    extrinsics[0][1] = rotation(0, 1);
+    extrinsics[0][2] = rotation(0, 2);
+    extrinsics[1][0] = rotation(1, 0);
+    extrinsics[1][1] = rotation(1, 1);
+    extrinsics[1][2] = rotation(1, 2);
+    extrinsics[2][0] = rotation(2, 0);
+    extrinsics[2][1] = rotation(2, 1);
+    extrinsics[2][2] = rotation(2, 2);
+
+    extrinsics[0][3] = position(0);
+    extrinsics[1][3] = position(1);
+    extrinsics[2][3] = position(2);
+    extrinsics[3] = {0.0, 0.0, 0.0, 1.0};
+
+    current_view["cameraExtrinsics"] = extrinsics;
+  
+    // check camera model and write parameters depending on model
+    // nlohmann::json intrinsics;
+    // intrinsics["focalLengthX"] = camera.FocalLength();
+    // intrinsics["focalLengthY"] = camera.CameraIntrinsics()->GetParameter(
+    //                                  theia::PinholeCameraModel::ASPECT_RATIO) *
+    //                              camera.FocalLength();
+    // intrinsics["principalPointX"] = camera.CameraIntrinsics()->GetParameter(
+    //     theia::PinholeCameraModel::PRINCIPAL_POINT_X);
+    // intrinsics["principalPointY"] = camera.CameraIntrinsics()->GetParameter(
+    //     theia::PinholeCameraModel::PRINCIPAL_POINT_Y);
+
+    // current_view["cameraIntrinsics"] = intrinsics;
+
+    views_json[view.Name()] = current_view;
+  }
+  calib_out_json["views"] = views_json;
+
+  nlohmann::json tracks_json;
+  const auto track_ids = reconstruction.TrackIds();
+  for (const auto& t_id : track_ids) {
+    const theia::Track* track = reconstruction.Track(t_id);
+    if (!track->IsEstimated()) {
+      continue;
+    }
+    nlohmann::json current_track;
+    current_track["referenceViewId"] = track->ReferenceViewId();
+    const Eigen::Vector3d pt = track->Point().hnormalized();
+    current_track["point"] = {pt[0],pt[1],pt[2]};
+    //current_track["covariance"] =
+    tracks_json[std::to_string(t_id)] = current_track;
+  }
+  calib_out_json["tracks"] = tracks_json;
+
+  std::ofstream out_stream(output_json_file);
+  CHECK(out_stream.is_open())
+      << "Could not open '" + output_json_file + "' for writing.";
+  out_stream << calib_out_json;
 
   return true;
 }

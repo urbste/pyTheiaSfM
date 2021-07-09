@@ -49,6 +49,11 @@ class Reconstruction;
 bool WriteReconstruction(const Reconstruction& reconstruction,
                          const std::string& output_file);
 
+// Writes the reconstruction to a json file. Only the estimated views and
+// tracks are output.
+bool WriteReconstructionJson(const Reconstruction& reconstruction,
+                             const std::string& output_json_file);
+
 }  // namespace theia
 
 #endif  // THEIA_IO_RECONSTRUCTION_WRITER_H_

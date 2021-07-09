@@ -78,6 +78,7 @@ void pytheia_io_classes(py::module &m) {
     m.def("ReadStrechaDataset", theia::ReadStrechaDatasetWrapper);
     m.def("ReadReconstruction", theia::ReadReconstructionWrapper);
     m.def("WriteReconstruction", theia::WriteReconstruction);
+    m.def("WriteReconstructionJson", theia::WriteReconstructionJson);
     m.def("WriteSiftKeyBinaryFile", theia::WriteSiftKeyBinaryFile);
     m.def("ReadSiftKeyBinaryFile", theia::ReadSiftKeyBinaryFileWrapper);
     m.def("ReadSiftKeyTextFile", theia::ReadSiftKeyTextFileWrapper);
