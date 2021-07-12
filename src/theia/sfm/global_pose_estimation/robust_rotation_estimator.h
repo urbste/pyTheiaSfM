@@ -89,6 +89,9 @@ class RobustRotationEstimator : public RotationEstimator {
   bool EstimateRotations(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
+  // python wrapper
+  std::unordered_map<ViewId, Eigen::Vector3d> EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs);
 
   // An alternative interface is to instead add relative rotation constraints
   // one by one with AddRelativeRotationConstraint, then call the
@@ -108,6 +111,7 @@ class RobustRotationEstimator : public RotationEstimator {
   // estimate of the global orientations.
   bool EstimateRotations(
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
+  //std::unordered_map<ViewId, Eigen::Vector3d> EstimateRotationsWrapper();
 
  protected:
   // Sets up the sparse linear system such that dR_ij = dR_j - dR_i. This is the

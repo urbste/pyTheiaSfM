@@ -997,7 +997,6 @@ void pytheia_sfm_classes(py::module &m) {
   py::class_<theia::BundleAdjuster>(m, "BundleAdjuster")
     // constructor uses pointer of an object as input
     //.def(py::init<theia::BundleAdjustmentOptions, theia::Reconstruction>())
-
     .def("AddView", &theia::BundleAdjuster::AddView)
     .def("AddTrack", &theia::BundleAdjuster::AddTrack)
     .def("Optimize", &theia::BundleAdjuster::Optimize)
@@ -1017,54 +1016,34 @@ void pytheia_sfm_classes(py::module &m) {
   // Global SfM
   m.def("ComputeTripletBaselineRatios", theia::ComputeTripletBaselineRatiosWrapper);
 
-  // Position Estimator
-  py::class_<theia::PositionEstimator>(m, "PositionEstimator")
-  ;
-
+  // Global Position Estimators
   py::class_<theia::LinearPositionEstimator, theia::PositionEstimator>(m, "LinearPositionEstimator")
     .def(py::init<theia::LinearPositionEstimator::Options, theia::Reconstruction>())
-    .def("EstimatePositions", &theia::LinearPositionEstimator::EstimatePositions)
-
-  ;
+    .def("EstimatePositions", &theia::LinearPositionEstimator::EstimatePositionsWrapper);
 
   py::class_<theia::NonlinearPositionEstimator, theia::PositionEstimator>(m, "NonlinearPositionEstimator")
     .def(py::init<theia::NonlinearPositionEstimator::Options, theia::Reconstruction>())
-    .def("EstimatePositions", &theia::NonlinearPositionEstimator::EstimatePositions)
-
-  ;
+    .def("EstimatePositions", &theia::NonlinearPositionEstimator::EstimatePositionsWrapper);
 
   py::class_<theia::LeastUnsquaredDeviationPositionEstimator, theia::PositionEstimator>(m, "LeastUnsquaredDeviationPositionEstimator")
     .def(py::init<theia::LeastUnsquaredDeviationPositionEstimator::Options>())
-    .def("EstimatePositions", &theia::LeastUnsquaredDeviationPositionEstimator::EstimatePositions)
+    .def("EstimatePositions", &theia::LeastUnsquaredDeviationPositionEstimator::EstimatePositionsWrapper);
 
-  ;
-
-
-  py::class_<theia::RotationEstimator>(m, "RotationEstimator")
-  ;
-
+  // Global Rotation Estimators
   py::class_<theia::RobustRotationEstimator, theia::RotationEstimator>(m, "RobustRotationEstimator")
     .def(py::init<theia::RobustRotationEstimator::Options>())
-    //.def("EstimateRotations", &theia::RobustRotationEstimator::EstimateRotations)
-    .def("AddRelativeRotationConstraint", &theia::RobustRotationEstimator::AddRelativeRotationConstraint)
-    //.def("EstimateRotations", &theia::RobustRotationEstimator::EstimateRotations)
-
-  ;
+    .def("EstimateRotations", &theia::RobustRotationEstimator::EstimateRotationsWrapper)
+    .def("AddRelativeRotationConstraint", &theia::RobustRotationEstimator::AddRelativeRotationConstraint);
 
   py::class_<theia::NonlinearRotationEstimator, theia::RotationEstimator>(m, "NonlinearRotationEstimator")
     .def(py::init<>())
     .def(py::init<double>())
-    .def("EstimateRotations", &theia::NonlinearRotationEstimator::EstimateRotations)
-
-  ;
+    .def("EstimateRotations", &theia::NonlinearRotationEstimator::EstimateRotationsWrapper);
 
   py::class_<theia::LinearRotationEstimator, theia::RotationEstimator>(m, "LinearRotationEstimator")
     .def(py::init<>())
     .def("AddRelativeRotationConstraint", &theia::LinearRotationEstimator::AddRelativeRotationConstraint)
-    //.def("EstimateRotations", &theia::RobustRotationEstimator::EstimateRotations)
-    //.def("EstimateRotations", &theia::RobustRotationEstimator::EstimateRotations)
-
-  ;
+    .def("EstimateRotations", &theia::LinearRotationEstimator::EstimateRotationsWrapper);
 }
 
 void pytheia_sfm(py::module &m) {

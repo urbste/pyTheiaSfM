@@ -77,6 +77,10 @@ class LinearPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation,
       std::unordered_map<ViewId, Eigen::Vector3d>* positions);
+  // python
+std::unordered_map<ViewId, Eigen::Vector3d> EstimatePositionsWrapper(
+      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
 
  private:
   // Returns the features as a unit-norm pixel ray after camera intrinsics

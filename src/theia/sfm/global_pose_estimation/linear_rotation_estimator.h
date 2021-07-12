@@ -61,6 +61,9 @@ class LinearRotationEstimator : public RotationEstimator {
   bool EstimateRotations(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
+  // python
+  std::unordered_map<ViewId, Eigen::Vector3d> EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs);
 
   // An alternative interface is to instead add relative rotation constraints
   // one by one with AddRelativeRotationConstraint, then call the

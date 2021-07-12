@@ -60,6 +60,8 @@ class RotationEstimator {
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       std::unordered_map<ViewId, Eigen::Vector3d>* rotations) = 0;
 
+  //virtual std::unordered_map<ViewId, Eigen::Vector3d> EstimateRotationsWrapper(
+  //    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs) = 0;
  private:
   DISALLOW_COPY_AND_ASSIGN(RotationEstimator);
 };

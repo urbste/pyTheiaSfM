@@ -382,4 +382,12 @@ void NonlinearPositionEstimator::AddCamerasAndPointsToParameterGroups(
   }
 }
 
+std::unordered_map<ViewId, Eigen::Vector3d> NonlinearPositionEstimator::EstimatePositionsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    const std::unordered_map<ViewId, Eigen::Vector3d>& orientation) {
+  std::unordered_map<ViewId, Eigen::Vector3d> positions;
+  EstimatePositions(view_pairs, orientation, &positions);
+  return positions;
+}
+
 }  // namespace theia

@@ -202,4 +202,11 @@ bool LinearRotationEstimator::EstimateRotations(
   return true;
 }
 
+std::unordered_map<ViewId, Eigen::Vector3d> LinearRotationEstimator::EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs) {
+    std::unordered_map<ViewId, Eigen::Vector3d> rotations;
+    //EstimateRotations(view_pairs, &rotations);
+    return rotations;
+}
+
 }  // namespace theia
