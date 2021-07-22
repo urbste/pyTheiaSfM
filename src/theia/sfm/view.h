@@ -82,6 +82,8 @@ public:
 
   const Feature *GetFeature(const TrackId track_id) const;
 
+  const TrackId GetTrack(const Feature& feature) const;
+
   void AddFeature(const TrackId track_id, const Feature &feature);
 
   bool RemoveFeature(const TrackId track_id);
@@ -97,7 +99,7 @@ private:
   template <class Archive>
   void serialize(Archive &ar, const std::uint32_t version) { // NOLINT
     ar(name_, timestamp_, is_estimated_, camera_, camera_intrinsics_prior_,
-       features_);
+       features_, features_to_tracks_);
   }
 
   std::string name_;
@@ -106,6 +108,7 @@ private:
   class Camera camera_;
   struct CameraIntrinsicsPrior camera_intrinsics_prior_;
   std::unordered_map<TrackId, Feature> features_;
+  std::unordered_map<Feature, TrackId> features_to_tracks_;
 
 };
 

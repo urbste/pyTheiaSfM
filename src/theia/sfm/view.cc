@@ -94,12 +94,25 @@ const Feature *View::GetFeature(const TrackId track_id) const {
   return FindOrNull(features_, track_id);
 }
 
+const TrackId View::GetTrack(const Feature& feature) const {
+  const TrackId* t_id = FindOrNull(features_to_tracks_, feature);
+  if (t_id) {
+    return *t_id;
+  }
+  return kInvalidTrackId;
+}
+
 void View::AddFeature(const TrackId track_id, const Feature& feature) {
   features_[track_id] = feature;
+  features_to_tracks_[feature] = track_id;
 }
 
 bool View::RemoveFeature(const TrackId track_id) {
-  return features_.erase(track_id) > 0;
+  const auto feature = FindOrNull(features_, track_id);
+  if (feature) {
+    return features_.erase(track_id) > 0 && features_to_tracks_.erase(*feature) > 0;
+  }
+  return false;
 }
 
 double View::GetTimestamp() const { return timestamp_; }

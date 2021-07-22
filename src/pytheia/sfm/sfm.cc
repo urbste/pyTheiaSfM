@@ -139,6 +139,8 @@ namespace sfm {
 
 void pytheia_sfm_classes(py::module &m) {
 
+  m.attr("kInvalidTrackId") = theia::kInvalidTrackId;
+  m.attr("kInvalidViewId") = theia::kInvalidViewId;
   //camera
   AddIntrinsicsPriorType<1>(m, "Scalar");
   AddIntrinsicsPriorType<2>(m, "Vector2d");
@@ -424,6 +426,7 @@ void pytheia_sfm_classes(py::module &m) {
 
   py::class_<theia::FeatureCorrespondence2D3D>(m, "FeatureCorrespondence2D3D")
     .def(py::init<>())
+    .def(py::init<Eigen::Vector2d,Eigen::Vector3d>())
     .def_readwrite("feature", &theia::FeatureCorrespondence2D3D::feature)
     .def_readwrite("world_point", &theia::FeatureCorrespondence2D3D::world_point)
   ;
@@ -578,6 +581,7 @@ void pytheia_sfm_classes(py::module &m) {
     //.def_readwrite("focal_length", &theia::View::Track)
 
     .def("GetFeature", &theia::View::GetFeature, py::return_value_policy::reference)
+    .def("GetTrack", &theia::View::GetTrack)
     .def("Camera", &theia::View::Camera, "Camera class object")
     .def("CameraIntrinsicsPrior", &theia::View::CameraIntrinsicsPrior)
     .def("SetCameraIntrinsicsPrior", &theia::View::SetCameraIntrinsicsPrior)
@@ -1016,6 +1020,9 @@ void pytheia_sfm_classes(py::module &m) {
   // Global SfM
   m.def("ComputeTripletBaselineRatios", theia::ComputeTripletBaselineRatiosWrapper);
 
+  // base PositionEstimator class
+  py::class_<theia::PositionEstimator>(m, "PositionEstimator");
+
   // Global Position Estimators
   py::class_<theia::LinearPositionEstimator, theia::PositionEstimator>(m, "LinearPositionEstimator")
     .def(py::init<theia::LinearPositionEstimator::Options, theia::Reconstruction>())
@@ -1028,7 +1035,10 @@ void pytheia_sfm_classes(py::module &m) {
   py::class_<theia::LeastUnsquaredDeviationPositionEstimator, theia::PositionEstimator>(m, "LeastUnsquaredDeviationPositionEstimator")
     .def(py::init<theia::LeastUnsquaredDeviationPositionEstimator::Options>())
     .def("EstimatePositions", &theia::LeastUnsquaredDeviationPositionEstimator::EstimatePositionsWrapper);
-
+  
+  // base RotationEstimator class
+  py::class_<theia::RotationEstimator>(m, "RotationEstimator");
+  
   // Global Rotation Estimators
   py::class_<theia::RobustRotationEstimator, theia::RotationEstimator>(m, "RobustRotationEstimator")
     .def(py::init<theia::RobustRotationEstimator::Options>())

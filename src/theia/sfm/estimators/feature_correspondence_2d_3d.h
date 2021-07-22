@@ -40,6 +40,10 @@
 namespace theia {
 
 struct FeatureCorrespondence2D3D {
+  FeatureCorrespondence2D3D() {}
+  FeatureCorrespondence2D3D(
+    const Eigen::Vector2d& feature, const Eigen::Vector3d& world_point) : 
+    feature(feature), world_point(world_point) {}
   Eigen::Vector2d feature;
   Eigen::Vector3d world_point;
 };
