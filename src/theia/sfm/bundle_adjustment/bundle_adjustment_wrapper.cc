@@ -20,7 +20,6 @@ std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustPartialReconstru
 
 }
 
-
 std::tuple<BundleAdjustmentSummary, Camera, Camera, std::vector<Eigen::Vector4d>> BundleAdjustTwoViewsWrapper(
     const TwoViewBundleAdjustmentOptions& options,
         const std::vector<FeatureCorrespondence>& correspondences){
@@ -65,6 +64,16 @@ std::tuple<BundleAdjustmentSummary, Reconstruction,
     return std::make_tuple(ba_summary, reconstruction, cov_mat, emp_variance_factor);
 }
 
+std::tuple<BundleAdjustmentSummary, Reconstruction, 
+          std::map<ViewId, Matrix6d>, double> 
+          BundleAdjustViewsWithCovWrapper(Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const std::vector<ViewId>& view_ids) {
+    std::map<ViewId, Matrix6d> cov_mats;
+    double emp_variance_factor;
+    BundleAdjustmentSummary ba_summary = BundleAdjustViews(
+        options, view_ids, &reconstruction, &cov_mats, &emp_variance_factor);
+    return std::make_tuple(ba_summary, reconstruction, cov_mats, emp_variance_factor);
+}
+
 std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustTrackWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options,
         const TrackId track_id) {
@@ -80,5 +89,15 @@ std::tuple<BundleAdjustmentSummary, Reconstruction, Matrix3d, double> BundleAdju
         options, track_id, &reconstruction, &cov_mat, &emp_variance_factor);
     return std::make_tuple(ba_summary, reconstruction, cov_mat, emp_variance_factor);
 }
+
+std::tuple<BundleAdjustmentSummary, Reconstruction, std::map<TrackId, Matrix3d>, double> BundleAdjustTracksWithCovWrapper(
+    Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const std::vector<TrackId>& track_ids) {
+    std::map<TrackId, Matrix3d> cov_mats;
+    double emp_variance_factor;
+    BundleAdjustmentSummary ba_summary = BundleAdjustTracks(
+        options, track_ids, &reconstruction, &cov_mats, &emp_variance_factor);
+    return std::make_tuple(ba_summary, reconstruction, cov_mats, emp_variance_factor);
+}
+
 
 }  // namespace theia

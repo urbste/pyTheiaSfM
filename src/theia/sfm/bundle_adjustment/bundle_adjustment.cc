@@ -130,7 +130,7 @@ BundleAdjustmentSummary
 BundleAdjustTrack(const BundleAdjustmentOptions &options,
                   const TrackId track_id, Reconstruction *reconstruction,
                   Matrix3d *empirical_covariance_matrix,
-                  double *empirical_variance) {
+                  double *empirical_variance_factor) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
@@ -145,13 +145,13 @@ BundleAdjustTrack(const BundleAdjustmentOptions &options,
     if (!bundle_adjuster.GetCovarianceForTrack(track_id,
                                                empirical_covariance_matrix)) {
       summary.success = false;
-      *empirical_variance = 1.0;
+      *empirical_variance_factor = 1.0;
     } else {
       // now get redundancy
       const double r =
           1.0 / (reconstruction->Track(track_id)->NumViews() * 2 - 3);
-      *empirical_variance = r * summary.final_cost;
-      *empirical_covariance_matrix *= *empirical_variance;
+      *empirical_variance_factor = r * summary.final_cost;
+      *empirical_covariance_matrix *= *empirical_variance_factor;
     }
   }
   return summary;
@@ -163,7 +163,7 @@ BundleAdjustmentSummary BundleAdjustTracks(
     const std::vector<TrackId> &tracks_to_optimize,
     Reconstruction *reconstruction,
     std::map<TrackId, Eigen::Matrix3d> *empirical_covariance_matrices,
-    double *emprical_variance_factor) {
+    double *empirical_variance_factor) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
@@ -182,7 +182,7 @@ BundleAdjustmentSummary BundleAdjustTracks(
     if (!bundle_adjuster.GetCovarianceForTracks(
             tracks_to_optimize, empirical_covariance_matrices)) {
       summary.success = false;
-      *emprical_variance_factor = 1.0;
+      *empirical_variance_factor = 1.0;
     } else {
       // now get redundancy to calculate empirical covariance matrix
       int nr_obs = 0;
@@ -192,15 +192,15 @@ BundleAdjustmentSummary BundleAdjustTracks(
       }
       const double redundancy = 1.0 / (nr_obs * 2 - total_nr_vars);
 
-      LOG(INFO) << "Redundancy in BundleAdjustTracks: " << redundancy << "\n"
-                << ", final cost: " << summary.final_cost
-                << ", empirical variance factor" << *emprical_variance_factor
-                << "\n";
-
-      *emprical_variance_factor = redundancy * summary.final_cost;
+      *empirical_variance_factor = redundancy * summary.final_cost;
       for (auto &cov : *empirical_covariance_matrices) {
-        cov.second *= *emprical_variance_factor;
+        cov.second *= *empirical_variance_factor;
       }
+      LOG(INFO) << "Redundancy in BundleAdjustTracks: " << redundancy << "\n"
+          << ", final cost: " << summary.final_cost
+          << ", mean reprojection error: " << (summary.final_cost * 2.0 / nr_obs)
+          << ", empirical variance factor: " << *empirical_variance_factor
+          << "\n";
     }
   }
   return summary;
@@ -227,7 +227,7 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
                                          const ViewId view_id,
                                          Reconstruction *reconstruction,
                                          Matrix6d *empirical_covariance_matrix,
-                                         double *empirical_variance) {
+                                         double *empirical_variance_factor) {
 
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
@@ -239,17 +239,64 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
   if (!summary.success) {
     *empirical_covariance_matrix = Matrix6d::Identity();
+    return summary;
   } else {
     if (!bundle_adjuster.GetCovarianceForView(view_id,
                                               empirical_covariance_matrix)) {
       summary.success = false;
-      *empirical_variance = 1.0;
+      *empirical_variance_factor = 1.0;
     } else {
       // now get redundancy
       const double r =
           1.0 / (reconstruction->View(view_id)->NumFeatures() * 2 - 6);
-      *empirical_variance = r * summary.final_cost;
-      *empirical_covariance_matrix *= *empirical_variance;
+      *empirical_variance_factor = r * summary.final_cost;
+      *empirical_covariance_matrix *= *empirical_variance_factor;
+    }
+  }
+  return summary;
+}
+
+BundleAdjustmentSummary BundleAdjustViews(const BundleAdjustmentOptions &options,
+                                         const std::vector<ViewId>& view_ids,
+                                         Reconstruction *reconstruction,
+                                         std::map<ViewId, Matrix6d> *empirical_covariance_matrices,
+                                         double *empirical_variance_factor) {
+
+  BundleAdjustmentOptions ba_options = options;
+  ba_options.linear_solver_type = ceres::DENSE_QR;
+  ba_options.use_inner_iterations = false;
+
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  for (const auto& vid : view_ids) {
+    bundle_adjuster.AddView(vid);
+  }
+
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+  if (!summary.success) {
+    return summary;
+  } else {
+    if (!bundle_adjuster.GetCovarianceForViews(view_ids,
+                                               empirical_covariance_matrices)) {
+      summary.success = false;
+      *empirical_variance_factor = 1.0;
+    } else {
+      // now get redundancy to calculate empirical covariance matrix
+      int nr_obs = 0;
+      double total_nr_vars = view_ids.size() * 6.0;
+      for (const auto &v : view_ids) {
+        nr_obs += reconstruction->View(v)->NumFeatures();
+      }
+      const double redundancy = 1.0 / (nr_obs * 2 - total_nr_vars);
+
+      *empirical_variance_factor = redundancy * summary.final_cost;
+      for (auto &cov : *empirical_covariance_matrices) {
+        cov.second *= *empirical_variance_factor;
+      }
+      LOG(INFO) << "Redundancy in BundleAdjustViews: " << redundancy << "\n"
+                << ", final cost: " << summary.final_cost
+                << ", mean reprojection error: " << (summary.final_cost * 2.0 / nr_obs)
+                << ", empirical variance factor: " << *empirical_variance_factor
+                << "\n";
     }
   }
   return summary;

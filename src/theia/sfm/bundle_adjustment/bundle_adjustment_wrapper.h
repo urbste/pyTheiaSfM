@@ -50,4 +50,9 @@ std::tuple<BundleAdjustmentSummary, Reconstruction, Matrix6d, double> BundleAdju
 std::tuple<BundleAdjustmentSummary, Reconstruction, Matrix3d, double> BundleAdjustTrackWithCovWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const TrackId track_id);
 
+std::tuple<BundleAdjustmentSummary, Reconstruction, std::map<ViewId, Matrix6d>, double> BundleAdjustViewsWithCovWrapper(
+    Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const std::vector<ViewId>& view_id);
+
+std::tuple<BundleAdjustmentSummary, Reconstruction, std::map<TrackId, Matrix3d>, double> BundleAdjustTracksWithCovWrapper(
+    Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const std::vector<TrackId>& track_id);
 }  // namespace theia

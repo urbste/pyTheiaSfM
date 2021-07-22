@@ -178,26 +178,34 @@ BundleAdjustmentSummary BundleAdjustTracks(
 ///////// With covariance estimation
 // Bundle adjust a single track.
 BundleAdjustmentSummary
-BundleAdjustTrack(const BundleAdjustmentOptions &options,
-                  const TrackId track_id, Reconstruction *reconstruction,
-                  Matrix3d *empirical_covariance_matrix,
-                  double *empirical_variance);
+BundleAdjustTrack(
+  const BundleAdjustmentOptions &options,
+  const TrackId track_id, Reconstruction *reconstruction,
+  Matrix3d *empirical_covariance_matrix,
+  double *empirical_variance_factor);
 
 // Bundle adjust tracks.
 BundleAdjustmentSummary BundleAdjustTracks(
-    const BundleAdjustmentOptions &options,
-    const std::vector<TrackId> &tracks_to_optimize,
-    Reconstruction *reconstruction,
-    std::map<TrackId, Eigen::Matrix3d>* empirical_covariance_matrices,
-    double* emprical_variance_factors);
+  const BundleAdjustmentOptions &options,
+  const std::vector<TrackId> &tracks_to_optimize,
+  Reconstruction *reconstruction,
+  std::map<TrackId, Eigen::Matrix3d>* empirical_covariance_matrices,
+  double* emprical_variance_factor);
 
 // Bundle adjust a single track.
-BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
-                                         const ViewId view_id,
-                                         Reconstruction *reconstruction,
-                                         Matrix6d *empirical_covariance_matrix,
-                                         double *empirical_variance);
+BundleAdjustmentSummary BundleAdjustView(
+  const BundleAdjustmentOptions &options,
+  const ViewId view_id,
+  Reconstruction *reconstruction,
+  Matrix6d *empirical_covariance_matrix,
+  double *empirical_variance_factor);
 
+BundleAdjustmentSummary BundleAdjustViews(
+  const BundleAdjustmentOptions &options,
+  const std::vector<ViewId>& view_ids,
+  Reconstruction *reconstruction,
+  std::map<ViewId, Matrix6d> *empirical_covariance_matrix,
+  double *empirical_variance_factor);
 } // namespace theia
 
 #endif // THEIA_SFM_BUNDLE_ADJUSTMENT_BUNDLE_ADJUSTMENT_H_

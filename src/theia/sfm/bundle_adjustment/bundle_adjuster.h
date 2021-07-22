@@ -80,11 +80,16 @@ class BundleAdjuster {
   bool GetCovarianceForTrack(const TrackId track_id, Eigen::Matrix3d* covariance_matrix);
 
   // Get covariance for all tracks
-  bool GetCovarianceForTracks(const std::vector<TrackId> &track_ids, std::map<TrackId, Eigen::Matrix3d>* covariance_matrices);
+  bool GetCovarianceForTracks(const std::vector<TrackId> &track_ids, 
+    std::map<TrackId, Eigen::Matrix3d>* covariance_matrices);
 
   // Get covariance for a single view
   bool GetCovarianceForView(const ViewId view_id, Matrix6d* covariance_matrix);
 
+  // Get covariance for a single view
+  bool GetCovarianceForViews(const std::vector<ViewId> &track_ids, 
+    std::map<ViewId, Matrix6d>* covariance_matrices);
+    
  protected:
   // Add all camera extrinsics and intrinsics to the optimization problem.
   void SetCameraExtrinsicsParameterization();

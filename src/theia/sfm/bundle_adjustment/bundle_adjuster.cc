@@ -507,4 +507,39 @@ bool BundleAdjuster::GetCovarianceForView(const ViewId view_id,
   }
 }
 
+
+bool BundleAdjuster::GetCovarianceForViews(
+    const std::vector<ViewId> &view_ids,
+    std::map<ViewId, Matrix6d> *covariance_matrices) {
+
+  ceres::Covariance covariance_estimator(covariance_options_);
+  std::vector<std::pair<const double *, const double *>> covariance_blocks;
+  std::vector<ViewId> est_view_ids;
+  for (const auto &v_id : view_ids) {
+    const auto extr_ptr = reconstruction_->View(v_id)->Camera().extrinsics();
+    if (!problem_->IsParameterBlockConstant(extr_ptr) &&
+         problem_->HasParameterBlock(extr_ptr)) {
+      est_view_ids.push_back(v_id);
+      covariance_blocks.push_back(
+          std::make_pair(extr_ptr, extr_ptr));
+    } else {
+        LOG(ERROR) << "There was a view that could not be found in the reconstruction or is set to fixed! No covariance estimation possible.\n";
+        return false;
+    }
+  }
+
+  if (!covariance_estimator.Compute(covariance_blocks, problem_.get())) {
+      return false;
+  }
+
+  for (size_t i = 0; i < est_view_ids.size(); ++i) {
+    Matrix6d cov_mat;
+    covariance_estimator.GetCovarianceMatrixInTangentSpace(
+        {covariance_blocks[i].first}, cov_mat.data());
+    covariance_matrices->insert(std::make_pair(est_view_ids[i], cov_mat));
+  }
+
+  return true;
+}
+
 } // namespace theia
