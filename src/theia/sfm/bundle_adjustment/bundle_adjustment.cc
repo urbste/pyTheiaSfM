@@ -148,9 +148,9 @@ BundleAdjustTrack(const BundleAdjustmentOptions &options,
       *empirical_variance_factor = 1.0;
     } else {
       // now get redundancy
-      const double r =
-          1.0 / (reconstruction->Track(track_id)->NumViews() * 2 - 3);
-      *empirical_variance_factor = r * summary.final_cost;
+      const double redundancy =
+          reconstruction->Track(track_id)->NumViews() * 2 - 3;
+      *empirical_variance_factor = (2.0 * summary.final_cost) / redundancy;
       *empirical_covariance_matrix *= *empirical_variance_factor;
     }
   }
@@ -190,19 +190,20 @@ BundleAdjustmentSummary BundleAdjustTracks(
       for (const auto &t : tracks_to_optimize) {
         nr_obs += reconstruction->Track(t)->NumViews();
       }
-      const double redundancy = 1.0 / (nr_obs * 2 - total_nr_vars);
+      const double redundancy = nr_obs * 2 - total_nr_vars;
 
-      *empirical_variance_factor = redundancy * summary.final_cost;
+      *empirical_variance_factor = (2.0 * summary.final_cost) / redundancy ;
       for (auto &cov : *empirical_covariance_matrices) {
         cov.second *= *empirical_variance_factor;
       }
       LOG(INFO) << "Redundancy in BundleAdjustTracks: " << redundancy << "\n"
           << ", final cost: " << summary.final_cost
-          << ", mean reprojection error: " << (summary.final_cost * 2.0 / nr_obs)
+          << ", root mean square reprojection error: " << std::sqrt(summary.final_cost * 2.0 / nr_obs)
           << ", empirical variance factor: " << *empirical_variance_factor
           << "\n";
     }
   }
+
   return summary;
 }
 
@@ -247,9 +248,9 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
       *empirical_variance_factor = 1.0;
     } else {
       // now get redundancy
-      const double r =
-          1.0 / (reconstruction->View(view_id)->NumFeatures() * 2 - 6);
-      *empirical_variance_factor = r * summary.final_cost;
+      const double redundancy =
+          reconstruction->View(view_id)->NumFeatures() * 2 - 6;
+      *empirical_variance_factor = (2.0 * summary.final_cost) / redundancy;
       *empirical_covariance_matrix *= *empirical_variance_factor;
     }
   }
@@ -286,15 +287,15 @@ BundleAdjustmentSummary BundleAdjustViews(const BundleAdjustmentOptions &options
       for (const auto &v : view_ids) {
         nr_obs += reconstruction->View(v)->NumFeatures();
       }
-      const double redundancy = 1.0 / (nr_obs * 2 - total_nr_vars);
+      const double redundancy = nr_obs * 2 - total_nr_vars;
 
-      *empirical_variance_factor = redundancy * summary.final_cost;
+      *empirical_variance_factor = (2.0 * summary.final_cost) / redundancy;
       for (auto &cov : *empirical_covariance_matrices) {
         cov.second *= *empirical_variance_factor;
       }
       LOG(INFO) << "Redundancy in BundleAdjustViews: " << redundancy << "\n"
                 << ", final cost: " << summary.final_cost
-                << ", mean reprojection error: " << (summary.final_cost * 2.0 / nr_obs)
+                << ", root mean square reprojection error: " << std::sqrt(summary.final_cost * 2.0 / nr_obs)
                 << ", empirical variance factor: " << *empirical_variance_factor
                 << "\n";
     }
