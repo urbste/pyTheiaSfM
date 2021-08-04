@@ -48,7 +48,7 @@ def configure_c_extension():
 def build_c_extension():
     """Compile C extension."""
     print("Compiling extension...")
-    subprocess.check_call(['make', '-j7'], cwd='cmake_build')
+    subprocess.check_call(['make', '-j4'], cwd='cmake_build')
 
 
 def create_package():
@@ -69,8 +69,8 @@ setuptools.setup(
     project_urls={
         "Documentation": "http://theia-sfm.org/",
     },
-    author='Shengyu Yin',
-    author_email = "shengyu952014@outlook.com",
+    author='Sergej Lebedev',
+    author_email = "SergejL91@gmail.com",
     license='BSD',
     packages=setuptools.find_packages(where='src'),
     include_package_data=True,

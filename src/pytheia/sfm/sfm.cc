@@ -955,6 +955,7 @@ void pytheia_sfm_classes(py::module &m) {
     .value("PRINCIPAL_POINTS", theia::OptimizeIntrinsicsType::PRINCIPAL_POINTS)
     .value("RADIAL_DISTORTION", theia::OptimizeIntrinsicsType::RADIAL_DISTORTION)
     .value("TANGENTIAL_DISTORTION", theia::OptimizeIntrinsicsType::TANGENTIAL_DISTORTION)
+    .value("DISTORTION", theia::OptimizeIntrinsicsType::DISTORTION)
     .value("ALL", theia::OptimizeIntrinsicsType::ALL)
     .export_values()
   ;
