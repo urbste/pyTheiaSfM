@@ -65,12 +65,12 @@ setuptools.setup(
     description='A Structure from Motion library',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/shengyu17/TheiaSfM/tree/feature/python_bindings',
+    url='https://github.com/urbste/TheiaSfM.git',
     project_urls={
         "Documentation": "http://theia-sfm.org/",
     },
-    author='Sergej Lebedev',
-    author_email = "SergejL91@gmail.com",
+    author='Shengyu Yin',
+    author_email = "shengyu952014@outlook.com",
     license='BSD',
     packages=setuptools.find_packages(where='src'),
     include_package_data=True,
@@ -83,6 +83,12 @@ setuptools.setup(
         'pytheia': [
             'pytheia.*',
             'libflann_cpp.*',
+            #'stubs/pytheia/pytheia/__init__.pyi',
+            #'stubs/pytheia/pytheia/io/__init__.pyi',
+            #'stubs/pytheia/pytheia/matching/__init__.pyi',
+            #'stubs/pytheia/pytheia/math/__init__.pyi',
+            #'stubs/pytheia/pytheia/sfm/__init__.pyi',
+            #'stubs/pytheia/pytheia/solvers/__init__.pyi',
         ]
     },
 
