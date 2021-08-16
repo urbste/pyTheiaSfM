@@ -108,7 +108,8 @@ private:
   template <class Archive>
   void serialize(Archive &ar, const std::uint32_t version) { // NOLINT
     ar(name_, timestamp_, is_estimated_, camera_, camera_intrinsics_prior_,
-       features_, features_to_tracks_);
+       features_, features_to_tracks_, position_prior_, position_prior_sqrt_information_,
+       has_position_prior_);
   }
 
   std::string name_;
@@ -119,7 +120,7 @@ private:
   std::unordered_map<TrackId, Feature> features_;
   std::unordered_map<Feature, TrackId> features_to_tracks_;
 
-  // a prior on an absolute position (e.g. GPS)
+  // A prior on an absolute position (e.g. GPS)
   Eigen::Vector3d position_prior_;
   Eigen::Matrix3d position_prior_sqrt_information_;
   bool has_position_prior_;
