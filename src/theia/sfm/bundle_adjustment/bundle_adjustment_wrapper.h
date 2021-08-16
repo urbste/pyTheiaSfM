@@ -12,34 +12,43 @@ namespace theia {
 using Matrix3d = Eigen::Matrix<double,3,3>;
 using Matrix6d = Eigen::Matrix<double,6,6>;
 
-
-std::tuple<BundleAdjustmentSummary, TwoViewInfo> BundleAdjustTwoViewsAngularWrapper(
+BundleAdjustmentSummary BundleAdjustTwoViewsAngularWrapper(
     const BundleAdjustmentOptions& options,
     const std::vector<FeatureCorrespondence>& correspondences,
     TwoViewInfo& two_view_info_prior);
 
-std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustViewWrapper(
+BundleAdjustmentSummary BundleAdjustViewWrapper(
     Reconstruction& reconstruction, 
     const BundleAdjustmentOptions& options,
     const ViewId view_id);
 
-std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustTrackWrapper(
+BundleAdjustmentSummary BundleAdjustTrackWrapper(
     Reconstruction& reconstruction, 
     const BundleAdjustmentOptions& options,
     const TrackId track_id);
 
 // with covariance information
-std::tuple<BundleAdjustmentSummary, Reconstruction, Matrix6d, double> BundleAdjustViewWithCovWrapper(
+std::tuple<BundleAdjustmentSummary, Matrix6d, double> BundleAdjustViewWithCovWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const ViewId view_id);
 
-std::tuple<BundleAdjustmentSummary, Reconstruction, Matrix3d, double> BundleAdjustTrackWithCovWrapper(
+std::tuple<BundleAdjustmentSummary, Matrix3d, double> BundleAdjustTrackWithCovWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const TrackId track_id);
 
-std::tuple<BundleAdjustmentSummary, Reconstruction, std::map<ViewId, Matrix6d>, double> BundleAdjustViewsWithCovWrapper(
+std::tuple<BundleAdjustmentSummary, std::map<ViewId, Matrix6d>, double> BundleAdjustViewsWithCovWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const std::vector<ViewId>& view_id);
 
-std::tuple<BundleAdjustmentSummary, Reconstruction, std::map<TrackId, Matrix3d>, double> BundleAdjustTracksWithCovWrapper(
+std::tuple<BundleAdjustmentSummary, std::map<TrackId, Matrix3d>, double> BundleAdjustTracksWithCovWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const std::vector<TrackId>& track_id);
+
+BundleAdjustmentSummary BundleAdjustReconstructionWrapper(
+        const BundleAdjustmentOptions& options,
+        Reconstruction& reconstruction);
+
+BundleAdjustmentSummary BundleAdjustPartialReconstructionWrapper(
+    const BundleAdjustmentOptions& options,
+    Reconstruction& reconstruction,
+    const std::unordered_set<ViewId>& views_to_optimize,
+    const std::unordered_set<TrackId>& tracks_to_optimize);
 
 // std::tuple<BundleAdjustmentSummary, Camera, Camera, std::vector<Eigen::Vector4d>> BundleAdjustTwoViewsWrapper(
 //     const TwoViewBundleAdjustmentOptions& options,
@@ -49,13 +58,5 @@ std::tuple<BundleAdjustmentSummary, Reconstruction, std::map<TrackId, Matrix3d>,
 //     const std::vector<FeatureCorrespondence>& correspondences,
 //     const Eigen::Vector3d& rotation1,
 //     const Eigen::Vector3d& rotation2);
-
-// std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustReconstructionWrapper(
-//     const BundleAdjustmentOptions& options);
-
-// std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustPartialReconstructionWrapper(
-//     const BundleAdjustmentOptions& options,
-//     const std::unordered_set<ViewId>& views_to_optimize,
-//     const std::unordered_set<TrackId>& tracks_to_optimize);
 
 }  // namespace theia

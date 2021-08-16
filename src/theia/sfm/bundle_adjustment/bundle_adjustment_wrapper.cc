@@ -1,82 +1,82 @@
 #include "theia/sfm/bundle_adjustment/bundle_adjustment_wrapper.h"
 
-
 namespace theia {
 
-std::tuple<BundleAdjustmentSummary, TwoViewInfo> BundleAdjustTwoViewsAngularWrapper(
+BundleAdjustmentSummary BundleAdjustTwoViewsAngularWrapper(
     const BundleAdjustmentOptions& options,
     const std::vector<FeatureCorrespondence>& correspondences,
     TwoViewInfo& two_view_info_prior){
     BundleAdjustmentSummary ba_summary = BundleAdjustTwoViewsAngular(options, correspondences, &two_view_info_prior);
-    return std::make_tuple(ba_summary, two_view_info_prior);
+    return ba_summary;
 }
 
-std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustViewWrapper(
+BundleAdjustmentSummary BundleAdjustViewWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const ViewId view_id){
     BundleAdjustmentSummary ba_summary = BundleAdjustView(options, view_id, &reconstruction);
-    return std::make_tuple(ba_summary, reconstruction);
+    return ba_summary;
 }
 
 
-std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustTrackWrapper(
+BundleAdjustmentSummary BundleAdjustTrackWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options,
         const TrackId track_id) {
     BundleAdjustmentSummary ba_summary = BundleAdjustTrack(options, track_id, &reconstruction);
-    return std::make_tuple(ba_summary, reconstruction);
+    return ba_summary;
 }
 
-std::tuple<BundleAdjustmentSummary, Reconstruction, Matrix6d, double> 
+std::tuple<BundleAdjustmentSummary, Matrix6d, double> 
           BundleAdjustViewWithCovWrapper(Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const ViewId view_id) {
     Matrix6d cov_mat;
     double emp_variance_factor;
     BundleAdjustmentSummary ba_summary = BundleAdjustView(
         options, view_id, &reconstruction, &cov_mat, &emp_variance_factor);
-    return std::make_tuple(ba_summary, reconstruction, cov_mat, emp_variance_factor);
+    return std::make_tuple(ba_summary, cov_mat, emp_variance_factor);
 }
 
-std::tuple<BundleAdjustmentSummary, Reconstruction, std::map<ViewId, Matrix6d>, double> 
+std::tuple<BundleAdjustmentSummary, std::map<ViewId, Matrix6d>, double> 
           BundleAdjustViewsWithCovWrapper(Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const std::vector<ViewId>& view_ids) {
     std::map<ViewId, Matrix6d> cov_mats;
     double emp_variance_factor;
     BundleAdjustmentSummary ba_summary = BundleAdjustViews(
         options, view_ids, &reconstruction, &cov_mats, &emp_variance_factor);
-    return std::make_tuple(ba_summary, reconstruction, cov_mats, emp_variance_factor);
+    return std::make_tuple(ba_summary, cov_mats, emp_variance_factor);
 }
 
 
-std::tuple<BundleAdjustmentSummary, Reconstruction, Matrix3d, double> BundleAdjustTrackWithCovWrapper(
+std::tuple<BundleAdjustmentSummary, Matrix3d, double> BundleAdjustTrackWithCovWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const TrackId track_id) {
     Matrix3d cov_mat;
     double emp_variance_factor;
     BundleAdjustmentSummary ba_summary = BundleAdjustTrack(
         options, track_id, &reconstruction, &cov_mat, &emp_variance_factor);
-    return std::make_tuple(ba_summary, reconstruction, cov_mat, emp_variance_factor);
+    return std::make_tuple(ba_summary, cov_mat, emp_variance_factor);
 }
 
-std::tuple<BundleAdjustmentSummary, Reconstruction, std::map<TrackId, Matrix3d>, double> BundleAdjustTracksWithCovWrapper(
+std::tuple<BundleAdjustmentSummary, std::map<TrackId, Matrix3d>, double> BundleAdjustTracksWithCovWrapper(
     Reconstruction& reconstruction, const BundleAdjustmentOptions& options, const std::vector<TrackId>& track_ids) {
     std::map<TrackId, Matrix3d> cov_mats;
     double emp_variance_factor;
     BundleAdjustmentSummary ba_summary = BundleAdjustTracks(
         options, track_ids, &reconstruction, &cov_mats, &emp_variance_factor);
-    return std::make_tuple(ba_summary, reconstruction, cov_mats, emp_variance_factor);
+    return std::make_tuple(ba_summary, cov_mats, emp_variance_factor);
 }
 
-// std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustReconstructionWrapper(
-//         const BundleAdjustmentOptions& options){
-//     Reconstruction reconstruction;
-//     BundleAdjustmentSummary ba_summary = BundleAdjustReconstruction(options, &reconstruction);
-//     return std::make_tuple(ba_summary, reconstruction);
-// }
+BundleAdjustmentSummary BundleAdjustReconstructionWrapper(
+        const BundleAdjustmentOptions& options,
+        Reconstruction& reconstruction) {
+    BundleAdjustmentSummary ba_summary = BundleAdjustReconstruction(options, &reconstruction);
+    return ba_summary;
+}
 
-// std::tuple<BundleAdjustmentSummary, Reconstruction> BundleAdjustPartialReconstructionWrapper(
-//     const BundleAdjustmentOptions& options,
-//     const std::unordered_set<ViewId>& views_to_optimize,
-//         const std::unordered_set<TrackId>& tracks_to_optimize){
-//     Reconstruction reconstruction;
-//     BundleAdjustmentSummary ba_summary = BundleAdjustPartialReconstruction(options, views_to_optimize, tracks_to_optimize, &reconstruction);
-//     return std::make_tuple(ba_summary, reconstruction);
-// }
+BundleAdjustmentSummary BundleAdjustPartialReconstructionWrapper(
+        const BundleAdjustmentOptions& options,
+        Reconstruction& reconstruction,
+        const std::unordered_set<ViewId>& views_to_optimize,
+        const std::unordered_set<TrackId>& tracks_to_optimize) {
+    BundleAdjustmentSummary ba_summary = BundleAdjustPartialReconstruction(
+        options, views_to_optimize, tracks_to_optimize, &reconstruction);
+    return ba_summary;
+}
 
 // std::tuple<BundleAdjustmentSummary, Camera, Camera, std::vector<Eigen::Vector4d>> BundleAdjustTwoViewsWrapper(
 //     const TwoViewBundleAdjustmentOptions& options,

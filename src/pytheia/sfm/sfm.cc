@@ -991,8 +991,8 @@ void pytheia_sfm_classes(py::module &m) {
     .def_readwrite("solve_time_in_seconds", &theia::BundleAdjustmentSummary::solve_time_in_seconds)
   ;
 
-  //m.def("BundleAdjustPartialReconstruction", theia::BundleAdjustPartialReconstructionWrapper);
-  //m.def("BundleAdjustReconstruction", theia::BundleAdjustReconstructionWrapper);
+  m.def("BundleAdjustPartialReconstruction", theia::BundleAdjustPartialReconstructionWrapper);
+  m.def("BundleAdjustReconstruction", theia::BundleAdjustReconstructionWrapper);
   m.def("BundleAdjustView", theia::BundleAdjustViewWrapper);
   m.def("BundleAdjustTrack", theia::BundleAdjustTrackWrapper);
   m.def("BundleAdjustViewWithCov", theia::BundleAdjustViewWithCovWrapper);

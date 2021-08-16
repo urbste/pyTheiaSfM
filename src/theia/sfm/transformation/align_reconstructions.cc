@@ -94,8 +94,9 @@ class CameraAlignmentEstimator
 
 }  // namespace
 
-void AlignReconstructions(const Reconstruction& reconstruction1,
-                          Reconstruction* reconstruction2) {
+SimilarityTransformation AlignReconstructions(
+    const Reconstruction& reconstruction1,
+    Reconstruction* reconstruction2) {
   CHECK_NOTNULL(reconstruction2);
 
   const std::vector<std::string> common_view_names =
@@ -127,9 +128,15 @@ void AlignReconstructions(const Reconstruction& reconstruction1,
 
   // Apply the similarity transformation to the reconstruction.
   TransformReconstruction(rotation, translation, scale, reconstruction2);
+
+  SimilarityTransformation result;
+  result.rotation = rotation;
+  result.translation = translation;
+  result.scale = scale;
+  return result;
 }
 
-void AlignReconstructionsRobust(
+SimilarityTransformation AlignReconstructionsRobust(
     const double robust_error_threshold,
     const Reconstruction& reconstruction1,
     Reconstruction* reconstruction2) {
@@ -190,6 +197,12 @@ void AlignReconstructionsRobust(
 
   // Apply the similarity transformation to the reconstruction.
   TransformReconstruction(rotation, translation, scale, reconstruction2);
+
+  SimilarityTransformation result;
+  result.rotation = rotation;
+  result.translation = translation;
+  result.scale = scale;
+  return result;
 }
 
 }  // namespace theia

@@ -4,6 +4,7 @@
 #include "theia/sfm/transformation/align_reconstructions.h"
 #include "theia/sfm/transformation/gdls_similarity_transform.h"
 #include "theia/sfm/transformation/transform_reconstruction.h"
+#include "theia/sfm/similarity_transformation.h"
 
 namespace theia {
 
@@ -27,18 +28,19 @@ std::tuple<Eigen::Matrix3d, Eigen::Vector3d, double> AlignPointCloudsUmeyamaWith
     return std::make_tuple(rotation, translation, scale);
 }
 
-std::tuple<std::vector<Eigen::Matrix<double,4,1>>, std::vector<Eigen::Vector3d>, std::vector<double>> GdlsSimilarityTransformWrapper(const std::vector<Eigen::Vector3d>& ray_origin,
-                             const std::vector<Eigen::Vector3d>& ray_direction,
-                                    const std::vector<Eigen::Vector3d>& world_point){
+std::tuple<std::vector<Eigen::Vector4d>, std::vector<Eigen::Vector3d>, std::vector<double>> GdlsSimilarityTransformWrapper(
+    const std::vector<Eigen::Vector3d>& ray_origin,
+    const std::vector<Eigen::Vector3d>& ray_direction,
+    const std::vector<Eigen::Vector3d>& world_point){
     std::vector<Eigen::Quaterniond> solution_rotation_q;
     std::vector<Eigen::Vector3d> solution_translation;
     std::vector<double> solution_scale;
     GdlsSimilarityTransform(ray_origin, ray_direction, world_point, &solution_rotation_q, &solution_translation, &solution_scale);
 
 
-    std::vector<Eigen::Matrix<double,4,1>> solution_rotation;
+    std::vector<Eigen::Vector4d> solution_rotation;
     for(int i=0;i<solution_rotation_q.size();++i){
-        Eigen::Matrix<double,4,1> tmp;
+        Eigen::Vector4d tmp;
         tmp(0,0) = solution_rotation_q[i].w();
         tmp(1,0) = solution_rotation_q[i].x();
         tmp(2,0) = solution_rotation_q[i].y();
@@ -56,16 +58,20 @@ std::vector<Eigen::Vector3d> AlignRotationsWrapper(const std::vector<Eigen::Vect
     return rotation;
 }
 
-void AlignReconstructionsWrapper(const Reconstruction& fixed_reconstruction,
+std::tuple<Eigen::Matrix3d, Eigen::Vector3d, double> AlignReconstructionsWrapper(const Reconstruction& fixed_reconstruction,
     Reconstruction& variable_reconstruction){
-    AlignReconstructions(fixed_reconstruction, &variable_reconstruction);
+    SimilarityTransformation res = AlignReconstructions(fixed_reconstruction, &variable_reconstruction);
+    return std::make_tuple(res.rotation, res.translation, res.scale);
 }
 
 
-void AlignReconstructionsRobustWrapper(const double robust_error_threshold,
-                                       const Reconstruction& fixed_reconstruction,
-                                       Reconstruction& variable_reconstruction){
-    AlignReconstructionsRobust(robust_error_threshold, fixed_reconstruction, &variable_reconstruction);
+std::tuple<Eigen::Matrix3d, Eigen::Vector3d, double> AlignReconstructionsRobustWrapper(
+    const double robust_error_threshold,
+    const Reconstruction& fixed_reconstruction,
+    Reconstruction& variable_reconstruction) {                            
+    SimilarityTransformation res = AlignReconstructionsRobust(
+        robust_error_threshold, fixed_reconstruction, &variable_reconstruction);
+    return std::make_tuple(res.rotation, res.translation, res.scale);
 }
 
 void TransformReconstructionWrapper(Reconstruction& reconstruction,
