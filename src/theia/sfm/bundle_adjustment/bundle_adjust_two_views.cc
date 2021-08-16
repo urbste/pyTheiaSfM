@@ -231,7 +231,6 @@ BundleAdjustmentSummary BundleAdjustTwoViewsAngular(
         info->rotation_2.data(),
         info->position_2.data());
   }
-
   // End setup time.
   summary.setup_time_in_seconds = timer.ElapsedTimeInSeconds();
 

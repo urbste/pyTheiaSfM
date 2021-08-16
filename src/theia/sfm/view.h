@@ -92,6 +92,15 @@ public:
 
   void SetTimestamp(const double timestamp);
 
+  void SetPositionPrior(const Eigen::Vector3d& position_prior, 
+    const Eigen::Matrix3d& position_prior_information);
+  
+  Eigen::Vector3d GetPositionPrior();
+
+  Eigen::Matrix3d GetPositionPriorSqrtInformation();
+
+  bool HasPositionPrior();
+
 private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
@@ -110,6 +119,10 @@ private:
   std::unordered_map<TrackId, Feature> features_;
   std::unordered_map<Feature, TrackId> features_to_tracks_;
 
+  // a prior on an absolute position (e.g. GPS)
+  Eigen::Vector3d position_prior_;
+  Eigen::Matrix3d position_prior_sqrt_information_;
+  bool has_position_prior_;
 };
 
 } // namespace theia

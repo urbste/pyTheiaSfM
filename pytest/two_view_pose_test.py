@@ -1,17 +1,4 @@
-from pytheia.pytheia.sfm import PoseFromThreePoints
-from pytheia.pytheia.sfm import NormalizedEightPointFundamentalMatrix
-from pytheia.pytheia.sfm import FivePointRelativePose
-from pytheia.pytheia.sfm import FourPointPoseAndFocalLength
-from pytheia.pytheia.sfm import FourPointHomography
-from pytheia.pytheia.sfm import FourPointsPoseFocalLengthRadialDistortion
-from pytheia.pytheia.sfm import FourPointRelativePosePartialRotation
-from pytheia.pytheia.sfm import ThreePointRelativePosePartialRotation
-from pytheia.pytheia.sfm import TwoPointPosePartialRotation
-from pytheia.pytheia.sfm import PositionFromTwoRays
-from pytheia.pytheia.sfm import RelativePoseFromTwoPointsWithKnownRotation
-from pytheia.pytheia.sfm import SevenPointFundamentalMatrix
-from pytheia.pytheia.sfm import SimTransformPartialRotation
-from pytheia.pytheia.sfm import DlsPnp
+import pytheia as pt
 
 import numpy as np
 from numpy.random import rand
@@ -35,30 +22,30 @@ tmp2 /= tmp2[2,:]
 pts2d_cam2 = tmp2[0:2,:]
 
 
-rt = PoseFromThreePoints(pts2d_cam1.T, pts3d.T)
+rt = pt.sfm.PoseFromThreePoints(pts2d_cam1.T, pts3d.T)
 print('PoseFromThreePoints')
 print(rt)
-rt = NormalizedEightPointFundamentalMatrix(pts2d_cam1.T, pts2d_cam2.T)
+rt = pt.sfm.NormalizedEightPointFundamentalMatrix(pts2d_cam1.T, pts2d_cam2.T)
 print('NormalizedEightPointFundamentalMatrix')
 print(rt)
-rt = FivePointRelativePose(pts2d_cam1.T, pts2d_cam2.T)
+rt = pt.sfm.FivePointRelativePose(pts2d_cam1.T, pts2d_cam2.T)
 print('FivePointRelativePose')
 print(rt)
-rt = FourPointPoseAndFocalLength(pts2d_cam1.T, pts3d.T)
+rt = pt.sfm.FourPointPoseAndFocalLength(pts2d_cam1.T, pts3d.T)
 print('FourPointPoseAndFocalLength')
 print(rt)
-rt = FourPointHomography(pts2d_cam1.T, pts2d_cam2.T)
+rt = pt.sfm.FourPointHomography(pts2d_cam1.T, pts2d_cam2.T)
 print('FourPointHomography')
 print(rt)
-rt = FourPointsPoseFocalLengthRadialDistortion(pts2d_cam1.T, pts3d.T)
+rt = pt.sfm.FourPointsPoseFocalLengthRadialDistortion(pts2d_cam1.T, pts3d.T)
 print('FourPointsPoseFocalLengthRadialDistortion')
 print(rt)
 
 
-rt = DlsPnp(pts2d_cam1.T, pts3d.T)
+rt = pt.sfm.DlsPnp(pts2d_cam1.T, pts3d.T)
 print('DlsPnp')
 print(rt)
-rt = SevenPointFundamentalMatrix(pts2d_cam1[:,0:7].T, pts2d_cam2[:,0:7].T)
+rt = pt.sfm.SevenPointFundamentalMatrix(pts2d_cam1[:,0:7].T, pts2d_cam2[:,0:7].T)
 print('SevenPointFundamentalMatrix')
 print(rt)
 

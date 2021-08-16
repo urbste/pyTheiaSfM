@@ -1,4 +1,4 @@
-from pytheia.pytheia.sfm import PoseFromThreePoints
+import pytheia as pt
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation as R
@@ -26,7 +26,7 @@ for i in range(3):
 
 start = time.time()
 for i in range(nr_runs):
-    d = PoseFromThreePoints(pts2d.T, pts3d.T)
+    d = pt.sfm.PoseFromThreePoints(pts2d.T, pts3d.T)
 end = time.time()
 print("Time pytheia per pose: {:.6f}ns".format((end-start)/nr_runs*1e6))
 

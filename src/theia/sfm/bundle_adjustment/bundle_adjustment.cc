@@ -136,7 +136,7 @@ BundleAdjustTrack(const BundleAdjustmentOptions &options,
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  bundle_adjuster.AddTrack(track_id);
+  bundle_adjuster.AddTrack(track_id, true);
 
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
   if (!summary.success) {

@@ -579,7 +579,6 @@ void pytheia_sfm_classes(py::module &m) {
     .def("RemoveFeature", &theia::View::RemoveFeature)
     .def_property_readonly("TrackIds", &theia::View::TrackIds)
     //.def_readwrite("focal_length", &theia::View::Track)
-
     .def("GetFeature", &theia::View::GetFeature, py::return_value_policy::reference)
     .def("GetTrack", &theia::View::GetTrack)
     .def("Camera", &theia::View::Camera, "Camera class object")
@@ -587,8 +586,12 @@ void pytheia_sfm_classes(py::module &m) {
     .def("SetCameraIntrinsicsPrior", &theia::View::SetCameraIntrinsicsPrior)
     .def("MutableCameraIntrinsicsPrior", &theia::View::MutableCameraIntrinsicsPrior, py::return_value_policy::reference)
     .def("MutableCamera", &theia::View::MutableCamera, py::return_value_policy::reference)
-
+    .def("GetPositionPrior", &theia::View::GetPositionPrior)
+    .def("GetPositionPriorSqrtInformation", &theia::View::GetPositionPriorSqrtInformation)
+    .def("SetPositionPrior", &theia::View::SetPositionPrior)
+    .def("HasPositionPrior", &theia::View::HasPositionPrior)
   ;
+
   // Visibility pyramid
   py::class_<theia::VisibilityPyramid>(m, "VisibilityPyramid")
     .def(py::init<int, int, int>())
@@ -674,6 +677,7 @@ void pytheia_sfm_classes(py::module &m) {
     .def_readwrite("gradient_tolerance", &theia::BundleAdjustmentOptions::gradient_tolerance)
     .def_readwrite("parameter_tolerance", &theia::BundleAdjustmentOptions::parameter_tolerance)
     .def_readwrite("max_trust_region_radius", &theia::BundleAdjustmentOptions::max_trust_region_radius)
+    .def_readwrite("use_position_priors", &theia::BundleAdjustmentOptions::use_position_priors)
   ;
 
 
@@ -987,17 +991,17 @@ void pytheia_sfm_classes(py::module &m) {
     .def_readwrite("solve_time_in_seconds", &theia::BundleAdjustmentSummary::solve_time_in_seconds)
   ;
 
-  m.def("BundleAdjustPartialReconstruction", theia::BundleAdjustPartialReconstructionWrapper);
-  m.def("BundleAdjustReconstruction", theia::BundleAdjustReconstructionWrapper);
+  //m.def("BundleAdjustPartialReconstruction", theia::BundleAdjustPartialReconstructionWrapper);
+  //m.def("BundleAdjustReconstruction", theia::BundleAdjustReconstructionWrapper);
   m.def("BundleAdjustView", theia::BundleAdjustViewWrapper);
   m.def("BundleAdjustTrack", theia::BundleAdjustTrackWrapper);
   m.def("BundleAdjustViewWithCov", theia::BundleAdjustViewWithCovWrapper);
   m.def("BundleAdjustTrackWithCov", theia::BundleAdjustTrackWithCovWrapper);
   m.def("BundleAdjustViewsWithCov", theia::BundleAdjustViewsWithCovWrapper);
   m.def("BundleAdjustTracksWithCov", theia::BundleAdjustTracksWithCovWrapper);
-  m.def("BundleAdjustTwoViews", theia::BundleAdjustTwoViewsWrapper);
+  //m.def("BundleAdjustTwoViews", theia::BundleAdjustTwoViewsWrapper);
   m.def("BundleAdjustTwoViewsAngular", theia::BundleAdjustTwoViewsAngularWrapper);
-  m.def("OptimizeRelativePositionWithKnownRotation", theia::OptimizeRelativePositionWithKnownRotationWrapper);
+  //m.def("OptimizeRelativePositionWithKnownRotation", theia::OptimizeRelativePositionWithKnownRotationWrapper);
 
   // Bundle Adjuster
   py::class_<theia::BundleAdjuster>(m, "BundleAdjuster")

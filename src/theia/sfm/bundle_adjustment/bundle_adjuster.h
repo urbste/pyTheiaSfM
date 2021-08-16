@@ -42,6 +42,7 @@
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/feature.h"
 #include "theia/sfm/types.h"
+#include "theia/sfm/view.h"
 #include "theia/util/timer.h"
 
 namespace theia {
@@ -49,6 +50,7 @@ class Camera;
 class CameraIntrinsicsModel;
 class Reconstruction;
 class Track;
+class View;
 
 // This class sets up nonlinear optimization problems for bundle adjustment.
 // Bundle adjustment problems are set up by adding views and tracks to be
@@ -115,6 +117,8 @@ class BundleAdjuster {
   virtual void AddReprojectionErrorResidual(const Feature& feature,
                                             Camera* camera,
                                             Track* track);
+  // Add a position prior residual. This can for example be a GPS position.
+  virtual void AddPositionPriorErrorResidual(View *view, Camera *camera);
 
   const BundleAdjustmentOptions options_;
   Reconstruction* reconstruction_;

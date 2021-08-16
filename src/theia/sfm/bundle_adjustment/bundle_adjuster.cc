@@ -45,6 +45,7 @@
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/create_reprojection_error_cost_function.h"
+#include "theia/sfm/bundle_adjustment/position_error.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/types.h"
@@ -120,7 +121,6 @@ void BundleAdjuster::AddView(const ViewId view_id) {
 
   // Fetch the camera that will be optimized.
   Camera *camera = view->MutableCamera();
-
   // Add residuals for all tracks in the view.
   for (const TrackId track_id : view->TrackIds()) {
     const Feature *feature = CHECK_NOTNULL(view->GetFeature(track_id));
@@ -135,6 +135,11 @@ void BundleAdjuster::AddView(const ViewId view_id) {
 
     // Add the point to group 0.
     SetTrackConstant(track_id);
+  }
+
+  // add a position prior if available
+  if (options_.use_position_priors && view->HasPositionPrior()) {
+    AddPositionPriorErrorResidual(view, camera);
   }
 }
 
@@ -178,6 +183,7 @@ void BundleAdjuster::AddTrack(const TrackId track_id,
 
   SetTrackVariable(track_id);
   SetTrackSchurGroup(track_id);
+  
   if (use_homogeneous) {
     SetHomogeneousPointParametrization(track_id);
   }
@@ -425,6 +431,16 @@ void BundleAdjuster::AddReprojectionErrorResidual(const Feature &feature,
           camera->GetCameraIntrinsicsModelType(), feature),
       loss_function_.get(), camera->mutable_extrinsics(),
       camera->mutable_intrinsics(), track->MutablePoint()->data());
+}
+
+void BundleAdjuster::AddPositionPriorErrorResidual(View *view,
+                                                   Camera *camera) {
+  // Adds a position priors to the camera poses. This can for example be a GPS position.
+  problem_->AddResidualBlock(
+        PositionError::Create(view->GetPositionPrior(), 
+                              view->GetPositionPriorSqrtInformation()),
+        NULL,
+        camera->mutable_extrinsics());
 }
 
 bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id,

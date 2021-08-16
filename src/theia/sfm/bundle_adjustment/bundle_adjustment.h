@@ -129,6 +129,9 @@ struct BundleAdjustmentOptions {
   double gradient_tolerance = 1e-10;
   double parameter_tolerance = 1e-8;
   double max_trust_region_radius = 1e12;
+
+  // Use position priors
+  bool use_position_priors = false;
 };
 
 // Some important metrics for analyzing bundle adjustment results.

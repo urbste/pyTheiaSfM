@@ -47,13 +47,22 @@
 namespace theia {
 using Vector2d = Eigen::Vector2d;
 
-View::View() : name_(""), is_estimated_(false), timestamp_(0.0) {}
+View::View() : name_(""), is_estimated_(false), timestamp_(0.0), has_position_prior_(false) {
+  position_prior_.setZero();
+  position_prior_sqrt_information_.setIdentity();
+}
 
 View::View(const std::string &name)
-    : name_(name), is_estimated_(false), timestamp_(0.0) {}
+    : name_(name), is_estimated_(false), timestamp_(0.0), has_position_prior_(false) {
+  position_prior_.setZero();
+  position_prior_sqrt_information_.setIdentity();
+}
 
 View::View(const std::string &name, const double timestamp)
-    : name_(name), is_estimated_(false), timestamp_(timestamp) {}
+    : name_(name), is_estimated_(false), timestamp_(timestamp), has_position_prior_(false) {
+  position_prior_.setZero();
+  position_prior_sqrt_information_.setIdentity();
+}
 
 const std::string &View::Name() const { return name_; }
 
@@ -118,5 +127,24 @@ bool View::RemoveFeature(const TrackId track_id) {
 double View::GetTimestamp() const { return timestamp_; }
 
 void View::SetTimestamp(const double timestamp) { timestamp_ = timestamp; }
+
+void View::SetPositionPrior(const Eigen::Vector3d& position_prior, 
+  const Eigen::Matrix3d& position_prior_sqrt_information) {
+  position_prior_ = position_prior;
+  position_prior_sqrt_information_ = position_prior_sqrt_information;
+  has_position_prior_ = true;
+}
+
+Eigen::Vector3d View::GetPositionPrior() {
+  return position_prior_;
+}
+
+Eigen::Matrix3d View::GetPositionPriorSqrtInformation() {
+  return position_prior_sqrt_information_;
+}
+
+bool View::HasPositionPrior() {
+  return has_position_prior_;
+}
 
 } // namespace theia
