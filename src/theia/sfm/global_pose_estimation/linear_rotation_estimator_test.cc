@@ -56,47 +56,6 @@ namespace {
 
 RandomNumberGenerator rng(56);
 
-// Computes R_ij = R_j * R_i^t.
-Vector3d RelativeRotationFromTwoRotations(const Vector3d& rotation1,
-                                          const Vector3d& rotation2,
-                                          const double noise) {
-  const Eigen::Matrix3d noisy_rotation =
-      Eigen::AngleAxisd(DegToRad(noise), rng.RandVector3d().normalized())
-          .toRotationMatrix();
-
-  Eigen::Matrix3d rotation_matrix1, rotation_matrix2;
-  ceres::AngleAxisToRotationMatrix(rotation1.data(), rotation_matrix1.data());
-  ceres::AngleAxisToRotationMatrix(rotation2.data(), rotation_matrix2.data());
-
-  const Eigen::AngleAxisd relative_rotation(
-      noisy_rotation * rotation_matrix2 * rotation_matrix1.transpose());
-  return relative_rotation.angle() * relative_rotation.axis();
-}
-
-// Aligns rotations to the ground truth rotations via a similarity
-// transformation.
-void AlignOrientations(const std::unordered_map<ViewId, Vector3d>& gt_rotations,
-                       std::unordered_map<ViewId, Vector3d>* rotations) {
-  // Collect all rotations into a vector.
-  std::vector<Vector3d> gt_rot, rot;
-  std::unordered_map<int, int> index_to_view_id;
-  int current_index = 0;
-  for (const auto& gt_rotation : gt_rotations) {
-    gt_rot.emplace_back(gt_rotation.second);
-    rot.emplace_back(FindOrDie(*rotations, gt_rotation.first));
-
-    index_to_view_id[current_index] = gt_rotation.first;
-    ++current_index;
-  }
-
-  AlignRotations(gt_rot, &rot);
-
-  for (int i = 0; i < rot.size(); i++) {
-    const ViewId view_id = FindOrDie(index_to_view_id, i);
-    (*rotations)[view_id] = rot[i];
-  }
-}
-
 }  // namespace
 
 class EstimateRotationsLinearTest : public ::testing::Test {
@@ -144,14 +103,14 @@ class EstimateRotationsLinearTest : public ::testing::Test {
     }
   }
 
-  void GetRelativeRotations(const int num_view_pairs, const double pose_noise) {
+  void GetRelativeRotations(const size_t num_view_pairs, const double pose_noise) {
     // Create a set of view id pairs that will contain a spanning tree.
     for (int i = 1; i < orientations_.size(); i++) {
       const ViewIdPair view_id_pair(i - 1, i);
       view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
           FindOrDie(orientations_, view_id_pair.first),
           FindOrDie(orientations_, view_id_pair.second),
-          pose_noise);
+          pose_noise, rng);
     }
 
     // Add random edges.
@@ -172,7 +131,7 @@ class EstimateRotationsLinearTest : public ::testing::Test {
       view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
           FindOrDie(orientations_, view_id_pair.first),
           FindOrDie(orientations_, view_id_pair.second),
-          pose_noise);
+          pose_noise, rng);
 
       // Set the number of inliers to be randomly from 50 to 200.
       view_pairs_[view_id_pair].num_verified_matches = rng.RandInt(50, 100);

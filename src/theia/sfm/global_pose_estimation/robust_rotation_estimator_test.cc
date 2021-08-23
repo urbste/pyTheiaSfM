@@ -46,6 +46,7 @@
 #include "theia/sfm/types.h"
 #include "theia/util/map_util.h"
 #include "theia/util/random.h"
+#include "theia/math/rotation.h"
 
 namespace theia {
 
@@ -54,65 +55,6 @@ using Eigen::Vector3d;
 namespace {
 
 RandomNumberGenerator rng(56);
-
-// Computes R_ij = R_j * R_i^t.
-Vector3d RelativeRotationFromTwoRotations(const Vector3d& rotation1,
-                                          const Vector3d& rotation2,
-                                          const double noise) {
-  const Eigen::Matrix3d noisy_rotation =
-      Eigen::AngleAxisd(DegToRad(noise), rng.RandVector3d().normalized())
-          .toRotationMatrix();
-
-  Eigen::Matrix3d rotation_matrix1, rotation_matrix2;
-  ceres::AngleAxisToRotationMatrix(rotation1.data(), rotation_matrix1.data());
-  ceres::AngleAxisToRotationMatrix(rotation2.data(), rotation_matrix2.data());
-
-  const Eigen::AngleAxisd relative_rotation(
-      noisy_rotation * rotation_matrix2 * rotation_matrix1.transpose());
-  return relative_rotation.angle() * relative_rotation.axis();
-}
-
-// return R_j = R_ij * R_i.
-Vector3d ApplyRelativeRotation(const Vector3d& rotation1,
-                               const Vector3d& relative_rotation) {
-  Vector3d rotation2;
-  Eigen::Matrix3d rotation1_matrix, relative_rotation_matrix;
-  ceres::AngleAxisToRotationMatrix(
-      rotation1.data(), ceres::ColumnMajorAdapter3x3(rotation1_matrix.data()));
-  ceres::AngleAxisToRotationMatrix(
-      relative_rotation.data(),
-      ceres::ColumnMajorAdapter3x3(relative_rotation_matrix.data()));
-
-  const Eigen::Matrix3d rotation2_matrix =
-      relative_rotation_matrix * rotation1_matrix;
-  ceres::RotationMatrixToAngleAxis(
-      ceres::ColumnMajorAdapter3x3(rotation2_matrix.data()), rotation2.data());
-  return rotation2;
-}
-
-// Aligns rotations to the ground truth rotations via a similarity
-// transformation.
-void AlignOrientations(const std::unordered_map<ViewId, Vector3d>& gt_rotations,
-                       std::unordered_map<ViewId, Vector3d>* rotations) {
-  // Collect all rotations into a vector.
-  std::vector<Vector3d> gt_rot, rot;
-  std::unordered_map<int, int> index_to_view_id;
-  int current_index = 0;
-  for (const auto& gt_rotation : gt_rotations) {
-    gt_rot.emplace_back(gt_rotation.second);
-    rot.emplace_back(FindOrDie(*rotations, gt_rotation.first));
-
-    index_to_view_id[current_index] = gt_rotation.first;
-    ++current_index;
-  }
-
-  AlignRotations(gt_rot, &rot);
-
-  for (int i = 0; i < rot.size(); i++) {
-    const ViewId view_id = FindOrDie(index_to_view_id, i);
-    (*rotations)[view_id] = rot[i];
-  }
-}
 
 }  // namespace
 
@@ -144,7 +86,7 @@ class EstimateRotationsRobustTest : public ::testing::Test {
       const Vector3d& estimated_rotation =
           FindOrDie(estimated_rotations, rotation.first);
       const Vector3d relative_rotation = RelativeRotationFromTwoRotations(
-          estimated_rotation, rotation.second, 0.0);
+          estimated_rotation, rotation.second, 0.0, rng);
       const double angular_error = RadToDeg(relative_rotation.norm());
 
       EXPECT_LT(angular_error, rotation_tolerance_degrees)
@@ -171,7 +113,7 @@ class EstimateRotationsRobustTest : public ::testing::Test {
       view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
           FindOrDie(orientations_, view_id_pair.first),
           FindOrDie(orientations_, view_id_pair.second),
-          pose_noise);
+          pose_noise, rng);
     }
 
     // Add random edges.
@@ -192,7 +134,7 @@ class EstimateRotationsRobustTest : public ::testing::Test {
       view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
           FindOrDie(orientations_, view_id_pair.first),
           FindOrDie(orientations_, view_id_pair.second),
-          pose_noise);
+          pose_noise, rng);
     }
   }
 
