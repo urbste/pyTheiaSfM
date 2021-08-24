@@ -109,9 +109,7 @@ class LmedTest : public ::testing::Test {
     std::random_shuffle(input_points->begin(), input_points->end());
   }
 
-  static void TearDownTestCase() {
-    delete input_points;
-  }
+  static void TearDownTestCase() { delete input_points; }
 
   // Synthetic points.
   static std::vector<Point>* input_points;
@@ -151,8 +149,10 @@ TEST_F(LmedTest, LineFitting) {
   RansacSummary summary;
   CHECK(lmed_line.Estimate(*input_points, &line, &summary));
   EXPECT_LT(fabs(line.m - 1.0), 0.1);
-  EXPECT_NEAR(static_cast<double>(summary.inliers.size()) /
-              input_points->size(), 0.666, 0.1);
+  EXPECT_NEAR(
+      static_cast<double>(summary.inliers.size()) / input_points->size(),
+      0.666,
+      0.1);
 }
 
 }  // namespace theia

@@ -113,10 +113,12 @@ class UncalibratedRelativePoseEstimator
     std::vector<FeatureCorrespondence> normalized_correspondences(
         centered_correspondences.size());
     for (int i = 0; i < centered_correspondences.size(); i++) {
-      normalized_correspondences[i].feature1 = Feature(
-          centered_correspondences[i].feature1.point_ / relative_pose.focal_length1);
-      normalized_correspondences[i].feature2 = Feature(
-          centered_correspondences[i].feature2.point_ / relative_pose.focal_length2);
+      normalized_correspondences[i].feature1 =
+          Feature(centered_correspondences[i].feature1.point_ /
+                  relative_pose.focal_length1);
+      normalized_correspondences[i].feature2 =
+          Feature(centered_correspondences[i].feature2.point_ /
+                  relative_pose.focal_length2);
     }
 
     GetBestPoseFromEssentialMatrix(essential_matrix,
@@ -161,14 +163,12 @@ bool EstimateUncalibratedRelativePose(
     RansacSummary* ransac_summary) {
   UncalibratedRelativePoseEstimator relative_pose_estimator;
   std::unique_ptr<SampleConsensusEstimator<UncalibratedRelativePoseEstimator> >
-      ransac = CreateAndInitializeRansacVariant(ransac_type,
-                                                ransac_params,
-                                                relative_pose_estimator);
+      ransac = CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, relative_pose_estimator);
 
   // Estimate essential matrix.
-  return ransac->Estimate(centered_correspondences,
-                          relative_pose,
-                          ransac_summary);
+  return ransac->Estimate(
+      centered_correspondences, relative_pose, ransac_summary);
 }
 
 }  // namespace theia

@@ -58,8 +58,7 @@ Eigen::Matrix<double, 8, 8> BuildActionMatrixUsingSymmetry(
     RowMajorMatrixXd* template_matrix);
 
 inline Eigen::Matrix<double, 8, 8> BuildActionMatrixUsingSymmetry(
-    const Matrix10d& a_matrix,
-    const Vector10d& b_vector) {
+    const Matrix10d& a_matrix, const Vector10d& b_vector) {
   RowMajorMatrixXd template_matrix;
   return BuildActionMatrixUsingSymmetry(a_matrix, b_vector, &template_matrix);
 }

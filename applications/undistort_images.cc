@@ -33,24 +33,29 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <algorithm>
 #include <string>
 
-DEFINE_string(input_reconstruction, "",
+DEFINE_string(input_reconstruction,
+              "",
               "Input reconstruction file with distorted cameras");
-DEFINE_string(output_reconstruction, "",
+DEFINE_string(output_reconstruction,
+              "",
               "Output reconstruction file with undistorted cameras");
 
-DEFINE_bool(undistort_images, true,
+DEFINE_bool(undistort_images,
+            true,
             "Set to true to undistort the images. If false, only the "
             "reconstruction itself is undistorted.");
-DEFINE_string(input_image_directory, "",
+DEFINE_string(input_image_directory,
+              "",
               "Directory containing the input distorted images.");
-DEFINE_string(output_image_directory, "",
+DEFINE_string(output_image_directory,
+              "",
               "Directory to write the output undistorted images. This is only "
               "used if undistort_images is set to true");
 

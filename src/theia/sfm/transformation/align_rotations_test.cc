@@ -32,16 +32,16 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <ceres/ceres.h>
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/ceres.h>
+#include <ceres/rotation.h>
 #include <glog/logging.h>
 
-#include "gtest/gtest.h"
 #include "theia/math/util.h"
 #include "theia/sfm/transformation/align_rotations.h"
 #include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -75,8 +75,9 @@ void TestAlignRotations(const int num_views,
   std::vector<Eigen::Vector3d> gt_rotations(num_views);
   std::vector<Eigen::Vector3d> rotations(num_views);
 
-  Eigen::Matrix3d rotation_transformation = Eigen::AngleAxisd(
-      15.0, rng.RandVector3d().normalized()).toRotationMatrix();
+  Eigen::Matrix3d rotation_transformation =
+      Eigen::AngleAxisd(15.0, rng.RandVector3d().normalized())
+          .toRotationMatrix();
   for (int i = 0; i < num_views; i++) {
     gt_rotations[i] = rng.RandVector3d();
     rotations[i] = gt_rotations[i];

@@ -32,17 +32,18 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <string>
-#include "gtest/gtest.h"
 
 #include "theia/image/image.h"
 #include "theia/image/keypoint_detector/keypoint.h"
 #include "theia/image/keypoint_detector/sift_detector.h"
 #include "theia/util/random.h"
 
-DEFINE_string(test_img, "image/keypoint_detector/img1.png",
+DEFINE_string(test_img,
+              "image/keypoint_detector/img1.png",
               "Name of test image file.");
 
 namespace theia {

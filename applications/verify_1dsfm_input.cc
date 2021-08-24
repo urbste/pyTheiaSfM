@@ -33,14 +33,15 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <memory>
 #include <string>
 
-DEFINE_string(1dsfm_dataset_directory, "",
+DEFINE_string(1dsfm_dataset_directory,
+              "",
               "Dataset where the 1dSFM dataset is located. Do not include a "
               "trailing slash.");
 
@@ -78,13 +79,12 @@ double ComputeRelativeTranslationError(
       theia::Clamp(relative_translation.dot(world_translation), -1.0, 1.0)));
 }
 
-void EvaluateRelativeError(
-    const theia::ViewGraph& view_graph,
-    const Reconstruction& reconstruction_1dsfm,
-    const Reconstruction& gt_reconstruction) {
+void EvaluateRelativeError(const theia::ViewGraph& view_graph,
+                           const Reconstruction& reconstruction_1dsfm,
+                           const Reconstruction& gt_reconstruction) {
   // For each edge, get the rotate translation and check the error.
-  std::vector<double> histogram_bins = {2,  5,   10,  15,  25,  50,
-                                        90, 135, 180, 225, 270, 315};
+  std::vector<double> histogram_bins = {
+      2, 5, 10, 15, 25, 50, 90, 135, 180, 225, 270, 315};
   theia::PoseError pose_error(histogram_bins, histogram_bins);
 
   const auto& edges = view_graph.GetAllEdges();
@@ -152,9 +152,8 @@ int main(int argc, char* argv[]) {
       theia::ReadBundlerFiles(lists_file, bundle_file, gt_reconstruction.get()))
       << "Could not the ground truth Bundler file at " << bundle_file;
 
-  EvaluateRelativeError(*view_graph_1dsfm,
-                        *reconstruction_1dsfm,
-                        *gt_reconstruction);
+  EvaluateRelativeError(
+      *view_graph_1dsfm, *reconstruction_1dsfm, *gt_reconstruction);
 
   return 0;
 }

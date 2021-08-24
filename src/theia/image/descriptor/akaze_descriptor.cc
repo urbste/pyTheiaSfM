@@ -61,10 +61,10 @@ bool AkazeDescriptorExtractor::DetectAndExtractDescriptors(
     std::vector<Eigen::VectorXf>* descriptors) {
   // Try to convert the image to grayscale and eigen type.
   const FloatImage& gray_image = image.AsGrayscaleImage();
-  libAKAZE::RowMatrixXf img_32 =
-      Eigen::Map<const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,
-                                     Eigen::RowMajor> >(
-          gray_image.Data(), gray_image.Rows(), gray_image.Cols());
+  libAKAZE::RowMatrixXf img_32 = Eigen::Map<
+      const Eigen::
+          Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(
+      gray_image.Data(), gray_image.Rows(), gray_image.Cols());
 
   // Set the akaze options.
   libAKAZE::AKAZEOptions options;
@@ -104,8 +104,8 @@ bool AkazeDescriptorExtractor::DetectAndExtractDescriptors(
   // Set the output keypoints.
   keypoints->reserve(akaze_keypoints.size());
   for (const auto& akaze_keypoint : akaze_keypoints) {
-    Keypoint keypoint(akaze_keypoint.pt.x(), akaze_keypoint.pt.y(),
-                      Keypoint::AKAZE);
+    Keypoint keypoint(
+        akaze_keypoint.pt.x(), akaze_keypoint.pt.y(), Keypoint::AKAZE);
     keypoint.set_scale(akaze_keypoint.size);
     keypoint.set_strength(akaze_keypoint.response);
     keypoint.set_orientation(akaze_keypoint.angle);

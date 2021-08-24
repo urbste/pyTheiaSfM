@@ -60,7 +60,7 @@ class CascadeHashingFeatureMatcher : public FeatureMatcher {
   CascadeHashingFeatureMatcher(
       const FeatureMatcherOptions& options,
       FeaturesAndMatchesDatabase* features_and_matches_database);
-      ~CascadeHashingFeatureMatcher();
+  ~CascadeHashingFeatureMatcher();
 
   // These methods are the same as the base class except that the HashedImage is
   // created as the descriptors are added.

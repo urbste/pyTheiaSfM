@@ -51,9 +51,8 @@ void IntersectMatches(const std::vector<IndexedFeatureMatch>& backwards_matches,
   index_map.reserve(backwards_matches.size());
   // Add all feature2 -> feature1 matches to the map.
   for (const IndexedFeatureMatch& feature_match : backwards_matches) {
-    InsertOrDie(&index_map,
-                feature_match.feature1_ind,
-                feature_match.feature2_ind);
+    InsertOrDie(
+        &index_map, feature_match.feature1_ind, feature_match.feature2_ind);
   }
 
   // Search the map for feature1 -> feature2 matches that are also present in

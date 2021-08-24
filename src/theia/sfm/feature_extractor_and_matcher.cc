@@ -75,48 +75,53 @@ void ExtractFeatures(const FeatureExtractorAndMatcher::Options& options,
                      std::vector<Keypoint>* keypoints,
                      std::vector<Eigen::VectorXf>* descriptors) {
   static const float kMaskThreshold = 0.5;
-//  std::unique_ptr<FloatImage> image(new FloatImage(image_filepath));
-//  // We create these variable here instead of upon the construction of the
-//  // object so that they can be thread-safe. We *should* be able to use the
-//  // static thread_local keywords, but apparently Mac OS-X's version of clang
-//  // does not actually support it!
-//  //
-//  // TODO(cmsweeney): Change this so that each thread in the threadpool receives
-//  // exactly one object.
-//  std::unique_ptr<DescriptorExtractor> descriptor_extractor =
-//      CreateDescriptorExtractor(options.descriptor_extractor_type,
-//                                options.feature_density);
+  //  std::unique_ptr<FloatImage> image(new FloatImage(image_filepath));
+  //  // We create these variable here instead of upon the construction of the
+  //  // object so that they can be thread-safe. We *should* be able to use the
+  //  // static thread_local keywords, but apparently Mac OS-X's version of
+  //  clang
+  //  // does not actually support it!
+  //  //
+  //  // TODO(cmsweeney): Change this so that each thread in the threadpool
+  //  receives
+  //  // exactly one object.
+  //  std::unique_ptr<DescriptorExtractor> descriptor_extractor =
+  //      CreateDescriptorExtractor(options.descriptor_extractor_type,
+  //                                options.feature_density);
 
-//  // Exit if the descriptor extraction fails.
-//  if (!descriptor_extractor->DetectAndExtractDescriptors(
-//          *image, keypoints, descriptors)) {
-//    LOG(ERROR) << "Could not extract descriptors in image " << image_filepath;
-//    return;
-//  }
+  //  // Exit if the descriptor extraction fails.
+  //  if (!descriptor_extractor->DetectAndExtractDescriptors(
+  //          *image, keypoints, descriptors)) {
+  //    LOG(ERROR) << "Could not extract descriptors in image " <<
+  //    image_filepath; return;
+  //  }
 
-//  if (imagemask_filepath.size() > 0) {
-//    std::unique_ptr<FloatImage> image_mask(new FloatImage(imagemask_filepath));
-//    // Check the size of the image and its associated mask.
-//    CHECK(image_mask->Width() == image->Width() &&
-//          image_mask->Height() == image->Height())
-//        << "The image and the mask don't have the same size. \n"
-//        << "- Image: " << image_filepath << "\t(" << image->Width() << " x "
-//        << image->Height() << ")\n"
-//        << "- Mask: " << imagemask_filepath << "\t(" << image_mask->Width()
-//        << " x " << image_mask->Height() << ")";
+  //  if (imagemask_filepath.size() > 0) {
+  //    std::unique_ptr<FloatImage> image_mask(new
+  //    FloatImage(imagemask_filepath));
+  //    // Check the size of the image and its associated mask.
+  //    CHECK(image_mask->Width() == image->Width() &&
+  //          image_mask->Height() == image->Height())
+  //        << "The image and the mask don't have the same size. \n"
+  //        << "- Image: " << image_filepath << "\t(" << image->Width() << " x "
+  //        << image->Height() << ")\n"
+  //        << "- Mask: " << imagemask_filepath << "\t(" << image_mask->Width()
+  //        << " x " << image_mask->Height() << ")";
 
-//    // Convert the mask to grayscale.
-//    image_mask->ConvertToGrayscaleImage();
-//    // Remove keypoints according to the associated mask (remove kp. in black
-//    // part).
-//    for (int i = keypoints->size() - 1; i > -1; i--) {
-//      if (image_mask->BilinearInterpolate(
-//              keypoints->at(i).x(), keypoints->at(i).y(), 0) < kMaskThreshold) {
-//        keypoints->erase(keypoints->begin() + i);
-//        descriptors->erase(descriptors->begin() + i);
-//      }
-//    }
-//  }
+  //    // Convert the mask to grayscale.
+  //    image_mask->ConvertToGrayscaleImage();
+  //    // Remove keypoints according to the associated mask (remove kp. in
+  //    black
+  //    // part).
+  //    for (int i = keypoints->size() - 1; i > -1; i--) {
+  //      if (image_mask->BilinearInterpolate(
+  //              keypoints->at(i).x(), keypoints->at(i).y(), 0) <
+  //              kMaskThreshold) {
+  //        keypoints->erase(keypoints->begin() + i);
+  //        descriptors->erase(descriptors->begin() + i);
+  //      }
+  //    }
+  //  }
 
   if (keypoints->size() > options.max_num_features) {
     keypoints->resize(options.max_num_features);
@@ -236,7 +241,7 @@ void FeatureExtractorAndMatcher::ExtractAndMatchFeatures() {
   SelectImagePairsWithGlobalDescriptorMatching();
   // Free up memory.
   global_image_descriptor_extractor_.release();
-  
+
   LOG(INFO) << "Matching images...";
   matcher_->MatchImages();
 }
@@ -260,20 +265,23 @@ void FeatureExtractorAndMatcher::ProcessImage(const int i) {
   const std::string mask_filepath =
       FindWithDefault(image_masks_, image_filepath, "");
 
-//  // Extract an EXIF focal length if it was not provided.
-//  if (!intrinsics.focal_length.is_set) {
-//    CHECK(exif_reader_.ExtractEXIFMetadata(image_filepath, &intrinsics));
+  //  // Extract an EXIF focal length if it was not provided.
+  //  if (!intrinsics.focal_length.is_set) {
+  //    CHECK(exif_reader_.ExtractEXIFMetadata(image_filepath, &intrinsics));
 
-//    // If the focal length still could not be extracted, set it to a reasonable
-//    // value based on a median viewing angle.
-//    if (!options_.only_calibrated_views && !intrinsics.focal_length.is_set) {
-//      VLOG(2) << "Exif was not detected. Setting it to a reasonable value.";
-//      intrinsics.focal_length.is_set = true;
-//      intrinsics.focal_length.value[0] =
-//          1.2 * static_cast<double>(
-//                    std::max(intrinsics.image_width, intrinsics.image_height));
-//    }
-//  }
+  //    // If the focal length still could not be extracted, set it to a
+  //    reasonable
+  //    // value based on a median viewing angle.
+  //    if (!options_.only_calibrated_views && !intrinsics.focal_length.is_set)
+  //    {
+  //      VLOG(2) << "Exif was not detected. Setting it to a reasonable value.";
+  //      intrinsics.focal_length.is_set = true;
+  //      intrinsics.focal_length.value[0] =
+  //          1.2 * static_cast<double>(
+  //                    std::max(intrinsics.image_width,
+  //                    intrinsics.image_height));
+  //    }
+  //  }
 
   // Early exit if no EXIF calibration exists and we are only processing
   // calibration views.
@@ -397,44 +405,50 @@ void FeatureExtractorAndMatcher::
     for (int j = 0; j < num_nearest_neighbors; j++) {
       const int second_id = global_matching_scores[i][j].second;
 
-      // Perform query expansion by adding image i as a candidate match to all of its matches neighbors.
-      const auto& neighbors_of_second_id = pairs_to_match[second_id].ranked_matches;
+      // Perform query expansion by adding image i as a candidate match to all
+      // of its matches neighbors.
+      const auto& neighbors_of_second_id =
+          pairs_to_match[second_id].ranked_matches;
       for (const int neighbor_of_second_id : neighbors_of_second_id) {
-	pairs_to_match[neighbor_of_second_id].expanded_matches.insert(i);
+        pairs_to_match[neighbor_of_second_id].expanded_matches.insert(i);
       }
 
-      // Add the match to both images so that edges are properly utilized for query expansion.
+      // Add the match to both images so that edges are properly utilized for
+      // query expansion.
       pairs_to_match[i].ranked_matches.insert(second_id);
       pairs_to_match[second_id].ranked_matches.insert(i);
-
     }
 
     // Remove the matching scores for image i to free up memory.
     global_matching_scores[i].clear();
   }
 
-
   // Collect all matches into one container.
   std::vector<std::pair<std::string, std::string>> image_names_to_match;
-  image_names_to_match.reserve(num_nearest_neighbors * global_descriptors.size());
+  image_names_to_match.reserve(num_nearest_neighbors *
+                               global_descriptors.size());
   for (const auto& matches : pairs_to_match) {
     for (const int match : matches.second.ranked_matches) {
       if (matches.first < match) {
-	image_names_to_match.emplace_back(image_names[matches.first], image_names[match]);
+        image_names_to_match.emplace_back(image_names[matches.first],
+                                          image_names[match]);
       }
     }
 
     for (const int match : matches.second.expanded_matches) {
       if (matches.first < match) {
-	image_names_to_match.emplace_back(image_names[matches.first], image_names[match]);
+        image_names_to_match.emplace_back(image_names[matches.first],
+                                          image_names[match]);
       }
     }
   }
 
   // Uniquify the matches.
   std::sort(image_names_to_match.begin(), image_names_to_match.end());
-  image_names_to_match.erase(std::unique(image_names_to_match.begin(), image_names_to_match.end()), image_names_to_match.end());
-  
+  image_names_to_match.erase(
+      std::unique(image_names_to_match.begin(), image_names_to_match.end()),
+      image_names_to_match.end());
+
   // Tell the matcher which pairs to match.
   matcher_->SetImagePairsToMatch(image_names_to_match);
 }

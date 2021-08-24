@@ -33,8 +33,8 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <algorithm>
@@ -42,9 +42,11 @@
 
 DEFINE_string(lists_file, "", "Input bundle lists file.");
 DEFINE_string(bundle_file, "", "Input bundle file.");
-DEFINE_string(output_reconstruction_file, "",
+DEFINE_string(output_reconstruction_file,
+              "",
               "Output reconstruction file in binary format.");
-DEFINE_string(images_directory, "",
+DEFINE_string(images_directory,
+              "",
               "Directory of input images. This is used to extract the "
               "principal point and image dimensions since Bundler does not "
               "provide those.");
@@ -55,9 +57,8 @@ int main(int argc, char* argv[]) {
 
   // Load the reconstuction.
   theia::Reconstruction reconstruction;
-  CHECK(theia::ReadBundlerFiles(FLAGS_lists_file,
-                                FLAGS_bundle_file,
-                                &reconstruction))
+  CHECK(theia::ReadBundlerFiles(
+      FLAGS_lists_file, FLAGS_bundle_file, &reconstruction))
       << "Could not read Bundler files.";
   if (FLAGS_images_directory.size() > 0) {
     CHECK(theia::PopulateImageSizesAndPrincipalPoints(FLAGS_images_directory,

@@ -33,8 +33,8 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <algorithm>
@@ -52,9 +52,8 @@ int main(int argc, char* argv[]) {
   theia::Reconstruction reconstruction;
   CHECK(theia::ReadReconstruction(FLAGS_reconstruction_file, &reconstruction));
 
-  CHECK(theia::WriteBundlerFiles(reconstruction,
-                                 FLAGS_lists_file,
-                                 FLAGS_bundle_file))
+  CHECK(theia::WriteBundlerFiles(
+      reconstruction, FLAGS_lists_file, FLAGS_bundle_file))
       << "Could not write out Bundler files.";
   return 0;
 }

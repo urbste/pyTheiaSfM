@@ -32,14 +32,13 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/math/rotation.h"
 #include "theia/math/util.h"
 #include "theia/sfm/global_pose_estimation/linear_rotation_estimator.h"
@@ -47,6 +46,7 @@
 #include "theia/sfm/types.h"
 #include "theia/util/map_util.h"
 #include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -103,14 +103,16 @@ class EstimateRotationsLinearTest : public ::testing::Test {
     }
   }
 
-  void GetRelativeRotations(const size_t num_view_pairs, const double pose_noise) {
+  void GetRelativeRotations(const size_t num_view_pairs,
+                            const double pose_noise) {
     // Create a set of view id pairs that will contain a spanning tree.
     for (int i = 1; i < orientations_.size(); i++) {
       const ViewIdPair view_id_pair(i - 1, i);
       view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
           FindOrDie(orientations_, view_id_pair.first),
           FindOrDie(orientations_, view_id_pair.second),
-          pose_noise, rng);
+          pose_noise,
+          rng);
     }
 
     // Add random edges.
@@ -131,7 +133,8 @@ class EstimateRotationsLinearTest : public ::testing::Test {
       view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
           FindOrDie(orientations_, view_id_pair.first),
           FindOrDie(orientations_, view_id_pair.second),
-          pose_noise, rng);
+          pose_noise,
+          rng);
 
       // Set the number of inliers to be randomly from 50 to 200.
       view_pairs_[view_id_pair].num_verified_matches = rng.RandInt(50, 100);
@@ -154,10 +157,8 @@ TEST_F(EstimateRotationsLinearTest, SmallTestWithNoise) {
   static const int kNumViews = 4;
   static const int kNumViewPairs = 6;
   static const double kPoseNoiseDegrees = 1.0;
-  TestLinearRotationEstimator(kNumViews,
-                              kNumViewPairs,
-                              kPoseNoiseDegrees,
-                              kToleranceDegrees);
+  TestLinearRotationEstimator(
+      kNumViews, kNumViewPairs, kPoseNoiseDegrees, kToleranceDegrees);
 }
 
 TEST_F(EstimateRotationsLinearTest, LargeTestWithNoise) {
@@ -165,10 +166,8 @@ TEST_F(EstimateRotationsLinearTest, LargeTestWithNoise) {
   static const int kNumViews = 100;
   static const int kNumViewPairs = 800;
   static const double kPoseNoiseDegrees = 5.0;
-  TestLinearRotationEstimator(kNumViews,
-                              kNumViewPairs,
-                              kPoseNoiseDegrees,
-                              kToleranceDegrees);
+  TestLinearRotationEstimator(
+      kNumViews, kNumViewPairs, kPoseNoiseDegrees, kToleranceDegrees);
 }
 
 }  // namespace theia

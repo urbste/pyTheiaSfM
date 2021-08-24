@@ -76,10 +76,8 @@ class CalibratedAbsolutePoseEstimator
 
     std::vector<Eigen::Matrix3d> rotations;
     std::vector<Eigen::Vector3d> translations;
-    if (!PoseFromThreePoints(features,
-                             world_points,
-                             &rotations,
-                             &translations)) {
+    if (!PoseFromThreePoints(
+            features, world_points, &rotations, &translations)) {
       return false;
     }
 
@@ -101,7 +99,8 @@ class CalibratedAbsolutePoseEstimator
     // rotation, c is the position, and X is the 3D point.
     const Eigen::Vector2d reprojected_feature =
         (absolute_pose.rotation *
-         (correspondence.world_point - absolute_pose.position)).hnormalized();
+         (correspondence.world_point - absolute_pose.position))
+            .hnormalized();
     return (reprojected_feature - correspondence.feature).squaredNorm();
   }
 
@@ -119,13 +118,11 @@ bool EstimateCalibratedAbsolutePose(
     RansacSummary* ransac_summary) {
   CalibratedAbsolutePoseEstimator absolute_pose_estimator;
   std::unique_ptr<SampleConsensusEstimator<CalibratedAbsolutePoseEstimator> >
-      ransac = CreateAndInitializeRansacVariant(ransac_type,
-                                                ransac_params,
-                                                absolute_pose_estimator);
+      ransac = CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, absolute_pose_estimator);
   // Estimate the absolute pose.
-  return ransac->Estimate(normalized_correspondences,
-                          absolute_pose,
-                          ransac_summary);
+  return ransac->Estimate(
+      normalized_correspondences, absolute_pose, ransac_summary);
 }
 
 }  // namespace theia

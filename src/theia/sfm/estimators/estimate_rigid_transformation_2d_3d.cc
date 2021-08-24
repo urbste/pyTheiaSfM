@@ -36,9 +36,9 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <glog/logging.h>
 #include <memory>
 #include <vector>
-#include <glog/logging.h>
 
 #include "theia/sfm/estimators/camera_and_feature_correspondence_2d_3d.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
@@ -59,9 +59,7 @@ class NonCentralCameraPoseEstimator
     : public Estimator<CameraAndFeatureCorrespondence2D3D,
                        RigidTransformation> {
  public:
-  NonCentralCameraPoseEstimator() {
-    estimator_.reset(new class Upnp);
-  }
+  NonCentralCameraPoseEstimator() { estimator_.reset(new class Upnp); }
   ~NonCentralCameraPoseEstimator() = default;
 
   // Get the minimum number of samples needed to generate a model.
@@ -86,8 +84,10 @@ class NonCentralCameraPoseEstimator
     ray_origins.reserve(data.size());
     world_points.reserve(data.size());
     for (const CameraAndFeatureCorrespondence2D3D& correspondence : data) {
-      ray_directions.emplace_back(correspondence.camera.PixelToUnitDepthRay(
-          correspondence.observation.point_).normalized());
+      ray_directions.emplace_back(
+          correspondence.camera
+              .PixelToUnitDepthRay(correspondence.observation.point_)
+              .normalized());
       ray_origins.emplace_back(correspondence.camera.GetPosition());
       world_points.emplace_back(correspondence.point3d.hnormalized());
     }
@@ -120,8 +120,8 @@ class NonCentralCameraPoseEstimator
     // If the point is reprojected behind the camera, return the maximum
     // possible error.
     const Eigen::Vector4d transformed_point =
-        (model.rotation * data.point3d.hnormalized() +
-         model.translation).homogeneous();
+        (model.rotation * data.point3d.hnormalized() + model.translation)
+            .homogeneous();
     if (data.camera.ProjectPoint(transformed_point, &reprojection) < 0) {
       return std::numeric_limits<double>::max();
     }
@@ -129,11 +129,11 @@ class NonCentralCameraPoseEstimator
     // Return the squared reprojection error.
     return (data.observation.point_ - reprojection).squaredNorm();
   }
-  
+
  private:
   // Upnp estimator.
   std::unique_ptr<class Upnp> estimator_;
-  
+
   DISALLOW_COPY_AND_ASSIGN(NonCentralCameraPoseEstimator);
 };
 
@@ -147,13 +147,10 @@ bool EstimateRigidTransformation2D3D(
     RansacSummary* ransac_summary) {
   NonCentralCameraPoseEstimator pose_estimator;
   std::unique_ptr<SampleConsensusEstimator<NonCentralCameraPoseEstimator>>
-      ransac = CreateAndInitializeRansacVariant(ransac_type,
-                                                ransac_params,
-                                                pose_estimator);
+      ransac = CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, pose_estimator);
   // Estimate the pose.
-  return ransac->Estimate(correspondences,
-                          estimated_pose,
-                          ransac_summary);
+  return ransac->Estimate(correspondences, estimated_pose, ransac_summary);
 }
 
 bool EstimateRigidTransformation2D3D(
@@ -168,8 +165,7 @@ bool EstimateRigidTransformation2D3D(
   for (int i = 0; i < num_correspondences; ++i) {
     correspondences[i].point3d =
         normalized_correspondences[i].world_point.homogeneous();
-    correspondences[i].observation =
-        normalized_correspondences[i].feature;
+    correspondences[i].observation = normalized_correspondences[i].feature;
     correspondences[i].camera.SetPosition(Eigen::Vector3d::Zero());
     correspondences[i].camera.SetOrientationFromRotationMatrix(
         Eigen::Matrix3d::Identity());

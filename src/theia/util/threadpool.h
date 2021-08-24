@@ -90,8 +90,8 @@ class ThreadPool {
 
   // Adds a task to the threadpool.
   template <class F, class... Args>
-  auto Add(F&& f, Args&& ... args)
-      ->std::future<typename std::result_of<F(Args...)>::type>;
+  auto Add(F&& f, Args&&... args)
+      -> std::future<typename std::result_of<F(Args...)>::type>;
 
  private:
   // Keep track of threads so we can join them
@@ -109,8 +109,8 @@ class ThreadPool {
 
 // add new work item to the pool
 template <class F, class... Args>
-auto ThreadPool::Add(F&& f, Args&& ... args)
-    ->std::future<typename std::result_of<F(Args...)>::type> {
+auto ThreadPool::Add(F&& f, Args&&... args)
+    -> std::future<typename std::result_of<F(Args...)>::type> {
   using return_type = typename std::result_of<F(Args...)>::type;
 
   auto task = std::make_shared<std::packaged_task<return_type()> >(
@@ -124,9 +124,7 @@ auto ThreadPool::Add(F&& f, Args&& ... args)
     CHECK(!stop) << "The ThreadPool object has been destroyed! Cannot add more "
                     "tasks to the ThreadPool!";
 
-    tasks.emplace([task]() {
-      (*task)();
-    });
+    tasks.emplace([task]() { (*task)(); });
   }
   condition.notify_one();
   return res;

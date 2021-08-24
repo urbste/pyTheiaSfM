@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,36 +20,38 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+// edited by Steffen Urban (urbste@googlemail.com), August 2021
 
 #ifndef THEIA_SFM_GLOBAL_POSE_ESTIMATION_LAGRANGE_DUAL_ROTATION_AVERAGING_H_
 #define THEIA_SFM_GLOBAL_POSE_ESTIMATION_LAGRANGE_DUAL_ROTATION_AVERAGING_H_
 
 // #define EIGEN_USE_MKL_ALL
 
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
 #include <vector>
-#include <chrono>
 
-#include <glog/logging.h>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/SparseCore>
+#include <glog/logging.h>
 
-
-#include "theia/sfm/global_pose_estimation/rotation_estimator.h"
 #include "theia/math/sdp_solver.h"
-#include "theia/util/hash.h"
+#include "theia/sfm/global_pose_estimation/rotation_estimator.h"
 #include "theia/sfm/types.h"
+#include "theia/util/hash.h"
 
 namespace theia {
 
@@ -58,11 +61,11 @@ namespace theia {
 // of absolute orientations.
 class LagrangeDualRotationEstimator : public RotationEstimator {
  public:
-  LagrangeDualRotationEstimator(const int N, const int dim);
-  LagrangeDualRotationEstimator(
-      const int N, const int dim, const math::SDPSolverOptions& option);
+  LagrangeDualRotationEstimator();
+  LagrangeDualRotationEstimator(const math::SDPSolverOptions& option);
 
-  void SetViewIdToIndex(const std::unordered_map<ViewId, int>& view_id_to_index);
+  void SetViewIdToIndex(
+      const std::unordered_map<ViewId, int>& view_id_to_index);
 
   void SetRAOption(const math::SDPSolverOptions& option);
 
@@ -74,6 +77,11 @@ class LagrangeDualRotationEstimator : public RotationEstimator {
   bool EstimateRotations(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       std::unordered_map<ViewId, Eigen::Vector3d>* global_rotations) override;
+
+  // Python Wrapper, Needs an intial guess for the global_orientations
+  void EstimateRotationsWrapper(
+      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+      std::unordered_map<ViewId, Eigen::Vector3d>& global_orientations);
 
   // Compute the upper bound of angular error alpha_max_
   // If for all |alpha_{ij}| < alpha_max_, the strong duality hold.
@@ -99,7 +107,7 @@ class LagrangeDualRotationEstimator : public RotationEstimator {
   math::Summary summary_;
 
   // number of images/frames
-  int images_num_;
+  size_t images_num_;
 
   int dim_;
 

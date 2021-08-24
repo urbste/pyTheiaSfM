@@ -34,10 +34,10 @@
 
 #include <Eigen/Core>
 
-#include "gtest/gtest.h"
 #include "theia/sfm/camera/projection_matrix_utils.h"
 #include "theia/test/test_utils.h"
 #include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -54,16 +54,15 @@ TEST(CameraIntrinsics, IntrinsicsToCalibrationMatrix) {
   const double principal_point_y = 240;
 
   Matrix3d gt_calibration_matrix;
-  gt_calibration_matrix <<
-      focal_length, skew, principal_point_x,
-      0, focal_length * aspect_ratio, principal_point_y,
-      0, 0, 1;
+  gt_calibration_matrix << focal_length, skew, principal_point_x, 0,
+      focal_length * aspect_ratio, principal_point_y, 0, 0, 1;
 
   Matrix3d calibration_matrix;
   IntrinsicsToCalibrationMatrix(focal_length,
                                 skew,
                                 aspect_ratio,
-                                principal_point_x, principal_point_y,
+                                principal_point_x,
+                                principal_point_y,
                                 &calibration_matrix);
   for (int i = 0; i < calibration_matrix.rows(); i++) {
     for (int j = 0; j < calibration_matrix.cols(); j++) {
@@ -74,10 +73,7 @@ TEST(CameraIntrinsics, IntrinsicsToCalibrationMatrix) {
 
 TEST(CameraIntrinsics, CalibrationMatrixToIntrinsics) {
   Matrix3d calibration_matrix;
-  calibration_matrix <<
-      800, 1.0, 320,
-      0, 1000, 240,
-      0, 0, 1;
+  calibration_matrix << 800, 1.0, 320, 0, 1000, 240, 0, 0, 1;
   double focal_length, skew, aspect_ratio, principal_point_x, principal_point_y;
   CalibrationMatrixToIntrinsics(calibration_matrix,
                                 &focal_length,
@@ -92,7 +88,6 @@ TEST(CameraIntrinsics, CalibrationMatrixToIntrinsics) {
   EXPECT_DOUBLE_EQ(principal_point_y, 240);
 }
 
-
 TEST(DecomposeProjectMatrix, Random) {
   RandomNumberGenerator rng(94);
   Matrix3x4d random_pmatrix;
@@ -100,10 +95,8 @@ TEST(DecomposeProjectMatrix, Random) {
     rng.SetRandom(&random_pmatrix);
     Matrix3d calibration_matrix;
     Vector3d rotation, position;
-    EXPECT_TRUE(DecomposeProjectionMatrix(random_pmatrix,
-                                          &calibration_matrix,
-                                          &rotation,
-                                          &position));
+    EXPECT_TRUE(DecomposeProjectionMatrix(
+        random_pmatrix, &calibration_matrix, &rotation, &position));
   }
 }
 
@@ -112,10 +105,8 @@ TEST(ComposeProjectionMatrix, Identity) {
   const Vector3d rotation = Vector3d::Zero();
   const Vector3d position = Vector3d::Zero();
   Matrix3x4d projection_matrix;
-  EXPECT_TRUE(ComposeProjectionMatrix(calibration_matrix,
-                                      rotation,
-                                      position,
-                                      &projection_matrix));
+  EXPECT_TRUE(ComposeProjectionMatrix(
+      calibration_matrix, rotation, position, &projection_matrix));
   EXPECT_TRUE(projection_matrix == Matrix3x4d::Identity());
 }
 
@@ -126,7 +117,7 @@ TEST(ComposeProjectionMatrix, Random) {
 
     Matrix3d calibration_matrix;
     const double focal_length = 800;
-    const double principal_point[2] = { 400, 300 };
+    const double principal_point[2] = {400, 300};
     IntrinsicsToCalibrationMatrix(focal_length,
                                   0.0,
                                   1.0,
@@ -135,10 +126,8 @@ TEST(ComposeProjectionMatrix, Random) {
                                   &calibration_matrix);
 
     Matrix3x4d projection_matrix;
-    EXPECT_TRUE(ComposeProjectionMatrix(calibration_matrix,
-                                        rotation,
-                                        position,
-                                        &projection_matrix));
+    EXPECT_TRUE(ComposeProjectionMatrix(
+        calibration_matrix, rotation, position, &projection_matrix));
   }
 }
 
@@ -150,20 +139,17 @@ TEST(ProjectionMatrix, Consistency) {
     rng.SetRandom(&random_pmatrix);
     Matrix3d calibration_matrix;
     Vector3d rotation, position;
-    EXPECT_TRUE(DecomposeProjectionMatrix(random_pmatrix,
-                                          &calibration_matrix,
-                                          &rotation,
-                                          &position));
+    EXPECT_TRUE(DecomposeProjectionMatrix(
+        random_pmatrix, &calibration_matrix, &rotation, &position));
 
     Matrix3x4d composed_pmatrix;
-    EXPECT_TRUE(ComposeProjectionMatrix(calibration_matrix,
-                                        rotation,
-                                        position,
-                                        &composed_pmatrix));
+    EXPECT_TRUE(ComposeProjectionMatrix(
+        calibration_matrix, rotation, position, &composed_pmatrix));
 
-    EXPECT_TRUE(test::ArraysEqualUpToScale(12, random_pmatrix.data(),
-                                           composed_pmatrix.data(), kTolerance))
-        << "gt pmatrix: \n" << random_pmatrix << "\ncomposed pmatrix: \n"
+    EXPECT_TRUE(test::ArraysEqualUpToScale(
+        12, random_pmatrix.data(), composed_pmatrix.data(), kTolerance))
+        << "gt pmatrix: \n"
+        << random_pmatrix << "\ncomposed pmatrix: \n"
         << composed_pmatrix;
   }
 }

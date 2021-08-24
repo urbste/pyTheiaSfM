@@ -62,6 +62,7 @@ namespace {
 bool AddViewToReconstruction(const std::string& image_filepath,
                              const CameraIntrinsicsPrior* intrinsics,
                              const CameraIntrinsicsGroupId intrinsics_group_id,
+                             const double image_timestamp,
                              Reconstruction* reconstruction) {
   std::string image_filename;
   CHECK(GetFilenameFromFilepath(image_filepath, true, &image_filename));
@@ -69,9 +70,10 @@ bool AddViewToReconstruction(const std::string& image_filepath,
   // Add the image to the reconstruction.
   ViewId view_id;
   if (intrinsics_group_id == kInvalidCameraIntrinsicsGroupId) {
-    view_id = reconstruction->AddView(image_filename);
+    view_id = reconstruction->AddView(image_filename, image_timestamp);
   } else {
-    view_id = reconstruction->AddView(image_filename, intrinsics_group_id);
+    view_id = reconstruction->AddView(
+        image_filename, intrinsics_group_id, image_timestamp);
   }
 
   if (view_id == kInvalidViewId) {
@@ -204,17 +206,20 @@ ReconstructionBuilder::ReconstructionBuilder(
 
 ReconstructionBuilder::~ReconstructionBuilder() {}
 
-bool ReconstructionBuilder::AddImage(const std::string& image_filepath) {
-  return AddImage(image_filepath, kInvalidCameraIntrinsicsGroupId);
+bool ReconstructionBuilder::AddImage(const std::string& image_filepath,
+                                     const double timestamp) {
+  return AddImage(image_filepath, kInvalidCameraIntrinsicsGroupId, timestamp);
 }
 
 bool ReconstructionBuilder::AddImage(
     const std::string& image_filepath,
-    const CameraIntrinsicsGroupId camera_intrinsics_group) {
+    const CameraIntrinsicsGroupId camera_intrinsics_group,
+    const double timestamp) {
   image_filepaths_.emplace_back(image_filepath);
   if (!AddViewToReconstruction(image_filepath,
                                NULL,
                                camera_intrinsics_group,
+                               timestamp,
                                reconstruction_.get())) {
     return false;
   }
@@ -223,19 +228,24 @@ bool ReconstructionBuilder::AddImage(
 
 bool ReconstructionBuilder::AddImageWithCameraIntrinsicsPrior(
     const std::string& image_filepath,
-    const CameraIntrinsicsPrior& camera_intrinsics_prior) {
-  return AddImageWithCameraIntrinsicsPrior(
-      image_filepath, camera_intrinsics_prior, kInvalidCameraIntrinsicsGroupId);
+    const CameraIntrinsicsPrior& camera_intrinsics_prior,
+    const double timestamp) {
+  return AddImageWithCameraIntrinsicsPrior(image_filepath,
+                                           camera_intrinsics_prior,
+                                           kInvalidCameraIntrinsicsGroupId,
+                                           timestamp);
 }
 
 bool ReconstructionBuilder::AddImageWithCameraIntrinsicsPrior(
     const std::string& image_filepath,
     const CameraIntrinsicsPrior& camera_intrinsics_prior,
-    const CameraIntrinsicsGroupId camera_intrinsics_group) {
+    const CameraIntrinsicsGroupId camera_intrinsics_group,
+    const double timestamp) {
   image_filepaths_.emplace_back(image_filepath);
   if (!AddViewToReconstruction(image_filepath,
                                &camera_intrinsics_prior,
                                camera_intrinsics_group,
+                               timestamp,
                                reconstruction_.get())) {
     return false;
   }

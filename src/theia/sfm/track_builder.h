@@ -35,9 +35,9 @@
 #ifndef THEIA_SFM_TRACK_BUILDER_H_
 #define THEIA_SFM_TRACK_BUILDER_H_
 
-#include <stdint.h>
 #include <cstddef>
 #include <memory>
+#include <stdint.h>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -47,7 +47,8 @@
 
 namespace theia {
 
-template <typename T> class ConnectedComponents;
+template <typename T>
+class ConnectedComponents;
 class Reconstruction;
 
 // Build tracks from feature correspondences across multiple images. Tracks are
@@ -62,14 +63,16 @@ class TrackBuilder {
   ~TrackBuilder();
 
   // Adds a feature correspondence between two views.
-  void AddFeatureCorrespondence(const ViewId view_id1, const Feature& feature1,
-                                const ViewId view_id2, const Feature& feature2);
+  void AddFeatureCorrespondence(const ViewId view_id1,
+                                const Feature& feature1,
+                                const ViewId view_id2,
+                                const Feature& feature2);
 
   // Generates all tracks and adds them to the reconstruction.
   void BuildTracks(Reconstruction* reconstruction);
 
  private:
-  uint64_t FindOrInsert(const std::pair<ViewId, Feature> &image_feature);
+  uint64_t FindOrInsert(const std::pair<ViewId, Feature>& image_feature);
 
   std::unordered_map<std::pair<ViewId, Feature>, uint64_t> features_;
   std::unique_ptr<ConnectedComponents<uint64_t> > connected_components_;

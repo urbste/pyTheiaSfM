@@ -34,8 +34,8 @@
 
 #include "theia/sfm/global_pose_estimation/pairwise_rotation_error.h"
 
-#include <ceres/ceres.h>
 #include <Eigen/Core>
+#include <ceres/ceres.h>
 
 namespace theia {
 

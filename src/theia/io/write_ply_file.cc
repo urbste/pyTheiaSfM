@@ -34,8 +34,8 @@
 
 #include "theia/io/write_ply_file.h"
 
-#include <glog/logging.h>
 #include <fstream>  // NOLINT
+#include <glog/logging.h>
 #include <string>
 #include <vector>
 
@@ -50,9 +50,8 @@ void GatherTracks(const Reconstruction& reconstruction,
   for (const TrackId track_id : reconstruction.TrackIds()) {
     const Track& track = *reconstruction.Track(track_id);
     points_to_write->emplace_back(track.Point().hnormalized());
-    colors_to_write->emplace_back(track.Color()[0],
-                                  track.Color()[1],
-                                  track.Color()[2]);
+    colors_to_write->emplace_back(
+        track.Color()[0], track.Color()[1], track.Color()[2]);
   }
 }
 
@@ -92,7 +91,8 @@ bool WritePlyFile(const std::string& ply_file,
   const auto& track_ids = reconstruction.TrackIds();
   for (const TrackId track_id : track_ids) {
     const Track& track = *reconstruction.Track(track_id);
-    if (!track.IsEstimated() || track.NumViews() < min_num_observations_per_point) {
+    if (!track.IsEstimated() ||
+        track.NumViews() < min_num_observations_per_point) {
       reconstruction.RemoveTrack(track_id);
     }
   }
@@ -101,18 +101,19 @@ bool WritePlyFile(const std::string& ply_file,
   std::vector<Eigen::Vector3d> points_to_write;
   std::vector<Eigen::Vector3i> colors_to_write;
   GatherTracks(reconstruction, &points_to_write, &colors_to_write);
-  GatherCameras(reconstruction, camera_color, &points_to_write, &colors_to_write);
+  GatherCameras(
+      reconstruction, camera_color, &points_to_write, &colors_to_write);
 
-  ply_writer << "ply"
-    << '\n' << "format ascii 1.0"
-             << '\n' << "element vertex " << points_to_write.size()
-    << '\n' << "property float x"
-    << '\n' << "property float y"
-    << '\n' << "property float z"
-    << '\n' << "property uchar red"
-    << '\n' << "property uchar green"
-    << '\n' << "property uchar blue"
-    << '\n' << "end_header" << std::endl;
+  ply_writer << "ply" << '\n'
+             << "format ascii 1.0" << '\n'
+             << "element vertex " << points_to_write.size() << '\n'
+             << "property float x" << '\n'
+             << "property float y" << '\n'
+             << "property float z" << '\n'
+             << "property uchar red" << '\n'
+             << "property uchar green" << '\n'
+             << "property uchar blue" << '\n'
+             << "end_header" << std::endl;
 
   for (int i = 0; i < points_to_write.size(); i++) {
     ply_writer << points_to_write[i].transpose() << " "

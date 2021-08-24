@@ -45,8 +45,8 @@
 
 namespace theia {
 using Eigen::Map;
-using Eigen::Vector3d;
 using Eigen::Quaterniond;
+using Eigen::Vector3d;
 
 namespace {
 
@@ -129,7 +129,7 @@ int TwoPointPoseCore(const Vector3d& axis,
   const long double b = 2.0 * m * (n - ray_dp);
   const long double c = m * m - (model_point_1 - model_point_2).squaredNorm();
 
-  double roots[2] = { 0.0, 0.0 };
+  double roots[2] = {0.0, 0.0};
   const int number_of_roots = SolveQuadraticReals(a, b, c, roots);
 
   int num_solutions = 0;
@@ -139,8 +139,13 @@ int TwoPointPoseCore(const Vector3d& axis,
       // Computes the other ray distance.
       const double ray_distance = m + n * roots[i];
       if (ray_distance > 0) {
-        AddPoseSolution(axis, model_point_1, model_point_2, image_ray_1,
-                        image_ray_2, ray_distance, roots[i],
+        AddPoseSolution(axis,
+                        model_point_1,
+                        model_point_2,
+                        image_ray_1,
+                        image_ray_2,
+                        ray_distance,
+                        roots[i],
                         &soln_rotations[num_solutions],
                         &soln_translations[num_solutions]);
         num_solutions++;
@@ -170,13 +175,23 @@ int TwoPointPosePartialRotation(const Vector3d& axis,
       // However if image_ray_2.y() is not equal to zero then we can swap
       // and the points and call the above function with the swapped points.
       // TODO(cmsweeney): Maybe always swap to improve the conditioning?
-      return TwoPointPoseCore(axis, model_point_2, model_point_1, image_ray_2,
-                              image_ray_1, soln_rotations, soln_translations);
+      return TwoPointPoseCore(axis,
+                              model_point_2,
+                              model_point_1,
+                              image_ray_2,
+                              image_ray_1,
+                              soln_rotations,
+                              soln_translations);
     }
     return 0;
   } else {
-    return TwoPointPoseCore(axis, model_point_1, model_point_2, image_ray_1,
-                            image_ray_2, soln_rotations, soln_translations);
+    return TwoPointPoseCore(axis,
+                            model_point_1,
+                            model_point_2,
+                            image_ray_1,
+                            image_ray_2,
+                            soln_rotations,
+                            soln_translations);
   }
 }
 

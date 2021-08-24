@@ -160,9 +160,8 @@ bool InsertIfNotPresent(
 // the set then it is inserted, otherwise nothing happens. True indicates that
 // an insert took place, false indicates the value was already present.
 template <class Collection>
-bool InsertIfNotPresent(
-    Collection* const collection,
-    const typename Collection::value_type& value) {
+bool InsertIfNotPresent(Collection* const collection,
+                        const typename Collection::value_type& value) {
   std::pair<typename Collection::iterator, bool> ret =
       collection->insert(typename Collection::value_type(value));
   return ret.second;
@@ -216,9 +215,10 @@ void InsertOrDie(Collection* const collection,
 }
 
 template <class Collection>
-void InsertOrDieNoPrint(Collection* const collection,
-                 const typename Collection::value_type::first_type& key,
-                 const typename Collection::value_type::second_type& data) {
+void InsertOrDieNoPrint(
+    Collection* const collection,
+    const typename Collection::value_type::first_type& key,
+    const typename Collection::value_type::second_type& data) {
   typedef typename Collection::value_type value_type;
   CHECK(collection->insert(value_type(key, data)).second);
 }

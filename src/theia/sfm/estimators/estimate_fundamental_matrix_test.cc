@@ -32,21 +32,21 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
 #include <vector>
-#include "gtest/gtest.h"
 
+#include "theia/matching/feature_correspondence.h"
 #include "theia/math/util.h"
-#include "theia/solvers/sample_consensus_estimator.h"
-#include "theia/test/test_utils.h"
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
 #include "theia/sfm/estimators/estimate_fundamental_matrix.h"
-#include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/pose/util.h"
+#include "theia/solvers/sample_consensus_estimator.h"
+#include "theia/test/test_utils.h"
 
 namespace theia {
 
@@ -75,11 +75,10 @@ void ExecuteRandomTest(const RansacParameters& options,
     // Add an inlier or outlier.
     if (i < inlier_ratio * kNumCorrespondences) {
       // Make sure the point is in front of the camera.
-      const Vector3d point_3d =
-          Vector3d(rng.RandDouble(-1.0, 1.0),
-                   rng.RandDouble(-1.0, 1.0),
-                   rng.RandDouble(-1.0, 1.0)) +
-          Vector3d(0, 0, 8);
+      const Vector3d point_3d = Vector3d(rng.RandDouble(-1.0, 1.0),
+                                         rng.RandDouble(-1.0, 1.0),
+                                         rng.RandDouble(-1.0, 1.0)) +
+                                Vector3d(0, 0, 8);
       correspondence.feature1.point_ = focal_length1 * point_3d.hnormalized();
       correspondence.feature2.point_ =
           focal_length2 * (rotation * point_3d + translation).hnormalized();

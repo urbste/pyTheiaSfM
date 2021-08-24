@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,30 +20,34 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+// edited by Steffen Urban (urbste@googlemail.com), August 2021
 
 #include "theia/sfm/global_pose_estimation/l1_rotation_global_estimator.h"
 
-#include <glog/logging.h>
 #include <Eigen/SparseCore>
+#include <glog/logging.h>
 
-#include "theia/sfm/global_pose_estimation/rotation_estimator_util.h"
 #include "theia/math/l1_solver.h"
+#include "theia/math/rotation.h"
+#include "theia/sfm/global_pose_estimation/rotation_estimator_util.h"
 #include "theia/util/map_util.h"
 #include "theia/util/timer.h"
-#include "theia/math/rotation.h"
 
 namespace theia {
 
 L1RotationGlobalEstimator::L1RotationGlobalEstimator(
-    const int num_orientations, const int num_edges,
+    const int num_orientations,
+    const int num_edges,
     const L1RotationOptions& options)
     : options_(options) {
   tangent_space_step_.resize((num_orientations - 1) * 3);
@@ -73,15 +78,16 @@ bool L1RotationGlobalEstimator::SolveL1Regression(
   }
 
   if (sparse_matrix_.rows() == 0) {
-    SetupLinearSystem(
-        relative_rotations, (*global_rotations).size(),
-        view_id_to_index_, &sparse_matrix_);
+    SetupLinearSystem(relative_rotations,
+                      (*global_rotations).size(),
+                      view_id_to_index_,
+                      &sparse_matrix_);
   }
 
   L1Solver<Eigen::SparseMatrix<double>>::Options l1_solver_options;
   l1_solver_options.max_num_iterations = 5;
-  L1Solver<Eigen::SparseMatrix<double> > l1_solver(
-      l1_solver_options, sparse_matrix_);
+  L1Solver<Eigen::SparseMatrix<double>> l1_solver(l1_solver_options,
+                                                  sparse_matrix_);
 
   tangent_space_step_.setZero();
   ComputeResiduals(relative_rotations, global_rotations);
@@ -118,7 +124,8 @@ void L1RotationGlobalEstimator::UpdateGlobalRotations(
     // Apply the rotation change to the global orientation.
     const Eigen::Vector3d& rotation_change =
         tangent_space_step_.segment<3>(3 * view_index);
-    rotation.second = theia::MultiplyRotations(rotation.second, rotation_change);
+    rotation.second =
+        theia::MultiplyRotations(rotation.second, rotation_change);
   }
 }
 
@@ -128,7 +135,8 @@ void L1RotationGlobalEstimator::ComputeResiduals(
   int rotation_error_index = 0;
 
   for (const auto& relative_rotation : relative_rotations) {
-    const Eigen::Vector3d& relative_rotation_aa = relative_rotation.second.rotation_2;
+    const Eigen::Vector3d& relative_rotation_aa =
+        relative_rotation.second.rotation_2;
     const Eigen::Vector3d& rotation1 =
         FindOrDie(*global_rotations, relative_rotation.first.first);
     const Eigen::Vector3d& rotation2 =
@@ -137,7 +145,8 @@ void L1RotationGlobalEstimator::ComputeResiduals(
     // Compute the relative rotation error as:
     //   R_err = R2^t * R_12 * R1.
     tangent_space_residual_.segment<3>(3 * rotation_error_index) =
-        theia::MultiplyRotations(-rotation2,
+        theia::MultiplyRotations(
+            -rotation2,
             theia::MultiplyRotations(relative_rotation_aa, rotation1));
     ++rotation_error_index;
   }
@@ -153,4 +162,4 @@ double L1RotationGlobalEstimator::ComputeAverageStepSize() {
   return delta_V / num_vertices;
 }
 
-}  // namespace gopt
+}  // namespace theia

@@ -34,8 +34,8 @@
 
 #include "theia/io/read_calibration.h"
 
-#include <stdio.h>
 #include <glog/logging.h>
+#include <stdio.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -43,8 +43,8 @@
 #include <cereal/external/rapidjson/document.h>
 #include <stlplus3/file_system.hpp>
 
-#include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/camera/camera_intrinsics_model_type.h"
+#include "theia/sfm/camera_intrinsics_prior.h"
 
 namespace theia {
 namespace {
@@ -85,9 +85,8 @@ bool ExtractPriorParameters(const cereal::rapidjson::Value& entry,
 
     bool all_doubles = true;
     for (int i = 0; i < num_entries; ++i) {
-      bool is_double =
-          entry[kPrincipalPoint][i].IsDouble() ||
-          entry[kPrincipalPoint][i].IsInt();
+      bool is_double = entry[kPrincipalPoint][i].IsDouble() ||
+                       entry[kPrincipalPoint][i].IsInt();
       if (is_double) {
         prior->principal_point.value[i] = entry[kPrincipalPoint][i].GetDouble();
       }
@@ -108,7 +107,7 @@ bool ExtractPriorParameters(const cereal::rapidjson::Value& entry,
   if (entry.HasMember(kCameraType) && entry[kCameraType].IsString()) {
     std::string model_type_str = entry[kCameraType].GetString();
     if (IsCameraIntrinsicsModelTypeValid(model_type_str)) {
-      prior->camera_intrinsics_model_type = std::move(model_type_str); 
+      prior->camera_intrinsics_model_type = std::move(model_type_str);
     } else {
       LOG(WARNING) << "Could not identify camera intrinsics model type: "
                    << model_type_str;
@@ -142,13 +141,12 @@ bool ExtractPriorParameters(const cereal::rapidjson::Value& entry,
   // Get radial distortion coeffs.
   if (entry.HasMember(kRadialDistortionCoeffs) &&
       entry[kRadialDistortionCoeffs].IsArray()) {
-    const int num_dist_coeffs = std::min(
-        static_cast<int>(entry[kRadialDistortionCoeffs].Size()), 4);
+    const int num_dist_coeffs =
+        std::min(static_cast<int>(entry[kRadialDistortionCoeffs].Size()), 4);
     bool all_doubles = true;
     for (int i = 0; i < num_dist_coeffs; ++i) {
-      bool is_double =
-          entry[kRadialDistortionCoeffs][i].IsDouble() ||
-          entry[kRadialDistortionCoeffs][i].IsInt();
+      bool is_double = entry[kRadialDistortionCoeffs][i].IsDouble() ||
+                       entry[kRadialDistortionCoeffs][i].IsInt();
       if (is_double) {
         prior->radial_distortion.value[i] =
             entry[kRadialDistortionCoeffs][i].GetDouble();
@@ -166,9 +164,8 @@ bool ExtractPriorParameters(const cereal::rapidjson::Value& entry,
         static_cast<int>(entry[kTangentialDistortionCoeffs].Size()), 2);
     bool all_doubles = true;
     for (int i = 0; i < num_dist_coeffs; ++i) {
-      bool is_double =
-          entry[kTangentialDistortionCoeffs][i].IsDouble() ||
-          entry[kTangentialDistortionCoeffs][i].IsInt();
+      bool is_double = entry[kTangentialDistortionCoeffs][i].IsDouble() ||
+                       entry[kTangentialDistortionCoeffs][i].IsInt();
       if (is_double) {
         prior->tangential_distortion.value[i] =
             entry[kTangentialDistortionCoeffs][i].GetDouble();
@@ -181,13 +178,12 @@ bool ExtractPriorParameters(const cereal::rapidjson::Value& entry,
 
   // Get position.
   if (entry.HasMember(kPosition) && entry[kPosition].IsArray()) {
-    const int num_entries = std::min(
-        static_cast<int>(entry[kPosition].Size()), 3);
+    const int num_entries =
+        std::min(static_cast<int>(entry[kPosition].Size()), 3);
     bool all_doubles = true;
     for (int i = 0; i < num_entries; ++i) {
       bool is_double =
-          entry[kPosition][i].IsDouble() ||
-          entry[kPosition][i].IsInt();
+          entry[kPosition][i].IsDouble() || entry[kPosition][i].IsInt();
       if (is_double) {
         prior->position.value[i] = entry[kPosition][i].GetDouble();
       }
@@ -198,8 +194,8 @@ bool ExtractPriorParameters(const cereal::rapidjson::Value& entry,
 
   // Get orientation using Angle-Axis.
   if (entry.HasMember(kOrientation) && entry[kOrientation].IsArray()) {
-    const int num_entries = std::min(
-        static_cast<int>(entry[kOrientation].Size()), 3);
+    const int num_entries =
+        std::min(static_cast<int>(entry[kOrientation].Size()), 3);
     bool all_doubles = true;
     for (int i = 0; i < num_entries; ++i) {
       bool is_double =
@@ -225,13 +221,12 @@ bool ExtractPriorParameters(const cereal::rapidjson::Value& entry,
     prior->longitude.is_set = true;
   }
 
-  
   if (entry.HasMember(kAltitude) &&
       (entry[kAltitude].IsDouble() || entry[kAltitude].IsInt())) {
     prior->altitude.value[0] = entry[kAltitude].GetDouble();
     prior->altitude.is_set = true;
   }
-  
+
   return true;
 }
 
@@ -286,9 +281,8 @@ bool ExtractCameraIntrinsicPriorsFromJson(
   for (SizeType i = 0; i < entries.Size(); ++i) {
     CameraIntrinsicsPrior prior;
     if (!entries[i].HasMember(kCameraIntrinsicsPrior) ||
-        !ExtractCameraIntrinsicsPrior(entries[i][kCameraIntrinsicsPrior],
-                                      &view_name,
-                                      &prior)) {
+        !ExtractCameraIntrinsicsPrior(
+            entries[i][kCameraIntrinsicsPrior], &view_name, &prior)) {
       LOG(WARNING) << "Could not parse entry at position: " << i;
       continue;
     }
@@ -330,9 +324,8 @@ bool ReadCalibration(const std::string& calibration_file,
 
   file_content.resize(last_curly_idx + 1);
 
-  const bool json_parsed =
-      ExtractCameraIntrinsicPriorsFromJson(file_content.c_str(),
-                                           camera_intrinsics_priors);
+  const bool json_parsed = ExtractCameraIntrinsicPriorsFromJson(
+      file_content.c_str(), camera_intrinsics_priors);
 
   return json_parsed;
 }

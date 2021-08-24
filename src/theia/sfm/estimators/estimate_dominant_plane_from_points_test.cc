@@ -32,19 +32,19 @@
 // Please contact the author of this library if you have any questions.
 // Author: Benjamin Nuernberger (bnuernberger@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
 #include <vector>
-#include "gtest/gtest.h"
 
 #include "theia/math/util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/estimators/estimate_dominant_plane_from_points.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/pose/util.h"
 #include "theia/test/test_utils.h"
+#include "theia/util/random.h"
 
 namespace theia {
 namespace {
@@ -94,18 +94,15 @@ void ExecuteRandomTest(const RansacParameters& options,
   // Estimate the dominant plane.
   Plane plane;
   RansacSummary ransac_summary;
-  EXPECT_TRUE(EstimateDominantPlaneFromPoints(options,
-                                 RansacType::RANSAC,
-                                 points3d,
-                                 &plane,
-                                 &ransac_summary));
+  EXPECT_TRUE(EstimateDominantPlaneFromPoints(
+      options, RansacType::RANSAC, points3d, &plane, &ransac_summary));
 
   // Expect that the inlier ratio is close to the ground truth.
   EXPECT_GT(static_cast<double>(ransac_summary.inliers.size()), 3);
 
   // Expect that the estimated plane's point is close to the ground truth.
-  const double dist = std::abs(gt_plane.unit_normal.dot(plane.point -
-      gt_plane.point));
+  const double dist =
+      std::abs(gt_plane.unit_normal.dot(plane.point - gt_plane.point));
   EXPECT_LE(dist, noise);
 
   // Expect that the estimated plane's normal is close to the ground truth.
@@ -129,11 +126,8 @@ TEST(EstimateDominantPlane, MinimalCase) {
 
   Plane plane;
   RansacSummary ransac_summary;
-  EXPECT_TRUE(EstimateDominantPlaneFromPoints(options,
-                                 RansacType::RANSAC,
-                                 points3d,
-                                 &plane,
-                                 &ransac_summary));
+  EXPECT_TRUE(EstimateDominantPlaneFromPoints(
+      options, RansacType::RANSAC, points3d, &plane, &ransac_summary));
 
   EXPECT_EQ(static_cast<double>(ransac_summary.inliers.size()), 3);
 }
@@ -147,9 +141,7 @@ TEST(EstimateDominantPlane, AllInliersNoNoise) {
   const double kInlierRatio = 1.0;
   const double kNoise = 0.0;
 
-  ExecuteRandomTest(options,
-                    kInlierRatio,
-                    kNoise);
+  ExecuteRandomTest(options, kInlierRatio, kNoise);
 }
 
 TEST(EstimateDominantPlane, AllInliersWithNoise) {
@@ -161,9 +153,7 @@ TEST(EstimateDominantPlane, AllInliersWithNoise) {
   const double kInlierRatio = 1.0;
   const double kNoise = 1.0;
 
-  ExecuteRandomTest(options,
-                    kInlierRatio,
-                    kNoise);
+  ExecuteRandomTest(options, kInlierRatio, kNoise);
 }
 
 TEST(EstimateDominantPlane, OutliersNoNoise) {
@@ -175,9 +165,7 @@ TEST(EstimateDominantPlane, OutliersNoNoise) {
   const double kInlierRatio = 0.7;
   const double kNoise = 0.0;
 
-  ExecuteRandomTest(options,
-                    kInlierRatio,
-                    kNoise);
+  ExecuteRandomTest(options, kInlierRatio, kNoise);
 }
 
 TEST(EstimateDominantPlane, OutliersWithNoise) {
@@ -189,9 +177,7 @@ TEST(EstimateDominantPlane, OutliersWithNoise) {
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
 
-  ExecuteRandomTest(options,
-                    kInlierRatio,
-                    kNoise);
+  ExecuteRandomTest(options, kInlierRatio, kNoise);
 }
 
 }  // namespace

@@ -38,24 +38,24 @@
 #include <Eigen/Geometry>
 #include <glog/logging.h>
 
-#include <limits>
 #include <cmath>
+#include <limits>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/math/util.h"
-#include "theia/test/test_utils.h"
-#include "theia/util/util.h"
-#include "theia/util/random.h"
-#include "theia/sfm/pose/three_point_relative_pose_partial_rotation.h"
 #include "theia/sfm/pose/test_util.h"
+#include "theia/sfm/pose/three_point_relative_pose_partial_rotation.h"
+#include "theia/test/test_utils.h"
+#include "theia/util/random.h"
+#include "theia/util/util.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
 using Eigen::AngleAxisd;
 using Eigen::Matrix3d;
-using Eigen::Vector3d;
 using Eigen::Quaterniond;
+using Eigen::Vector3d;
 
 RandomNumberGenerator rng(60);
 
@@ -101,11 +101,8 @@ void TestThreePointResultWithNoise(const Vector3d& axis,
   // Calculates the essential matrix, this may return multiple solutions.
   std::vector<Quaterniond> soln_rotations;
   std::vector<Vector3d> soln_translations;
-  ThreePointRelativePosePartialRotation(axis,
-                                        view_one_rays,
-                                        view_two_rays,
-                                        &soln_rotations,
-                                        &soln_translations);
+  ThreePointRelativePosePartialRotation(
+      axis, view_one_rays, view_two_rays, &soln_rotations, &soln_translations);
   EXPECT_GT(soln_rotations.size(), 0);
 
   // Among the returned solutions verify that at least one is close to the
@@ -121,7 +118,8 @@ void TestThreePointResultWithNoise(const Vector3d& axis,
     // translations have matching directions.
     const double translation_angle_difference =
         AngleAxisd(Quaterniond::FromTwoVectors(soln_translations[n],
-                                               expected_translation)).angle();
+                                               expected_translation))
+            .angle();
 
     bool matched_translation =
         (translation_angle_difference < max_angle_between_translation);
@@ -136,8 +134,8 @@ void TestThreePointResultWithNoise(const Vector3d& axis,
 // A basic test with a few points and no noise.
 void BasicTest() {
   const Vector3d points_3d[3] = {Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0)};
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0)};
   const Vector3d axis = Vector3d(0.0, 0.0, 1.0).normalized();
   Quaterniond kExpectedRotation(AngleAxisd(DegToRad(51.0), axis));
 
@@ -156,15 +154,13 @@ void BasicTest() {
                                 kMaxAllowedAngleBetweenTranslations);
 }
 
-TEST(ThreePointRelativePosePartialRotationTest, Basic) {
-  BasicTest();
-}
+TEST(ThreePointRelativePosePartialRotationTest, Basic) { BasicTest(); }
 
 // A basic test with a few points, no noise and no rotation.
 TEST(ThreePointRelativePosePartialRotationTest, NoRotationTest) {
   const Vector3d points_3d[3] = {Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0)};
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0)};
   // This test fails with these points.
   // const Vector3d points_3d[3] = {Vector3d(-1.0, 3.0, -3.0),
   //                                 Vector3d(1.0, -1.0, 2.0),
@@ -188,31 +184,27 @@ TEST(ThreePointRelativePosePartialRotationTest, NoRotationTest) {
 
 // Tests a variety of axes, angles and translations with added projection noise.
 TEST(ThreePointRelativePosePartialRotationTest, NoiseTest) {
-  const Vector3d kPoints3D[3] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0) };
+  const Vector3d kPoints3D[3] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0)};
 
-  const Vector3d kAxes[7] = {
-      Vector3d(0.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized()
-  };
+  const Vector3d kAxes[7] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                             Vector3d(0.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 1.0).normalized(),
+                             Vector3d(0.0, 1.0, 1.0).normalized(),
+                             Vector3d(1.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 1.0, 1.0).normalized()};
 
-  const double kAngles[7] = { 11.0, 7.0, 5.0, 2.0, 3.0, 13.0, 12.0 };
+  const double kAngles[7] = {11.0, 7.0, 5.0, 2.0, 3.0, 13.0, 12.0};
 
-  const Vector3d kTranslations[7] = {
-      Vector3d(1.0, 1.0, 1.0),
-      Vector3d(3.0, 2.0, 13.0),
-      Vector3d(4.0, 5.0, 11.0),
-      Vector3d(1.0, 2.0, 15.0),
-      Vector3d(3.0, 1.5, 91.0),
-      Vector3d(6.0, 3.0, 2.0),
-      Vector3d(13.0, 1.0, 15.0)
-  };
+  const Vector3d kTranslations[7] = {Vector3d(1.0, 1.0, 1.0),
+                                     Vector3d(3.0, 2.0, 13.0),
+                                     Vector3d(4.0, 5.0, 11.0),
+                                     Vector3d(1.0, 2.0, 15.0),
+                                     Vector3d(3.0, 1.5, 91.0),
+                                     Vector3d(6.0, 3.0, 2.0),
+                                     Vector3d(13.0, 1.0, 15.0)};
 
   for (int transform_index = 0; transform_index < THEIA_ARRAYSIZE(kAxes);
        ++transform_index) {
@@ -236,45 +228,39 @@ TEST(ThreePointRelativePosePartialRotationTest, NoiseTest) {
 // Tests that the solver degrade gracefully when the passed axis is not exactly
 // correct.
 TEST(ThreePointRelativePosePartialRotationTest, IncorrectAxisTest) {
-  const Vector3d kPoints3D[3] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0) };
+  const Vector3d kPoints3D[3] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0)};
 
-  const Vector3d kAxes[7] = {
-      Vector3d(0.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized()
-  };
+  const Vector3d kAxes[7] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                             Vector3d(0.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 1.0).normalized(),
+                             Vector3d(0.0, 1.0, 1.0).normalized(),
+                             Vector3d(1.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 1.0, 1.0).normalized()};
 
-  const double kAngles[7] = { 11.0, 7.0, 5.0, 2.0, 3.0, 13.0, 12.0 };
+  const double kAngles[7] = {11.0, 7.0, 5.0, 2.0, 3.0, 13.0, 12.0};
 
-  const Vector3d kTranslations[7] = {
-      Vector3d(1.0, 1.0, 1.0),
-      Vector3d(3.0, 2.0, 13.0),
-      Vector3d(4.0, 5.0, 11.0),
-      Vector3d(1.0, 2.0, 15.0),
-      Vector3d(3.0, 1.5, 91.0),
-      Vector3d(6.0, 3.0, 2.0),
-      Vector3d(13.0, 1.0, 15.0)
-  };
+  const Vector3d kTranslations[7] = {Vector3d(1.0, 1.0, 1.0),
+                                     Vector3d(3.0, 2.0, 13.0),
+                                     Vector3d(4.0, 5.0, 11.0),
+                                     Vector3d(1.0, 2.0, 15.0),
+                                     Vector3d(3.0, 1.5, 91.0),
+                                     Vector3d(6.0, 3.0, 2.0),
+                                     Vector3d(13.0, 1.0, 15.0)};
 
   // The axes are perturbed by these rotation to simulate the axis not being
   // perfectly known.
   const Quaterniond kAxisPerturbations[6] = {
-    Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(1.0, 0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(1.0, 0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 1.0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 1.0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 0.0, 1.0))),
-    Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 0.0, 1.0)))
-  };
+      Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(1.0, 0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(1.0, 0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 1.0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 1.0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 0.0, 1.0))),
+      Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 0.0, 1.0)))};
 
-  for (int transform_index = 0;
-       transform_index < THEIA_ARRAYSIZE(kAxes);
+  for (int transform_index = 0; transform_index < THEIA_ARRAYSIZE(kAxes);
        ++transform_index) {
     for (int axis_rotation_index = 0;
          axis_rotation_index < THEIA_ARRAYSIZE(kAxisPerturbations);
@@ -290,10 +276,8 @@ TEST(ThreePointRelativePosePartialRotationTest, IncorrectAxisTest) {
       // Tests the ThreePointRelativePosePartialRotation function with fairly
       // large thresholds on the allowed translation and rotation differences.
       const double kProjectionNoise = 0.0;
-      const double kMaxAllowedRotationDifference =
-          DegToRad(2.0);
-      const double kMaxAllowedAngleBetweenTranslations =
-          DegToRad(2.0);
+      const double kMaxAllowedRotationDifference = DegToRad(2.0);
+      const double kMaxAllowedAngleBetweenTranslations = DegToRad(2.0);
 
       TestThreePointResultWithNoise(kAxes[transform_index],
                                     kPoints3D,
@@ -308,42 +292,31 @@ TEST(ThreePointRelativePosePartialRotationTest, IncorrectAxisTest) {
 
 // Comprehensive test with many points and different axes and translations.
 TEST(ThreePointRelativePosePartialRotationTest, ManyPoints) {
-  const Vector3d kAxes[7] = {
-      Vector3d(0.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized()
-  };
+  const Vector3d kAxes[7] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                             Vector3d(0.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 1.0).normalized(),
+                             Vector3d(0.0, 1.0, 1.0).normalized(),
+                             Vector3d(1.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 1.0, 1.0).normalized()};
   const double kAngles[7] = {11.0, 7.0, 5.0, 2.0, 3.0, 13.0, 12.0};
 
-  const Vector3d kTranslations[7] = {
-      Vector3d(1.0, 1.0, 1.0),
-      Vector3d(3.0, 2.0, 13.0),
-      Vector3d(4.0, 5.0, 11.0),
-      Vector3d(1.0, 2.0, 15.0),
-      Vector3d(3.0, 1.5, 91.0),
-      Vector3d(6.0, 3.0, 2.0),
-      Vector3d(13.0, 1.0, 15.0)
-  };
+  const Vector3d kTranslations[7] = {Vector3d(1.0, 1.0, 1.0),
+                                     Vector3d(3.0, 2.0, 13.0),
+                                     Vector3d(4.0, 5.0, 11.0),
+                                     Vector3d(1.0, 2.0, 15.0),
+                                     Vector3d(3.0, 1.5, 91.0),
+                                     Vector3d(6.0, 3.0, 2.0),
+                                     Vector3d(13.0, 1.0, 15.0)};
 
   for (int i = 0; i < 1000; ++i) {
     for (int transform_index = 0; transform_index < THEIA_ARRAYSIZE(kAxes);
          ++transform_index) {
       std::vector<Vector3d> random_points;
-      CreateRandomPointsInFrustum(1.0,
-                                  1.0,
-                                  2.0,
-                                  10.0,
-                                  3,
-                                  &rng,
-                                  &random_points);
+      CreateRandomPointsInFrustum(1.0, 1.0, 2.0, 10.0, 3, &rng, &random_points);
 
-      const Vector3d points_3d[3] = { random_points[0],
-                                      random_points[1],
-                                      random_points[2] };
+      const Vector3d points_3d[3] = {
+          random_points[0], random_points[1], random_points[2]};
       Quaterniond kExpectedRotation(AngleAxisd(
           DegToRad(kAngles[transform_index]), kAxes[transform_index]));
 

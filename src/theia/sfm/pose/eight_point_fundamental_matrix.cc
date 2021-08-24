@@ -34,11 +34,11 @@
 
 #include "theia/sfm/pose/eight_point_fundamental_matrix.h"
 
-#include <glog/logging.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <Eigen/SVD>
 #include <Eigen/LU>
+#include <Eigen/SVD>
+#include <glog/logging.h>
 
 #include "theia/sfm/pose/util.h"
 
@@ -46,8 +46,8 @@ namespace theia {
 
 using Eigen::JacobiSVD;
 using Eigen::Map;
-using Eigen::Matrix3d;
 using Eigen::Matrix;
+using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 
@@ -88,7 +88,7 @@ bool NormalizedEightPointFundamentalMatrix(
     normalized_fvector = lu_decomposition.kernel();
   } else {
     JacobiSVD<Matrix<double, Eigen::Dynamic, 9> > cmatrix_svd(
-       constraint_matrix, Eigen::ComputeFullV);
+        constraint_matrix, Eigen::ComputeFullV);
     normalized_fvector = cmatrix_svd.matrixV().col(8);
   }
 

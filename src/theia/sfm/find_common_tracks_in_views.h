@@ -35,8 +35,8 @@
 #ifndef THEIA_SFM_FIND_COMMON_TRACKS_IN_VIEWS_H_
 #define THEIA_SFM_FIND_COMMON_TRACKS_IN_VIEWS_H_
 
-#include <vector>
 #include "theia/sfm/types.h"
+#include <vector>
 
 namespace theia {
 

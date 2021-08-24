@@ -58,8 +58,11 @@ class NonlinearRotationEstimator : public RotationEstimator {
   bool EstimateRotations(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
-  std::unordered_map<ViewId, Eigen::Vector3d> EstimateRotationsWrapper(
-    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs);
+
+  // Python wrapper, Requires an initial guess of the global_orientations
+  void EstimateRotationsWrapper(
+      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+      std::unordered_map<ViewId, Eigen::Vector3d>& global_orientations);
 
  private:
   const double robust_loss_width_;

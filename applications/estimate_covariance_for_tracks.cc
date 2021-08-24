@@ -2,8 +2,8 @@
 // Author: Steffen Urban (urbste@gmail.com)
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <algorithm>
@@ -24,19 +24,23 @@ int main(int argc, char* argv[]) {
   CHECK(theia::ReadReconstruction(FLAGS_reconstruction, reconstruction.get()))
       << "Could not read reconstruction file.";
 
-
   std::cout << "\nNum views: " << reconstruction->NumViews()
-            << "\nNum 3D points: " << reconstruction->NumTracks()<<"\n";
+            << "\nNum 3D points: " << reconstruction->NumTracks() << "\n";
 
   theia::BundleAdjustmentOptions options;
-  for (int i=0; i < reconstruction->TrackIds().size(); ++i) {
-      Eigen::Matrix3d cov;
-      double empirical_variance;
-      theia::BundleAdjustmentSummary summary = theia::BundleAdjustTrack(options, reconstruction->TrackIds()[i], reconstruction.get(), &cov, &empirical_variance);
+  for (int i = 0; i < reconstruction->TrackIds().size(); ++i) {
+    Eigen::Matrix3d cov;
+    double empirical_variance;
+    theia::BundleAdjustmentSummary summary =
+        theia::BundleAdjustTrack(options,
+                                 reconstruction->TrackIds()[i],
+                                 reconstruction.get(),
+                                 &cov,
+                                 &empirical_variance);
 
-      std::cout<<"FInal cost: "<<summary.final_cost<<"\n";
-      std::cout<<"standard deviations: "<<cov.diagonal().array().sqrt().transpose()*1000.<<" [mm]\n";
+    std::cout << "FInal cost: " << summary.final_cost << "\n";
+    std::cout << "standard deviations: "
+              << cov.diagonal().array().sqrt().transpose() * 1000. << " [mm]\n";
   }
   return 0;
 }
-

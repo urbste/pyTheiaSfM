@@ -434,7 +434,7 @@ void AddImagesToReconstructionBuilder(
   if (image_files.size() > FLAGS_max_num_images) {
     image_files.resize(FLAGS_max_num_images);
   }
-  
+
   // Load calibration file if it is provided.
   std::unordered_map<std::string, theia::CameraIntrinsicsPrior>
       camera_intrinsics_prior;

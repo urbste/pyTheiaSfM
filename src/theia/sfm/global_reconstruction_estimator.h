@@ -70,8 +70,7 @@ class ViewGraph;
 // to the largest connected component in the view graph.
 class GlobalReconstructionEstimator : public ReconstructionEstimator {
  public:
-  GlobalReconstructionEstimator(
-      const ReconstructionEstimatorOptions& options);
+  GlobalReconstructionEstimator(const ReconstructionEstimatorOptions& options);
 
   ReconstructionEstimatorSummary Estimate(ViewGraph* view_graph,
                                           Reconstruction* reconstruction);

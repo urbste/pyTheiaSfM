@@ -43,10 +43,15 @@ namespace theia {
 // Helper method to the P4Pf algorithm that computes the grobner basis that
 // allows for a solution to the problem.
 bool FourPointFocalLengthHelper(
-    const double glab, const double glac, const double glad, const double glbc,
-    const double glbd, const double glcd,
+    const double glab,
+    const double glac,
+    const double glad,
+    const double glbc,
+    const double glbd,
+    const double glcd,
     const Eigen::Matrix<double, 2, 4>& features_normalized,
-    std::vector<double>* f, std::vector<Eigen::Vector3d>* depths);
+    std::vector<double>* f,
+    std::vector<Eigen::Vector3d>* depths);
 
 }  // namespace theia
 

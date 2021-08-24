@@ -38,10 +38,10 @@
 #include <vector>
 
 #include "theia/alignment/alignment.h"
-#include "theia/solvers/estimator.h"
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/pose/five_point_relative_pose.h"
 #include "theia/sfm/pose/util.h"
+#include "theia/solvers/estimator.h"
 #include "theia/util/util.h"
 
 namespace theia {
@@ -69,9 +69,8 @@ class EssentialMatrixEstimator
       image2_points.emplace_back(correspondences[i].feature2.point_);
     }
 
-    return FivePointRelativePose(image1_points,
-                                 image2_points,
-                                 essential_matrices);
+    return FivePointRelativePose(
+        image1_points, image2_points, essential_matrices);
   }
 
   // The error for a correspondences given a model. This is the squared sampson
@@ -96,15 +95,13 @@ bool EstimateEssentialMatrix(
     Eigen::Matrix3d* essential_matrix,
     RansacSummary* ransac_summary) {
   EssentialMatrixEstimator essential_matrix_estimator;
-  std::unique_ptr<SampleConsensusEstimator<EssentialMatrixEstimator> >
-      ransac = CreateAndInitializeRansacVariant(ransac_type,
-                                                ransac_params,
-                                                essential_matrix_estimator);
+  std::unique_ptr<SampleConsensusEstimator<EssentialMatrixEstimator> > ransac =
+      CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, essential_matrix_estimator);
 
   // Estimate essential matrix.
-  return ransac->Estimate(normalized_correspondences,
-                          essential_matrix,
-                          ransac_summary);
+  return ransac->Estimate(
+      normalized_correspondences, essential_matrix, ransac_summary);
 }
 
 }  // namespace theia

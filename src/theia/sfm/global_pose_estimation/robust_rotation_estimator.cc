@@ -34,9 +34,9 @@
 
 #include "theia/sfm/global_pose_estimation/robust_rotation_estimator.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
+#include <ceres/rotation.h>
 #include <unordered_map>
 
 #include "theia/math/l1_solver.h"
@@ -116,29 +116,23 @@ void RobustRotationEstimator::SetupLinearSystem() {
     const int view1_index =
         FindOrDie(view_id_to_index_, relative_rotation.first.first);
     if (view1_index != kConstantRotationIndex) {
-      triplet_list.emplace_back(3 * rotation_error_index,
-                                3 * view1_index,
-                                -1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 1,
-                                3 * view1_index + 1,
-                                -1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 2,
-                                3 * view1_index + 2,
-                                -1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index, 3 * view1_index, -1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 1, 3 * view1_index + 1, -1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 2, 3 * view1_index + 2, -1.0);
     }
 
     const int view2_index =
         FindOrDie(view_id_to_index_, relative_rotation.first.second);
     if (view2_index != kConstantRotationIndex) {
-      triplet_list.emplace_back(3 * rotation_error_index + 0,
-                                3 * view2_index + 0,
-                                1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 1,
-                                3 * view2_index + 1,
-                                1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 2,
-                                3 * view2_index + 2,
-                                1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 0, 3 * view2_index + 0, 1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 1, 3 * view2_index + 1, 1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 2, 3 * view2_index + 2, 1.0);
     }
 
     ++rotation_error_index;
@@ -154,7 +148,6 @@ bool RobustRotationEstimator::SolveL1Regression() {
   tangent_space_step_.setZero();
   ComputeResiduals();
   for (int i = 0; i < options_.max_num_l1_iterations; i++) {
-
     l1_solver.Solve(tangent_space_residual_, &tangent_space_step_);
     UpdateGlobalRotations();
     ComputeResiduals();
@@ -188,11 +181,9 @@ bool RobustRotationEstimator::SolveIRLS() {
 
   ComputeResiduals();
 
-
   Eigen::ArrayXd weights(num_edges * 3);
   Eigen::SparseMatrix<double> at_weight;
   for (int i = 0; i < options_.max_num_irls_iterations; i++) {
-
     // Compute the Huber-like weights for each error term.
     const double& sigma = options_.irls_loss_parameter_sigma;
     for (int k = 0; k < num_edges; ++k) {
@@ -203,8 +194,7 @@ bool RobustRotationEstimator::SolveIRLS() {
     }
 
     // Update the factorization for the weighted values.
-    at_weight =
-        sparse_matrix_.transpose() * weights.matrix().asDiagonal();
+    at_weight = sparse_matrix_.transpose() * weights.matrix().asDiagonal();
     linear_solver.Factorize(at_weight * sparse_matrix_);
     if (linear_solver.Info() != Eigen::Success) {
       LOG(ERROR) << "Failed to factorize the least squares system.";
@@ -223,7 +213,8 @@ bool RobustRotationEstimator::SolveIRLS() {
     ComputeResiduals();
     const double avg_step_size = ComputeAverageStepSize();
 
-    VLOG(2) << StringPrintf(row_format.c_str(), i,
+    VLOG(2) << StringPrintf(row_format.c_str(),
+                            i,
                             tangent_space_residual_.squaredNorm(),
                             avg_step_size);
 
@@ -281,11 +272,10 @@ double RobustRotationEstimator::ComputeAverageStepSize() {
   return delta_V / numVertices;
 }
 
-std::unordered_map<ViewId, Eigen::Vector3d> RobustRotationEstimator::EstimateRotationsWrapper(
-    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs) {
-    std::unordered_map<ViewId, Eigen::Vector3d> rotations;
-    EstimateRotations(view_pairs, &rotations);
-    return rotations;
+void RobustRotationEstimator::EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    std::unordered_map<ViewId, Eigen::Vector3d>& initial_orientations) {
+  EstimateRotations(view_pairs, &initial_orientations);
 }
 
 }  // namespace theia

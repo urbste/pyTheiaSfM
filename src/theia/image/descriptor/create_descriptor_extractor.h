@@ -54,11 +54,7 @@ enum class DescriptorExtractorType {
 // interested in extracting a smaller number of features per image. Other
 // projects (e.g., photogrammetry) may be interested in very dense
 // reconstructions and so will want to extract many features (DENSE).
-enum class FeatureDensity {
-  SPARSE = 0,
-  NORMAL = 1,
-  DENSE = 2
-};
+enum class FeatureDensity { SPARSE = 0, NORMAL = 1, DENSE = 2 };
 
 // Factory method to create the keypoint detector and descriptor extractor.
 std::unique_ptr<DescriptorExtractor> CreateDescriptorExtractor(

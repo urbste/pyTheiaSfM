@@ -34,9 +34,9 @@
 
 #include "theia/sfm/find_common_tracks_in_views.h"
 
+#include <algorithm>
 #include <glog/logging.h>
 #include <iterator>
-#include <algorithm>
 #include <vector>
 
 #include "theia/sfm/reconstruction.h"
@@ -76,8 +76,10 @@ std::vector<TrackId> FindCommonTracksInViews(
         GetTrackIdsForView(reconstruction, views[i]);
     std::sort(sorted_track_ids.begin(), sorted_track_ids.end());
 
-    std::set_intersection(common_track_ids.begin(), common_track_ids.end(),
-                          sorted_track_ids.begin(), sorted_track_ids.end(),
+    std::set_intersection(common_track_ids.begin(),
+                          common_track_ids.end(),
+                          sorted_track_ids.begin(),
+                          sorted_track_ids.end(),
                           std::back_inserter(buffer));
     std::swap(common_track_ids, buffer);
   }

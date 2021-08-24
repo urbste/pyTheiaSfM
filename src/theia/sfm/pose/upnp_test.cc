@@ -41,15 +41,15 @@
 #include <vector>
 
 #include "theia/math/util.h"
-#include "theia/sfm/pose/upnp.h"
 #include "theia/sfm/pose/test_util.h"
+#include "theia/sfm/pose/upnp.h"
 #include "theia/util/random.h"
 
 namespace theia {
 namespace {
 
-using Eigen::Quaterniond;
 using Eigen::AngleAxisd;
+using Eigen::Quaterniond;
 using Eigen::Vector3d;
 
 RandomNumberGenerator rng(57);
@@ -60,11 +60,10 @@ struct InputDatum {
   std::vector<Eigen::Vector3d> world_points;
 };
 
-InputDatum ComputeInputDatum(
-    const std::vector<Vector3d>& world_points,
-    const std::vector<Vector3d>& camera_centers,
-    const Quaterniond& expected_rotation,
-    const Vector3d& expected_translation) {
+InputDatum ComputeInputDatum(const std::vector<Vector3d>& world_points,
+                             const std::vector<Vector3d>& camera_centers,
+                             const Quaterniond& expected_rotation,
+                             const Vector3d& expected_translation) {
   const int num_points = world_points.size();
   const int num_cameras = camera_centers.size();
 
@@ -83,9 +82,9 @@ InputDatum ComputeInputDatum(
     ray_origins.emplace_back(std::move(ray_origin));
 
     // Reproject 3D points into camera frame.
-    ray_directions.emplace_back(
-        (expected_rotation * world_points[i] + expected_translation -
-         ray_origins[i]).normalized());
+    ray_directions.emplace_back((expected_rotation * world_points[i] +
+                                 expected_translation - ray_origins[i])
+                                    .normalized());
   }
 
   input_datum.world_points = world_points;
@@ -112,33 +111,30 @@ bool CheckReprojectionErrors(const InputDatum& input_datum,
   return good_reprojection_errors;
 }
 
-void TestUpnpPoseEstimationWithNoise(
-    const Quaterniond& expected_rotation,
-    const Vector3d& expected_translation,
-    const double projection_noise_std_dev,
-    const double max_reprojection_error,
-    const double max_rotation_difference,
-    const double max_translation_difference,
-    InputDatum* input_datum) {
+void TestUpnpPoseEstimationWithNoise(const Quaterniond& expected_rotation,
+                                     const Vector3d& expected_translation,
+                                     const double projection_noise_std_dev,
+                                     const double max_reprojection_error,
+                                     const double max_rotation_difference,
+                                     const double max_translation_difference,
+                                     InputDatum* input_datum) {
   const int num_points = input_datum->world_points.size();
   // Add noise to ray.
   if (projection_noise_std_dev > 0.0) {
     for (int i = 0; i < input_datum->world_points.size(); ++i) {
-      AddNoiseToRay(projection_noise_std_dev,
-                    &rng,
-                    &input_datum->ray_directions[i]);
+      AddNoiseToRay(
+          projection_noise_std_dev, &rng, &input_datum->ray_directions[i]);
     }
   }
 
   // Estimate pose.
   std::vector<Quaterniond> solution_rotations;
   std::vector<Vector3d> solution_translations;
-  const Upnp::CostParameters upnp_params =
-      Upnp(input_datum->ray_origins,
-           input_datum->ray_directions,
-           input_datum->world_points,
-           &solution_rotations,
-           &solution_translations);
+  const Upnp::CostParameters upnp_params = Upnp(input_datum->ray_origins,
+                                                input_datum->ray_directions,
+                                                input_datum->world_points,
+                                                &solution_rotations,
+                                                &solution_translations);
   const double upnp_cost = Upnp::EvaluateCost(upnp_params, expected_rotation);
   VLOG(3) << "Upnp cost with expected rotation: " << upnp_cost;
 
@@ -173,27 +169,25 @@ void TestUpnpPoseEstimationWithNoise(
 
 // Verifies that the cost-function parameters are correct for central cameras.
 TEST(UpnpTests, ComputeCostParametersForCentralCameraPoseEstimation) {
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigin = { Vector3d(2.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigin = {Vector3d(2.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(13.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   const double kNoise = 0.0;
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigin,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigin, soln_rotation, soln_translation);
 
   std::vector<Eigen::Quaterniond> solution_rotations;
   std::vector<Eigen::Vector3d> solution_translations;
   const Upnp::CostParameters upnp_params = Upnp(input_datum.ray_origins,
-                                              input_datum.ray_directions,
-                                              input_datum.world_points,
-                                              &solution_rotations,
-                                              &solution_translations);
+                                                input_datum.ray_directions,
+                                                input_datum.world_points,
+                                                &solution_rotations,
+                                                &solution_translations);
 
   const double upnp_cost = Upnp::EvaluateCost(upnp_params, soln_rotation);
   EXPECT_NEAR(upnp_cost, 0.0, 1e-6);
@@ -202,22 +196,20 @@ TEST(UpnpTests, ComputeCostParametersForCentralCameraPoseEstimation) {
 // Verifies that the cost-function parameters are correct for non-central
 // cameras.
 TEST(UpnpTests, ComputeCostParametersForNonCentralCameraPoseEstimation) {
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   const double kNoise = 0.0;
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
 
   std::vector<Eigen::Quaterniond> solution_rotations;
   std::vector<Eigen::Vector3d> solution_translations;
@@ -233,21 +225,18 @@ TEST(UpnpTests, ComputeCostParametersForNonCentralCameraPoseEstimation) {
 
 // Verifies that the computation of the residual is correct.
 TEST(UpnpTests, EvaluateResidualAtOptimalSolution) {
-  const std::vector<Vector3d> kPoints3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
-    Vector3d(-1.0, -3.0, 2.0),
-    Vector3d(1.0, -2.0, 1.0),
-    Vector3d(-1.0, 4.0, 2.0),
-    Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
-  
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
 }
 
 // Checks the case of a minimal sample and central camera pose estimation.
@@ -256,19 +245,17 @@ TEST(UpnpTests, MinimalSampleCentralCameraPoseEstimation) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigin = { Vector3d(2.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigin = {Vector3d(2.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(13.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigin,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigin, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -285,19 +272,17 @@ TEST(UpnpTests, MinimalSampleCentralCameraPoseEstimationWithNoise) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1.0);
   const double kMaxAllowedTranslationDifference = 1e-3;
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigin = { Vector3d(2.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigin = {Vector3d(2.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(13.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigin,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigin, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -314,22 +299,20 @@ TEST(UpnpTests, MinimalSampleNonCentralCameraPoseEstimation) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(13.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -347,22 +330,20 @@ TEST(UpnpTests, MinimalSampleNonCentralCameraPoseEstimationWithNoise) {
   const double kMaxReprojectionError = 3.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1.0);
   const double kMaxAllowedTranslationDifference = 1e-3;
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(13.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -380,25 +361,21 @@ TEST(UpnpTests, NonMinimalSampleCentralCameraPoseEstimation) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
-    Vector3d(-1.0, -3.0, 2.0),
-    Vector3d(1.0, -2.0, 1.0),
-    Vector3d(-1.0, 4.0, 2.0),
-    Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(0.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(0.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(13.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -416,25 +393,21 @@ TEST(UpnpTests, NonMinimalSampleCentralCameraPoseEstimationWithNoise) {
   const double kMaxReprojectionError = 3.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1.0);
   const double kMaxAllowedTranslationDifference = 1e-3;
-  const std::vector<Vector3d> kPoints3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
-    Vector3d(-1.0, -3.0, 2.0),
-    Vector3d(1.0, -2.0, 1.0),
-    Vector3d(-1.0, 4.0, 2.0),
-    Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(0.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(0.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(13.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -451,28 +424,24 @@ TEST(UpnpTests, NonMinimalSampleNonCentralCameraPoseEstimation) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
-    Vector3d(-1.0, -3.0, 2.0),
-    Vector3d(1.0, -2.0, 1.0),
-    Vector3d(-1.0, 4.0, 2.0),
-    Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(13.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -490,28 +459,24 @@ TEST(UpnpTests, NonMinimalSampleNonCentralCameraPoseEstimationWithNoise) {
   const double kMaxReprojectionError = 3.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1.0);
   const double kMaxAllowedTranslationDifference = 1e-3;
-  const std::vector<Vector3d> kPoints3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
-    Vector3d(-1.0, -3.0, 2.0),
-    Vector3d(1.0, -2.0, 1.0),
-    Vector3d(-1.0, 4.0, 2.0),
-    Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(13.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -528,19 +493,17 @@ TEST(UpnpTests, NoRotationOnMinimalSampleAndCentralCamera) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigin = { Vector3d(2.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigin = {Vector3d(2.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(0.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigin,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigin, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -558,22 +521,20 @@ TEST(UpnpTests, NoRotationOnMinimalSampleAndNonCentralCamera) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(0.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -590,25 +551,21 @@ TEST(UpnpTests, NoRotationOnNonMinimalSampleAndCentralCamera) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
-    Vector3d(-1.0, -3.0, 2.0),
-    Vector3d(1.0, -2.0, 1.0),
-    Vector3d(-1.0, 4.0, 2.0),
-    Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigin = { Vector3d(2.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigin = {Vector3d(2.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(0.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigin,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigin, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -625,28 +582,24 @@ TEST(UpnpTests, NoRotationOnNonMinimalSampleAndNonCentralCamera) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
-    Vector3d(-1.0, -3.0, 2.0),
-    Vector3d(1.0, -2.0, 1.0),
-    Vector3d(-1.0, 4.0, 2.0),
-    Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(0.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -657,26 +610,23 @@ TEST(UpnpTests, NoRotationOnNonMinimalSampleAndNonCentralCamera) {
                                   &input_datum);
 }
 
-
 // Tests estimation of pose when only rotation occurs on a central camera.
 TEST(UpnpTests, NoTranslationOnMinimalSampleAndCentralCamera) {
   const double kNoiseStdDev = 0.0;
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigin = { Vector3d(2.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigin = {Vector3d(2.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(10.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(0.0, 0.0, 0.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigin,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigin, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -694,22 +644,20 @@ TEST(UpnpTests, NoTranslationOnMinimalSampleAndNonCentralCamera) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(10.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(0.0, 0.0, 0.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -726,25 +674,21 @@ TEST(UpnpTests, NoTranslationOnNonMinimalSampleAndCentralCamera) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
-    Vector3d(-1.0, -3.0, 2.0),
-    Vector3d(1.0, -2.0, 1.0),
-    Vector3d(-1.0, 4.0, 2.0),
-    Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigin = { Vector3d(2.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigin = {Vector3d(2.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(10.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(0.0, 0.0, 0.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigin,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigin, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,
@@ -761,28 +705,24 @@ TEST(UpnpTests, NoTranslationOnNonMinimalSampleAndNonCentralCamera) {
   const double kMaxReprojectionError = 1.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(1e-4);
   const double kMaxAllowedTranslationDifference = 1e-6;
-  const std::vector<Vector3d> kPoints3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
-    Vector3d(-1.0, -3.0, 2.0),
-    Vector3d(1.0, -2.0, 1.0),
-    Vector3d(-1.0, 4.0, 2.0),
-    Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kPoints3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
   const Quaterniond soln_rotation = Quaterniond(
       AngleAxisd(DegToRad(10.0), Vector3d(1.0, 0.0, 1.0).normalized()));
   const Vector3d soln_translation(0.0, 0.0, 0.0);
   // Compute input datum.
-  InputDatum input_datum = ComputeInputDatum(kPoints3d,
-                                             kImageOrigins,
-                                             soln_rotation,
-                                             soln_translation);
+  InputDatum input_datum = ComputeInputDatum(
+      kPoints3d, kImageOrigins, soln_rotation, soln_translation);
   // Execute test.
   TestUpnpPoseEstimationWithNoise(soln_rotation,
                                   soln_translation,

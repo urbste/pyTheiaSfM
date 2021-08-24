@@ -34,8 +34,8 @@
 
 #include "theia/io/reconstruction_reader.h"
 
-#include <cereal/archives/portable_binary.hpp>
 #include <Eigen/Core>
+#include <cereal/archives/portable_binary.hpp>
 #include <glog/logging.h>
 
 #include <cstdio>

@@ -34,19 +34,19 @@
 
 #include <Eigen/Dense>
 
+#include "gtest/gtest.h"
 #include <ceres/rotation.h>
 #include <math.h>
-#include "gtest/gtest.h"
 
 #include "theia/alignment/alignment.h"
-#include "theia/test/test_utils.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
+#include "theia/test/test_utils.h"
 
 namespace theia {
 
 using Eigen::AngleAxisd;
-using Eigen::Matrix3d;
 using Eigen::Matrix;
+using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
@@ -205,8 +205,8 @@ TEST(PinholeRadialTangentialCameraModel, GetSubsetFromOptimizeIntrinsicsType) {
   }
 
   // Test that optimizing for skew works correctly.
-  constant_subset = camera.GetSubsetFromOptimizeIntrinsicsType(
-      OptimizeIntrinsicsType::SKEW);
+  constant_subset =
+      camera.GetSubsetFromOptimizeIntrinsicsType(OptimizeIntrinsicsType::SKEW);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters() - 1);
   for (int i = 0; i < constant_subset.size(); i++) {
     EXPECT_NE(constant_subset[i], PinholeRadialTangentialCameraModel::SKEW);
@@ -260,10 +260,10 @@ void ReprojectionTest(const PinholeRadialTangentialCameraModel& camera) {
         const Vector2d reprojected_pixel =
             camera.CameraToImageCoordinates(point);
 
-      // Expect the reprojection to be close.
-      EXPECT_LT((pixel - reprojected_pixel).norm(), kTolerance)
-          << "gt pixel: " << pixel.transpose()
-          << "\nreprojected pixel: " << reprojected_pixel.transpose();
+        // Expect the reprojection to be close.
+        EXPECT_LT((pixel - reprojected_pixel).norm(), kTolerance)
+            << "gt pixel: " << pixel.transpose()
+            << "\nreprojected pixel: " << reprojected_pixel.transpose();
       }
     }
   }

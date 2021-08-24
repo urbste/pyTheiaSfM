@@ -34,25 +34,28 @@
 
 #include "theia/sfm/transformation/align_point_clouds.h"
 
-#include <glog/logging.h>
 #include <Eigen/Dense>
+#include <glog/logging.h>
 
 namespace theia {
 
 void AlignPointCloudsUmeyama(const std::vector<Eigen::Vector3d>& left,
                              const std::vector<Eigen::Vector3d>& right,
                              Eigen::Matrix3d* rotation,
-                             Eigen::Vector3d* translation, double* scale) {
+                             Eigen::Vector3d* translation,
+                             double* scale) {
   std::vector<double> weights(left.size(), 1.0);
-  AlignPointCloudsUmeyamaWithWeights(left, right, weights, rotation,
-                                     translation, scale);
+  AlignPointCloudsUmeyamaWithWeights(
+      left, right, weights, rotation, translation, scale);
 }
 
 void AlignPointCloudsUmeyamaWithWeights(
     const std::vector<Eigen::Vector3d>& left,
     const std::vector<Eigen::Vector3d>& right,
-    const std::vector<double>& weights, Eigen::Matrix3d* rotation,
-    Eigen::Vector3d* translation, double* scale) {
+    const std::vector<double>& weights,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* translation,
+    double* scale) {
   CHECK_EQ(left.size(), right.size());
   CHECK_EQ(left.size(), weights.size());
   CHECK_NOTNULL(rotation);

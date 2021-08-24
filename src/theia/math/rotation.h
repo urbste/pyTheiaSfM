@@ -39,14 +39,14 @@
 
 #include <Eigen/Core>
 
-#include <vector>
-#include <unordered_map>
 #include "theia/sfm/types.h"
 #include "theia/util/random.h"
+#include <unordered_map>
+#include <vector>
 
 namespace theia {
 
-Eigen::MatrixXd ProjectToSOd(const Eigen::MatrixXd &M);
+Eigen::MatrixXd ProjectToSOd(const Eigen::MatrixXd& M);
 
 // Rotates the "rotation" set of orientations such that the orientations are
 // most closely aligned in an L2 sense. That is, "rotation" is transformed such
@@ -70,7 +70,6 @@ Eigen::Vector3d MultiplyRotations(const Eigen::Vector3d& rotation1,
 Eigen::Vector3d RelativeRotationFromTwoRotations(
     const Eigen::Vector3d& rotation1, const Eigen::Vector3d& rotation2);
 
-
 // Computes R_ij = R_j * R_i^t with noise
 Eigen::Vector3d RelativeRotationFromTwoRotations(
     const Eigen::Vector3d& rotation1,
@@ -79,12 +78,12 @@ Eigen::Vector3d RelativeRotationFromTwoRotations(
     theia::RandomNumberGenerator& rng);
 
 // return R_j = R_ij * R_i.
-Eigen::Vector3d ApplyRelativeRotation(
-    const Eigen::Vector3d& rotation1,
-    const Eigen::Vector3d& relative_rotation);
+Eigen::Vector3d ApplyRelativeRotation(const Eigen::Vector3d& rotation1,
+                                      const Eigen::Vector3d& relative_rotation);
 
 Eigen::Vector3d RelativeTranslationFromTwoPositions(
-    const Eigen::Vector3d& position1, const Eigen::Vector3d& position2,
+    const Eigen::Vector3d& position1,
+    const Eigen::Vector3d& position2,
     const Eigen::Vector3d& rotation1);
 }  // namespace theia
 

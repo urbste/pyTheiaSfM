@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,14 +20,15 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 
 // edited Steffen Urban, (urbste@googlemail.com), 2021
 
@@ -40,8 +42,8 @@
 
 #include "theia/sfm/global_pose_estimation/rotation_estimator.h"
 
-#include "theia/sfm/types.h"
 #include "theia/math/util.h"
+#include "theia/sfm/types.h"
 #include "theia/util/hash.h"
 
 namespace theia {
@@ -60,9 +62,9 @@ class L1RotationGlobalEstimator {
     double l1_step_convergence_threshold = 0.001;
   };
 
-  L1RotationGlobalEstimator(
-      const int num_orientations, const int num_edges,
-      const L1RotationOptions& options);
+  L1RotationGlobalEstimator(const int num_orientations,
+                            const int num_edges,
+                            const L1RotationOptions& options);
 
   void SetViewIdToIndex(
       const std::unordered_map<ViewId, int>& view_id_to_index);
@@ -85,8 +87,8 @@ class L1RotationGlobalEstimator {
   // Computes the relative rotation error based on the current global
   // orientation estimates.
   void ComputeResiduals(
-    const std::unordered_map<ViewIdPair, TwoViewInfo>& relative_rotations,
-    std::unordered_map<ViewId, Eigen::Vector3d>* global_rotations);
+      const std::unordered_map<ViewIdPair, TwoViewInfo>& relative_rotations,
+      std::unordered_map<ViewId, Eigen::Vector3d>* global_rotations);
 
   // Computes the average size of the most recent step of the algorithm.
   // The is the average over all non-fixed global_rotations_ of their

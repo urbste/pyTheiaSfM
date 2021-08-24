@@ -35,16 +35,16 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <Eigen/SVD>
-#include <glog/logging.h>
 #include <cmath>
+#include <glog/logging.h>
 
 #include "gtest/gtest.h"
 
 #include "theia/math/util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/pose/seven_point_fundamental_matrix.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/pose/util.h"
+#include "theia/util/random.h"
 
 namespace theia {
 namespace {
@@ -71,18 +71,17 @@ void GenerateImagePoints(const std::vector<Vector3d>& points_3d,
   image_2_points->reserve(points_3d.size());
   for (int i = 0; i < points_3d.size(); i++) {
     image_1_points->push_back(points_3d[i].hnormalized());
-    image_2_points->push_back((expected_rotation * points_3d[i] +
-                               expected_translation).hnormalized());
+    image_2_points->push_back(
+        (expected_rotation * points_3d[i] + expected_translation)
+            .hnormalized());
   }
 
   if (projection_noise_std_dev) {
     for (int i = 0; i < points_3d.size(); i++) {
-      AddNoiseToProjection(projection_noise_std_dev,
-                           &rng,
-                           &((*image_1_points)[i]));
-      AddNoiseToProjection(projection_noise_std_dev,
-                           &rng,
-                           &((*image_2_points)[i]));
+      AddNoiseToProjection(
+          projection_noise_std_dev, &rng, &((*image_1_points)[i]));
+      AddNoiseToProjection(
+          projection_noise_std_dev, &rng, &((*image_2_points)[i]));
     }
   }
 }
@@ -94,19 +93,21 @@ void SevenPointWithNoiseTest(const std::vector<Vector3d>& points_3d,
                              const double kMaxSampsonError) {
   std::vector<Vector2d> image_1_points;
   std::vector<Vector2d> image_2_points;
-  GenerateImagePoints(points_3d, projection_noise_std_dev, expected_rotation,
-                      expected_translation, &image_1_points, &image_2_points);
+  GenerateImagePoints(points_3d,
+                      projection_noise_std_dev,
+                      expected_rotation,
+                      expected_translation,
+                      &image_1_points,
+                      &image_2_points);
   // Compute fundamental matrix.
   std::vector<Matrix3d> fundamental_matrix;
-  EXPECT_TRUE(SevenPointFundamentalMatrix(image_1_points,
-                                          image_2_points,
-                                          &fundamental_matrix));
+  EXPECT_TRUE(SevenPointFundamentalMatrix(
+      image_1_points, image_2_points, &fundamental_matrix));
 
   for (int i = 0; i < fundamental_matrix.size(); i++) {
     for (int j = 0; j < image_1_points.size(); j++) {
-      const double sampson_error = SquaredSampsonDistance(fundamental_matrix[i],
-                                                          image_1_points[j],
-                                                          image_2_points[j]);
+      const double sampson_error = SquaredSampsonDistance(
+          fundamental_matrix[i], image_1_points[j], image_2_points[j]);
       ASSERT_LT(sampson_error, kMaxSampsonError) << "Fmatrix = \n"
                                                  << fundamental_matrix[i];
     }
@@ -114,13 +115,14 @@ void SevenPointWithNoiseTest(const std::vector<Vector3d>& points_3d,
 }
 
 void BasicTest() {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
+  const std::vector<Vector3d> points_3d = {
+      Vector3d(-1.0, 3.0, 3.0),
+      Vector3d(1.0, -1.0, 2.0),
+      Vector3d(-1.0, 1.0, 2.0),
+      Vector3d(2.0, 1.0, 3.0),
+      Vector3d(-1.0, -3.0, 2.0),
+      Vector3d(1.0, -2.0, 1.0),
+      Vector3d(-1.0, 4.0, 2.0),
   };
 
   const Quaterniond soln_rotation(
@@ -129,22 +131,21 @@ void BasicTest() {
   const double kNoise = 0.0 / 512.0;
   const double kMaxSampsonError = 1e-12;
 
-  SevenPointWithNoiseTest(points_3d, kNoise, soln_rotation, soln_translation,
-                          kMaxSampsonError);
+  SevenPointWithNoiseTest(
+      points_3d, kNoise, soln_rotation, soln_translation, kMaxSampsonError);
 }
 
-TEST(SevenPoint, BasicTest) {
-  BasicTest();
-}
+TEST(SevenPoint, BasicTest) { BasicTest(); }
 
 TEST(SevenPoint, MinimalNoiseTest) {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
+  const std::vector<Vector3d> points_3d = {
+      Vector3d(-1.0, 3.0, 3.0),
+      Vector3d(1.0, -1.0, 2.0),
+      Vector3d(-1.0, 1.0, 2.0),
+      Vector3d(2.0, 1.0, 3.0),
+      Vector3d(-1.0, -3.0, 2.0),
+      Vector3d(1.0, -2.0, 1.0),
+      Vector3d(-1.0, 4.0, 2.0),
   };
 
   const Quaterniond soln_rotation(
@@ -153,35 +154,38 @@ TEST(SevenPoint, MinimalNoiseTest) {
   const double kNoise = 1.0 / 512.0;
   const double kMaxSampsonError = 1e-12;
 
-  SevenPointWithNoiseTest(points_3d, kNoise, soln_rotation,
-                          soln_translation, kMaxSampsonError);
+  SevenPointWithNoiseTest(
+      points_3d, kNoise, soln_rotation, soln_translation, kMaxSampsonError);
 }
 
 TEST(SevenPoint, DegenerateTest) {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
+  const std::vector<Vector3d> points_3d = {
+      Vector3d(-1.0, 3.0, 3.0),
+      Vector3d(-1.0, 3.0, 3.0),
+      Vector3d(-1.0, 1.0, 2.0),
+      Vector3d(2.0, 1.0, 3.0),
+      Vector3d(-1.0, -3.0, 2.0),
+      Vector3d(1.0, -2.0, 1.0),
+      Vector3d(-1.0, 4.0, 2.0),
   };
 
   const Quaterniond soln_rotation(
-  AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
+      AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 0.5, 0.0);
 
   std::vector<Vector2d> image_1_points;
   std::vector<Vector2d> image_2_points;
-  GenerateImagePoints(points_3d, 0.0, soln_rotation,
-                      soln_translation, &image_1_points, &image_2_points);
+  GenerateImagePoints(points_3d,
+                      0.0,
+                      soln_rotation,
+                      soln_translation,
+                      &image_1_points,
+                      &image_2_points);
 
   std::vector<Matrix3d> fundamental_matrix;
-  EXPECT_FALSE(SevenPointFundamentalMatrix(image_1_points,
-                                           image_2_points,
-                                           &fundamental_matrix));
+  EXPECT_FALSE(SevenPointFundamentalMatrix(
+      image_1_points, image_2_points, &fundamental_matrix));
 }
-
 
 }  // namespace
 }  // namespace theia

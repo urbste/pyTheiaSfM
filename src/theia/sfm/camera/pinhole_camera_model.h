@@ -35,14 +35,14 @@
 #ifndef THEIA_SFM_CAMERA_PINHOLE_CAMERA_MODEL_H_
 #define THEIA_SFM_CAMERA_PINHOLE_CAMERA_MODEL_H_
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <cereal/access.hpp>
 #include <cereal/cereal.hpp>
 #include <cereal/types/base_class.hpp>
 #include <cereal/types/polymorphic.hpp>
 #include <ceres/ceres.h>
 #include <stdint.h>
-#include <Eigen/Core>
-#include <Eigen/Geometry>
 #include <vector>
 
 #include "theia/sfm/camera/camera_intrinsics_model.h"
@@ -83,7 +83,7 @@ class PinholeCameraModel : public CameraIntrinsicsModel {
 
   static const int kIntrinsicsSize = 7;
 
-  enum InternalParametersIndex{
+  enum InternalParametersIndex {
     FOCAL_LENGTH = 0,
     ASPECT_RATIO = 1,
     SKEW = 2,
@@ -179,18 +179,17 @@ class PinholeCameraModel : public CameraIntrinsicsModel {
 };
 
 template <typename T>
-bool PinholeCameraModel::CameraToPixelCoordinates(
-    const T* intrinsic_parameters, const T* point, T* pixel) {
+bool PinholeCameraModel::CameraToPixelCoordinates(const T* intrinsic_parameters,
+                                                  const T* point,
+                                                  T* pixel) {
   // Get normalized pixel projection at image plane depth = 1.
   const T& depth = point[2];
-  const T normalized_pixel[2] = { point[0] / depth,
-                                  point[1] / depth };
+  const T normalized_pixel[2] = {point[0] / depth, point[1] / depth};
 
   // Apply radial distortion.
   T distorted_pixel[2];
-  PinholeCameraModel::DistortPoint(intrinsic_parameters,
-                                   normalized_pixel,
-                                   distorted_pixel);
+  PinholeCameraModel::DistortPoint(
+      intrinsic_parameters, normalized_pixel, distorted_pixel);
 
   // Apply calibration parameters to transform normalized units into pixels.
   const T& focal_length =
@@ -205,8 +204,8 @@ bool PinholeCameraModel::CameraToPixelCoordinates(
 
   pixel[0] = focal_length * distorted_pixel[0] + skew * distorted_pixel[1] +
              principal_point_x;
-  pixel[1] = focal_length * aspect_ratio * distorted_pixel[1] +
-             principal_point_y;
+  pixel[1] =
+      focal_length * aspect_ratio * distorted_pixel[1] + principal_point_y;
 
   return true;
 }
@@ -234,9 +233,8 @@ bool PinholeCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
 
   // Undo the radial distortion.
   T undistorted_point[2];
-  PinholeCameraModel::UndistortPoint(intrinsic_parameters,
-                                     distorted_point,
-                                     point);
+  PinholeCameraModel::UndistortPoint(
+      intrinsic_parameters, distorted_point, point);
   point[2] = T(1.0);
 
   return true;
@@ -253,8 +251,7 @@ bool PinholeCameraModel::DistortPoint(const T* intrinsic_parameters,
 
   const T r_sq = undistorted_point[0] * undistorted_point[0] +
                  undistorted_point[1] * undistorted_point[1];
-  const T d =
-      1.0 + r_sq * (radial_distortion1 + radial_distortion2 * r_sq);
+  const T d = 1.0 + r_sq * (radial_distortion1 + radial_distortion2 * r_sq);
 
   distorted_point[0] = undistorted_point[0] * d;
   distorted_point[1] = undistorted_point[1] * d;
@@ -281,9 +278,8 @@ bool PinholeCameraModel::UndistortPoint(const T* intrinsic_parameters,
     const T r_sq = undistorted_point[0] * undistorted_point[0] +
                    undistorted_point[1] * undistorted_point[1];
     // Compute the distortion factor.
-    const T d = 1.0 +
-                r_sq * (intrinsic_parameters[RADIAL_DISTORTION_1] +
-                        intrinsic_parameters[RADIAL_DISTORTION_2] * r_sq);
+    const T d = 1.0 + r_sq * (intrinsic_parameters[RADIAL_DISTORTION_1] +
+                              intrinsic_parameters[RADIAL_DISTORTION_2] * r_sq);
 
     // We know that the distorted point = d * undistorted point, so we can solve
     // for a better estimate of the undistorted point by taking the inverse of

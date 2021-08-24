@@ -33,16 +33,18 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
-#include <theia/theia.h>
+#include <glog/logging.h>
 #include <string>
+#include <theia/theia.h>
 #include <vector>
 
-DEFINE_string(input_sift_key_file, "",
+DEFINE_string(input_sift_key_file,
+              "",
               "Input sift key text file to convert. Should end in .key");
 
-DEFINE_string(output_sift_key_file, "",
+DEFINE_string(output_sift_key_file,
+              "",
               "Output sift key file in binary format. Should end in .bin");
 
 // This function will load the sift descriptors from the key text files and
@@ -56,9 +58,8 @@ bool ConvertSiftKeyFile(const std::string& input_sift_key_file,
       theia::ReadSiftKeyTextFile(input_sift_key_file, &descriptor, &keypoint));
 
   // Write binary file.
-  CHECK(theia::WriteSiftKeyBinaryFile(output_sift_key_file,
-                                      descriptor,
-                                      keypoint));
+  CHECK(theia::WriteSiftKeyBinaryFile(
+      output_sift_key_file, descriptor, keypoint));
 
   return true;
 }

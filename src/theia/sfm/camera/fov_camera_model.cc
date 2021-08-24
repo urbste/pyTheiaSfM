@@ -34,14 +34,14 @@
 
 #include "theia/sfm/camera/fov_camera_model.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <glog/logging.h>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
-#include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/camera/projection_matrix_utils.h"
+#include "theia/sfm/camera_intrinsics_prior.h"
 
 namespace theia {
 
@@ -61,7 +61,7 @@ FOVCameraModel::FOVCameraModel() {
   SetParameter(RADIAL_DISTORTION_1, kDefaultOmega);
 }
 
-int FOVCameraModel::NumParameters() const {return kIntrinsicsSize;}
+int FOVCameraModel::NumParameters() const { return kIntrinsicsSize; }
 
 // Returns the camera model type of the object.
 CameraIntrinsicsModelType FOVCameraModel::Type() const {
@@ -75,8 +75,8 @@ void FOVCameraModel::SetFromCameraIntrinsicsPriors(
   if (prior.focal_length.is_set) {
     SetFocalLength(prior.focal_length.value[0]);
   } else if (prior.image_width != 0.0 && prior.image_height != 0.0) {
-    SetFocalLength(1.2 * static_cast<double>(std::max(
-        prior.image_width, prior.image_height)));
+    SetFocalLength(1.2 * static_cast<double>(
+                             std::max(prior.image_width, prior.image_height)));
   }
 
   // Set the principal point.
@@ -118,7 +118,6 @@ CameraIntrinsicsPrior FOVCameraModel::CameraIntrinsicsPriorFromIntrinsics()
   return prior;
 }
 
-
 // Returns the indices of the parameters that will be optimized during bundle
 // adjustment.
 std::vector<int> FOVCameraModel::GetSubsetFromOptimizeIntrinsicsType(
@@ -128,8 +127,8 @@ std::vector<int> FOVCameraModel::GetSubsetFromOptimizeIntrinsicsType(
     return constant_intrinsics;
   }
 
-  if ((intrinsics_to_optimize &
-      OptimizeIntrinsicsType::FOCAL_LENGTH) == OptimizeIntrinsicsType::NONE) {
+  if ((intrinsics_to_optimize & OptimizeIntrinsicsType::FOCAL_LENGTH) ==
+      OptimizeIntrinsicsType::NONE) {
     constant_intrinsics.emplace_back(FOCAL_LENGTH);
   }
   if ((intrinsics_to_optimize & OptimizeIntrinsicsType::ASPECT_RATIO) ==
@@ -172,9 +171,7 @@ void FOVCameraModel::PrintIntrinsics() const {
 void FOVCameraModel::SetAspectRatio(const double aspect_ratio) {
   parameters_[ASPECT_RATIO] = aspect_ratio;
 }
-double FOVCameraModel::AspectRatio() const {
-  return parameters_[ASPECT_RATIO];
-}
+double FOVCameraModel::AspectRatio() const { return parameters_[ASPECT_RATIO]; }
 
 void FOVCameraModel::SetRadialDistortion(const double radial_distortion_1) {
   parameters_[RADIAL_DISTORTION_1] = radial_distortion_1;

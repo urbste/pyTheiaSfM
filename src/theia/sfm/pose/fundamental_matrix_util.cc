@@ -84,14 +84,10 @@ bool FocalLengthsFromFundamentalMatrix(const double fmatrix[3 * 3],
   const double theta2 = atan2(-epipole2(1), epipole2(0));
 
   Matrix3d rotation1, rotation2;
-  rotation1 <<
-      cos(theta1), -sin(theta1), 0,
-      sin(theta1), cos(theta1), 0,
-      0, 0, 1;
-  rotation2 <<
-      cos(theta2), -sin(theta2), 0,
-      sin(theta2), cos(theta2), 0,
-      0, 0, 1;
+  rotation1 << cos(theta1), -sin(theta1), 0, sin(theta1), cos(theta1), 0, 0, 0,
+      1;
+  rotation2 << cos(theta2), -sin(theta2), 0, sin(theta2), cos(theta2), 0, 0, 0,
+      1;
 
   const Matrix3d rotated_fmatrix =
       rotation2 * fundamental_matrix * rotation1.transpose();
@@ -206,8 +202,8 @@ void ProjectionMatricesFromFundamentalMatrix(const double fmatrix[3 * 3],
                                              double pmatrix1[3 * 4],
                                              double pmatrix2[3 * 4]) {
   Map<const Matrix3d> fmatrix_map(fmatrix);
-  const Vector3d right_epipole = fmatrix_map.jacobiSvd(Eigen::ComputeFullV)
-      .matrixV().rightCols<1>();
+  const Vector3d right_epipole =
+      fmatrix_map.jacobiSvd(Eigen::ComputeFullV).matrixV().rightCols<1>();
 
   Map<Matrix3d>(pmatrix1, 3, 3) = Matrix3d::Identity();
   Map<Vector3d>(pmatrix1 + 9, 3) = Vector3d::Zero();
@@ -257,10 +253,12 @@ void ComposeFundamentalMatrix(const double focal_length1,
                               const double rotation[3 * 3],
                               const double translation[3],
                               double fmatrix[3 * 3]) {
-  const Matrix3d calibration_inv1 = Eigen::DiagonalMatrix<double, 3>(
-      focal_length1, focal_length1, 1.0).inverse();
-  const Matrix3d calibration_inv2 = Eigen::DiagonalMatrix<double, 3>(
-      focal_length2, focal_length2, 1.0).inverse();
+  const Matrix3d calibration_inv1 =
+      Eigen::DiagonalMatrix<double, 3>(focal_length1, focal_length1, 1.0)
+          .inverse();
+  const Matrix3d calibration_inv2 =
+      Eigen::DiagonalMatrix<double, 3>(focal_length2, focal_length2, 1.0)
+          .inverse();
 
   const Eigen::Map<const Eigen::Matrix3d> rot(rotation);
   const Eigen::Map<const Eigen::Vector3d> trans(translation);

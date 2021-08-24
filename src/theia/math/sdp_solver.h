@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,14 +20,17 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+// edited by Steffen Urban (urbste@googlemail.com), August 2021
 
 #ifndef THEIA_MATH_SDP_SOLVER_H_
 #define THEIA_MATH_SDP_SOLVER_H_
@@ -34,9 +38,9 @@
 #include <iostream>
 #include <unordered_map>
 
-#include <glog/logging.h>
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
+#include <glog/logging.h>
 
 #include "theia/math/solver_options.h"
 #include "theia/math/solver_summary.h"
@@ -47,13 +51,12 @@ namespace math {
 class SDPSolver {
  public:
   SDPSolver(const size_t n, const size_t block_dim)
-      : SDPSolver(n, block_dim, math::SDPSolverOptions()) { }
+      : SDPSolver(n, block_dim, math::SDPSolverOptions()) {}
 
-  SDPSolver(const size_t n, const size_t block_dim,
+  SDPSolver(const size_t n,
+            const size_t block_dim,
             const SDPSolverOptions& options)
-      : n_(n),
-        dim_(block_dim),
-        sdp_solver_options_(options) {
+      : n_(n), dim_(block_dim), sdp_solver_options_(options) {
     Q_ = Eigen::SparseMatrix<double>(dim_ * n, dim_ * n);
   }
 
@@ -63,22 +66,16 @@ class SDPSolver {
     sdp_solver_options_ = options;
   }
 
-  virtual void SetCovariance(const Eigen::SparseMatrix<double>& Q) {
-    Q_ = Q;
-  }
+  virtual void SetCovariance(const Eigen::SparseMatrix<double>& Q) { Q_ = Q; }
 
   virtual void SetAdjacentEdges(
       const std::unordered_map<size_t, std::vector<size_t>>& adj_edges) {
     adj_edges_ = adj_edges;
   }
 
-  size_t NumUnknowns() const {
-    return n_;
-  }
+  size_t NumUnknowns() const { return n_; }
 
-  size_t Dimension() const {
-    return dim_;
-  }
+  size_t Dimension() const { return dim_; }
 
   // Get the final optimal solution
   virtual Eigen::MatrixXd GetSolution() const = 0;

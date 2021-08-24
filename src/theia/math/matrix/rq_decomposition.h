@@ -52,13 +52,15 @@ class RQDecomposition {
   typedef Eigen::Matrix<typename MatrixType::Scalar,
                         MatrixType::ColsAtCompileTime,
                         MatrixType::RowsAtCompileTime,
-                        (MatrixType::Flags & Eigen::RowMajorBit) ?
-                        Eigen::RowMajor : Eigen::ColMajor,
+                        (MatrixType::Flags & Eigen::RowMajorBit)
+                            ? Eigen::RowMajor
+                            : Eigen::ColMajor,
                         MatrixType::MaxColsAtCompileTime,
-                        MatrixType::MaxRowsAtCompileTime> MatrixTransposeType;
+                        MatrixType::MaxRowsAtCompileTime>
+      MatrixTransposeType;
 
-  typedef typename
-  Eigen::HouseholderQR<MatrixTransposeType>::MatrixQType MatrixQType;
+  typedef typename Eigen::HouseholderQR<MatrixTransposeType>::MatrixQType
+      MatrixQType;
 
   // The matlab version of RQ decomposition is as follows:
   //
@@ -111,13 +113,9 @@ class RQDecomposition {
   }
 
   // Mimic Eigen's QR interface.
-  const MatrixType& matrixR() const {
-    return matrix_r_;
-  }
+  const MatrixType& matrixR() const { return matrix_r_; }
 
-  const MatrixQType& matrixQ() const {
-    return matrix_q_;
-  }
+  const MatrixQType& matrixQ() const { return matrix_q_; }
 
  private:
   MatrixType matrix_r_;

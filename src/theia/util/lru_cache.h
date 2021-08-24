@@ -37,12 +37,12 @@
 
 #include <glog/logging.h>
 
+#include <functional>
 #include <limits>
 #include <list>
 #include <mutex>  // NOLINT
 #include <unordered_map>
 #include <utility>
-#include <functional>
 
 #include "theia/util/map_util.h"
 #include "theia/util/util.h"
@@ -70,8 +70,7 @@ class LRUCache {
   // should use _2, etc. to specify that more arguments will be passed.
   LRUCache(const std::function<ValueType(const KeyType&)>& fetch_entry,
            const int max_cache_entries)
-      : fetch_entry_(fetch_entry),
-        max_cache_entries_(max_cache_entries) {
+      : fetch_entry_(fetch_entry), max_cache_entries_(max_cache_entries) {
     CHECK_GT(max_cache_entries_, 0)
         << "The maximum number of cache entries must be greater than 0.";
     cache_misses_ = 0;
@@ -97,9 +96,8 @@ class LRUCache {
 
       // If the entry was in the cache, we need to update the access record by
       // moving it to the back of the list.
-      cache_entries_.splice(cache_entries_.end(),
-                            cache_entries_,
-                            it->second.second);
+      cache_entries_.splice(
+          cache_entries_.end(), cache_entries_, it->second.second);
 
       return it->second.first;
     }

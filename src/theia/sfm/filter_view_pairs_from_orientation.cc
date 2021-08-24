@@ -11,7 +11,6 @@
 
 // Steffen Urban
 
-
 #include "theia/sfm/filter_view_pairs_from_orientation.h"
 
 #include <Eigen/Core>
@@ -22,11 +21,11 @@
 
 #include "theia/math/rotation.h"
 #include "theia/math/util.h"
-#include "theia/util/hash.h"
-#include "theia/util/map_util.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/types.h"
 #include "theia/sfm/view_graph/view_graph.h"
+#include "theia/util/hash.h"
+#include "theia/util/map_util.h"
 
 namespace theia {
 

@@ -32,20 +32,20 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
 #include <vector>
-#include "gtest/gtest.h"
 
 #include "theia/alignment/alignment.h"
 #include "theia/math/util.h"
-#include "theia/util/random.h"
-#include "theia/util/util.h"
 #include "theia/sfm/pose/dls_pnp.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/types.h"
+#include "theia/util/random.h"
+#include "theia/util/util.h"
 
 namespace theia {
 namespace {
@@ -77,7 +77,8 @@ void TestDlsPnpWithNoise(const std::vector<Vector3d>& world_points,
     // Reproject 3D points into camera frame.
     feature_points.push_back(
         (expected_transform * world_points[i].homogeneous())
-            .eval().hnormalized());
+            .eval()
+            .hnormalized());
   }
 
   if (projection_noise_std_dev) {
@@ -99,8 +100,7 @@ void TestDlsPnpWithNoise(const std::vector<Vector3d>& world_points,
   for (int i = 0; i < num_solutions; i++) {
     // Check that reprojection errors are small.
     Matrix3x4d soln_transform;
-    soln_transform <<
-        soln_rotation[i].toRotationMatrix(), soln_translation[i];
+    soln_transform << soln_rotation[i].toRotationMatrix(), soln_translation[i];
 
     for (int j = 0; j < num_points; j++) {
       const Vector2d reprojected_point =
@@ -128,12 +128,12 @@ void TestDlsPnpWithNoise(const std::vector<Vector3d>& world_points,
 }
 
 void BasicTest() {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   const double kNoise = 0.0;
   const double kMaxReprojectionError = 1e-4;
@@ -149,22 +149,19 @@ void BasicTest() {
                       kMaxAllowedTranslationDifference);
 }
 
-TEST(DlsPnp, Basic) {
-  BasicTest();
-}
+TEST(DlsPnp, Basic) { BasicTest(); }
 
 TEST(DlsPnp, NoiseTest) {
-    const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                              Vector3d(1.0, -1.0, 2.0),
-                                              Vector3d(-1.0, 1.0, 2.0),
-                                              Vector3d(2.0, 1.0, 3.0),
-                                              Vector3d(-1.0, -3.0, 2.0),
-                                              Vector3d(1.0, -2.0, 1.0),
-                                              Vector3d(-1.0, 4.0, 2.0),
-                                              Vector3d(-2.0, 2.0, 3.0)
-    };
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   const double kNoise = 1.0 / 512.0;
   const double kMaxReprojectionError = 5e-3;
@@ -181,17 +178,15 @@ TEST(DlsPnp, NoiseTest) {
 }
 
 TEST(DlsPnp, ManyPoints) {
-// Sets some test rotations and translations.
-  static const Vector3d kAxes[] = {
-      Vector3d(0.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized()
-  };
+  // Sets some test rotations and translations.
+  static const Vector3d kAxes[] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 0.0).normalized(),
+                                   Vector3d(1.0, 0.0, 0.0).normalized(),
+                                   Vector3d(1.0, 0.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 1.0).normalized(),
+                                   Vector3d(1.0, 1.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 1.0).normalized(),
+                                   Vector3d(1.0, 1.0, 1.0).normalized()};
 
   static const double kRotationAngles[THEIA_ARRAYSIZE(kAxes)] = {
       DegToRad(7.0),
@@ -212,10 +207,10 @@ TEST(DlsPnp, ManyPoints) {
       Vector3d(3.0, 1.5, 18.0),
       Vector3d(1.0, 7.0, 11.0),
       Vector3d(0.0, 0.0, 0.0),  // Tests no translation.
-      Vector3d(0.0, 0.0, 0.0)  // Tests no translation and no rotation.
+      Vector3d(0.0, 0.0, 0.0)   // Tests no translation and no rotation.
   };
 
-  static const int num_points[3] = { 100, 500, 1000 };
+  static const int num_points[3] = {100, 500, 1000};
   const double kNoise = 1.0 / 512.0;
   const double kMaxReprojectionError = 1e-2;
   const double kMaxAllowedRotationDifference = DegToRad(0.3);
@@ -244,17 +239,16 @@ TEST(DlsPnp, ManyPoints) {
 }
 
 TEST(DlsPnp, NoRotation) {
-    const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                              Vector3d(1.0, -1.0, 2.0),
-                                              Vector3d(-1.0, 1.0, 2.0),
-                                              Vector3d(2.0, 1.0, 3.0),
-                                              Vector3d(-1.0, -3.0, 2.0),
-                                              Vector3d(1.0, -2.0, 1.0),
-                                              Vector3d(-1.0, 4.0, 2.0),
-                                              Vector3d(-2.0, 2.0, 3.0)
-    };
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(0.0), Vector3d(0.0, 0.0, 1.0)));
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(0.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   const double kNoise = 1.0 / 512.0;
   const double kMaxReprojectionError = 5e-3;
@@ -271,17 +265,16 @@ TEST(DlsPnp, NoRotation) {
 }
 
 TEST(DlsPnp, NoTranslation) {
-      const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                              Vector3d(1.0, -1.0, 2.0),
-                                              Vector3d(-1.0, 1.0, 2.0),
-                                              Vector3d(2.0, 1.0, 3.0),
-                                              Vector3d(-1.0, -3.0, 2.0),
-                                              Vector3d(1.0, -2.0, 1.0),
-                                              Vector3d(-1.0, 4.0, 2.0),
-                                              Vector3d(-2.0, 2.0, 3.0)
-    };
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(0.0, 0.0, 0.0);
   const double kNoise = 1.0 / 512.0;
   const double kMaxReprojectionError = 1e-2;
@@ -298,17 +291,16 @@ TEST(DlsPnp, NoTranslation) {
 }
 
 TEST(DlsPnp, OrthogonalRotation) {
-    const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                              Vector3d(1.0, -1.0, 2.0),
-                                              Vector3d(-1.0, 1.0, 2.0),
-                                              Vector3d(2.0, 1.0, 3.0),
-                                              Vector3d(-1.0, -3.0, 2.0),
-                                              Vector3d(1.0, -2.0, 1.0),
-                                              Vector3d(-1.0, 4.0, 2.0),
-                                              Vector3d(-2.0, 2.0, 3.0)
-    };
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(90.0), Vector3d(0.0, 0.0, 1.0)));
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(90.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   const double kNoise = 1.0 / 512.0;
   const double kMaxReprojectionError = 5e-3;

@@ -49,10 +49,10 @@
 namespace theia {
 
 using Eigen::MatrixXd;
-using Eigen::Vector3d;
-using Eigen::VectorXd;
 using Eigen::Vector3cd;
+using Eigen::Vector3d;
 using Eigen::VectorXcd;
+using Eigen::VectorXd;
 
 namespace {
 // Machine precision constants.
@@ -106,10 +106,10 @@ void QuadraticSyntheticDivision(const VectorXd& polynomial,
   (*quotient)(1) = polynomial(1) - polynomial(0) * quadratic_divisor(1);
   for (int i = 2; i < polynomial.size() - 2; i++) {
     (*quotient)(i) = polynomial(i) - (*quotient)(i - 2) * quadratic_divisor(2) -
-        (*quotient)(i - 1) * quadratic_divisor(1);
+                     (*quotient)(i - 1) * quadratic_divisor(1);
   }
 
-  const VectorXd::ReverseReturnType &creverse_quotient = quotient->reverse();
+  const VectorXd::ReverseReturnType& creverse_quotient = quotient->reverse();
   (*remainder)(0) = polynomial.reverse()(1) -
                     quadratic_divisor(1) * creverse_quotient(0) -
                     quadratic_divisor(2) * creverse_quotient(1);
@@ -119,7 +119,7 @@ void QuadraticSyntheticDivision(const VectorXd& polynomial,
 
 // Determines whether the iteration has converged by examining the three most
 // recent values for convergence.
-template<typename T>
+template <typename T>
 bool HasConverged(const T& sequence) {
   const bool convergence_condition_1 =
       std::abs(sequence(1) - sequence(0)) < std::abs(sequence(0)) / 2.0;
@@ -375,8 +375,7 @@ bool JenkinsTraubSolver::ExtractRoots() {
 }
 
 // Stage 1: Generate K-polynomials with no shifts (i.e. zero-shifts).
-void JenkinsTraubSolver::ApplyZeroShiftToKPolynomial(
-    const int num_iterations) {
+void JenkinsTraubSolver::ApplyZeroShiftToKPolynomial(const int num_iterations) {
   // K0 is the first order derivative of polynomial.
   k_polynomial_ = DifferentiatePolynomial(polynomial_) / polynomial_.size();
   for (int i = 1; i < num_iterations; i++) {
@@ -578,9 +577,9 @@ bool JenkinsTraubSolver::ApplyLinearShiftToKPolynomial(
   }
 
   // Compute an initial guess for the root.
-  double real_root = (root -
-                      EvaluatePolynomial(polynomial_, root) /
-                      EvaluatePolynomial(k_polynomial_, root)).real();
+  double real_root = (root - EvaluatePolynomial(polynomial_, root) /
+                                 EvaluatePolynomial(k_polynomial_, root))
+                         .real();
 
   VectorXd deflated_polynomial, deflated_k_polynomial;
   double polynomial_at_root(0), k_polynomial_at_root(0);
@@ -611,8 +610,10 @@ bool JenkinsTraubSolver::ApplyLinearShiftToKPolynomial(
     }
 
     // Update the K-Polynomial.
-    SyntheticDivisionAndEvaluate(k_polynomial_, real_root,
-                                 &deflated_k_polynomial, &k_polynomial_at_root);
+    SyntheticDivisionAndEvaluate(k_polynomial_,
+                                 real_root,
+                                 &deflated_k_polynomial,
+                                 &k_polynomial_at_root);
     k_polynomial_ = AddPolynomials(
         deflated_k_polynomial,
         -k_polynomial_at_root / polynomial_at_root * deflated_polynomial);
@@ -633,8 +634,7 @@ bool JenkinsTraubSolver::ApplyLinearShiftToKPolynomial(
     // If the linear iterations appear to be stalling then we may have found a
     // double real root of the form (z - x^2). Attempt a quadratic variable
     // shift from the current estimate of the root.
-    if (i >= 2 &&
-        std::abs(delta_root) < 0.001 * std::abs(real_root) &&
+    if (i >= 2 && std::abs(delta_root) < 0.001 * std::abs(real_root) &&
         std::abs(prev_polynomial_at_root) < std::abs(polynomial_at_root)) {
       const std::complex<double> new_root(real_root, 0);
       return ApplyQuadraticShiftToKPolynomial(new_root,
@@ -771,7 +771,7 @@ void JenkinsTraubSolver::ComputeZeroShiftKPolynomial() {
 
   k_polynomial_ = AddPolynomials(k_polynomial_.head(k_polynomial_.size() - 1),
                                  -k_at_zero / polynomial_at_zero *
-                                 polynomial_.head(polynomial_.size() - 1));
+                                     polynomial_.head(polynomial_.size() - 1));
 }
 
 // The iterations are computed with the following equation:
@@ -821,8 +821,8 @@ VectorXd JenkinsTraubSolver::ComputeNextSigma() {
   const double b2 = -(creverse_k_polynomial(1) + b1 * creverse_polynomial(1)) /
                     creverse_polynomial(0);
 
-  const double a1 = b_* c_ - a_ * d_;
-  const double a2 = a_ * c_ + u * a_ * d_ + v * b_* d_;
+  const double a1 = b_ * c_ - a_ * d_;
+  const double a2 = a_ * c_ + u * a_ * d_ + v * b_ * d_;
   const double c2 = b1 * a2;
   const double c3 = b1 * b1 * (a_ * a_ + u * a_ * b_ + v * b_ * b_);
   const double c4 = v * b2 * a1 - c2 - c3;

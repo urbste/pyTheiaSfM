@@ -35,8 +35,8 @@
 #ifndef THEIA_SFM_GLOBAL_POSE_ESTIMATION_PAIRWISE_ROTATION_ERROR_H_
 #define THEIA_SFM_GLOBAL_POSE_ESTIMATION_PAIRWISE_ROTATION_ERROR_H_
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
+#include <ceres/rotation.h>
 
 namespace ceres {
 class CostFunction;
@@ -53,7 +53,7 @@ struct PairwiseRotationError {
   // The error is given by the rotation loop error as specified above. We return
   // 3 residuals to give more opportunity for optimization.
   template <typename T>
-  bool operator() (const T* rotation1, const T* rotation2, T* residuals) const;
+  bool operator()(const T* rotation1, const T* rotation2, T* residuals) const;
 
   static ceres::CostFunction* Create(const Eigen::Vector3d& relative_rotation,
                                      const double weight);
@@ -63,9 +63,9 @@ struct PairwiseRotationError {
 };
 
 template <typename T>
-bool PairwiseRotationError::operator() (const T* rotation1,
-                                        const T* rotation2,
-                                        T* residuals) const {
+bool PairwiseRotationError::operator()(const T* rotation1,
+                                       const T* rotation2,
+                                       T* residuals) const {
   // Convert angle axis rotations to rotation matrices.
   Eigen::Matrix<T, 3, 3> rotation1_mat, rotation2_mat;
   Eigen::Matrix3d relative_rotation_mat;
@@ -73,7 +73,8 @@ bool PairwiseRotationError::operator() (const T* rotation1,
       rotation1, ceres::ColumnMajorAdapter3x3(rotation1_mat.data()));
   ceres::AngleAxisToRotationMatrix(
       rotation2, ceres::ColumnMajorAdapter3x3(rotation2_mat.data()));
-  ceres::AngleAxisToRotationMatrix(relative_rotation_.data(),
+  ceres::AngleAxisToRotationMatrix(
+      relative_rotation_.data(),
       ceres::ColumnMajorAdapter3x3(relative_rotation_mat.data()));
 
   // Compute the loop rotation from the two global rotations.

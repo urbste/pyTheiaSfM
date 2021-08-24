@@ -32,17 +32,19 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <fstream>  // NOLINT
 
 DEFINE_string(reconstruction, "", "Theia Reconstruction file.");
-DEFINE_string(images, "",
+DEFINE_string(images,
+              "",
               "A filepath wildcard specifying all images that were used in the "
               "reconstruction.");
-DEFINE_string(pmvs_working_directory, "",
+DEFINE_string(pmvs_working_directory,
+              "",
               "A directory to store the necessary pmvs files.");
 DEFINE_int32(num_threads, 1, "Number of threads used in PMVS.");
 
@@ -113,8 +115,7 @@ int WriteCamerasToPMVS(const theia::Reconstruction& reconstruction) {
   return current_image_index;
 }
 
-void WritePMVSOptions(const std::string& working_dir,
-                      const int num_images) {
+void WritePMVSOptions(const std::string& working_dir, const int num_images) {
   std::ofstream ofs(working_dir + "/pmvs_options.txt");
   ofs << "level 1" << std::endl;
   ofs << "csize 2" << std::endl;

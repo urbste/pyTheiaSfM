@@ -45,7 +45,8 @@ using Eigen::Vector3d;
 using Eigen::Vector4d;
 
 Track::Track()
-    : is_estimated_(false), inverse_depth_(0.0),
+    : is_estimated_(false),
+      inverse_depth_(0.0),
       reference_view_id_(theia::kInvalidViewId) {
   point_.setZero();
   color_.setZero();
@@ -60,17 +61,15 @@ void Track::SetEstimated(const bool is_estimated) {
 
 bool Track::IsEstimated() const { return is_estimated_; }
 
-const Eigen::Vector4d &Track::Point() const { return point_; }
+const Eigen::Vector4d& Track::Point() const { return point_; }
 
-Vector4d *Track::MutablePoint() { return &point_; }
+Vector4d* Track::MutablePoint() { return &point_; }
 
-void Track::SetPoint(const Eigen::Vector4d& point) {
-  point_ = point;
-}
+void Track::SetPoint(const Eigen::Vector4d& point) { point_ = point; }
 
-const Eigen::Matrix<uint8_t, 3, 1> &Track::Color() const { return color_; }
+const Eigen::Matrix<uint8_t, 3, 1>& Track::Color() const { return color_; }
 
-Eigen::Matrix<uint8_t, 3, 1> *Track::MutableColor() { return &color_; }
+Eigen::Matrix<uint8_t, 3, 1>* Track::MutableColor() { return &color_; }
 
 void Track::SetColor(const Eigen::Matrix<uint8_t, 3, 1>& color) {
   color_ = color;
@@ -93,30 +92,32 @@ bool Track::RemoveView(const ViewId view_id) {
   return successfull_removed;
 }
 
-const std::unordered_set<ViewId> &Track::ViewIds() const { return view_ids_; }
+const std::unordered_set<ViewId>& Track::ViewIds() const { return view_ids_; }
 
 ViewId Track::ReferenceViewId() const { return reference_view_id_; }
 
-const double &Track::InverseDepth() const { return inverse_depth_; }
+const double& Track::InverseDepth() const { return inverse_depth_; }
 
-double *Track::MutableInverseDepth() { return &inverse_depth_; }
+double* Track::MutableInverseDepth() { return &inverse_depth_; }
 
-void Track::SetInverseDepth(const double& inverse_depth) { 
-  inverse_depth_ = inverse_depth; 
-  }
+void Track::SetInverseDepth(const double& inverse_depth) {
+  inverse_depth_ = inverse_depth;
+}
 
-void Track::SetReferenceBearingVector(const Vector3d &ref_bearing) {
+void Track::SetReferenceBearingVector(const Vector3d& ref_bearing) {
   reference_bearing_ = ref_bearing;
 }
 
-const Vector3d &Track::ReferenceBearingVector() const { return reference_bearing_; }
+const Vector3d& Track::ReferenceBearingVector() const {
+  return reference_bearing_;
+}
 
-void Track::SetReferenceDescriptor(const Eigen::VectorXf &descriptor) {
+void Track::SetReferenceDescriptor(const Eigen::VectorXf& descriptor) {
   reference_descriptor_ = descriptor;
 }
 
-const Eigen::VectorXf &Track::ReferenceDescriptor() const {
+const Eigen::VectorXf& Track::ReferenceDescriptor() const {
   return reference_descriptor_;
 }
 
-} // namespace theia
+}  // namespace theia

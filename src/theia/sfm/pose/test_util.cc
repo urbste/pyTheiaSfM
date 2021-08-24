@@ -34,9 +34,9 @@
 
 #include "theia/sfm/pose/test_util.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <ceres/rotation.h>
 #include <glog/logging.h>
 
 #include "theia/math/util.h"
@@ -112,7 +112,8 @@ void CreateRandomPointsInFrustum(const double near_plane_width,
     const double x_radius = near_plane_width * rand_depth / near_plane_depth;
     const double y_radius = near_plane_height * rand_depth / near_plane_depth;
     Vector3d rand_point(rng->RandDouble(-x_radius, x_radius),
-                        rng->RandDouble(-y_radius, y_radius), rand_depth);
+                        rng->RandDouble(-y_radius, y_radius),
+                        rand_depth);
     random_points->push_back(rand_point);
   }
 }

@@ -98,15 +98,12 @@ bool EstimateFundamentalMatrix(
     RansacSummary* ransac_summary) {
   FundamentalMatrixEstimator fundamental_matrix_estimator;
   std::unique_ptr<SampleConsensusEstimator<FundamentalMatrixEstimator> >
-      ransac = CreateAndInitializeRansacVariant(ransac_type,
-                                                ransac_params,
-                                                fundamental_matrix_estimator);
+      ransac = CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, fundamental_matrix_estimator);
 
   // Estimate essential matrix.
-  return ransac->Estimate(normalized_correspondences,
-                          fundamental_matrix,
-                          ransac_summary);
+  return ransac->Estimate(
+      normalized_correspondences, fundamental_matrix, ransac_summary);
 }
-
 
 }  // namespace theia

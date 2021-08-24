@@ -36,9 +36,9 @@
 #define THEIA_MATCHING_CASCADE_HASHER_H_
 
 #include <Eigen/Core>
-#include <stdint.h>
 #include <bitset>
 #include <memory>
+#include <stdint.h>
 #include <vector>
 
 #include "theia/util/random.h"

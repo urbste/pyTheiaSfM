@@ -1,19 +1,19 @@
 #include "theia/sfm/estimators/estimate_absolute_pose_with_known_orientation.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <vector>
 
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
 #include "theia/sfm/pose/essential_matrix_utils.h"
-#include "theia/sfm/pose/util.h"
 #include "theia/sfm/pose/relative_pose_from_two_points_with_known_rotation.h"
+#include "theia/sfm/pose/util.h"
+#include "theia/sfm/triangulation/triangulation.h"
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/sample_consensus_estimator.h"
-#include "theia/sfm/triangulation/triangulation.h"
 #include "theia/util/util.h"
 
 namespace theia {
@@ -34,10 +34,10 @@ class RelativePoseWithKnownOrientationEstimator
   bool EstimateModel(const std::vector<FeatureCorrespondence>& correspondences,
                      std::vector<Eigen::Vector3d>* relative_positions) const {
     Eigen::Vector3d position;
-    const Eigen::Vector2d rotated_features1[2] = {correspondences[0].feature1.point_,
-                                                  correspondences[1].feature1.point_};
-    const Eigen::Vector2d rotated_features2[2] = {correspondences[0].feature2.point_,
-                                                  correspondences[1].feature2.point_};
+    const Eigen::Vector2d rotated_features1[2] = {
+        correspondences[0].feature1.point_, correspondences[1].feature1.point_};
+    const Eigen::Vector2d rotated_features2[2] = {
+        correspondences[0].feature2.point_, correspondences[1].feature2.point_};
     if (!RelativePoseFromTwoPointsWithKnownRotation(
             rotated_features1, rotated_features2, &position)) {
       return false;
@@ -72,13 +72,11 @@ bool EstimateRelativePoseWithKnownOrientation(
   RelativePoseWithKnownOrientationEstimator relative_pose_estimator;
   std::unique_ptr<
       SampleConsensusEstimator<RelativePoseWithKnownOrientationEstimator> >
-      ransac = CreateAndInitializeRansacVariant(ransac_type,
-                                                ransac_params,
-                                                relative_pose_estimator);
+      ransac = CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, relative_pose_estimator);
   // Estimate the relative pose.
-  return ransac->Estimate(rotated_correspondences,
-                          relative_camera2_position,
-                          ransac_summary);
+  return ransac->Estimate(
+      rotated_correspondences, relative_camera2_position, ransac_summary);
 }
 
 }  // namespace theia

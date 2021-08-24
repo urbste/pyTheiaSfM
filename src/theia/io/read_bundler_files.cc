@@ -66,10 +66,12 @@ bool AddViewsToReconstruction(const BundlerFileReader& reader,
   }
 
   std::string truncated_filename;
+  int view_cnt = 0;
   for (const ListImgEntry& entry : reader.img_entries()) {
     CHECK(theia::GetFilenameFromFilepath(
         entry.filename, true, &truncated_filename));
-    const ViewId view_id = reconstruction->AddView(truncated_filename);
+    const ViewId view_id =
+        reconstruction->AddView(truncated_filename, ++view_cnt);
     CHECK_NE(view_id, kInvalidViewId)
         << "View " << truncated_filename << " could not be added.";
     // Set the focal length.
@@ -87,8 +89,7 @@ bool AddViewsToReconstruction(const BundlerFileReader& reader,
 }
 
 std::unordered_set<ViewId> AddCamerasToReconstruction(
-    const BundlerFileReader& reader,
-    Reconstruction* reconstruction) {
+    const BundlerFileReader& reader, Reconstruction* reconstruction) {
   std::unordered_set<ViewId> views_to_remove;
   // Populate camera parameters.
   static const Eigen::Matrix3d bundler_to_theia =
@@ -97,7 +98,7 @@ std::unordered_set<ViewId> AddCamerasToReconstruction(
   const int num_cameras = reader.NumCameras();
   CHECK_EQ(num_cameras, reconstruction->NumViews())
       << "The number of cameras in the lists file is not equal to the number "
-      "of cameras in the bundle file. Data is corrupted!";
+         "of cameras in the bundle file. Data is corrupted!";
 
   // Read in the camera params.
   const std::vector<BundlerCamera>& bundler_cameras = reader.cameras();
@@ -123,8 +124,7 @@ std::unordered_set<ViewId> AddCamerasToReconstruction(
     // removed.
     camera->SetPrincipalPoint(0, 0);
 
-    const Eigen::Matrix3d rotation =
-        bundler_to_theia * bundler_camera.rotation;
+    const Eigen::Matrix3d rotation = bundler_to_theia * bundler_camera.rotation;
     const Eigen::Vector3d translation =
         bundler_to_theia * bundler_camera.translation;
 
@@ -142,10 +142,9 @@ std::unordered_set<ViewId> AddCamerasToReconstruction(
   return views_to_remove;
 }
 
-int AddTracksToReconstruction(
-    const BundlerFileReader& reader,
-    const  std::unordered_set<ViewId>& views_to_remove,
-    Reconstruction* reconstruction) {
+int AddTracksToReconstruction(const BundlerFileReader& reader,
+                              const std::unordered_set<ViewId>& views_to_remove,
+                              Reconstruction* reconstruction) {
   // Read in each 3D point and correspondences.
   int num_invalid_tracks = 0;
   const int num_points = reader.NumPoints();
@@ -166,7 +165,8 @@ int AddTracksToReconstruction(
 
       // NOTE: We flip the pixel directions to compensate for Bundlers different
       // coordinate system in images.
-      const Feature feature(Eigen::Vector2d(feature_info.kpt_x, -feature_info.kpt_y));
+      const Feature feature(
+          Eigen::Vector2d(feature_info.kpt_x, -feature_info.kpt_y));
 
       // Push the sift key correspondence to the view list if the view is valid.
       if (!ContainsKey(views_to_remove, feature_info.camera_index)) {
@@ -261,8 +261,8 @@ bool ReadBundlerFiles(const std::string& lists_file,
   }
 
   // Populate views in the reconstruction.
-  CHECK(AddViewsToReconstruction(
-      bundler_file_reader, CHECK_NOTNULL(reconstruction)));
+  CHECK(AddViewsToReconstruction(bundler_file_reader,
+                                 CHECK_NOTNULL(reconstruction)));
 
   // Populate cameras to reconstruction.
   const std::unordered_set<ViewId> views_to_remove =

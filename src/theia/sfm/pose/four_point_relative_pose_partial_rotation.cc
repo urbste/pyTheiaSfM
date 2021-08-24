@@ -40,8 +40,8 @@
 #include <Eigen/Geometry>
 #include <Eigen/SVD>
 #include <glog/logging.h>
-#include <math.h>
 #include <limits>
+#include <math.h>
 
 #include "theia/alignment/alignment.h"
 
@@ -60,7 +60,9 @@ using Eigen::Vector4d;
 
 namespace {
 
-bool SolveQEP(const Matrix4d& M, const Matrix4d& C, const Matrix4d& K,
+bool SolveQEP(const Matrix4d& M,
+              const Matrix4d& C,
+              const Matrix4d& K,
               std::vector<double>* eigenvalues,
               std::vector<Vector4d>* eigenvectors) {
   // Solves the quadratic eigenvalue problem:

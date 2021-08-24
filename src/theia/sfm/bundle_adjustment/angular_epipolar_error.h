@@ -48,16 +48,15 @@ struct AngularEpipolarError {
                        const Eigen::Vector2d& feature2)
       : feature1_(feature1), feature2_(feature2) {}
 
-  template<typename T> bool operator()(const T* rotation,
-                                       const T* translation,
-                                       T* angular_epipolar_error) const {
+  template <typename T>
+  bool operator()(const T* rotation,
+                  const T* translation,
+                  T* angular_epipolar_error) const {
     // Convert features to T.
-    const Eigen::Matrix<T, 3, 1> feature1(T(feature1_(0)),
-                                          T(feature1_(1)),
-                                          T(1.0));
-    const Eigen::Matrix<T, 3, 1> feature2(T(feature2_(0)),
-                                          T(feature2_(1)),
-                                          T(1.0));
+    const Eigen::Matrix<T, 3, 1> feature1(
+        T(feature1_(0)), T(feature1_(1)), T(1.0));
+    const Eigen::Matrix<T, 3, 1> feature2(
+        T(feature2_(0)), T(feature2_(1)), T(1.0));
 
     // Obtain rotation matrix.
     Eigen::Matrix<T, 3, 3> rotation_matrix;

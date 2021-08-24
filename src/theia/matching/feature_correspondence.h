@@ -35,9 +35,9 @@
 #ifndef THEIA_MATCHING_FEATURE_CORRESPONDENCE_H_
 #define THEIA_MATCHING_FEATURE_CORRESPONDENCE_H_
 
+#include <Eigen/Core>
 #include <cereal/access.hpp>
 #include <cereal/cereal.hpp>
-#include <Eigen/Core>
 #include <stdint.h>
 
 #include "theia/alignment/alignment.h"
@@ -58,7 +58,8 @@ struct FeatureCorrespondence {
       : feature1(feature1), feature2(feature2) {}
 
   bool operator==(const FeatureCorrespondence& other) const {
-    return (feature1.point_ == other.feature1.point_ && feature2.point_ == other.feature2.point_);
+    return (feature1.point_ == other.feature1.point_ &&
+            feature2.point_ == other.feature2.point_);
   }
 
  private:

@@ -70,7 +70,9 @@ class RadialHomographyMatrixEstimator
     }
 
     return SixPointRadialDistortionHomography(
-        image_points_left, image_points_right, results,
+        image_points_left,
+        image_points_right,
+        results,
         correspondences[0].min_radial_distortion,
         correspondences[0].max_radial_distortion);
   }
@@ -79,8 +81,10 @@ class RadialHomographyMatrixEstimator
   double Error(const RadialDistortionFeatureCorrespondence& correspondence,
                const RadialHomographyResult& radial_homography_result) const {
     return CheckRadialSymmetricError(
-        radial_homography_result, correspondence.feature_left,
-        correspondence.feature_right, correspondence.focal_length_estimate_left,
+        radial_homography_result,
+        correspondence.feature_left,
+        correspondence.feature_right,
+        correspondence.focal_length_estimate_left,
         correspondence.focal_length_estimate_right);
   }
 
@@ -89,10 +93,12 @@ class RadialHomographyMatrixEstimator
 };
 
 bool EstimateRadialHomographyMatrix(
-    const RansacParameters& ransac_params, const RansacType& ransac_type,
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
     const std::vector<RadialDistortionFeatureCorrespondence>&
         normalized_correspondences,
-    RadialHomographyResult* result, RansacSummary* ransac_summary) {
+    RadialHomographyResult* result,
+    RansacSummary* ransac_summary) {
   RadialHomographyMatrixEstimator radial_homography_matrix_estimator;
 
   std::unique_ptr<SampleConsensusEstimator<RadialHomographyMatrixEstimator> >
@@ -102,4 +108,4 @@ bool EstimateRadialHomographyMatrix(
   // Estimate radial distortion homography matrix.
   return ransac->Estimate(normalized_correspondences, result, ransac_summary);
 }
-}
+}  // namespace theia

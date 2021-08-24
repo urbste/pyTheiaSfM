@@ -36,9 +36,9 @@
 
 #include "theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <memory>
 #include <vector>
 
@@ -54,7 +54,8 @@
 namespace theia {
 namespace {
 
-void DistortPoint(const Eigen::Vector2d& point2d, const double& distortion,
+void DistortPoint(const Eigen::Vector2d& point2d,
+                  const double& distortion,
                   Eigen::Vector2d* distorted_point) {
   const double r_u_sq = point2d[0] * point2d[0] + point2d[1] * point2d[1];
 
@@ -92,12 +93,14 @@ class RadialDistUncalibratedAbsolutePoseEstimator
   bool EstimateModel(
       const std::vector<FeatureCorrespondence2D3D>& correspondences,
       std::vector<RadialDistUncalibratedAbsolutePose>* absolute_poses) const {
-    const Vector2d features[4] = {
-        correspondences[0].feature, correspondences[1].feature,
-        correspondences[2].feature, correspondences[3].feature};
-    const Vector3d world_points[4] = {
-        correspondences[0].world_point, correspondences[1].world_point,
-        correspondences[2].world_point, correspondences[3].world_point};
+    const Vector2d features[4] = {correspondences[0].feature,
+                                  correspondences[1].feature,
+                                  correspondences[2].feature,
+                                  correspondences[3].feature};
+    const Vector3d world_points[4] = {correspondences[0].world_point,
+                                      correspondences[1].world_point,
+                                      correspondences[2].world_point,
+                                      correspondences[3].world_point};
 
     std::vector<Matrix3d> rotations;
     std::vector<Vector3d> translations;
@@ -105,10 +108,16 @@ class RadialDistUncalibratedAbsolutePoseEstimator
     std::vector<double> focal_lenghts;
 
     if (!FourPointsPoseFocalLengthRadialDistortion(
-            features, world_points, meta_data_.max_focal_length,
-            meta_data_.min_focal_length, meta_data_.max_radial_distortion,
-            meta_data_.min_radial_distortion, &rotations, &translations,
-            &radial_distortions, &focal_lenghts))
+            features,
+            world_points,
+            meta_data_.max_focal_length,
+            meta_data_.min_focal_length,
+            meta_data_.max_radial_distortion,
+            meta_data_.min_radial_distortion,
+            &rotations,
+            &translations,
+            &radial_distortions,
+            &focal_lenghts))
       return false;
 
     absolute_poses->resize(rotations.size());
@@ -133,14 +142,14 @@ class RadialDistUncalibratedAbsolutePoseEstimator
         Vector3d(absolute_pose.focal_length, absolute_pose.focal_length, 1.0)
             .asDiagonal();
     if (absolute_pose.translation[2] < 0.0) {
-        return 1.0e10;
+      return 1.0e10;
     }
     Vector3d reproj_pt = (absolute_pose.rotation * correspondence.world_point +
                           absolute_pose.translation);
     const Eigen::Vector2d reproj_pt_2d = (K * reproj_pt).hnormalized();
     Eigen::Vector2d distorted_point;
-    DistortPoint(reproj_pt_2d, absolute_pose.radial_distortion,
-                 &distorted_point);
+    DistortPoint(
+        reproj_pt_2d, absolute_pose.radial_distortion, &distorted_point);
 
     return (distorted_point - correspondence.feature).squaredNorm();
   }
@@ -158,7 +167,8 @@ class RadialDistUncalibratedAbsolutePoseEstimator
 }  // namespace
 
 bool EstimateRadialDistUncalibratedAbsolutePose(
-    const RansacParameters& ransac_params, const RansacType& ransac_type,
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
     const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences,
     const RadialDistUncalibratedAbsolutePoseMetaData& meta_data,
     RadialDistUncalibratedAbsolutePose* absolute_pose,
@@ -168,11 +178,11 @@ bool EstimateRadialDistUncalibratedAbsolutePose(
 
   std::unique_ptr<
       SampleConsensusEstimator<RadialDistUncalibratedAbsolutePoseEstimator> >
-      ransac = CreateAndInitializeRansacVariant(ransac_type, ransac_params,
-                                                absolute_pose_estimator);
+      ransac = CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, absolute_pose_estimator);
   // Estimate the absolute pose.
-  const bool success = ransac->Estimate(normalized_correspondences,
-                                        absolute_pose, ransac_summary);
+  const bool success = ransac->Estimate(
+      normalized_correspondences, absolute_pose, ransac_summary);
 
   return success;
 }

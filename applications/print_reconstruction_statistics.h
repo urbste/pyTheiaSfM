@@ -51,12 +51,12 @@ inline void PrintReprojectionErrors(
     const theia::Track* track = CHECK_NOTNULL(reconstruction.Track(track_id));
     for (const theia::ViewId view_id : track->ViewIds()) {
       const theia::Feature* feature =
-        reconstruction.View(view_id)->GetFeature(track_id);
+          reconstruction.View(view_id)->GetFeature(track_id);
 
       // Reproject the observations.
       Eigen::Vector2d projection;
-      if (reconstruction.View(view_id)
-              ->Camera().ProjectPoint(track->Point(), &projection) < 0) {
+      if (reconstruction.View(view_id)->Camera().ProjectPoint(
+              track->Point(), &projection) < 0) {
         ++num_projections_behind_camera;
       }
 
@@ -74,9 +74,9 @@ inline void PrintReprojectionErrors(
 
   std::sort(reprojection_errors.begin(), reprojection_errors.end());
   const double mean_reprojection_error =
-      std::accumulate(reprojection_errors.begin(),
-                      reprojection_errors.end(),
-                      0.0) / static_cast<double>(reprojection_errors.size());
+      std::accumulate(
+          reprojection_errors.begin(), reprojection_errors.end(), 0.0) /
+      static_cast<double>(reprojection_errors.size());
   const double median_reprojection_error =
       reprojection_errors[reprojection_errors.size() / 2];
 
@@ -89,8 +89,8 @@ inline void PrintReprojectionErrors(
 
 inline void PrintTrackLengthHistogram(
     const theia::Reconstruction& reconstruction) {
-  std::vector<int> histogram_bins = {2, 3,  4,  5,  6,  7, 8,
-                                     9, 10, 15, 20, 25, 50};
+  std::vector<int> histogram_bins = {
+      2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 50};
   theia::Histogram<int> histogram(histogram_bins);
   std::vector<int> track_lengths;
   for (const theia::TrackId track_id : reconstruction.TrackIds()) {
@@ -121,7 +121,6 @@ inline void PrintTrackLengthHistogram(
   // Display the track length histogram.
   const std::string hist_msg = histogram.PrintString();
   LOG(INFO) << "Track length histogram = \n" << hist_msg;
-
 }
 
 #endif  // APPLICATIONS_PRINT_RECONSTRUCTION_STATISTICS_H_

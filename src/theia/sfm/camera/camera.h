@@ -35,15 +35,15 @@
 #ifndef THEIA_SFM_CAMERA_CAMERA_H_
 #define THEIA_SFM_CAMERA_CAMERA_H_
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <algorithm>
 #include <cereal/access.hpp>
 #include <cereal/cereal.hpp>
 #include <cereal/types/memory.hpp>
 #include <glog/logging.h>
-#include <stdint.h>
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <algorithm>
 #include <memory>
+#include <stdint.h>
 #include <vector>
 
 #include "theia/sfm/camera/camera_intrinsics_model.h"
@@ -82,10 +82,9 @@ class Camera {
   //
   // NOTE: The projection matrix does not contain information about radial
   // distortion, so those parameters will need to be set separately.
-  bool InitializeFromProjectionMatrix(
-      const int image_width,
-      const int image_height,
-      const Matrix3x4d projection_matrix);
+  bool InitializeFromProjectionMatrix(const int image_width,
+                                      const int image_height,
+                                      const Matrix3x4d projection_matrix);
 
   // Set the camera parameters (and camera intrinsics type) from the prior.
   void SetFromCameraIntrinsicsPriors(const CameraIntrinsicsPrior& prior);
@@ -122,7 +121,8 @@ class Camera {
   // infinity.
   double ProjectPoint(const Eigen::Vector4d& point,
                       Eigen::Vector2d* pixel) const;
-  std::tuple<double, Eigen::Vector2d> ProjectPointWrapper(const Eigen::Vector4d& point);
+  std::tuple<double, Eigen::Vector2d> ProjectPointWrapper(
+      const Eigen::Vector4d& point);
 
   // Converts the pixel point to a ray in 3D space such that the origin of the
   // ray is at the camera center and the direction is the pixel direction
@@ -195,10 +195,7 @@ class Camera {
   // Indexing for the location of parameters. Collecting the extrinsics and
   // intrinsics into a single array makes the interface to bundle adjustment
   // with Ceres much simpler.
-  enum ExternalParametersIndex {
-    POSITION = 0,
-    ORIENTATION = 3
-  };
+  enum ExternalParametersIndex { POSITION = 0, ORIENTATION = 3 };
 
   static const int kExtrinsicsSize = 6;
 

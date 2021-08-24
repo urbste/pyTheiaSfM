@@ -70,24 +70,30 @@ struct RadialHomographyResult {
 bool SixPointRadialDistortionHomography(
     const std::vector<Eigen::Vector2d>& normalized_feature_points_left,
     const std::vector<Eigen::Vector2d>& normalized_feature_points_right,
-    std::vector<RadialHomographyResult>* results, double lmin = -5.0,
+    std::vector<RadialHomographyResult>* results,
+    double lmin = -5.0,
     double lmax = 0.0);
 
 // Some helper functions, also needed by the estimator
 void DistortPoint(const Eigen::Vector3d& point_in_camera,
-                  const double focal_length, const double radial_distortion,
+                  const double focal_length,
+                  const double radial_distortion,
                   Eigen::Vector2d& distorted_point);
 
 void UndistortPoint(const Eigen::Vector2d& distorted_point,
-                    const double focal_length, const double radial_distortion,
+                    const double focal_length,
+                    const double radial_distortion,
                     Eigen::Vector3d& undistorted_point);
 
-void ProjectCameraToCamera(const Eigen::Matrix3d& H, const Eigen::Vector3d& X,
+void ProjectCameraToCamera(const Eigen::Matrix3d& H,
+                           const Eigen::Vector3d& X,
                            Eigen::Vector3d* Y);
 
 double CheckRadialSymmetricError(
     const RadialHomographyResult& radial_homography,
-    const Eigen::Vector2d& pt_left, const Eigen::Vector2d& pt_right,
-    const double focal_length1, const double focal_length2);
-}
+    const Eigen::Vector2d& pt_left,
+    const Eigen::Vector2d& pt_right,
+    const double focal_length1,
+    const double focal_length2);
+}  // namespace theia
 #endif

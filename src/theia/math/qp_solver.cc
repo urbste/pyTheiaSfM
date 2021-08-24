@@ -86,9 +86,10 @@ bool QPSolver::Solve(Eigen::VectorXd* solution) {
   int coeff_index = -1;
   if ((ub_ - lb_).minCoeff(&coeff_index) < 0) {
     LOG(WARNING) << "You specified invalid lower or upper bounds for the "
-                    "problem. lower_bound[" << coeff_index
-                 << "] = " << lb_[coeff_index] << " but upper_bound["
-                 << coeff_index << "] = " << ub_[coeff_index];
+                    "problem. lower_bound["
+                 << coeff_index << "] = " << lb_[coeff_index]
+                 << " but upper_bound[" << coeff_index
+                 << "] = " << ub_[coeff_index];
     return false;
   }
 
@@ -140,8 +141,8 @@ bool QPSolver::Solve(Eigen::VectorXd* solution) {
         options_.relative_tolerance * (options_.rho * u).norm();
 
     // Log the result to the screen.
-    VLOG(2) << StringPrintf(row_format.c_str(), objval, i, r_norm, s_norm,
-                            primal_eps, dual_eps);
+    VLOG(2) << StringPrintf(
+        row_format.c_str(), objval, i, r_norm, s_norm, primal_eps, dual_eps);
     // Determine if the minimizer has converged.
     if (r_norm < primal_eps && s_norm < dual_eps) {
       break;

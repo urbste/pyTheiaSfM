@@ -34,10 +34,10 @@
 
 #include "theia/image/image.h"
 
+#include <Eigen/Core>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
 #include <glog/logging.h>
-#include <Eigen/Core>
 
 #include <algorithm>
 #include <cmath>
@@ -64,14 +64,14 @@ FloatImage::FloatImage(const int width, const int height, const int channels) {
   image_.reset(image_spec);
 }
 
-FloatImage::FloatImage(const int width, const int height, const int channels,
+FloatImage::FloatImage(const int width,
+                       const int height,
+                       const int channels,
                        float* buffer)
     : image_(oiio::ImageSpec(width, height, channels, oiio::TypeDesc::FLOAT),
              reinterpret_cast<void*>(buffer)) {}
 
-FloatImage::FloatImage(const oiio::ImageBuf& image) {
-  image_.copy(image);
-}
+FloatImage::FloatImage(const oiio::ImageBuf& image) { image_.copy(image); }
 
 FloatImage& FloatImage::operator=(const FloatImage& image2) {
   image_.copy(image2.image_);
@@ -94,7 +94,9 @@ int FloatImage::Height() const { return image_.spec().height; }
 
 int FloatImage::Channels() const { return image_.nchannels(); }
 
-void FloatImage::SetXY(const int x, const int y, const int c,
+void FloatImage::SetXY(const int x,
+                       const int y,
+                       const int c,
                        const float value) {
   DCHECK_GE(x, 0);
   DCHECK_LT(x, Width());
@@ -137,17 +139,21 @@ Eigen::Vector3f FloatImage::GetXY(const int x, const int y) const {
   return rgb;
 }
 
-void FloatImage::SetRowCol(const int row, const int col, const int channel,
+void FloatImage::SetRowCol(const int row,
+                           const int col,
+                           const int channel,
                            const float value) {
   SetXY(col, row, channel, value);
 }
 
-void FloatImage::SetRowCol(const int row, const int col,
+void FloatImage::SetRowCol(const int row,
+                           const int col,
                            const Eigen::Vector3f& rgb) {
   SetXY(col, row, rgb);
 }
 
-float FloatImage::GetRowCol(const int row, const int col,
+float FloatImage::GetRowCol(const int row,
+                            const int col,
                             const int channel) const {
   return GetXY(col, row, channel);
 }
@@ -156,7 +162,8 @@ Eigen::Vector3f FloatImage::GetRowCol(const int row, const int col) const {
   return GetXY(col, row);
 }
 
-float FloatImage::BilinearInterpolate(const double x, const double y,
+float FloatImage::BilinearInterpolate(const double x,
+                                      const double y,
                                       const int c) const {
   DCHECK_GE(c, 0);
   DCHECK_LT(c, Channels());
@@ -197,8 +204,8 @@ void FloatImage::ConvertToRGBImage() {
   if (Channels() == 1) {
     // Copy the single grayscale channel into r, g, and b.
     const oiio::ImageBuf source(image_);
-    const oiio::ImageSpec image_spec(Width(), Height(), 3,
-                                     oiio::TypeDesc::FLOAT);
+    const oiio::ImageSpec image_spec(
+        Width(), Height(), 3, oiio::TypeDesc::FLOAT);
     image_.reset(image_spec);
     oiio::ImageBufAlgo::paste(image_, 0, 0, 0, 0, source);
     oiio::ImageBufAlgo::paste(image_, 0, 0, 0, 1, source);
@@ -206,8 +213,8 @@ void FloatImage::ConvertToRGBImage() {
   } else if (Channels() > 3) {
     // Copy only the r,g,b channels and drop the rest.
     const oiio::ImageBuf source(image_);
-    const oiio::ImageSpec image_spec(Width(), Height(), 3,
-                                     oiio::TypeDesc::FLOAT);
+    const oiio::ImageSpec image_spec(
+        Width(), Height(), 3, oiio::TypeDesc::FLOAT);
     image_.reset(image_spec);
     oiio::ImageBufAlgo::channels(image_, source, 3, NULL);
   } else {
@@ -296,7 +303,8 @@ FloatImage FloatImage::ComputeGradient() const {
 
 void FloatImage::ApproximateGaussianBlur(const int kernel_size) {
   oiio::ImageBuf kernel;
-  oiio::ImageBufAlgo::make_kernel(kernel, "gaussian",
+  oiio::ImageBufAlgo::make_kernel(kernel,
+                                  "gaussian",
                                   static_cast<float>(kernel_size),
                                   static_cast<float>(kernel_size));
   oiio::ImageBufAlgo::convolve(image_, image_, kernel);
@@ -329,8 +337,8 @@ void FloatImage::Resize(int new_width, int new_height, int num_channels) {
   // If the image has not been initialized then initialize it with the image
   // spec. Otherwise resize the image and interpolate pixels accordingly.
   if (!image_.initialized()) {
-    oiio::ImageSpec image_spec(new_width, new_height, num_channels,
-                               oiio::TypeDesc::FLOAT);
+    oiio::ImageSpec image_spec(
+        new_width, new_height, num_channels, oiio::TypeDesc::FLOAT);
     image_.reset(image_spec);
   } else {
     CHECK_LE(Channels(), num_channels) << "Decreasing channels is not "
@@ -353,7 +361,8 @@ void FloatImage::ResizeRowsCols(int new_rows, int new_cols) {
 }
 
 void FloatImage::Resize(double scale) {
-  Resize(static_cast<int>(scale * Width()), static_cast<int>(scale * Height()),
+  Resize(static_cast<int>(scale * Width()),
+         static_cast<int>(scale * Height()),
          Channels());
 }
 

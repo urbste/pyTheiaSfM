@@ -34,20 +34,19 @@
 
 #include "theia/math/rotation.h"
 
+#include <ceres/autodiff_cost_function.h>
+#include <ceres/cost_function.h>
+#include <ceres/problem.h>
 #include <ceres/rotation.h>
 #include <ceres/solver.h>
-#include <ceres/problem.h>
-#include <ceres/cost_function.h>
-#include <ceres/autodiff_cost_function.h>
-#include <ceres/rotation.h>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <glog/logging.h>
 #include <limits>
 
-#include "theia/util/map_util.h"
 #include "theia/math/util.h"
+#include "theia/util/map_util.h"
 
 namespace {
 
@@ -149,7 +148,8 @@ Eigen::Vector3d MultiplyRotations(const Eigen::Vector3d& rotation1,
 }
 
 Eigen::Vector3d RelativeTranslationFromTwoPositions(
-    const Eigen::Vector3d& position1, const Eigen::Vector3d& position2,
+    const Eigen::Vector3d& position1,
+    const Eigen::Vector3d& position2,
     const Eigen::Vector3d& rotation1) {
   Eigen::Matrix3d rotation_matrix1;
   ceres::AngleAxisToRotationMatrix(rotation1.data(), rotation_matrix1.data());
@@ -173,7 +173,8 @@ void AlignRotations(const std::vector<Eigen::Vector3d>& gt_rotation,
   ceres::Problem problem;
   for (size_t i = 0; i < gt_rotation.size(); i++) {
     problem.AddResidualBlock(
-        RotationAlignmentError::Create(gt_rotation[i], rotation->at(i)), NULL,
+        RotationAlignmentError::Create(gt_rotation[i], rotation->at(i)),
+        NULL,
         rotation_alignment.data());
   }
 
@@ -211,7 +212,7 @@ void AlignOrientations(
   }
 }
 
-Eigen::MatrixXd ProjectToSOd(const Eigen::MatrixXd &M) {
+Eigen::MatrixXd ProjectToSOd(const Eigen::MatrixXd& M) {
   // Compute the SVD of M.
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(
       M, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -242,8 +243,10 @@ Eigen::Vector3d RelativeRotationFromTwoRotations(
 
 // Computes R_ij = R_j * R_i^t. With noise.
 Eigen::Vector3d RelativeRotationFromTwoRotations(
-    const Eigen::Vector3d& rotation1, const Eigen::Vector3d& rotation2,
-    const double noise, theia::RandomNumberGenerator& rng) {
+    const Eigen::Vector3d& rotation1,
+    const Eigen::Vector3d& rotation2,
+    const double noise,
+    theia::RandomNumberGenerator& rng) {
   const Eigen::Matrix3d noisy_rotation =
       Eigen::AngleAxisd(DegToRad(noise), rng.RandVector3d().normalized())
           .toRotationMatrix();

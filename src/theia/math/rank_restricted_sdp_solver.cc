@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,14 +20,17 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+// edited by Steffen Urban (urbste@googlemail.com), August 2021
 
 #include "theia/math/rank_restricted_sdp_solver.h"
 
@@ -44,10 +48,10 @@ RankRestrictedSDPSolver::RankRestrictedSDPSolver(const size_t n,
     : RankRestrictedSDPSolver(n, block_dim, math::SDPSolverOptions()) {}
 
 RankRestrictedSDPSolver::RankRestrictedSDPSolver(
-    const size_t n, const size_t block_dim,
+    const size_t n,
+    const size_t block_dim,
     const math::SDPSolverOptions& options)
-    : BCMSDPSolver(n, block_dim, options),
-      rank_(3) {
+    : BCMSDPSolver(n, block_dim, options), rank_(3) {
   Y_ = Eigen::MatrixXd::Zero(rank_, dim_ * n_);
 }
 
@@ -73,11 +77,17 @@ void RankRestrictedSDPSolver::Solve(math::Summary& summary) {
   summary.begin_time = std::chrono::high_resolution_clock::now();
   while (summary.total_iterations_num < sdp_solver_options_.max_iterations) {
     if (sdp_solver_options_.verbose) {
-      LogToStd(summary.total_iterations_num, prev_func_val, cur_func_val, error,
+      LogToStd(summary.total_iterations_num,
+               prev_func_val,
+               cur_func_val,
+               error,
                duration);
     }
 
-    if (IsConverge(prev_func_val, cur_func_val, sdp_solver_options_.tolerance, &error)) {
+    if (IsConverge(prev_func_val,
+                   cur_func_val,
+                   sdp_solver_options_.tolerance,
+                   &error)) {
       break;
     }
 
@@ -110,7 +120,10 @@ void RankRestrictedSDPSolver::Solve(math::Summary& summary) {
 
   summary.total_iterations_num++;
   if (sdp_solver_options_.verbose) {
-    LogToStd(summary.total_iterations_num, prev_func_val, cur_func_val, error,
+    LogToStd(summary.total_iterations_num,
+             prev_func_val,
+             cur_func_val,
+             error,
              duration);
   }
 }
@@ -125,25 +138,24 @@ Eigen::MatrixXd RankRestrictedSDPSolver::GetSolution() const {
   return solution;
 }
 
-const Eigen::MatrixXd& RankRestrictedSDPSolver::GetYStar() const {
-  return Y_;
-}
+const Eigen::MatrixXd& RankRestrictedSDPSolver::GetYStar() const { return Y_; }
 
-const Eigen::MatrixXd RankRestrictedSDPSolver::ComputeQYt(const Eigen::MatrixXd& Y) const {
+const Eigen::MatrixXd RankRestrictedSDPSolver::ComputeQYt(
+    const Eigen::MatrixXd& Y) const {
   return Q_ * Y.transpose();
 }
 
 Eigen::MatrixXd RankRestrictedSDPSolver::ComputeLambdaMatrix() const {
   const Eigen::MatrixXd QYt = this->ComputeQYt(Y_);
-  
+
   const size_t rank = Y_.rows();
   // \Lambda = \SymblockDiag(Q * Y^T * Y).
   Eigen::MatrixXd Lambda = Eigen::MatrixXd::Zero(dim_, n_ * dim_);
 
 #pragma omp parallel for num_threads(sdp_solver_options_.num_threads)
   for (size_t i = 0; i < n_; ++i) {
-    Eigen::MatrixXd P = QYt.block(i * dim_, 0, dim_, rank) *
-      Y_.block(0, i * dim_, rank, dim_);
+    Eigen::MatrixXd P =
+        QYt.block(i * dim_, 0, dim_, rank) * Y_.block(0, i * dim_, rank, dim_);
     Lambda.block(0, i * dim_, dim_, dim_) = 0.5 * (P + P.transpose());
   }
 
@@ -173,11 +185,10 @@ void RankRestrictedSDPSolver::SetOptimalY(const Eigen::MatrixXd& Y) {
   Y_ = Y;
 }
 
-size_t RankRestrictedSDPSolver::CurrentRank() const {
-  return rank_;
-}
+size_t RankRestrictedSDPSolver::CurrentRank() const { return rank_; }
 
-Eigen::MatrixXd RankRestrictedSDPSolver::Project(const Eigen::MatrixXd& A) const {
+Eigen::MatrixXd RankRestrictedSDPSolver::Project(
+    const Eigen::MatrixXd& A) const {
   // We use a generalization of the well-known SVD-based projection for the
   // orthogonal and special orthogonal groups; see for example Proposition 7
   // in the paper "Projection-Like Retractions on Matrix Manifolds" by Absil
@@ -188,11 +199,13 @@ Eigen::MatrixXd RankRestrictedSDPSolver::Project(const Eigen::MatrixXd& A) const
 #pragma omp parallel for num_threads(sdp_solver_options_.num_threads)
   for (size_t i = 0; i < n_; ++i) {
     // Compute the (thin) SVD of the ith block of A
-    Eigen::JacobiSVD<Eigen::MatrixXd> SVD(A.block(0, i * dim_, rank_, dim_),
-                                 Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Eigen::JacobiSVD<Eigen::MatrixXd> SVD(
+        A.block(0, i * dim_, rank_, dim_),
+        Eigen::ComputeThinU | Eigen::ComputeThinV);
 
     // Set the ith block of P to the SVD-based projection of the ith block of A
-    P.block(0, i * dim_, rank_, dim_) = SVD.matrixU() * SVD.matrixV().transpose();
+    P.block(0, i * dim_, rank_, dim_) =
+        SVD.matrixU() * SVD.matrixV().transpose();
   }
   return P;
 }
@@ -225,17 +238,17 @@ Eigen::MatrixXd RankRestrictedSDPSolver::TangentSpaceProjection(
 }
 
 Eigen::MatrixXd RankRestrictedSDPSolver::SymBlockDiagProduct(
-    const Eigen::MatrixXd &A, const Eigen::MatrixXd &B,
-    const Eigen::MatrixXd &C) const {
+    const Eigen::MatrixXd& A,
+    const Eigen::MatrixXd& B,
+    const Eigen::MatrixXd& C) const {
   // Preallocate result matrix
   Eigen::MatrixXd R(rank_, dim_ * n_);
 
 #pragma omp parallel for num_threads(sdp_solver_options_.num_threads)
   for (size_t i = 0; i < n_; ++i) {
     // Compute block product Bi' * Ci.
-    Eigen::MatrixXd P =
-        B.block(0, i * dim_, rank_, dim_).transpose() *
-            C.block(0, i * dim_, rank_, dim_);
+    Eigen::MatrixXd P = B.block(0, i * dim_, rank_, dim_).transpose() *
+                        C.block(0, i * dim_, rank_, dim_);
     // Symmetrize this block.
     Eigen::MatrixXd S = 0.5 * (P + P.transpose());
     // Compute Ai * S and set corresponding block of R.

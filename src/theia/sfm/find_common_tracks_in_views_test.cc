@@ -36,10 +36,10 @@
 #include <utility>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/sfm/find_common_tracks_in_views.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/types.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -61,12 +61,11 @@ TEST(FindCommonTracksInViews, NoCommonTracks) {
   reconstruction.AddTrack(track2);
   reconstruction.AddTrack(track3);
 
-  const std::vector<ViewId> views_to_find_common_tracks = { 0, 1, 2, 3};
-  const std::vector<TrackId> common_tracks = FindCommonTracksInViews(
-      reconstruction, views_to_find_common_tracks);
+  const std::vector<ViewId> views_to_find_common_tracks = {0, 1, 2, 3};
+  const std::vector<TrackId> common_tracks =
+      FindCommonTracksInViews(reconstruction, views_to_find_common_tracks);
   EXPECT_EQ(common_tracks.size(), 0);
 }
-
 
 TEST(FindCommonTracksInViews, CommonTracks) {
   const Feature feature;
@@ -86,9 +85,9 @@ TEST(FindCommonTracksInViews, CommonTracks) {
   reconstruction.AddTrack(track2);
   reconstruction.AddTrack(track3);
 
-  const std::vector<ViewId> views_to_find_common_tracks = { 0, 1, 2, 3};
-  const std::vector<TrackId> common_tracks = FindCommonTracksInViews(
-      reconstruction, views_to_find_common_tracks);
+  const std::vector<ViewId> views_to_find_common_tracks = {0, 1, 2, 3};
+  const std::vector<TrackId> common_tracks =
+      FindCommonTracksInViews(reconstruction, views_to_find_common_tracks);
   EXPECT_EQ(common_tracks.size(), 1);
 }
 

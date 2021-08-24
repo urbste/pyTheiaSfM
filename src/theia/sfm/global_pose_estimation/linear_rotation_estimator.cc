@@ -34,10 +34,10 @@
 
 #include "theia/sfm/global_pose_estimation/linear_rotation_estimator.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 #include <Eigen/SparseQR>
+#include <ceres/rotation.h>
 #include <unordered_map>
 #include <vector>
 
@@ -137,17 +137,15 @@ void LinearRotationEstimator::AddRelativeRotationConstraint(
   // view1 index comes before the view2 index, then B = -R_ij and C =
   // I. Otherwise, B = I and C = -R_ij.
   if (view1_index < view2_index) {
-    Fill3x3SparseMatrix(
-        -relative_rotation_matrix.transpose(),
-        kNumRotationMatrixDimensions * view1_index,
-        kNumRotationMatrixDimensions * view2_index,
-        &constraint_entries_);
+    Fill3x3SparseMatrix(-relative_rotation_matrix.transpose(),
+                        kNumRotationMatrixDimensions * view1_index,
+                        kNumRotationMatrixDimensions * view2_index,
+                        &constraint_entries_);
   } else {
-    Fill3x3SparseMatrix(
-        -relative_rotation_matrix,
-        kNumRotationMatrixDimensions * view2_index,
-        kNumRotationMatrixDimensions * view1_index,
-        &constraint_entries_);
+    Fill3x3SparseMatrix(-relative_rotation_matrix,
+                        kNumRotationMatrixDimensions * view2_index,
+                        kNumRotationMatrixDimensions * view1_index,
+                        &constraint_entries_);
   }
 }
 
@@ -171,8 +169,9 @@ bool LinearRotationEstimator::EstimateRotations(
   // Compute the 3 eigenvectors corresponding to the smallest eigenvalues. These
   // orthogonal vectors will contain the solution rotation matrices.
   SparseSymShiftSolveLLT op(constraint_matrix);
-  Spectra::SymEigsShiftSolver<double, Spectra::LARGEST_MAGN,
-                              SparseSymShiftSolveLLT> eigs(&op, 3, 6, 0.0);
+  Spectra::
+      SymEigsShiftSolver<double, Spectra::LARGEST_MAGN, SparseSymShiftSolveLLT>
+          eigs(&op, 3, 6, 0.0);
   eigs.init();
   eigs.compute();
 
@@ -202,11 +201,11 @@ bool LinearRotationEstimator::EstimateRotations(
   return true;
 }
 
-std::unordered_map<ViewId, Eigen::Vector3d> LinearRotationEstimator::EstimateRotationsWrapper(
-    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs) {
-    std::unordered_map<ViewId, Eigen::Vector3d> rotations;
-    //EstimateRotations(view_pairs, &rotations);
-    return rotations;
+// Python wrapper, Requires an initial guess of the global_orientations
+void LinearRotationEstimator::EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    std::unordered_map<ViewId, Eigen::Vector3d>& initial_global_orientations) {
+  EstimateRotations(view_pairs, &initial_global_orientations);
 }
 
 }  // namespace theia

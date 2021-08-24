@@ -52,9 +52,7 @@ bool DescriptorExtractor::ComputeDescriptors(
   auto keypoint_it = keypoints->begin();
   while (keypoint_it != keypoints->end()) {
     Eigen::VectorXf descriptor;
-    if (!ComputeDescriptor(gray_image,
-                           *keypoint_it,
-                           &descriptor)) {
+    if (!ComputeDescriptor(gray_image, *keypoint_it, &descriptor)) {
       keypoint_it = keypoints->erase(keypoint_it);
       continue;
     }

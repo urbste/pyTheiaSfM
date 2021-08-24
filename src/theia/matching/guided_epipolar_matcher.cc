@@ -35,22 +35,22 @@
 #include "theia/matching/guided_epipolar_matcher.h"
 
 #include <Eigen/Core>
-#include <stdint.h>
 #include <algorithm>
 #include <limits>
-#include <vector>
+#include <stdint.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "flann/flann.hpp"
 
-#include "theia/matching/keypoints_and_descriptors.h"
 #include "theia/matching/distance.h"
 #include "theia/matching/indexed_feature_match.h"
+#include "theia/matching/keypoints_and_descriptors.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/pose/fundamental_matrix_util.h"
-#include "theia/util/map_util.h"
 #include "theia/util/hash.h"
+#include "theia/util/map_util.h"
 #include "theia/util/random.h"
 
 namespace theia {
@@ -125,9 +125,8 @@ bool GuidedEpipolarMatcher::Initialize(
       continue;
     }
     for (int j = 0; j < image_grids_.size(); j++) {
-      image_grids_[j].AddFeature(i,
-                                 features2_.keypoints[i].x(),
-                                 features2_.keypoints[i].y());
+      image_grids_[j].AddFeature(
+          i, features2_.keypoints[i].x(), features2_.keypoints[i].y());
     }
     x.emplace_back(features2_.keypoints[i].x());
     y.emplace_back(features2_.keypoints[i].y());
@@ -166,8 +165,10 @@ bool GuidedEpipolarMatcher::GetMatches(
     // neighbor matches for each feature in this epiline group.
     std::vector<std::vector<float> > nn_distances;
     std::vector<std::vector<int> > nn_indices;
-    FindKNearestNeighbors(epiline_group.features, candidate_keypoint_indices,
-                          &nn_distances, &nn_indices);
+    FindKNearestNeighbors(epiline_group.features,
+                          candidate_keypoint_indices,
+                          &nn_distances,
+                          &nn_indices);
 
     // For each feature in the epiline group, check the Lowes ratio of the top 2
     // nearest neighbors to determine if the match is valid.
@@ -249,9 +250,8 @@ void GuidedEpipolarMatcher::GroupEpipolarLines(
 
     // See if an epipolar endpoint exists nearby. If it does not, then add a new
     // endpoint group.
-    if (i == 0 ||
-        (epiline_groups->back().endpoints[0] - line_endpoints[0])
-                .squaredNorm() > sq_max_distance_pixels) {
+    if (i == 0 || (epiline_groups->back().endpoints[0] - line_endpoints[0])
+                          .squaredNorm() > sq_max_distance_pixels) {
       // Create a new epiline group.
       EpilineGroup epiline_group;
       epiline_group.endpoints = line_endpoints;
@@ -282,8 +282,8 @@ void GuidedEpipolarMatcher::FindFeaturesNearEpipolarLines(
 
   // The number of steps required to "walk" between the line endpoints.
   const int num_steps =
-    static_cast<int>((line_endpoints[1] - line_endpoints[0]).norm() /
-                     options_.guided_matching_max_distance_pixels);
+      static_cast<int>((line_endpoints[1] - line_endpoints[0]).norm() /
+                       options_.guided_matching_max_distance_pixels);
 
   // Sample the epipolar line equally between the points where it intersects
   // the features bounding box.
@@ -318,8 +318,7 @@ void GuidedEpipolarMatcher::FindFeaturesNearEpipolarLines(
 }
 
 void GuidedEpipolarMatcher::FindEpipolarLineIntersection(
-    const Eigen::Vector3d& epipolar_line,
-    std::vector<Eigen::Vector2d>* lines) {
+    const Eigen::Vector3d& epipolar_line, std::vector<Eigen::Vector2d>* lines) {
   const double y_of_left_intersection =
       -(epipolar_line.z() + epipolar_line.x() * top_left_.x()) /
       epipolar_line.y();
@@ -387,7 +386,8 @@ void GuidedEpipolarMatcher::FindKNearestNeighbors(
 
   // Create the searchable KD-tree with FLANN.
   flann::Matrix<float> flann_candidate_descriptors(
-      candidate_descriptors.data(), candidate_descriptors.rows(),
+      candidate_descriptors.data(),
+      candidate_descriptors.rows(),
       candidate_descriptors.cols());
 
   flann::Index<flann::L2<float> > flann_kd_tree(
@@ -398,7 +398,9 @@ void GuidedEpipolarMatcher::FindKNearestNeighbors(
   const int max_leafs_to_check =
       std::max(static_cast<int>(candidate_descriptors.rows() * 0.2),
                kMinNumLeafsVisited);
-  flann_kd_tree.knnSearch(flann_query_descriptors, *nn_indices, *nn_distances,
+  flann_kd_tree.knnSearch(flann_query_descriptors,
+                          *nn_indices,
+                          *nn_distances,
                           kNumNearestNeighbors,
                           flann::SearchParams(max_leafs_to_check));
 
@@ -459,7 +461,7 @@ void GuidedEpipolarMatcher::ImageGrid::GetClosestGridCenter(
       cell_size_ + cell_offset_x_);
   grid_center->y() = static_cast<int>(
       std::floor((y - cell_offset_y_) / (2.0 * cell_size_)) * 2.0 * cell_size_ +
-      + cell_size_ + cell_offset_y_);
+      +cell_size_ + cell_offset_y_);
 }
 
 void GuidedEpipolarMatcher::ImageGrid::GetFeaturesFromCell(

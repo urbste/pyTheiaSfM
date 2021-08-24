@@ -60,8 +60,7 @@ Eigen::Matrix<double, 16, 16> BuildActionMatrix(
     RowMajorMatrixXd* template_matrix);
 
 inline Eigen::Matrix<double, 16, 16> BuildActionMatrix(
-    const Matrix10d& a_matrix,
-    const Vector10d& b_vector) {
+    const Matrix10d& a_matrix, const Vector10d& b_vector) {
   RowMajorMatrixXd template_matrix;
   return BuildActionMatrix(a_matrix, b_vector, &template_matrix);
 }

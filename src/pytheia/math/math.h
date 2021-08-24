@@ -7,8 +7,7 @@ namespace py = pybind11;
 namespace pytheia {
 namespace math {
 
-void pytheia_math(py::module &m);
+void pytheia_math(py::module& m);
 
 }
-}
-
+}  // namespace pytheia

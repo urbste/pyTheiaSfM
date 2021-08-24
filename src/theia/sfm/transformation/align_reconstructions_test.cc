@@ -34,18 +34,18 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
+#include <string>
 #include <utility>
 #include <vector>
-#include <string>
 
 #include "gtest/gtest.h"
 
 #include "theia/sfm/reconstruction.h"
-#include "theia/sfm/types.h"
 #include "theia/sfm/transformation/align_reconstructions.h"
 #include "theia/sfm/transformation/transform_reconstruction.h"
+#include "theia/sfm/types.h"
 #include "theia/util/random.h"
 #include "theia/util/stringprintf.h"
 
@@ -130,10 +130,8 @@ void TestAlignReconstructions(const int num_views,
                               const Eigen::Vector3d translation,
                               const double scale) {
   Reconstruction reconstruction1, reconstruction2;
-  BuildReconstructions(num_views,
-                       num_tracks,
-                       &reconstruction1,
-                       &reconstruction2);
+  BuildReconstructions(
+      num_views, num_tracks, &reconstruction1, &reconstruction2);
   TransformReconstruction(rotation, translation, scale, &reconstruction1);
   AlignReconstructions(reconstruction1, &reconstruction2);
   VerifyAlignment(reconstruction1, reconstruction2);
@@ -189,6 +187,5 @@ TEST(AlignReconstructions, SimilarityTransformation) {
   const double scale = 4.2;
   TestAlignReconstructions(kNumViews, kNumTracks, rotation, translation, scale);
 }
-
 
 }  // namespace theia

@@ -84,7 +84,7 @@ void GetRigidTransform(const Matrix<double, 3, 4>& points1,
     s(2, 2) = sign;
   }
   *rotation = svd.matrixU() * s * svd.matrixV().transpose();
-  *translation = - *rotation * mean_points1 + mean_points2;
+  *translation = -*rotation * mean_points1 + mean_points2;
 }
 
 }  // namespace
@@ -94,8 +94,8 @@ int FourPointPoseAndFocalLength(
     const std::vector<Eigen::Vector3d>& world_points_vector,
     std::vector<Eigen::Matrix<double, 3, 4> >* projection_matrices) {
   Eigen::Map<const Matrix<double, 2, 4> > features(feature_vectors[0].data());
-  Eigen::Map<const Matrix<double, 3, 4> > world_points(world_points_vector[0]
-                                                           .data());
+  Eigen::Map<const Matrix<double, 3, 4> > world_points(
+      world_points_vector[0].data());
 
   // Normalize the points such that the mean = 0, variance = sqrt(2.0).
   const Vector3d mean_world_point = world_points.rowwise().mean();
@@ -111,18 +111,24 @@ int FourPointPoseAndFocalLength(
       features / features_variance;
 
   // Precompute monomials.
-  const double glab = (world_point_normalized.col(0) -
-                       world_point_normalized.col(1)).squaredNorm();
-  const double glac = (world_point_normalized.col(0) -
-                       world_point_normalized.col(2)).squaredNorm();
-  const double glad = (world_point_normalized.col(0) -
-                       world_point_normalized.col(3)).squaredNorm();
-  const double glbc = (world_point_normalized.col(1) -
-                       world_point_normalized.col(2)).squaredNorm();
-  const double glbd = (world_point_normalized.col(1) -
-                       world_point_normalized.col(3)).squaredNorm();
-  const double glcd = (world_point_normalized.col(2) -
-                       world_point_normalized.col(3)).squaredNorm();
+  const double glab =
+      (world_point_normalized.col(0) - world_point_normalized.col(1))
+          .squaredNorm();
+  const double glac =
+      (world_point_normalized.col(0) - world_point_normalized.col(2))
+          .squaredNorm();
+  const double glad =
+      (world_point_normalized.col(0) - world_point_normalized.col(3))
+          .squaredNorm();
+  const double glbc =
+      (world_point_normalized.col(1) - world_point_normalized.col(2))
+          .squaredNorm();
+  const double glbd =
+      (world_point_normalized.col(1) - world_point_normalized.col(3))
+          .squaredNorm();
+  const double glcd =
+      (world_point_normalized.col(2) - world_point_normalized.col(3))
+          .squaredNorm();
 
   if (glab * glac * glad * glbc * glbd * glcd < 1e-15) {
     return -1;
@@ -132,8 +138,15 @@ int FourPointPoseAndFocalLength(
   std::vector<double> focal_length;
   std::vector<Vector3d> depths;
 
-  FourPointFocalLengthHelper(glab, glac, glad, glbc, glbd, glcd,
-                             features_normalized, &focal_length, &depths);
+  FourPointFocalLengthHelper(glab,
+                             glac,
+                             glad,
+                             glbc,
+                             glbd,
+                             glcd,
+                             features_normalized,
+                             &focal_length,
+                             &depths);
 
   if (focal_length.size() == 0) {
     return -1;
@@ -151,18 +164,24 @@ int FourPointPoseAndFocalLength(
 
     // Fix the scale.
     Matrix<double, 6, 1> d;
-    d(0) = sqrt(glab / (adjusted_world_points.col(0) -
-                        adjusted_world_points.col(1)).squaredNorm());
-    d(1) = sqrt(glac / (adjusted_world_points.col(0) -
-                        adjusted_world_points.col(2)).squaredNorm());
-    d(2) = sqrt(glad / (adjusted_world_points.col(0) -
-                        adjusted_world_points.col(3)).squaredNorm());
-    d(3) = sqrt(glbc / (adjusted_world_points.col(1) -
-                        adjusted_world_points.col(2)).squaredNorm());
-    d(4) = sqrt(glbd / (adjusted_world_points.col(1) -
-                        adjusted_world_points.col(3)).squaredNorm());
-    d(5) = sqrt(glcd / (adjusted_world_points.col(2) -
-                        adjusted_world_points.col(3)).squaredNorm());
+    d(0) = sqrt(glab /
+                (adjusted_world_points.col(0) - adjusted_world_points.col(1))
+                    .squaredNorm());
+    d(1) = sqrt(glac /
+                (adjusted_world_points.col(0) - adjusted_world_points.col(2))
+                    .squaredNorm());
+    d(2) = sqrt(glad /
+                (adjusted_world_points.col(0) - adjusted_world_points.col(3))
+                    .squaredNorm());
+    d(3) = sqrt(glbc /
+                (adjusted_world_points.col(1) - adjusted_world_points.col(2))
+                    .squaredNorm());
+    d(4) = sqrt(glbd /
+                (adjusted_world_points.col(1) - adjusted_world_points.col(3))
+                    .squaredNorm());
+    d(5) = sqrt(glcd /
+                (adjusted_world_points.col(2) - adjusted_world_points.col(3))
+                    .squaredNorm());
 
     const double gta = d.mean();
 
@@ -171,8 +190,11 @@ int FourPointPoseAndFocalLength(
     // Get the transformation by aligning the points.
     Matrix3d rotation;
     Vector3d translation;
-    GetRigidTransform(world_point_normalized, adjusted_world_points, false,
-                      &rotation, &translation);
+    GetRigidTransform(world_point_normalized,
+                      adjusted_world_points,
+                      false,
+                      &rotation,
+                      &translation);
 
     translation =
         world_point_variance * translation - rotation * mean_world_point;

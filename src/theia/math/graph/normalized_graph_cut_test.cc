@@ -36,9 +36,9 @@
 #include <unordered_set>
 #include <utility>
 
-#include "gtest/gtest.h"
 #include "theia/math/graph/normalized_graph_cut.h"
 #include "theia/util/hash.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 

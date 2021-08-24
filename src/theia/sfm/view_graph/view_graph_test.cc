@@ -39,20 +39,19 @@
 
 #include "gtest/gtest.h"
 
-#include "theia/util/hash.h"
-#include "theia/util/map_util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/types.h"
 #include "theia/sfm/view_graph/view_graph.h"
+#include "theia/util/hash.h"
+#include "theia/util/map_util.h"
+#include "theia/util/random.h"
 
 namespace theia {
 
 // This is needed for EXPECT_EQ(TwoViewInfo, TwoViewInfo);
 bool operator==(const TwoViewInfo& lhs, const TwoViewInfo& rhs) {
-  return lhs.position_2 == rhs.position_2 &&
-      lhs.rotation_2 == rhs.rotation_2 &&
-      lhs.num_verified_matches == rhs.num_verified_matches;
+  return lhs.position_2 == rhs.position_2 && lhs.rotation_2 == rhs.rotation_2 &&
+         lhs.num_verified_matches == rhs.num_verified_matches;
 }
 
 TEST(ViewGraph, Constructor) {
@@ -109,8 +108,7 @@ TEST(ViewGraph, AddEdge) {
   EXPECT_EQ(*edge_2_0, info2);
   EXPECT_TRUE(graph.GetEdge(2, 1) == nullptr);
 
-  const std::unordered_set<ViewId> edge_ids =
-      *graph.GetNeighborIdsForView(0);
+  const std::unordered_set<ViewId> edge_ids = *graph.GetNeighborIdsForView(0);
   EXPECT_TRUE(ContainsKey(edge_ids, 1));
   EXPECT_TRUE(ContainsKey(edge_ids, 2));
 

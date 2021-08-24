@@ -32,14 +32,14 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
+#include <bitset>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <bitset>
 #include <string>
-#include "gtest/gtest.h"
 
-#include "theia/util/random.h"
 #include "theia/matching/distance.h"
+#include "theia/util/random.h"
 
 namespace theia {
 

@@ -32,17 +32,16 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <vector>
 
 #include "gtest/gtest.h"
 
-#include "theia/sfm/global_pose_estimation/compute_triplet_baseline_ratios.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/feature.h"
+#include "theia/sfm/global_pose_estimation/compute_triplet_baseline_ratios.h"
 #include "theia/sfm/view_triplet.h"
 #include "theia/util/random.h"
 
@@ -118,12 +117,18 @@ void TestTripletBaselineComputation(const double pixel_noise,
     camera3.ProjectPoint(point, &feature3[i].point_);
 
     if (pixel_noise > 0) {
-      feature1[i].point_.x() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature1[i].point_.y() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature2[i].point_.x() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature2[i].point_.y() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature3[i].point_.x() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
-      feature3[i].point_.y() += rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature1[i].point_.x() +=
+          rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature1[i].point_.y() +=
+          rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature2[i].point_.x() +=
+          rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature2[i].point_.y() +=
+          rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature3[i].point_.x() +=
+          rng.RandGaussian(0.0, pixel_noise / kFocalLength);
+      feature3[i].point_.y() +=
+          rng.RandGaussian(0.0, pixel_noise / kFocalLength);
     }
   }
 
@@ -133,11 +138,8 @@ void TestTripletBaselineComputation(const double pixel_noise,
   TwoViewInfoFromCameras(camera1, camera2, &triplet.info_one_two);
   TwoViewInfoFromCameras(camera1, camera3, &triplet.info_one_three);
   TwoViewInfoFromCameras(camera2, camera3, &triplet.info_two_three);
-  EXPECT_TRUE(ComputeTripletBaselineRatios(triplet,
-                                           feature1,
-                                           feature2,
-                                           feature3,
-                                           &baseline));
+  EXPECT_TRUE(ComputeTripletBaselineRatios(
+      triplet, feature1, feature2, feature3, &baseline));
 
   // Measure the error.
   const double baseline_12 =
@@ -146,9 +148,8 @@ void TestTripletBaselineComputation(const double pixel_noise,
       (camera3.GetPosition() - camera1.GetPosition()).norm();
   const double baseline_23 =
       (camera3.GetPosition() - camera2.GetPosition()).norm();
-  const Eigen::Vector3d gt_baseline(1.0,
-                                    baseline_13 / baseline_12,
-                                    baseline_23 / baseline_12);
+  const Eigen::Vector3d gt_baseline(
+      1.0, baseline_13 / baseline_12, baseline_23 / baseline_12);
 
   EXPECT_NEAR(gt_baseline[0] / baseline[0], 1.0, tolerance);
   EXPECT_NEAR(gt_baseline[1] / baseline[1], 1.0, tolerance);

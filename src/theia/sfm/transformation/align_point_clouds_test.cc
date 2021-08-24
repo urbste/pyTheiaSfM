@@ -36,10 +36,10 @@
 #include <Eigen/Geometry>
 #include <glog/logging.h>
 
-#include "gtest/gtest.h"
 #include "theia/math/util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/transformation/align_point_clouds.h"
+#include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 using Eigen::Matrix;
@@ -53,12 +53,15 @@ namespace {
 double kEpsilon = 1e-6;
 
 void UmeyamaSimpleTest() {
-  std::vector<Vector3d> left = {
-      Vector3d(0.4, -3.105, 2.147),  Vector3d(1.293, 7.1982, -.068),
-      Vector3d(-5.34, 0.708, -3.69), Vector3d(-.345, 1.987, 0.936),
-      Vector3d(0.93, 1.45, 1.079),   Vector3d(-3.15, -4.73, 2.49),
-      Vector3d(2.401, -2.03, -1.87), Vector3d(3.192, -.573, 0.1),
-      Vector3d(-2.53, 3.07, -5.19)};
+  std::vector<Vector3d> left = {Vector3d(0.4, -3.105, 2.147),
+                                Vector3d(1.293, 7.1982, -.068),
+                                Vector3d(-5.34, 0.708, -3.69),
+                                Vector3d(-.345, 1.987, 0.936),
+                                Vector3d(0.93, 1.45, 1.079),
+                                Vector3d(-3.15, -4.73, 2.49),
+                                Vector3d(2.401, -2.03, -1.87),
+                                Vector3d(3.192, -.573, 0.1),
+                                Vector3d(-2.53, 3.07, -5.19)};
 
   const Matrix3d rotation_mat =
       Eigen::AngleAxisd(DegToRad(15.0), Vector3d(1.0, -2.7, 1.9).normalized())
@@ -128,7 +131,8 @@ void UmeyamaWithWeigthsAndNoise() {
 
     const Matrix3d rotation_mat =
         Eigen::AngleAxisd(DegToRad(rng.RandDouble(0.0, 360.0)),
-                          rng.RandVector3d().normalized()).toRotationMatrix();
+                          rng.RandVector3d().normalized())
+            .toRotationMatrix();
     const Vector3d translation_vec = rng.RandVector3d();
     const double expected_scale = rng.RandDouble(0.001, 10);
 
@@ -152,8 +156,12 @@ void UmeyamaWithWeigthsAndNoise() {
     Matrix3d rotation_noisy;
     Vector3d translation_noisy;
     double scale_noisy;
-    AlignPointCloudsUmeyamaWithWeights(left, right, weights, &rotation_noisy,
-                                       &translation_noisy, &scale_noisy);
+    AlignPointCloudsUmeyamaWithWeights(left,
+                                       right,
+                                       weights,
+                                       &rotation_noisy,
+                                       &translation_noisy,
+                                       &scale_noisy);
     for (size_t i = 0; i < num_points; ++i) {
       const double dist = (right[i] - (scale_noisy * rotation_noisy * left[i] +
                                        translation_noisy))
@@ -165,8 +173,12 @@ void UmeyamaWithWeigthsAndNoise() {
     Matrix3d rotation_weighted;
     Vector3d translation_weighted;
     double scale_weighted;
-    AlignPointCloudsUmeyamaWithWeights(left, right, weights, &rotation_weighted,
-                                       &translation_weighted, &scale_weighted);
+    AlignPointCloudsUmeyamaWithWeights(left,
+                                       right,
+                                       weights,
+                                       &rotation_weighted,
+                                       &translation_weighted,
+                                       &scale_weighted);
 
     // Check if the parameters are closer to real parameters ?
     const bool condition_on_scale = (std::abs(scale_weighted - expected_scale) <
@@ -187,9 +199,7 @@ void UmeyamaWithWeigthsAndNoise() {
 
 }  // namespace
 
-TEST(AlignPointCloudsUmeyama, SimpleTest) {
-    UmeyamaSimpleTest();
-}
+TEST(AlignPointCloudsUmeyama, SimpleTest) { UmeyamaSimpleTest(); }
 
 TEST(AlignPointCloudsUmeyamaWithWeights, WeightsAndNoise) {
   UmeyamaWithWeigthsAndNoise();

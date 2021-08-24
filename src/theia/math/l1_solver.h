@@ -159,17 +159,16 @@ class L1Solver {
       const double r_norm = (a_times_x - z - rhs).norm();
       const double s_norm =
           (-options_.rho * a_.transpose() * (z - z_old)).norm();
-      const double max_norm =
-          std::max({a_times_x.norm(), z.norm(), rhs_norm});
+      const double max_norm = std::max({a_times_x.norm(), z.norm(), rhs_norm});
       const double primal_eps =
           primal_abs_tolerance_eps + options_.relative_tolerance * max_norm;
       const double dual_eps = dual_abs_tolerance_eps +
-                 options_.relative_tolerance *
-                     (options_.rho * a_.transpose() * u).norm();
+                              options_.relative_tolerance *
+                                  (options_.rho * a_.transpose() * u).norm();
 
       // Log the result to the screen.
-      VLOG(2) << StringPrintf(row_format.c_str(), i, r_norm, s_norm, primal_eps,
-                              dual_eps);
+      VLOG(2) << StringPrintf(
+          row_format.c_str(), i, r_norm, s_norm, primal_eps, dual_eps);
       // Determine if the minimizer has converged.
       if (r_norm < primal_eps && s_norm < dual_eps) {
         break;

@@ -33,8 +33,8 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <algorithm>
@@ -54,7 +54,6 @@ int main(int argc, char* argv[]) {
       new theia::Reconstruction());
   CHECK(theia::ReadReconstruction(FLAGS_reconstruction, reconstruction.get()))
       << "Could not read reconstruction file.";
-
 
   LOG(INFO) << "\nNum views: " << reconstruction->NumViews()
             << "\nNum 3D points: " << reconstruction->NumTracks();

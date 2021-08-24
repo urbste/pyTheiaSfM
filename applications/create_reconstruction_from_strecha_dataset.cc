@@ -41,17 +41,19 @@
 // http://cvlabwww.epfl.ch/data/multiview/denseMVS.html
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <fstream>  // NOLINT
 #include <string>
 
-DEFINE_string(input_dataset_directory, "",
+DEFINE_string(input_dataset_directory,
+              "",
               "Directory containing camera files from the Strecha MVS dataset. "
               "Do not include a trailing slash.");
-DEFINE_string(output_reconstruction, "",
+DEFINE_string(output_reconstruction,
+              "",
               "Filepath of the output Theia reconstruction file generated.");
 
 int main(int argc, char* argv[]) {
@@ -60,7 +62,8 @@ int main(int argc, char* argv[]) {
 
   // Add each camera in the Strecha MVS dataset to the reconstruciton.
   theia::Reconstruction reconstruction;
-  CHECK(theia::ReadStrechaDataset(FLAGS_input_dataset_directory, &reconstruction));
+  CHECK(theia::ReadStrechaDataset(FLAGS_input_dataset_directory,
+                                  &reconstruction));
   CHECK(theia::WriteReconstruction(reconstruction, FLAGS_output_reconstruction))
       << "Could not write the reconstruction file to: "
       << FLAGS_output_reconstruction;

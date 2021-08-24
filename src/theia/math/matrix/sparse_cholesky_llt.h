@@ -38,14 +38,11 @@
 // however changed from cholmod to Eigen::SimplisticalLDLT
 // --> cholmod is faster (3-4x at least for big problems) but GPL
 
-
-
 #ifndef THEIA_MATH_MATRIX_SPARSE_CHOLESKY_LLT_H_
 #define THEIA_MATH_MATRIX_SPARSE_CHOLESKY_LLT_H_
 
-
-#include <Eigen/SparseCore>
 #include <Eigen/SparseCholesky>
+#include <Eigen/SparseCore>
 
 namespace theia {
 

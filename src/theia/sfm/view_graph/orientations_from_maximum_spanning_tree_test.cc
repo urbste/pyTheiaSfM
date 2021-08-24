@@ -32,16 +32,16 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
+#include <ceres/rotation.h>
 #include <unordered_map>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/sfm/view_graph/orientations_from_maximum_spanning_tree.h"
 #include "theia/sfm/view_graph/view_graph.h"
 #include "theia/util/map_util.h"
 #include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -51,8 +51,7 @@ using Eigen::Vector3d;
 RandomNumberGenerator rng(150);
 
 void CreateViewsWithRandomOrientations(
-    const int num_views,
-    std::unordered_map<ViewId, Vector3d>* orientations) {
+    const int num_views, std::unordered_map<ViewId, Vector3d>* orientations) {
   (*orientations)[0] = Vector3d::Zero();
   for (int i = 1; i < num_views; i++) {
     (*orientations)[i] = rng.RandVector3d();
@@ -86,10 +85,9 @@ TwoViewInfo CreateTwoViewInfo(
   return info;
 }
 
-void CreateViewGraph(
-    const int num_edges,
-    const std::unordered_map<ViewId, Vector3d>& orientations,
-    ViewGraph* view_graph) {
+void CreateViewGraph(const int num_edges,
+                     const std::unordered_map<ViewId, Vector3d>& orientations,
+                     ViewGraph* view_graph) {
   CHECK_GE(num_edges, orientations.size() - 1);
 
   // Add a skeletal graph.
@@ -126,23 +124,20 @@ void VerifyOrientations(
     const Vector3d& gt_orientation2 =
         FindOrDie(gt_orientations, edge.first.second);
     Vector3d gt_relative_rotation;
-    RelativeRotationFromOrientations(gt_orientation1,
-                                     gt_orientation2,
-                                     &gt_relative_rotation);
+    RelativeRotationFromOrientations(
+        gt_orientation1, gt_orientation2, &gt_relative_rotation);
 
     const Vector3d& orientation1 = FindOrDie(orientations, edge.first.first);
     const Vector3d& orientation2 = FindOrDie(orientations, edge.first.second);
     Vector3d relative_rotation;
-    RelativeRotationFromOrientations(orientation1,
-                                     orientation2,
-                                     &relative_rotation);
+    RelativeRotationFromOrientations(
+        orientation1, orientation2, &relative_rotation);
 
     EXPECT_LT((gt_relative_rotation - relative_rotation).norm(), kTolerance);
   }
 }
 
-void TestOrientationsFromViewGraph(const int num_views,
-                                   const int num_edges) {
+void TestOrientationsFromViewGraph(const int num_views, const int num_edges) {
   std::unordered_map<ViewId, Vector3d> orientations;
   CreateViewsWithRandomOrientations(num_views, &orientations);
   ViewGraph view_graph;

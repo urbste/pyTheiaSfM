@@ -40,7 +40,7 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>  // NOLINT
+#include <fstream>   // NOLINT
 #include <iostream>  // NOLINT
 #include <string>
 #include <vector>
@@ -98,17 +98,43 @@ bool ReadSiftKeyTextFile(const std::string& sift_key_file,
     uint8_t* p = int_descriptor.data();
     for (int line = 0; line < 6; line++) {
       CHECK_NOTNULL(fgets(buf, 1024, fp));
-      sscanf(buf, "%hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu "
+      sscanf(buf,
+             "%hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu "
              "%hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu",
-             p + 0, p + 1, p + 2, p + 3, p + 4, p + 5, p + 6, p + 7, p + 8,
-             p + 9, p + 10, p + 11, p + 12, p + 13, p + 14, p + 15, p + 16,
-             p + 17, p + 18, p + 19);
+             p + 0,
+             p + 1,
+             p + 2,
+             p + 3,
+             p + 4,
+             p + 5,
+             p + 6,
+             p + 7,
+             p + 8,
+             p + 9,
+             p + 10,
+             p + 11,
+             p + 12,
+             p + 13,
+             p + 14,
+             p + 15,
+             p + 16,
+             p + 17,
+             p + 18,
+             p + 19);
 
       p += 20;
     }
     CHECK_NOTNULL(fgets(buf, 1024, fp));
-    sscanf(buf, "%hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu", p + 0, p + 1,
-           p + 2, p + 3, p + 4, p + 5, p + 6, p + 7);
+    sscanf(buf,
+           "%hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu",
+           p + 0,
+           p + 1,
+           p + 2,
+           p + 3,
+           p + 4,
+           p + 5,
+           p + 6,
+           p + 7);
 
     Eigen::VectorXf float_descriptor = int_descriptor.cast<float>();
     float_descriptor /= 255.0;

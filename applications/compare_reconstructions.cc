@@ -34,23 +34,26 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <algorithm>
 #include <memory>
 #include <string>
 
-DEFINE_string(reference_reconstruction, "",
+DEFINE_string(reference_reconstruction,
+              "",
               "Filepath to the reconstruction that is considered the reference "
               "or 'ground truth' reconstruction.");
-DEFINE_string(reconstruction_to_align, "",
+DEFINE_string(reconstruction_to_align,
+              "",
               "Filepath to the reconstruction that will be aligned to the "
               "ground truth reconstruction. The reported errors/distance are "
               "the distances from this to the reference reconstruction after a "
               "robust alignment has been performed.");
-DEFINE_double(robust_alignment_threshold, 0.0,
+DEFINE_double(robust_alignment_threshold,
+              0.0,
               "If greater than 0.0, this threshold sets determines inliers for "
               "RANSAC alignment of reconstructions. The inliers are then used "
               "for a least squares alignment.");
@@ -70,11 +73,11 @@ std::string PrintMeanMedianHistogram(
   }
 
   mean /= static_cast<double>(sorted_errors.size());
-  const std::string error_msg = theia::StringPrintf(
-      "Mean = %lf\nMedian = %lf\nHistogram:\n%s",
-      mean,
-      sorted_errors[sorted_errors.size() / 2],
-      histogram.PrintString().c_str());
+  const std::string error_msg =
+      theia::StringPrintf("Mean = %lf\nMedian = %lf\nHistogram:\n%s",
+                          mean,
+                          sorted_errors[sorted_errors.size() / 2],
+                          histogram.PrintString().c_str());
   return error_msg;
 }
 
@@ -126,10 +129,9 @@ void EvaluateRotations(const Reconstruction& reference_reconstruction,
 }
 
 // Align the reconstructions then evaluate the pose errors.
-void EvaluateAlignedPoseError(
-    const std::vector<std::string>& common_view_names,
-    const Reconstruction& reference_reconstruction,
-    Reconstruction* reconstruction_to_align) {
+void EvaluateAlignedPoseError(const std::vector<std::string>& common_view_names,
+                              const Reconstruction& reference_reconstruction,
+                              Reconstruction* reconstruction_to_align) {
   if (FLAGS_robust_alignment_threshold > 0.0) {
     AlignReconstructionsRobust(FLAGS_robust_alignment_threshold,
                                reference_reconstruction,
@@ -139,7 +141,7 @@ void EvaluateAlignedPoseError(
   }
 
   std::vector<double> rotation_bins = {1, 2, 5, 10, 15, 20, 45};
-  std::vector<double> position_bins = {1, 5, 10, 50, 100, 1000 };
+  std::vector<double> position_bins = {1, 5, 10, 50, 100, 1000};
   theia::PoseError pose_error(rotation_bins, position_bins);
   std::vector<double> focal_length_errors(common_view_names.size());
   for (int i = 0; i < common_view_names.size(); i++) {
@@ -177,8 +179,8 @@ void EvaluateAlignedPoseError(
 }
 
 void ComputeTrackLengthHistogram(const Reconstruction& reconstruction) {
-  std::vector<int> histogram_bins = {2, 3,  4,  5,  6,  7, 8,
-                                     9, 10, 15, 20, 25, 50};
+  std::vector<int> histogram_bins = {
+      2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 50};
   theia::Histogram<int> histogram(histogram_bins);
   for (const TrackId track_id : reconstruction.TrackIds()) {
     const theia::Track* track = reconstruction.Track(track_id);
@@ -212,8 +214,7 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Number of cameras:\n"
             << "\tReconstruction 1: " << reference_reconstruction->NumViews()
             << "\n\tReconstruction 2: " << reconstruction_to_align->NumViews()
-            << "\n\tNumber of Common cameras: "
-            << common_view_names.size();
+            << "\n\tNumber of Common cameras: " << common_view_names.size();
 
   if (common_view_names.size() == 0) {
     LOG(INFO) << "Could not compare reconstructions because they do not have "
@@ -227,9 +228,8 @@ int main(int argc, char* argv[]) {
             << "\n\tReconstruction 2: " << reconstruction_to_align->NumTracks();
 
   // Evaluate rotation independent of positions.
-  EvaluateRotations(*reference_reconstruction,
-                    *reconstruction_to_align,
-                    common_view_names);
+  EvaluateRotations(
+      *reference_reconstruction, *reconstruction_to_align, common_view_names);
 
   // Align models and evaluate position and rotation errors.
   EvaluateAlignedPoseError(common_view_names,

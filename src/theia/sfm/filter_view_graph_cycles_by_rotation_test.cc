@@ -32,19 +32,19 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
+#include <ceres/rotation.h>
 #include <unordered_map>
 #include <vector>
 
-#include "gtest/gtest.h"
-#include "theia/util/hash.h"
-#include "theia/util/map_util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/filter_view_graph_cycles_by_rotation.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/types.h"
 #include "theia/sfm/view_graph/view_graph.h"
+#include "theia/util/hash.h"
+#include "theia/util/map_util.h"
+#include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -56,8 +56,7 @@ using Eigen::Vector3d;
 RandomNumberGenerator rng(56);
 
 void CreateViewsWithRandomOrientations(
-    const int num_views,
-    std::unordered_map<ViewId, Vector3d>* orientations) {
+    const int num_views, std::unordered_map<ViewId, Vector3d>* orientations) {
   (*orientations)[0] = Vector3d::Zero();
   for (int i = 1; i < num_views; i++) {
     (*orientations)[i] = rng.RandVector3d();
@@ -117,8 +116,7 @@ void CreateValidViewPairs(
       continue;
     }
 
-    const TwoViewInfo info =
-        CreateTwoViewInfo(orientations, view_id_pair);
+    const TwoViewInfo info = CreateTwoViewInfo(orientations, view_id_pair);
     view_graph->AddEdge(view_ids[0], view_ids[1], info);
   }
 }

@@ -41,9 +41,9 @@
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/track.h"
+#include "theia/sfm/triangulation/triangulation.h"
 #include "theia/sfm/types.h"
 #include "theia/sfm/view.h"
-#include "theia/sfm/triangulation/triangulation.h"
 
 namespace theia {
 
@@ -103,7 +103,8 @@ int SetOutlierTracksToUnestimated(const std::unordered_set<TrackId>& track_ids,
         track->SetEstimated(false);
         break;
       }
-      mean_sq_reprojection_error += (projection - (*feature).point_).squaredNorm();
+      mean_sq_reprojection_error +=
+          (projection - (*feature).point_).squaredNorm();
       ++num_projections;
     }
 

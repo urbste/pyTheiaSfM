@@ -34,8 +34,8 @@
 
 #include "theia/util/random.h"
 
-#include <glog/logging.h>
 #include <chrono>  // NOLINT
+#include <glog/logging.h>
 #include <random>
 
 #include "theia/util/util.h"
@@ -101,9 +101,8 @@ Eigen::Vector2d RandomNumberGenerator::RandVector2d() {
 
 Eigen::Vector3d RandomNumberGenerator::RandVector3d(const double min,
                                                     const double max) {
-  return Eigen::Vector3d(RandDouble(min, max),
-                         RandDouble(min, max),
-                         RandDouble(min, max));
+  return Eigen::Vector3d(
+      RandDouble(min, max), RandDouble(min, max), RandDouble(min, max));
 }
 
 Eigen::Vector3d RandomNumberGenerator::RandVector3d() {

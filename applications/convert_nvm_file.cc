@@ -32,14 +32,15 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <string>
 
 DEFINE_string(nvm_file, "", "Input bundle lists file.");
-DEFINE_string(output_reconstruction_file, "",
+DEFINE_string(output_reconstruction_file,
+              "",
               "Output reconstruction file in binary format.");
 
 int main(int argc, char* argv[]) {

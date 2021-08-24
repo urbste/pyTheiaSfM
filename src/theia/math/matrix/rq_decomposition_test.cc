@@ -38,8 +38,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "gtest/gtest.h"
 #include "theia/math/matrix/rq_decomposition.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -58,15 +58,17 @@ void TestRQDecomposition(const int rows, const int cols, const double tol) {
   for (int i = 0; i < 100; ++i) {
     const MatrixType& m = MatrixType::Random(rows, cols);
     RQDecomposition<MatrixType> rq(m);
-    EXPECT_TRUE(rq.matrixR().bottomRows(std::min(rows, cols))
-                    .isUpperTriangular());
+    EXPECT_TRUE(
+        rq.matrixR().bottomRows(std::min(rows, cols)).isUpperTriangular());
     EXPECT_TRUE(rq.matrixQ().isUnitary());
     EXPECT_NEAR(rq.matrixQ().determinant(), 1.0, kLargeTolerance);
 
     const MatrixType& diff = rq.matrixR() * rq.matrixQ() - m;
     EXPECT_LE(diff.cwiseAbs().maxCoeff(), tol)
-        << rq.matrixR() << "\n\n" << rq.matrixQ() << "\n\n"
-        << rq.matrixR() * rq.matrixQ() << "\n\n" << m;
+        << rq.matrixR() << "\n\n"
+        << rq.matrixQ() << "\n\n"
+        << rq.matrixR() * rq.matrixQ() << "\n\n"
+        << m;
   }
 }
 
@@ -100,10 +102,10 @@ TEST(RQTest, FloatMatrices) {
 }
 
 TEST(RQTest, RowMajorMatrices) {
-  TestRQDecomposition<Matrix<double, 3, 3, Eigen::RowMajor> >(3, 3,
-                                                              kSmallTolerance);
-  TestRQDecomposition<Matrix<float, 3, 3, Eigen::RowMajor> >(3, 3,
-                                                             kLargeTolerance);
+  TestRQDecomposition<Matrix<double, 3, 3, Eigen::RowMajor> >(
+      3, 3, kSmallTolerance);
+  TestRQDecomposition<Matrix<float, 3, 3, Eigen::RowMajor> >(
+      3, 3, kLargeTolerance);
 }
 
 }  // namespace theia

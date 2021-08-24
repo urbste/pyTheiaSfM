@@ -80,9 +80,8 @@ class RelativePoseEstimator
     }
 
     std::vector<Matrix3d> essential_matrices;
-    if (!FivePointRelativePose(image1_points,
-                               image2_points,
-                               &essential_matrices)) {
+    if (!FivePointRelativePose(
+            image1_points, image2_points, &essential_matrices)) {
       return false;
     }
 
@@ -94,11 +93,11 @@ class RelativePoseEstimator
       // The best relative pose decomposition should have at least 4
       // triangulated points in front of the camera. This is because one point
       // may be at infinity.
-      const int num_points_in_front_of_cameras = GetBestPoseFromEssentialMatrix(
-          essential_matrix,
-          correspondences,
-          &relative_pose.rotation,
-          &relative_pose.position);
+      const int num_points_in_front_of_cameras =
+          GetBestPoseFromEssentialMatrix(essential_matrix,
+                                         correspondences,
+                                         &relative_pose.rotation,
+                                         &relative_pose.position);
       if (num_points_in_front_of_cameras >= 4) {
         relative_poses->push_back(relative_pose);
       }
@@ -110,9 +109,8 @@ class RelativePoseEstimator
   // error.
   double Error(const FeatureCorrespondence& correspondence,
                const RelativePose& relative_pose) const {
-    if (IsTriangulatedPointInFrontOfCameras(correspondence,
-                                            relative_pose.rotation,
-                                            relative_pose.position)) {
+    if (IsTriangulatedPointInFrontOfCameras(
+            correspondence, relative_pose.rotation, relative_pose.position)) {
       return SquaredSampsonDistance(relative_pose.essential_matrix,
                                     correspondence.feature1.point_,
                                     correspondence.feature2.point_);
@@ -134,13 +132,11 @@ bool EstimateRelativePose(
     RansacSummary* ransac_summary) {
   RelativePoseEstimator relative_pose_estimator;
   std::unique_ptr<SampleConsensusEstimator<RelativePoseEstimator> > ransac =
-      CreateAndInitializeRansacVariant(ransac_type,
-                                       ransac_params,
-                                       relative_pose_estimator);
+      CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, relative_pose_estimator);
   // Estimate the relative pose.
-  return ransac->Estimate(normalized_correspondences,
-                          relative_pose,
-                          ransac_summary);
+  return ransac->Estimate(
+      normalized_correspondences, relative_pose, ransac_summary);
 }
 
 }  // namespace theia

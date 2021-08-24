@@ -52,13 +52,16 @@ Eigen::Matrix<double, 3, 9> LeftMultiplyMatrix(const Eigen::Vector3d& v);
 // parameterized by the 3 rotation coefficients s1, s2, s3).
 void ExtractJacobianCoefficients(
     const Eigen::Matrix<double, 9, 9>& ls_cost_coefficients,
-    double f1_coeff[20], double f2_coeff[20], double f3_coeff[20]);
+    double f1_coeff[20],
+    double f2_coeff[20],
+    double f3_coeff[20]);
 
 // Constructs a Macaulay matrix to solve the system of equations using the
 // polynomial coefficients from the jacobians.
-Eigen::MatrixXd CreateMacaulayMatrix(
-    const double f1_coeff[20], const double f2_coeff[20],
-    const double f3_coeff[20], const double rand_term[4]);
+Eigen::MatrixXd CreateMacaulayMatrix(const double f1_coeff[20],
+                                     const double f2_coeff[20],
+                                     const double f3_coeff[20],
+                                     const double rand_term[4]);
 
 }  // namespace dls_impl
 }  // namespace theia

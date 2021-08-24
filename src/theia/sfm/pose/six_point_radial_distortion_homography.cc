@@ -46,8 +46,8 @@ namespace theia {
 
 using Eigen::Matrix;
 using Eigen::MatrixXd;
-using Eigen::Vector3d;
 using Eigen::Vector2d;
+using Eigen::Vector3d;
 using Vector6d = Eigen::Matrix<double, 6, 1>;
 using Array51d = Eigen::Array<double, 5, 1>;
 using Matrix68d = Eigen::Matrix<double, 6, 8>;
@@ -63,7 +63,8 @@ bool IsNearZero(double val) {
 bool SixPointRadialDistortionHomography(
     const std::vector<Eigen::Vector2d>& normalized_feature_points_left,
     const std::vector<Eigen::Vector2d>& normalized_feature_points_right,
-    std::vector<RadialHomographyResult>* results, const double lmin,
+    std::vector<RadialHomographyResult>* results,
+    const double lmin,
     const double lmax) {
   Matrix62d X;
   Matrix62d U;
@@ -155,8 +156,10 @@ bool SixPointRadialDistortionHomography(
 }
 
 // Some helper functions
-void DistortPoint(const Vector3d& point_in_camera, const double focal_length,
-                  const double radial_distortion, Vector2d& distorted_point) {
+void DistortPoint(const Vector3d& point_in_camera,
+                  const double focal_length,
+                  const double radial_distortion,
+                  Vector2d& distorted_point) {
   Vector2d point_in_cam_persp_div;
   point_in_cam_persp_div[0] =
       focal_length * point_in_camera[0] / point_in_camera[2];
@@ -180,7 +183,8 @@ void DistortPoint(const Vector3d& point_in_camera, const double focal_length,
   }
 }
 
-void UndistortPoint(const Vector2d& distorted_point, const double focal_length,
+void UndistortPoint(const Vector2d& distorted_point,
+                    const double focal_length,
                     const double radial_distortion,
                     Vector3d& undistorted_point) {
   double px = distorted_point[0];
@@ -200,8 +204,10 @@ void ProjectCameraToCamera(const Matrix3d& H, const Vector3d& X, Vector3d* Y) {
 }
 
 double CheckRadialSymmetricError(
-    const RadialHomographyResult& radial_homography, const Vector2d& pt_left,
-    const Vector2d& pt_right, const double focal_length1,
+    const RadialHomographyResult& radial_homography,
+    const Vector2d& pt_left,
+    const Vector2d& pt_right,
+    const double focal_length1,
     const double focal_length2) {
   // todo: in the estimator this gets calculated for each sample every time
   const double l1_scaled =
@@ -215,8 +221,8 @@ double CheckRadialSymmetricError(
 
   Vector3d ray2_in_1, ray1_in_2;
   ProjectCameraToCamera(radial_homography.H, bearing_vector_right, &ray2_in_1);
-  ProjectCameraToCamera(radial_homography.H.inverse(), bearing_vector_left,
-                        &ray1_in_2);
+  ProjectCameraToCamera(
+      radial_homography.H.inverse(), bearing_vector_left, &ray1_in_2);
 
   Vector2d pt_left_from_right, pt_right_from_left;
   DistortPoint(ray2_in_1, focal_length1, l1_scaled, pt_left_from_right);
@@ -232,4 +238,4 @@ double CheckRadialSymmetricError(
 
   return sym_error;
 }
-}
+}  // namespace theia

@@ -44,11 +44,11 @@
 namespace theia {
 
 // Bundle adjust the specified views and tracks.
-BundleAdjustmentSummary
-BundleAdjustPartialReconstruction(const BundleAdjustmentOptions &options,
-                                  const std::unordered_set<ViewId> &view_ids,
-                                  const std::unordered_set<TrackId> &track_ids,
-                                  Reconstruction *reconstruction) {
+BundleAdjustmentSummary BundleAdjustPartialReconstruction(
+    const BundleAdjustmentOptions& options,
+    const std::unordered_set<ViewId>& view_ids,
+    const std::unordered_set<TrackId>& track_ids,
+    Reconstruction* reconstruction) {
   CHECK_NOTNULL(reconstruction);
 
   BundleAdjuster bundle_adjuster(options, reconstruction);
@@ -64,11 +64,10 @@ BundleAdjustPartialReconstruction(const BundleAdjustmentOptions &options,
 }
 
 // Bundle adjust the entire reconstruction.
-BundleAdjustmentSummary
-BundleAdjustReconstruction(const BundleAdjustmentOptions &options,
-                           Reconstruction *reconstruction) {
-  const auto &view_ids = reconstruction->ViewIds();
-  const auto &track_ids = reconstruction->TrackIds();
+BundleAdjustmentSummary BundleAdjustReconstruction(
+    const BundleAdjustmentOptions& options, Reconstruction* reconstruction) {
+  const auto& view_ids = reconstruction->ViewIds();
+  const auto& track_ids = reconstruction->TrackIds();
 
   BundleAdjuster bundle_adjuster(options, reconstruction);
   for (const ViewId view_id : view_ids) {
@@ -83,9 +82,9 @@ BundleAdjustReconstruction(const BundleAdjustmentOptions &options,
 }
 
 // Bundle adjust a single view.
-BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
+BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
                                          const ViewId view_id,
-                                         Reconstruction *reconstruction) {
+                                         Reconstruction* reconstruction) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
@@ -96,25 +95,26 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
 }
 
 // Bundle adjust views.
-BundleAdjustmentSummary
-BundleAdjustViews(const BundleAdjustmentOptions &options,
-                  const std::vector<ViewId> &view_ids_to_optimize,
-                  Reconstruction *reconstruction) {
+BundleAdjustmentSummary BundleAdjustViews(
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& view_ids_to_optimize,
+    Reconstruction* reconstruction) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  for (const auto &view_id : view_ids_to_optimize) {
+  for (const auto& view_id : view_ids_to_optimize) {
     bundle_adjuster.AddView(view_id);
   }
   return bundle_adjuster.Optimize();
 }
 
 // Bundle adjust a single track.
-BundleAdjustmentSummary
-BundleAdjustTrack(const BundleAdjustmentOptions &options,
-                  const TrackId track_id, Reconstruction *reconstruction) {
+BundleAdjustmentSummary BundleAdjustTrack(
+    const BundleAdjustmentOptions& options,
+    const TrackId track_id,
+    Reconstruction* reconstruction) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
@@ -126,11 +126,12 @@ BundleAdjustTrack(const BundleAdjustmentOptions &options,
 }
 
 // Bundle adjust a single track.
-BundleAdjustmentSummary
-BundleAdjustTrack(const BundleAdjustmentOptions &options,
-                  const TrackId track_id, Reconstruction *reconstruction,
-                  Matrix3d *empirical_covariance_matrix,
-                  double *empirical_variance_factor) {
+BundleAdjustmentSummary BundleAdjustTrack(
+    const BundleAdjustmentOptions& options,
+    const TrackId track_id,
+    Reconstruction* reconstruction,
+    Matrix3d* empirical_covariance_matrix,
+    double* empirical_variance_factor) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
@@ -159,17 +160,17 @@ BundleAdjustTrack(const BundleAdjustmentOptions &options,
 
 // Bundle adjust tracks.
 BundleAdjustmentSummary BundleAdjustTracks(
-    const BundleAdjustmentOptions &options,
-    const std::vector<TrackId> &tracks_to_optimize,
-    Reconstruction *reconstruction,
-    std::map<TrackId, Eigen::Matrix3d> *empirical_covariance_matrices,
-    double *empirical_variance_factor) {
+    const BundleAdjustmentOptions& options,
+    const std::vector<TrackId>& tracks_to_optimize,
+    Reconstruction* reconstruction,
+    std::map<TrackId, Eigen::Matrix3d>* empirical_covariance_matrices,
+    double* empirical_variance_factor) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  for (const auto &track_id : tracks_to_optimize) {
+  for (const auto& track_id : tracks_to_optimize) {
     // set homogeneous representation to true. otherwise covariance matrix will
     // be singular
     bundle_adjuster.AddTrack(track_id, true);
@@ -187,20 +188,21 @@ BundleAdjustmentSummary BundleAdjustTracks(
       // now get redundancy to calculate empirical covariance matrix
       int nr_obs = 0;
       double total_nr_vars = tracks_to_optimize.size() * 3.0;
-      for (const auto &t : tracks_to_optimize) {
+      for (const auto& t : tracks_to_optimize) {
         nr_obs += reconstruction->Track(t)->NumViews();
       }
       const double redundancy = nr_obs * 2 - total_nr_vars;
 
-      *empirical_variance_factor = (2.0 * summary.final_cost) / redundancy ;
-      for (auto &cov : *empirical_covariance_matrices) {
+      *empirical_variance_factor = (2.0 * summary.final_cost) / redundancy;
+      for (auto& cov : *empirical_covariance_matrices) {
         cov.second *= *empirical_variance_factor;
       }
       LOG(INFO) << "Redundancy in BundleAdjustTracks: " << redundancy << "\n"
-          << ", final cost: " << summary.final_cost
-          << ", root mean square reprojection error: " << std::sqrt(summary.final_cost * 2.0 / nr_obs)
-          << ", empirical variance factor: " << *empirical_variance_factor
-          << "\n";
+                << ", final cost: " << summary.final_cost
+                << ", root mean square reprojection error: "
+                << std::sqrt(summary.final_cost * 2.0 / nr_obs)
+                << ", empirical variance factor: " << *empirical_variance_factor
+                << "\n";
     }
   }
 
@@ -208,28 +210,27 @@ BundleAdjustmentSummary BundleAdjustTracks(
 }
 
 // Bundle adjust tracks.
-BundleAdjustmentSummary
-BundleAdjustTracks(const BundleAdjustmentOptions &options,
-                   const std::vector<TrackId> &tracks_to_optimize,
-                   Reconstruction *reconstruction) {
+BundleAdjustmentSummary BundleAdjustTracks(
+    const BundleAdjustmentOptions& options,
+    const std::vector<TrackId>& tracks_to_optimize,
+    Reconstruction* reconstruction) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  for (const auto &track_id : tracks_to_optimize) {
+  for (const auto& track_id : tracks_to_optimize) {
     bundle_adjuster.AddTrack(
         track_id, options.use_homogeneous_local_point_parametrization);
   }
   return bundle_adjuster.Optimize();
 }
 
-BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
+BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
                                          const ViewId view_id,
-                                         Reconstruction *reconstruction,
-                                         Matrix6d *empirical_covariance_matrix,
-                                         double *empirical_variance_factor) {
-
+                                         Reconstruction* reconstruction,
+                                         Matrix6d* empirical_covariance_matrix,
+                                         double* empirical_variance_factor) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
@@ -257,12 +258,12 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
   return summary;
 }
 
-BundleAdjustmentSummary BundleAdjustViews(const BundleAdjustmentOptions &options,
-                                         const std::vector<ViewId>& view_ids,
-                                         Reconstruction *reconstruction,
-                                         std::map<ViewId, Matrix6d> *empirical_covariance_matrices,
-                                         double *empirical_variance_factor) {
-
+BundleAdjustmentSummary BundleAdjustViews(
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& view_ids,
+    Reconstruction* reconstruction,
+    std::map<ViewId, Matrix6d>* empirical_covariance_matrices,
+    double* empirical_variance_factor) {
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
@@ -284,18 +285,19 @@ BundleAdjustmentSummary BundleAdjustViews(const BundleAdjustmentOptions &options
       // now get redundancy to calculate empirical covariance matrix
       int nr_obs = 0;
       double total_nr_vars = view_ids.size() * 6.0;
-      for (const auto &v : view_ids) {
+      for (const auto& v : view_ids) {
         nr_obs += reconstruction->View(v)->NumFeatures();
       }
       const double redundancy = nr_obs * 2 - total_nr_vars;
 
       *empirical_variance_factor = (2.0 * summary.final_cost) / redundancy;
-      for (auto &cov : *empirical_covariance_matrices) {
+      for (auto& cov : *empirical_covariance_matrices) {
         cov.second *= *empirical_variance_factor;
       }
       LOG(INFO) << "Redundancy in BundleAdjustViews: " << redundancy << "\n"
                 << ", final cost: " << summary.final_cost
-                << ", root mean square reprojection error: " << std::sqrt(summary.final_cost * 2.0 / nr_obs)
+                << ", root mean square reprojection error: "
+                << std::sqrt(summary.final_cost * 2.0 / nr_obs)
                 << ", empirical variance factor: " << *empirical_variance_factor
                 << "\n";
     }
@@ -303,4 +305,4 @@ BundleAdjustmentSummary BundleAdjustViews(const BundleAdjustmentOptions &options
   return summary;
 }
 
-} // namespace theia
+}  // namespace theia

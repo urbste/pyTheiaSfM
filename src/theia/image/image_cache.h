@@ -47,25 +47,25 @@ class FloatImage;
 // are held in the same directory and are referenced by their filename
 // (including the extension).
 class ImageCache {
-public:
- // We require that all images are held in the same directory for
- // convenience. That directory must be specified here. and
- //
- // Images are held in an LRU cache so as to remain memory efficient for
- // out-of-core operations. This specifies the maximum number of images that
- // may be in the cache at any given time. This value may need to be adjusted
- // depending on how much memory is available.
- ImageCache(const std::string& image_directory,
-            const int max_num_images_in_cache);
- ~ImageCache();
+ public:
+  // We require that all images are held in the same directory for
+  // convenience. That directory must be specified here. and
+  //
+  // Images are held in an LRU cache so as to remain memory efficient for
+  // out-of-core operations. This specifies the maximum number of images that
+  // may be in the cache at any given time. This value may need to be adjusted
+  // depending on how much memory is available.
+  ImageCache(const std::string& image_directory,
+             const int max_num_images_in_cache);
+  ~ImageCache();
 
- // Returns the image corresponding to the view id, or a nullptr if the view
- // does not exist. It is up to the caller to determine if the image was
- // successfully fetched (i.e. if the returned image is not a nullptr). A
- // shared_ptr is used to monitor when images may be ejected from the cache and
- // prevent them from going out of scope while the caller is still using them.
- const std::shared_ptr<const theia::FloatImage> FetchImage(
-     const std::string& image_filename) const;
+  // Returns the image corresponding to the view id, or a nullptr if the view
+  // does not exist. It is up to the caller to determine if the image was
+  // successfully fetched (i.e. if the returned image is not a nullptr). A
+  // shared_ptr is used to monitor when images may be ejected from the cache and
+  // prevent them from going out of scope while the caller is still using them.
+  const std::shared_ptr<const theia::FloatImage> FetchImage(
+      const std::string& image_filename) const;
 
  private:
   typedef LRUCache<std::string, std::shared_ptr<const theia::FloatImage> >

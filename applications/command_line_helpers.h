@@ -35,12 +35,12 @@
 #ifndef APPLICATIONS_COMMAND_LINE_HELPERS_H_
 #define APPLICATIONS_COMMAND_LINE_HELPERS_H_
 
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
-#include <string>
 #include <sstream>
+#include <string>
 
 using theia::DescriptorExtractorType;
 using theia::FeatureDensity;
@@ -114,9 +114,12 @@ inline GlobalRotationEstimatorType StringToRotationEstimatorType(
     return GlobalRotationEstimatorType::NONLINEAR;
   } else if (rotation_estimator == "LINEAR") {
     return GlobalRotationEstimatorType::LINEAR;
+  } else if (rotation_estimator == "LAGRANGE_DUAL") {
+    return GlobalRotationEstimatorType::LAGRANGE_DUAL;
+  } else if (rotation_estimator == "HYBRID") {
+    return GlobalRotationEstimatorType::HYBRID;
   } else {
-    LOG(FATAL)
-        << "Invalid rotation estimator type. Using ROBUST_L1L2 instead.";
+    LOG(FATAL) << "Invalid rotation estimator type. Using ROBUST_L1L2 instead.";
     return GlobalRotationEstimatorType::ROBUST_L1L2;
   }
 }
@@ -130,8 +133,7 @@ inline GlobalPositionEstimatorType StringToPositionEstimatorType(
   } else if (position_estimator == "LEAST_UNSQUARED_DEVIATION") {
     return GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION;
   } else {
-    LOG(FATAL)
-        << "Invalid position estimator type. Using NONLINEAR instead.";
+    LOG(FATAL) << "Invalid position estimator type. Using NONLINEAR instead.";
     return GlobalPositionEstimatorType::NONLINEAR;
   }
 }

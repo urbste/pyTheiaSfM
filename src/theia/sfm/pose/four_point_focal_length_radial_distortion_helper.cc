@@ -38,17 +38,17 @@
 
 #include "theia/sfm/pose/four_point_focal_length_radial_distortion_helper.h"
 
-#include <glog/logging.h>
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
-#include <vector>
+#include <glog/logging.h>
 #include <iostream>
+#include <vector>
 
 namespace theia {
 
 using Eigen::Matrix;
-using Eigen::Vector3d;
 using Eigen::MatrixXd;
+using Eigen::Vector3d;
 
 void FourPointsPoseFocalLengthRadialDistortionSolver(
     const Eigen::Matrix<double, 64, 1>& data,
@@ -1382,7 +1382,7 @@ void FourPointsPoseFocalLengthRadialDistortionSolver(
   const std::vector<int> b_ind_r = {0, 1, 2, 3, 4, 5, 6};
   const std::vector<int> b_ind_c = {30, 31, 32, 33, 34, 35, 36};
 
-  //MatrixXd b = MatrixXd::Zero(7, 37);
+  // MatrixXd b = MatrixXd::Zero(7, 37);
   Matrix<double, 7, 37> b;
   b.fill(0.0);
   for (int i = 0; i < b_ind_r.size(); ++i) {
@@ -1433,4 +1433,4 @@ void FourPointsPoseFocalLengthRadialDistortionSolver(
   }
 }
 
-}  // theia namespace
+}  // namespace theia

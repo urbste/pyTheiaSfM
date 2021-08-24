@@ -79,19 +79,21 @@ class BundleAdjuster {
   BundleAdjustmentSummary Optimize();
 
   // Get covariance for a single track
-  bool GetCovarianceForTrack(const TrackId track_id, Eigen::Matrix3d* covariance_matrix);
+  bool GetCovarianceForTrack(const TrackId track_id,
+                             Eigen::Matrix3d* covariance_matrix);
 
   // Get covariance for all tracks
-  bool GetCovarianceForTracks(const std::vector<TrackId> &track_ids, 
-    std::map<TrackId, Eigen::Matrix3d>* covariance_matrices);
+  bool GetCovarianceForTracks(
+      const std::vector<TrackId>& track_ids,
+      std::map<TrackId, Eigen::Matrix3d>* covariance_matrices);
 
   // Get covariance for a single view
   bool GetCovarianceForView(const ViewId view_id, Matrix6d* covariance_matrix);
 
   // Get covariance for a single view
-  bool GetCovarianceForViews(const std::vector<ViewId> &track_ids, 
-    std::map<ViewId, Matrix6d>* covariance_matrices);
-    
+  bool GetCovarianceForViews(const std::vector<ViewId>& track_ids,
+                             std::map<ViewId, Matrix6d>* covariance_matrices);
+
  protected:
   // Add all camera extrinsics and intrinsics to the optimization problem.
   void SetCameraExtrinsicsParameterization();
@@ -118,7 +120,7 @@ class BundleAdjuster {
                                             Camera* camera,
                                             Track* track);
   // Add a position prior residual. This can for example be a GPS position.
-  virtual void AddPositionPriorErrorResidual(View *view, Camera *camera);
+  virtual void AddPositionPriorErrorResidual(View* view, Camera* camera);
 
   const BundleAdjustmentOptions options_;
   Reconstruction* reconstruction_;

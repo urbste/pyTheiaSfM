@@ -32,23 +32,25 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <glog/logging.h>
-#include <gflags/gflags.h>
-#include <theia/theia.h>
 #include <fstream>  // NOLINT
+#include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <string>
-#include <vector>
+#include <theia/theia.h>
 #include <unordered_map>
+#include <vector>
 
 // Input/output files.
 DEFINE_string(images, "", "Wildcard of images to reconstruct.");
-DEFINE_string(output_calibration_file, "",
+DEFINE_string(output_calibration_file,
+              "",
               "Calibration file containing image calibration data.");
-DEFINE_bool(initialize_uncalibrated_images_with_median_viewing_angle, true,
+DEFINE_bool(initialize_uncalibrated_images_with_median_viewing_angle,
+            true,
             "Images with no EXIF information initialize the focal length based "
             "on a focal length corresponding to a median viewing angle.");
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 

@@ -38,7 +38,8 @@
 
 namespace theia {
 
-double CalculateSPRTDecisionThreshold(double sigma, double epsilon,
+double CalculateSPRTDecisionThreshold(double sigma,
+                                      double epsilon,
                                       double time_compute_model_ratio,
                                       int num_models_verified) {
   // Eq. 2 in Matas et. al.
@@ -46,8 +47,9 @@ double CalculateSPRTDecisionThreshold(double sigma, double epsilon,
              sigma * log(sigma / epsilon);
 
   // Eq. 6 in Matas et. al.
-  double a_0 = time_compute_model_ratio * c /
-                   static_cast<double>(num_models_verified) + 1.0;
+  double a_0 =
+      time_compute_model_ratio * c / static_cast<double>(num_models_verified) +
+      1.0;
   double decision_threshold = a_0;
   double kConvergence = 1e-4;
   // Matas et. al. says the decision threshold typically converges in 4
@@ -64,8 +66,10 @@ double CalculateSPRTDecisionThreshold(double sigma, double epsilon,
 }
 
 bool SequentialProbabilityRatioTest(const std::vector<double>& residuals,
-                                    double error_thresh, double sigma,
-                                    double epsilon, double decision_threshold,
+                                    double error_thresh,
+                                    double sigma,
+                                    double epsilon,
+                                    double decision_threshold,
                                     int* num_tested_points,
                                     double* observed_inlier_ratio) {
   int observed_num_inliers = 0;

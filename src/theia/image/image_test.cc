@@ -33,15 +33,15 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include <Eigen/Core>
-#include <gflags/gflags.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
+#include <gflags/gflags.h>
 #include <stdio.h>
 #include <string>
 
-#include "gtest/gtest.h"
 #include "theia/image/image.h"
 #include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 DEFINE_string(test_img, "image/test1.jpg", "Name of test image file.");
 
@@ -57,7 +57,7 @@ std::string img_filename = THEIA_DATA_DIR + std::string("/") + FLAGS_test_img;
   ASSERT_EQ(oiio_img.oriented_width(), theia_img.Cols());   \
   ASSERT_EQ(oiio_img.oriented_height(), theia_img.Rows());  \
   ASSERT_EQ(oiio_img.nchannels(), theia_img.Channels());    \
-  oiio::ImageBuf::ConstIterator<float> it(oiio_img); \
+  oiio::ImageBuf::ConstIterator<float> it(oiio_img);        \
   for (; !it.done(); ++it) {                                \
     for (int c = 0; c < oiio_img.nchannels(); c++) {        \
       ASSERT_EQ(it[c], theia_img.GetXY(it.x(), it.y(), c)); \
@@ -148,9 +148,7 @@ TEST(Image, ConvertToRGBImage) {
 
   // Check that all channels have equal value and that the value is equal to the
   // grayscale image.
-  for (oiio::ImageBuf::ConstIterator<float> it(gray_img);
-       !it.done();
-       ++it) {
+  for (oiio::ImageBuf::ConstIterator<float> it(gray_img); !it.done(); ++it) {
     ASSERT_EQ(it[0], rgb_img.GetXY(it.x(), it.y(), 0));
     ASSERT_EQ(it[0], rgb_img.GetXY(it.x(), it.y(), 1));
     ASSERT_EQ(it[0], rgb_img.GetXY(it.x(), it.y(), 2));

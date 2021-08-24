@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,25 +20,28 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+// edited by Steffen Urban (urbste@googlemail.com), August 2021
 
 #ifndef THEIA_SFM_GLOBAL_POSE_ESTIMATION_IRLS_ROTATION_LOCAL_REFINE_H_
 #define THEIA_SFM_GLOBAL_POSE_ESTIMATION_IRLS_ROTATION_LOCAL_REFINE_H_
 
-#include <vector>
-#include <utility>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "theia/math/rotation.h"
-#include "theia/sfm/types.h"
 #include "theia/math/util.h"
+#include "theia/sfm/types.h"
 
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
@@ -61,13 +65,14 @@ class IRLSRotationLocalRefiner {
     double irls_loss_parameter_sigma = DegToRad(5.0);
   };
 
-  IRLSRotationLocalRefiner(
-      const int num_orientations, const int num_edges,
-      const IRLSRefinerOptions& options);
+  IRLSRotationLocalRefiner(const int num_orientations,
+                           const int num_edges,
+                           const IRLSRefinerOptions& options);
 
   void SetInitTangentSpaceStep(const Eigen::VectorXd& tangent_space_step);
 
-  void SetViewIdToIndex(const std::unordered_map<ViewId, int>& view_id_to_index);
+  void SetViewIdToIndex(
+      const std::unordered_map<ViewId, int>& view_id_to_index);
 
   void SetSparseMatrix(const Eigen::SparseMatrix<double>& sparse_matrix);
 
@@ -88,8 +93,8 @@ class IRLSRotationLocalRefiner {
   // Computes the relative rotation error based on the current global
   // orientation estimates.
   void ComputeResiduals(
-    const std::unordered_map<ViewIdPair, TwoViewInfo>& relative_rotations,
-    std::unordered_map<ViewId, Eigen::Vector3d>* global_rotations);
+      const std::unordered_map<ViewIdPair, TwoViewInfo>& relative_rotations,
+      std::unordered_map<ViewId, Eigen::Vector3d>* global_rotations);
 
   // Computes the average size of the most recent step of the algorithm.
   // The is the average over all non-fixed global_rotations_ of their
@@ -111,9 +116,8 @@ class IRLSRotationLocalRefiner {
 
   // b in the linear system Ax = b.
   Eigen::VectorXd tangent_space_residual_;
-
 };
 
-}  // namespace gopt
+}  // namespace theia
 
 #endif  // THEIA_SFM_GLOBAL_POSE_ESTIMATION_IRLS_ROTATION_LOCAL_REFINE_H_

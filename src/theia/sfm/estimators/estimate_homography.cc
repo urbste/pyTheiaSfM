@@ -75,9 +75,8 @@ class HomographyEstimator
     }
 
     Eigen::Matrix3d homography_matrix;
-    if (!FourPointHomography(image1_points,
-                             image2_points,
-                             &homography_matrix)) {
+    if (!FourPointHomography(
+            image1_points, image2_points, &homography_matrix)) {
       return false;
     }
 
@@ -109,9 +108,8 @@ bool EstimateHomography(
     RansacSummary* ransac_summary) {
   HomographyEstimator homography_estimator;
   std::unique_ptr<SampleConsensusEstimator<HomographyEstimator> > ransac =
-      CreateAndInitializeRansacVariant(ransac_type,
-                                       ransac_params,
-                                       homography_estimator);
+      CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, homography_estimator);
   // Estimate the homography.
   return ransac->Estimate(correspondences, homography, ransac_summary);
 }

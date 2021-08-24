@@ -77,7 +77,8 @@ bool PopulateImageSizesAndPrincipalPoints(const std::string& image_directory,
         directory_with_slash + reconstruction->View(view_ids[i])->Name();
     // const FloatImage image(file);
     // CHECK_GT(image.Cols(), 0);
-    // Camera* camera = reconstruction->MutableView(view_ids[i])->MutableCamera();
+    // Camera* camera =
+    // reconstruction->MutableView(view_ids[i])->MutableCamera();
     // camera->SetImageSize(image.Cols(), image.Rows());
     // camera->SetPrincipalPoint(image.Cols() / 2.0, image.Rows() / 2.0);
   }

@@ -38,10 +38,10 @@
 #include <Eigen/Geometry>
 #include <cmath>
 
-#include "gtest/gtest.h"
 #include "theia/sfm/pose/util.h"
 #include "theia/sfm/types.h"
 #include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -60,13 +60,16 @@ TEST(FundamentalMatrixUtil, FocalLengths) {
     const Vector3d rotation_angle_axis = rng.RandVector3d();
     const Matrix3d rotation =
         Eigen::AngleAxisd(rotation_angle_axis.norm(),
-                          rotation_angle_axis.normalized()).toRotationMatrix();
+                          rotation_angle_axis.normalized())
+            .toRotationMatrix();
     const Vector3d translation = rng.RandVector3d().normalized();
 
     // Create calibration matrices.
     Matrix3d fundamental_matrix;
-    ComposeFundamentalMatrix(gt_focal_length1, gt_focal_length2,
-                             rotation.data(), translation.data(),
+    ComposeFundamentalMatrix(gt_focal_length1,
+                             gt_focal_length2,
+                             rotation.data(),
+                             translation.data(),
                              fundamental_matrix.data());
 
     double focal_length1, focal_length2;
@@ -119,7 +122,8 @@ TEST(FundamentalMatrixUtil, FundamentalMatrixFromProjectionMatrices) {
     const Vector3d rotation_angle_axis = rng.RandVector3d();
     const Matrix3d rotation =
         Eigen::AngleAxisd(rotation_angle_axis.norm(),
-                          rotation_angle_axis.normalized()).toRotationMatrix();
+                          rotation_angle_axis.normalized())
+            .toRotationMatrix();
     const Vector3d translation = rng.RandVector3d();
     Matrix3x4d pmatrix1, pmatrix2;
     pmatrix1 << Matrix3d::Identity(), Vector3d::Zero();
@@ -127,8 +131,8 @@ TEST(FundamentalMatrixUtil, FundamentalMatrixFromProjectionMatrices) {
 
     // Get the fundamental matrix.
     Matrix3d fmatrix;
-    FundamentalMatrixFromProjectionMatrices(pmatrix1.data(), pmatrix2.data(),
-                                            fmatrix.data());
+    FundamentalMatrixFromProjectionMatrices(
+        pmatrix1.data(), pmatrix2.data(), fmatrix.data());
     // Ensure the epipolar constraint holds.
     for (int j = 0; j < kNumPoints; j++) {
       const Vector3d image_point1 = pmatrix1 * points_3d[j].homogeneous();

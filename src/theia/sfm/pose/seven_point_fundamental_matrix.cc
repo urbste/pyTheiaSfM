@@ -57,16 +57,11 @@ Matrix<double, 7, 9> SetupEpipolarConstraint(
   for (int i = 0; i < 7; i++) {
     // Fill matrix with the epipolar constraint from q'_t*E*q = 0. Where q is
     // from the first image, and q' is from the second.
-    epipolar_constraint.row(i) <<
-        image2_points[i].x() * image1_points[i].x(),
-        image2_points[i].y() * image1_points[i].x(),
-        image1_points[i].x(),
+    epipolar_constraint.row(i) << image2_points[i].x() * image1_points[i].x(),
+        image2_points[i].y() * image1_points[i].x(), image1_points[i].x(),
         image2_points[i].x() * image1_points[i].y(),
-        image2_points[i].y() * image1_points[i].y(),
-        image1_points[i].y(),
-        image2_points[i].x(),
-        image2_points[i].y(),
-        1.0;
+        image2_points[i].y() * image1_points[i].y(), image1_points[i].y(),
+        image2_points[i].x(), image2_points[i].y(), 1.0;
   }
 
   return epipolar_constraint;

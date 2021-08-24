@@ -35,14 +35,14 @@
 #ifndef THEIA_SFM_CAMERA_FISHEYE_CAMERA_MODEL_H_
 #define THEIA_SFM_CAMERA_FISHEYE_CAMERA_MODEL_H_
 
-#include <ceres/jet.h>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <cereal/access.hpp>
 #include <cereal/cereal.hpp>
 #include <cereal/types/base_class.hpp>
 #include <cereal/types/polymorphic.hpp>
+#include <ceres/jet.h>
 #include <stdint.h>
-#include <Eigen/Core>
-#include <Eigen/Geometry>
 #include <vector>
 
 #include "theia/sfm/camera/camera_intrinsics_model.h"
@@ -64,7 +64,7 @@ class FisheyeCameraModel : public CameraIntrinsicsModel {
 
   static const int kIntrinsicsSize = 9;
 
-  enum InternalParametersIndex{
+  enum InternalParametersIndex {
     FOCAL_LENGTH = 0,
     ASPECT_RATIO = 1,
     SKEW = 2,
@@ -160,14 +160,14 @@ class FisheyeCameraModel : public CameraIntrinsicsModel {
 };
 
 template <typename T>
-bool FisheyeCameraModel::CameraToPixelCoordinates(
-    const T* intrinsic_parameters, const T* point, T* pixel) {
+bool FisheyeCameraModel::CameraToPixelCoordinates(const T* intrinsic_parameters,
+                                                  const T* point,
+                                                  T* pixel) {
   // Apply radial distortion. Note that we pass in the entire 3D point instead
   // of the projection onto a plane or sphere.
   T distorted_pixel[2];
-  FisheyeCameraModel::DistortPoint(intrinsic_parameters,
-                                   point,
-                                   distorted_pixel);
+  FisheyeCameraModel::DistortPoint(
+      intrinsic_parameters, point, distorted_pixel);
 
   // Apply calibration parameters to transform normalized units into pixels.
   const T& focal_length =
@@ -182,8 +182,8 @@ bool FisheyeCameraModel::CameraToPixelCoordinates(
 
   pixel[0] = focal_length * distorted_pixel[0] + skew * distorted_pixel[1] +
              principal_point_x;
-  pixel[1] = focal_length * aspect_ratio * distorted_pixel[1] +
-             principal_point_y;
+  pixel[1] =
+      focal_length * aspect_ratio * distorted_pixel[1] + principal_point_y;
 
   return true;
 }
@@ -211,9 +211,8 @@ bool FisheyeCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
 
   // Undo the radial distortion.
   T undistorted_point[2];
-  FisheyeCameraModel::UndistortPoint(intrinsic_parameters,
-                                     distorted_point,
-                                     point);
+  FisheyeCameraModel::UndistortPoint(
+      intrinsic_parameters, distorted_point, point);
   point[2] = T(1.0);
 
   return true;

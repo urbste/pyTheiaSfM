@@ -44,9 +44,7 @@ std::unordered_map<int, int> cache_lookup = {
     {0, 1}, {1, 47}, {2, 14}, {3, 101}, {4, 7}, {5, 29}};
 
 // We will use this as our cache miss function for testing purposes.
-int CacheMissLookup(const int& input) {
-  return FindOrDie(cache_lookup, input);
-}
+int CacheMissLookup(const int& input) { return FindOrDie(cache_lookup, input); }
 
 TEST(LRUCache, Construtor) {
   const int kMaxCacheSize = 5;

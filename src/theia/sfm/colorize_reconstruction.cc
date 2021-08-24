@@ -79,7 +79,8 @@ void ExtractColorsFromImage(
   //   }
   // } else {
   //   LOG(FATAL) << "The image file at: " << image_file
-  //              << " is not an RGB or a grayscale image so the color cannot be "
+  //              << " is not an RGB or a grayscale image so the color cannot be
+  //              "
   //                 "extracted.";
   // }
 }
@@ -109,13 +110,10 @@ void ColorizeReconstruction(const std::string& image_directory,
   for (const ViewId view_id : view_ids) {
     const View* view = reconstruction->View(view_id);
     const std::string image_filepath = image_directory + view->Name();
-    CHECK(FileExists(image_filepath)) << "The image file: " << image_filepath
-                                      << " does not exist!";
-    pool->Add(ExtractColorsFromImage,
-              image_filepath,
-              *view,
-              &colors,
-              &mutex_lock);
+    CHECK(FileExists(image_filepath))
+        << "The image file: " << image_filepath << " does not exist!";
+    pool->Add(
+        ExtractColorsFromImage, image_filepath, *view, &colors, &mutex_lock);
   }
   // Wait for all threads to finish before proceeding.
   pool.reset(nullptr);

@@ -34,9 +34,9 @@
 
 #include <Eigen/Dense>
 
+#include "gtest/gtest.h"
 #include <ceres/rotation.h>
 #include <math.h>
-#include "gtest/gtest.h"
 
 #include "theia/alignment/alignment.h"
 #include "theia/sfm/camera/fov_camera_model.h"
@@ -46,8 +46,8 @@
 namespace theia {
 
 using Eigen::AngleAxisd;
-using Eigen::Matrix3d;
 using Eigen::Matrix;
+using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
@@ -211,10 +211,10 @@ void ReprojectionTest(const FOVCameraModel& camera) {
         const Vector2d reprojected_pixel =
             camera.CameraToImageCoordinates(point);
 
-      // Expect the reprojection to be close.
-      EXPECT_LT((pixel - reprojected_pixel).norm(), kTolerance)
-          << "gt pixel: " << pixel.transpose()
-          << "\nreprojected pixel: " << reprojected_pixel.transpose();
+        // Expect the reprojection to be close.
+        EXPECT_LT((pixel - reprojected_pixel).norm(), kTolerance)
+            << "gt pixel: " << pixel.transpose()
+            << "\nreprojected pixel: " << reprojected_pixel.transpose();
       }
     }
   }

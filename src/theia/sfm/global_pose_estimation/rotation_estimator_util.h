@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,14 +20,15 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 
 // edited by Steffen Urban (urbste@googlemail.com), 2021
 
@@ -38,8 +40,8 @@
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 
-#include "theia/sfm/types.h"
 #include "theia/math/util.h"
+#include "theia/sfm/types.h"
 #include "theia/util/hash.h"
 #include "theia/util/map_util.h"
 
@@ -72,8 +74,8 @@ static inline void SetupLinearSystem(
     Eigen::SparseMatrix<double>* sparse_matrix) {
   // The rotation change is one less than the number of global rotations because
   // we keep one rotation constant.
-  (*sparse_matrix).resize(
-      relative_rotations.size() * 3, (num_rotations - 1) * 3);
+  (*sparse_matrix)
+      .resize(relative_rotations.size() * 3, (num_rotations - 1) * 3);
 
   const int kStartRotationIndex = -1;
 
@@ -87,23 +89,23 @@ static inline void SetupLinearSystem(
     const int view1_index =
         FindOrDie(view_id_to_index, relative_rotation.first.first) - 1;
     if (view1_index != kStartRotationIndex) {
-      triplet_list.emplace_back(3 * rotation_error_index + 0,
-                                3 * view1_index + 0, -1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 1,
-                                3 * view1_index + 1, -1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 2,
-                                3 * view1_index + 2, -1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 0, 3 * view1_index + 0, -1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 1, 3 * view1_index + 1, -1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 2, 3 * view1_index + 2, -1.0);
     }
 
     const int view2_index =
         FindOrDie(view_id_to_index, relative_rotation.first.second) - 1;
     if (view2_index != kStartRotationIndex) {
-      triplet_list.emplace_back(3 * rotation_error_index + 0,
-                                3 * view2_index + 0, 1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 1,
-                                3 * view2_index + 1, 1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 2,
-                                3 * view2_index + 2, 1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 0, 3 * view2_index + 0, 1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 1, 3 * view2_index + 1, 1.0);
+      triplet_list.emplace_back(
+          3 * rotation_error_index + 2, 3 * view2_index + 2, 1.0);
     }
 
     ++rotation_error_index;

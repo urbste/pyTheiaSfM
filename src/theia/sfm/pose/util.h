@@ -35,8 +35,8 @@
 #ifndef THEIA_SFM_POSE_UTIL_H_
 #define THEIA_SFM_POSE_UTIL_H_
 
-#include <Eigen/Core>
 #include "theia/alignment/alignment.h"
+#include <Eigen/Core>
 
 namespace theia {
 
@@ -57,10 +57,9 @@ Eigen::Matrix3d CrossProductMatrix(const Eigen::Vector3d& cross_vec);
 // calculates the matrix that will shift the points so that the centroid is at
 // the origin and the average distance from the centroid is sqrt(2). Returns the
 // transformation matrix and the transformed points.
-bool NormalizeImagePoints(
-    const std::vector<Eigen::Vector2d>& image_points,
-    std::vector<Eigen::Vector2d>* normalized_image_points,
-    Eigen::Matrix3d* normalization_matrix);
+bool NormalizeImagePoints(const std::vector<Eigen::Vector2d>& image_points,
+                          std::vector<Eigen::Vector2d>* normalized_image_points,
+                          Eigen::Matrix3d* normalization_matrix);
 
 // Projects a 3x3 matrix to the rotation matrix in SO3 space with the closest
 // Frobenius norm. For a matrix with an SVD decomposition M = USV, the nearest

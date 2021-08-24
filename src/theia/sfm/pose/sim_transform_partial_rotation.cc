@@ -39,8 +39,8 @@
 #include <Eigen/Geometry>
 #include <Eigen/LU>
 #include <glog/logging.h>
-#include <math.h>
 #include <limits>
+#include <math.h>
 
 #include "theia/alignment/alignment.h"
 #include "theia/sfm/pose/util.h"
@@ -58,7 +58,9 @@ typedef Eigen::Matrix<double, 5, 1> Vector5d;
 
 namespace {
 
-bool SolveQEP(const Matrix5d& M, const Matrix5d& C, const Matrix5d& K,
+bool SolveQEP(const Matrix5d& M,
+              const Matrix5d& C,
+              const Matrix5d& K,
               std::vector<double>* eigenvalues,
               std::vector<Vector5d>* eigenvectors) {
   // Solves the quadratic eigenvalue problem:
@@ -124,7 +126,7 @@ bool SolveQEP(const Matrix5d& M, const Matrix5d& C, const Matrix5d& K,
     // solutions.
     if (fabs(eig_solver.eigenvalues()[i].imag()) == 1 ||
         (i > 0 && eig_solver.eigenvalues()[i].real() ==
-         eig_solver.eigenvalues()[i - 1].real())) {
+                      eig_solver.eigenvalues()[i - 1].real())) {
       continue;
     }
     eigenvalues->push_back(eig_solver.eigenvalues()[i].real());
@@ -243,8 +245,8 @@ void SimTransformPartialRotation(const Vector3d& axis,
     for (int i = 0; i < eigenvalues.size(); ++i) {
       if (fabs(eigenvectors[i][4]) < kWTolerance ||
           eigenvectors[i][3] / eigenvectors[i][4] < 0) {
-      continue;
-    }
+        continue;
+      }
 
       Quaterniond quat(eigenvalues[i], axis[0], axis[1], axis[2]);
       quat.normalize();

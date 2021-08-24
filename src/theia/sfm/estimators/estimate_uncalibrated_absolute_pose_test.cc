@@ -42,12 +42,12 @@
 #include "gtest/gtest.h"
 
 #include "theia/math/util.h"
-#include "theia/solvers/sample_consensus_estimator.h"
-#include "theia/test/test_utils.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_absolute_pose.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/pose/util.h"
+#include "theia/solvers/sample_consensus_estimator.h"
+#include "theia/test/test_utils.h"
 #include "theia/util/random.h"
 
 namespace theia {
@@ -74,10 +74,9 @@ void ExecuteRandomTest(const RansacParameters& options,
   std::vector<FeatureCorrespondence2D3D> correspondences;
   for (int i = 0; i < kNumPoints; i++) {
     FeatureCorrespondence2D3D correspondence;
-    correspondence.world_point =
-        Vector3d(rng.RandDouble(-2.0, 2.0),
-                 rng.RandDouble(-2.0, 2.0),
-                 rng.RandDouble(6.0, 10.0));
+    correspondence.world_point = Vector3d(rng.RandDouble(-2.0, 2.0),
+                                          rng.RandDouble(-2.0, 2.0),
+                                          rng.RandDouble(6.0, 10.0));
 
     // Add an inlier or outlier.
     if (i < inlier_ratio * kNumPoints) {
@@ -102,31 +101,23 @@ void ExecuteRandomTest(const RansacParameters& options,
   // Estimate the absolute pose.
   UncalibratedAbsolutePose pose;
   RansacSummary ransac_summary;
-  EXPECT_TRUE(EstimateUncalibratedAbsolutePose(options,
-                                             RansacType::RANSAC,
-                                             correspondences,
-                                             &pose,
-                                             &ransac_summary));
+  EXPECT_TRUE(EstimateUncalibratedAbsolutePose(
+      options, RansacType::RANSAC, correspondences, &pose, &ransac_summary));
 
   // Expect that the inlier ratio is close to the ground truth.
   EXPECT_GT(static_cast<double>(ransac_summary.inliers.size()), 3);
 
   // Expect poses are near.
-  EXPECT_TRUE(test::ArraysEqualUpToScale(9,
-                                         rotation.data(),
-                                         pose.rotation.data(),
-                                         tolerance));
+  EXPECT_TRUE(test::ArraysEqualUpToScale(
+      9, rotation.data(), pose.rotation.data(), tolerance));
   // The position is more noisy than the rotation usually.
-  EXPECT_TRUE(test::ArraysEqualUpToScale(3,
-                                         position.data(),
-                                         pose.position.data(),
-                                         2.0 * tolerance));
+  EXPECT_TRUE(test::ArraysEqualUpToScale(
+      3, position.data(), pose.position.data(), 2.0 * tolerance));
 
   // Expect focal length is near.
   static const double kFocalLengthTolerance = 0.05;
-  EXPECT_NEAR(pose.focal_length,
-              kFocalLength,
-              kFocalLengthTolerance * kFocalLength);
+  EXPECT_NEAR(
+      pose.focal_length, kFocalLength, kFocalLengthTolerance * kFocalLength);
 }
 
 TEST(EstimateUncalibratedAbsolutePose, AllInliersNoNoise) {
@@ -140,13 +131,12 @@ TEST(EstimateUncalibratedAbsolutePose, AllInliersNoNoise) {
   const double kPoseTolerance = 1e-4;
 
   const std::vector<Matrix3d> rotations = {
-    Matrix3d::Identity(),
-    AngleAxisd(DegToRad(12.0), Vector3d::UnitY()).toRotationMatrix(),
-    AngleAxisd(DegToRad(-9.0), Vector3d(1.0, 0.2, -0.8).normalized())
-        .toRotationMatrix()
-  };
-  const std::vector<Vector3d> positions = { Vector3d(-1.3, 0, 0),
-                                            Vector3d(0, 0, 0.5) };
+      Matrix3d::Identity(),
+      AngleAxisd(DegToRad(12.0), Vector3d::UnitY()).toRotationMatrix(),
+      AngleAxisd(DegToRad(-9.0), Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix()};
+  const std::vector<Vector3d> positions = {Vector3d(-1.3, 0, 0),
+                                           Vector3d(0, 0, 0.5)};
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
       ExecuteRandomTest(options,
@@ -171,13 +161,12 @@ TEST(EstimateUncalibratedAbsolutePose, AllInliersWithNoise) {
   const double kPoseTolerance = 1e-2;
 
   const std::vector<Matrix3d> rotations = {
-    Matrix3d::Identity(),
-    AngleAxisd(DegToRad(12.0), Vector3d::UnitY()).toRotationMatrix(),
-    AngleAxisd(DegToRad(-9.0), Vector3d(1.0, 0.2, -0.8).normalized())
-        .toRotationMatrix()
-  };
-  const std::vector<Vector3d> positions = { Vector3d(-1.3, 0, 0),
-                                            Vector3d(0, 0, 0.5) };
+      Matrix3d::Identity(),
+      AngleAxisd(DegToRad(12.0), Vector3d::UnitY()).toRotationMatrix(),
+      AngleAxisd(DegToRad(-9.0), Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix()};
+  const std::vector<Vector3d> positions = {Vector3d(-1.3, 0, 0),
+                                           Vector3d(0, 0, 0.5)};
 
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
@@ -204,8 +193,8 @@ TEST(EstimateUncalibratedAbsolutePose, OutliersNoNoise) {
 
   const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
                                            RandomRotation(15.0, &rng)};
-  const std::vector<Vector3d> positions = { Vector3d(1, 0, 0),
-                                            Vector3d(0, 1, 0) };
+  const std::vector<Vector3d> positions = {Vector3d(1, 0, 0),
+                                           Vector3d(0, 1, 0)};
 
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
@@ -232,8 +221,8 @@ TEST(EstimateUncalibratedAbsolutePose, OutliersWithNoise) {
 
   const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
                                            RandomRotation(15.0, &rng)};
-  const std::vector<Vector3d> positions = { Vector3d(1, 0, 0),
-                                            Vector3d(0, 1, 0) };
+  const std::vector<Vector3d> positions = {Vector3d(1, 0, 0),
+                                           Vector3d(0, 1, 0)};
 
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {

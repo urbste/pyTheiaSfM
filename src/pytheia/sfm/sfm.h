@@ -7,8 +7,7 @@ namespace py = pybind11;
 namespace pytheia {
 namespace sfm {
 
-void pytheia_sfm(py::module &m);
+void pytheia_sfm(py::module& m);
 
 }
-}
-
+}  // namespace pytheia

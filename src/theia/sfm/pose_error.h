@@ -35,8 +35,8 @@
 #ifndef THEIA_SFM_POSE_ERROR_H_
 #define THEIA_SFM_POSE_ERROR_H_
 
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -82,8 +82,9 @@ class PoseError {
     const std::string rotation_msg = rotation_histogram_->PrintString();
     message += StringPrintf(
         "Rotation Error:\nMean = %lf \nMedian = %lf\nHistogram:\n%s",
-        mean_rotation_error, median_rotation_error, rotation_msg.c_str());
-
+        mean_rotation_error,
+        median_rotation_error,
+        rotation_msg.c_str());
 
     // Print position errors.
     std::sort(position_error_.begin(), position_error_.end());
@@ -95,7 +96,9 @@ class PoseError {
     const std::string position_msg = position_histogram_->PrintString();
     message += StringPrintf(
         "\nPosition Error:\nMean = %lf \nMedian = %lf\nHistogram:\n%s",
-        mean_position_error, median_position_error, position_msg.c_str());
+        mean_position_error,
+        median_position_error,
+        position_msg.c_str());
     return message;
   }
 

@@ -35,9 +35,9 @@
 #ifndef THEIA_MATH_DISTRIBUTION_H_
 #define THEIA_MATH_DISTRIBUTION_H_
 
+#include <cmath>
 #include <glog/logging.h>
 #include <stdio.h>
-#include <cmath>
 
 #include "theia/math/util.h"
 

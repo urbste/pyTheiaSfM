@@ -35,18 +35,18 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <Eigen/SVD>
-#include <glog/logging.h>
 #include <cmath>
+#include <glog/logging.h>
 
 #include "gtest/gtest.h"
 
 #include "theia/math/util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/pose/eight_point_fundamental_matrix.h"
 #include "theia/sfm/pose/fundamental_matrix_util.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/triangulation/triangulation.h"
 #include "theia/sfm/types.h"
+#include "theia/util/random.h"
 
 namespace theia {
 namespace {
@@ -73,16 +73,17 @@ void GenerateImagePoints(const std::vector<Vector3d>& points_3d,
   image_2_points->reserve(points_3d.size());
   for (int i = 0; i < points_3d.size(); i++) {
     image_1_points->push_back(points_3d[i].hnormalized());
-    image_2_points->push_back((expected_rotation * points_3d[i] +
-                               expected_translation).hnormalized());
+    image_2_points->push_back(
+        (expected_rotation * points_3d[i] + expected_translation)
+            .hnormalized());
   }
 
   if (projection_noise_std_dev) {
     for (int i = 0; i < points_3d.size(); i++) {
-      AddNoiseToProjection(projection_noise_std_dev, &rng,
-                           &((*image_1_points)[i]));
-      AddNoiseToProjection(projection_noise_std_dev, &rng,
-                           &((*image_2_points)[i]));
+      AddNoiseToProjection(
+          projection_noise_std_dev, &rng, &((*image_1_points)[i]));
+      AddNoiseToProjection(
+          projection_noise_std_dev, &rng, &((*image_2_points)[i]));
     }
   }
 }
@@ -101,13 +102,13 @@ void CheckReprojectionError(const std::vector<Vector2d>& image_1_points,
   for (int i = 0; i < image_1_points.size(); i++) {
     // Triangulate the world point.
     Vector4d triangulated_point;
-    CHECK(TriangulateDLT(left_projection, right_projection,
-                         image_1_points[i], image_2_points[i],
+    CHECK(TriangulateDLT(left_projection,
+                         right_projection,
+                         image_1_points[i],
+                         image_2_points[i],
                          &triangulated_point));
-    const Vector3d left_point =
-        left_projection * triangulated_point;
-    const Vector3d right_point =
-        right_projection * triangulated_point;
+    const Vector3d left_point = left_projection * triangulated_point;
+    const Vector3d right_point = right_projection * triangulated_point;
 
     // Compute reprojection error.
     const double img_1_error =
@@ -127,28 +128,32 @@ void EightPointNormalizedWithNoiseTest(const std::vector<Vector3d>& points_3d,
                                        const double kMaxReprojectionError) {
   std::vector<Vector2d> image_1_points;
   std::vector<Vector2d> image_2_points;
-  GenerateImagePoints(points_3d, projection_noise_std_dev, expected_rotation,
-                      expected_translation, &image_1_points, &image_2_points);
+  GenerateImagePoints(points_3d,
+                      projection_noise_std_dev,
+                      expected_rotation,
+                      expected_translation,
+                      &image_1_points,
+                      &image_2_points);
   // Compute fundamental matrix.
   Matrix3d fundamental_matrix;
-  EXPECT_TRUE(NormalizedEightPointFundamentalMatrix(image_1_points,
-                                                    image_2_points,
-                                                    &fundamental_matrix));
+  EXPECT_TRUE(NormalizedEightPointFundamentalMatrix(
+      image_1_points, image_2_points, &fundamental_matrix));
 
-  CheckReprojectionError(image_1_points, image_2_points, fundamental_matrix,
+  CheckReprojectionError(image_1_points,
+                         image_2_points,
+                         fundamental_matrix,
                          kMaxReprojectionError);
 }
 
 void BasicNormalizedTest() {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
-                                            Vector3d(-2.0, 2.0, 3.0)
-  };
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
 
   const Quaterniond soln_rotation(
       AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
@@ -156,25 +161,24 @@ void BasicNormalizedTest() {
   const double kNoise = 0.0 / 512.0;
   const double kMaxReprojectionError = 1e-12;
 
-  EightPointNormalizedWithNoiseTest(
-      points_3d, kNoise, soln_rotation, soln_translation,
-      kMaxReprojectionError);
+  EightPointNormalizedWithNoiseTest(points_3d,
+                                    kNoise,
+                                    soln_rotation,
+                                    soln_translation,
+                                    kMaxReprojectionError);
 }
 
-TEST(NormalizedEightPoint, BasicTest) {
-  BasicNormalizedTest();
-}
+TEST(NormalizedEightPoint, BasicTest) { BasicNormalizedTest(); }
 
 TEST(NormalizedEightPoint, MinimalNoiseTest) {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
-                                            Vector3d(-2.0, 2.0, 3.0)
-  };
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
 
   const Quaterniond soln_rotation(
       AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
@@ -182,22 +186,26 @@ TEST(NormalizedEightPoint, MinimalNoiseTest) {
   const double kNoise = 1.0 / 512.0;
   const double kMaxReprojectionError = 1e-4;
 
-  EightPointNormalizedWithNoiseTest(points_3d, kNoise, soln_rotation,
-                                    soln_translation, kMaxReprojectionError);
+  EightPointNormalizedWithNoiseTest(points_3d,
+                                    kNoise,
+                                    soln_rotation,
+                                    soln_translation,
+                                    kMaxReprojectionError);
 }
 
 TEST(NormalizedEightPoint, OverconstrainedNoiseTest) {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
-                                            Vector3d(-2.0, 2.0, 3.0),
-                                            Vector3d(-2.0, 4.0, 1.0),
-                                            Vector3d(-2.0, 2.0, 2.0),
-                                            Vector3d(-4.0, 3.0, 3.0),
+  const std::vector<Vector3d> points_3d = {
+      Vector3d(-1.0, 3.0, 3.0),
+      Vector3d(1.0, -1.0, 2.0),
+      Vector3d(-1.0, 1.0, 2.0),
+      Vector3d(2.0, 1.0, 3.0),
+      Vector3d(-1.0, -3.0, 2.0),
+      Vector3d(1.0, -2.0, 1.0),
+      Vector3d(-1.0, 4.0, 2.0),
+      Vector3d(-2.0, 2.0, 3.0),
+      Vector3d(-2.0, 4.0, 1.0),
+      Vector3d(-2.0, 2.0, 2.0),
+      Vector3d(-4.0, 3.0, 3.0),
   };
 
   const Quaterniond soln_rotation(
@@ -206,36 +214,40 @@ TEST(NormalizedEightPoint, OverconstrainedNoiseTest) {
   const double kNoise = 1.0 / 512.0;
   const double kMaxReprojectionError = 1e-4;
 
-  EightPointNormalizedWithNoiseTest(points_3d, kNoise, soln_rotation,
-                                    soln_translation, kMaxReprojectionError);
+  EightPointNormalizedWithNoiseTest(points_3d,
+                                    kNoise,
+                                    soln_rotation,
+                                    soln_translation,
+                                    kMaxReprojectionError);
 }
 
 TEST(NormalizedEightPoint, DegenerateTest) {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
-                                            Vector3d(-2.0, 2.0, 3.0)
-  };
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
 
   const Quaterniond soln_rotation(
-  AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
+      AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 0.5, 0.0);
 
   std::vector<Vector2d> image_1_points;
   std::vector<Vector2d> image_2_points;
-  GenerateImagePoints(points_3d, 0.0, soln_rotation,
-                      soln_translation, &image_1_points, &image_2_points);
+  GenerateImagePoints(points_3d,
+                      0.0,
+                      soln_rotation,
+                      soln_translation,
+                      &image_1_points,
+                      &image_2_points);
 
   Matrix3d fundamental_matrix;
-  EXPECT_FALSE(NormalizedEightPointFundamentalMatrix(image_1_points,
-                                                     image_2_points,
-                                                     &fundamental_matrix));
+  EXPECT_FALSE(NormalizedEightPointFundamentalMatrix(
+      image_1_points, image_2_points, &fundamental_matrix));
 }
-
 
 }  // namespace
 }  // namespace theia

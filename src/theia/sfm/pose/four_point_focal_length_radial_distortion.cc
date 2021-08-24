@@ -36,7 +36,6 @@
 // company address (steffen.urban@zeiss.com)
 // December 2018
 
-#include <glog/logging.h>
 #include <Eigen/Cholesky>
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -45,6 +44,7 @@
 #include <Eigen/LU>
 #include <Eigen/QR>
 #include <Eigen/SVD>
+#include <glog/logging.h>
 #include <random>
 
 #include "theia/sfm/pose/four_point_focal_length_radial_distortion.h"
@@ -71,20 +71,24 @@ using Eigen::Vector4d;
 bool FourPointsPoseFocalLengthRadialDistortion(
     const Eigen::Vector2d feature_vectors[4],
     const Eigen::Vector3d world_points[4],
-    const double max_focal_length, const double min_focal_length,
-    const double max_distortion, const double min_distortion,
+    const double max_focal_length,
+    const double min_focal_length,
+    const double max_distortion,
+    const double min_distortion,
     std::vector<Eigen::Matrix3d>* rotations,
     std::vector<Eigen::Vector3d>* translations,
     std::vector<double>* radial_distortions,
     std::vector<double>* focal_lengths) {
   // check that input size of features and world points is 4
-  //CHECK_EQ(feature_vectors.size(), world_points.size());
+  // CHECK_EQ(feature_vectors.size(), world_points.size());
 
   CHECK_GE(min_focal_length, 0.0);
   CHECK_GE(max_focal_length, 0.0);
   CHECK_GE(max_focal_length, min_focal_length);
-  CHECK_LE(max_distortion, 0.0); // smaller zero means we allow only barrel distortion for this model
-  CHECK_LE(min_distortion, 0.0); // smaller zero means we allow only barrel distortion for this model
+  CHECK_LE(max_distortion, 0.0);  // smaller zero means we allow only barrel
+                                  // distortion for this model
+  CHECK_LE(min_distortion, 0.0);  // smaller zero means we allow only barrel
+                                  // distortion for this model
   CHECK_LE(max_distortion, min_distortion);
 
   Vector4d d;
@@ -218,8 +222,10 @@ bool FourPointsPoseFocalLengthRadialDistortion(
   for (int i = 0; i < valid_solutions.size(); ++i) {
     const double k = valid_solutions[i][3];
     const double P33 = valid_solutions[i][4];
-    Eigen::Vector4d alpha(valid_solutions[i][0], valid_solutions[i][1],
-                          valid_solutions[i][2], 1.0);
+    Eigen::Vector4d alpha(valid_solutions[i][0],
+                          valid_solutions[i][1],
+                          valid_solutions[i][2],
+                          1.0);
 
     Vector8d P12_ = N * alpha;
     Map<Matrix42d> P12(P12_.data(), 4, 2);

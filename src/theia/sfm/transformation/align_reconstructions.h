@@ -35,8 +35,8 @@
 #ifndef THEIA_SFM_TRANSFORMATION_ALIGN_RECONSTRUCTIONS_H_
 #define THEIA_SFM_TRANSFORMATION_ALIGN_RECONSTRUCTIONS_H_
 
-#include <Eigen/Core>
 #include "theia/sfm/similarity_transformation.h"
+#include <Eigen/Core>
 
 namespace theia {
 class Reconstruction;
@@ -45,14 +45,13 @@ class Reconstruction;
 // positions in an L2 sense.
 // Also returns the alignment result, i.e. rotation, translation and scale.
 SimilarityTransformation AlignReconstructions(
-    const Reconstruction& reconstruction1,
-    Reconstruction* reconstruction2);
+    const Reconstruction& reconstruction1, Reconstruction* reconstruction2);
 
 // Aligns the reconstructions so that their commons cameras have the closest
 // positions. This method is robust by using RANSAC to compute similarity
 // transformations with inliers having a position distance less than
 // robust_error_threshold. A final alignment is run on the inliers of the best
-// RANSAC estimation. 
+// RANSAC estimation.
 // Also returns the alignment result, i.e. rotation, translation and scale.
 SimilarityTransformation AlignReconstructionsRobust(
     const double robust_error_threshold,

@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,37 +20,39 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 
 // edited by Steffen Urban (urbste@googlemail.com), 2021
 
 #include "theia/sfm/global_pose_estimation/irls_rotation_local_refiner.h"
 
+#include <glog/logging.h>
 #include <iomanip>
 #include <iostream>
-#include <glog/logging.h>
 
+#include "theia/math/matrix/sparse_cholesky_llt.h"
+#include "theia/math/rotation.h"
 #include "theia/sfm/global_pose_estimation/rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/rotation_estimator_util.h"
-#include "theia/math/rotation.h"
-#include "theia/math/matrix/sparse_cholesky_llt.h"
-#include "theia/util/map_util.h"
 #include "theia/sfm/types.h"
+#include "theia/util/map_util.h"
 #include "theia/util/timer.h"
 
 namespace theia {
 
 IRLSRotationLocalRefiner::IRLSRotationLocalRefiner(
-    const int num_orientations, const int num_edges,
+    const int num_orientations,
+    const int num_edges,
     const IRLSRefinerOptions& options)
-  : options_(options) {
+    : options_(options) {
   // The rotation change is one less than the number of global rotations because
   // we keep one rotation constant.
   tangent_space_step_.resize((num_orientations - 1) * 3);
@@ -85,9 +88,10 @@ bool IRLSRotationLocalRefiner::SolveIRLS(
   }
 
   if (sparse_matrix_.rows() == 0) {
-    SetupLinearSystem(
-        relative_rotations, (*global_rotations).size(),
-        view_id_to_index_, &sparse_matrix_);
+    SetupLinearSystem(relative_rotations,
+                      (*global_rotations).size(),
+                      view_id_to_index_,
+                      &sparse_matrix_);
   }
 
   // Set up the linear solver and analyze the sparsity pattern of the
@@ -100,9 +104,9 @@ bool IRLSRotationLocalRefiner::SolveIRLS(
     return false;
   }
 
-  LOG(INFO) << std::setw(12) << std::setfill(' ') << "Iter "
-            << std::setw(16) << std::setfill(' ') << "SqError "
-            << std::setw(16) << std::setfill(' ') << "Delta ";
+  LOG(INFO) << std::setw(12) << std::setfill(' ') << "Iter " << std::setw(16)
+            << std::setfill(' ') << "SqError " << std::setw(16)
+            << std::setfill(' ') << "Delta ";
 
   ComputeResiduals(relative_rotations, global_rotations);
 
@@ -140,9 +144,8 @@ bool IRLSRotationLocalRefiner::SolveIRLS(
     ComputeResiduals(relative_rotations, global_rotations);
     const double avg_step_size = ComputeAverageStepSize();
 
-    LOG(INFO) << std::setw(12) << std::setfill(' ') << i
-              << std::setw(16) << std::setfill(' ')
-              << tangent_space_residual_.squaredNorm()
+    LOG(INFO) << std::setw(12) << std::setfill(' ') << i << std::setw(16)
+              << std::setfill(' ') << tangent_space_residual_.squaredNorm()
               << std::setw(16) << std::setfill(' ') << avg_step_size;
 
     if (avg_step_size < options_.irls_step_convergence_threshold) {
@@ -151,8 +154,8 @@ bool IRLSRotationLocalRefiner::SolveIRLS(
     }
   }
 
-  LOG(INFO) << "Total time [IRLS]: "
-            << timer.ElapsedTimeInSeconds() * 1e3 << " ms.";
+  LOG(INFO) << "Total time [IRLS]: " << timer.ElapsedTimeInSeconds() * 1e3
+            << " ms.";
   return true;
 }
 
@@ -177,7 +180,8 @@ void IRLSRotationLocalRefiner::ComputeResiduals(
   int rotation_error_index = 0;
 
   for (const auto& relative_rotation : relative_rotations) {
-    const Eigen::Vector3d& relative_rotation_aa = relative_rotation.second.rotation_2;
+    const Eigen::Vector3d& relative_rotation_aa =
+        relative_rotation.second.rotation_2;
     const Eigen::Vector3d& rotation1 =
         FindOrDie(*global_rotations, relative_rotation.first.first);
     const Eigen::Vector3d& rotation2 =
@@ -187,7 +191,7 @@ void IRLSRotationLocalRefiner::ComputeResiduals(
     //   R_err = R2^t * R_12 * R1.
     tangent_space_residual_.segment<3>(3 * rotation_error_index) =
         MultiplyRotations(-rotation2,
-            MultiplyRotations(relative_rotation_aa, rotation1));
+                          MultiplyRotations(relative_rotation_aa, rotation1));
     ++rotation_error_index;
   }
 }

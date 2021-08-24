@@ -34,9 +34,9 @@
 
 // This file was created by Steffen Urban (urbste@googlemail.com) October 2019
 
-#include <glog/logging.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <glog/logging.h>
 
 #include <algorithm>
 #include <vector>
@@ -59,7 +59,8 @@ using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 
-void DistortPoint(const Eigen::Vector2d& point2d, const double& distortion,
+void DistortPoint(const Eigen::Vector2d& point2d,
+                  const double& distortion,
                   Eigen::Vector2d* distorted_point) {
   const double r_u_sq = point2d[0] * point2d[0] + point2d[1] * point2d[1];
 
@@ -88,16 +89,17 @@ RandomNumberGenerator rng(64);
 void ExecuteRandomTest(const RansacParameters& options,
                        const Matrix3d& gt_rotation,
                        const Vector3d& gt_translation,
-                       const double inlier_ratio, const double noise,
+                       const double inlier_ratio,
+                       const double noise,
                        const double tolerance) {
   // Create feature correspondences (inliers and outliers) and add noise if
   // appropriate.
   std::vector<FeatureCorrespondence2D3D> correspondences;
   for (int i = 0; i < kNumPoints; i++) {
     FeatureCorrespondence2D3D correspondence;
-    correspondence.world_point =
-        Vector3d(rng.RandDouble(-5.0, 5.0), rng.RandDouble(-5.0, 5.0),
-                 rng.RandDouble(3.0, 10.0));
+    correspondence.world_point = Vector3d(rng.RandDouble(-5.0, 5.0),
+                                          rng.RandDouble(-5.0, 5.0),
+                                          rng.RandDouble(3.0, 10.0));
 
     const Matrix3d camera_matrix =
         Eigen::DiagonalMatrix<double, 3>(kFocalLength, kFocalLength, 1.0);
@@ -111,13 +113,12 @@ void ExecuteRandomTest(const RansacParameters& options,
       correspondence.feature =
           (gt_projection * correspondence.world_point.homogeneous())
               .hnormalized();
-      DistortPoint(correspondence.feature, kRadialDistortion,
-                   &correspondence.feature);
+      DistortPoint(
+          correspondence.feature, kRadialDistortion, &correspondence.feature);
     } else {
       correspondence.feature =
           Vector2d(rng.RandDouble(-1.0, 1.0), rng.RandDouble(-1.0, 1.0));
     }
-
 
     correspondences.emplace_back(correspondence);
   }
@@ -136,27 +137,31 @@ void ExecuteRandomTest(const RansacParameters& options,
   meta_data.min_radial_distortion = -1e-9;
   meta_data.max_radial_distortion = -1e-5;
   RansacSummary ransac_summary;
-  EXPECT_TRUE(EstimateRadialDistUncalibratedAbsolutePose(
-      options, RansacType::RANSAC, correspondences, meta_data, &pose,
-      &ransac_summary));
+  EXPECT_TRUE(EstimateRadialDistUncalibratedAbsolutePose(options,
+                                                         RansacType::RANSAC,
+                                                         correspondences,
+                                                         meta_data,
+                                                         &pose,
+                                                         &ransac_summary));
 
   // Expect poses are near.
-  EXPECT_TRUE(test::ArraysEqualUpToScale(9, gt_rotation.data(),
-                                         pose.rotation.data(), tolerance));
+  EXPECT_TRUE(test::ArraysEqualUpToScale(
+      9, gt_rotation.data(), pose.rotation.data(), tolerance));
   // The position is more noisy than the rotation usually.
   EXPECT_TRUE(test::ArraysEqualUpToScale(
       3, gt_translation.data(), pose.translation.data(), 2.0 * tolerance));
 
   // Expect focal length is near.
   static const double kFocalLengthTolerance = 0.05;
-  EXPECT_NEAR(pose.focal_length, kFocalLength,
-              kFocalLengthTolerance * kFocalLength);
+  EXPECT_NEAR(
+      pose.focal_length, kFocalLength, kFocalLengthTolerance * kFocalLength);
   // Expect radial distortion is near.
-  EXPECT_NEAR(pose.radial_distortion, kRadialDistortion,
+  EXPECT_NEAR(pose.radial_distortion,
+              kRadialDistortion,
               std::abs(2.0 * kFocalLengthTolerance * kRadialDistortion));
 }
 
- TEST(EstimateRadialDistUncalibratedAbsolutePose, AllInliersNoNoise) {
+TEST(EstimateRadialDistUncalibratedAbsolutePose, AllInliersNoNoise) {
   RansacParameters options;
   options.rng = std::make_shared<RandomNumberGenerator>(rng);
   options.use_mle = true;
@@ -176,13 +181,17 @@ void ExecuteRandomTest(const RansacParameters& options,
                                            Vector3d(1.0, 1.0, 0.1)};
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
-      ExecuteRandomTest(options, rotations[i], positions[j], kInlierRatio,
-                        kNoise, kPoseTolerance);
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kInlierRatio,
+                        kNoise,
+                        kPoseTolerance);
     }
   }
 }
 
- TEST(EstimateRadialDistUncalibratedAbsolutePose, AllInliersWithNoise) {
+TEST(EstimateRadialDistUncalibratedAbsolutePose, AllInliersWithNoise) {
   RansacParameters options;
   options.rng = std::make_shared<RandomNumberGenerator>(rng);
   options.use_mle = true;
@@ -204,8 +213,12 @@ void ExecuteRandomTest(const RansacParameters& options,
 
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
-      ExecuteRandomTest(options, rotations[i], positions[j], kInlierRatio,
-                        kNoise, kPoseTolerance);
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kInlierRatio,
+                        kNoise,
+                        kPoseTolerance);
     }
   }
 }
@@ -229,8 +242,12 @@ TEST(EstimateRadialDistUncalibratedAbsolutePose, OutliersNoNoise) {
 
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
-      ExecuteRandomTest(options, rotations[i], positions[j], kInlierRatio,
-                        kNoise, kPoseTolerance);
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kInlierRatio,
+                        kNoise,
+                        kPoseTolerance);
     }
   }
 }
@@ -254,8 +271,12 @@ TEST(EstimateRadialDistUncalibratedAbsolutePose, OutliersWithNoise) {
 
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
-      ExecuteRandomTest(options, rotations[i], positions[j], kInlierRatio,
-                        kNoise, kPoseTolerance);
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kInlierRatio,
+                        kNoise,
+                        kPoseTolerance);
     }
   }
 }

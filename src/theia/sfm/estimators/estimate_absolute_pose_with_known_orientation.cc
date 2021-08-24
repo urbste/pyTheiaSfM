@@ -34,9 +34,9 @@
 
 #include "theia/sfm/estimators/estimate_absolute_pose_with_known_orientation.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <vector>
 
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
@@ -130,23 +130,19 @@ bool EstimateAbsolutePoseWithKnownOrientation(
     const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences,
     Eigen::Vector3d* camera_position,
     RansacSummary* ransac_summary) {
-
   // Rotate the correspondences.
   std::vector<FeatureCorrespondence2D3D> rotated_correspondences;
-  RotateCorrespondences(normalized_correspondences,
-                        camera_orientation,
-                        &rotated_correspondences);
+  RotateCorrespondences(
+      normalized_correspondences, camera_orientation, &rotated_correspondences);
 
   AbsolutePoseWithKnownOrientationEstimator absolute_pose_estimator;
   std::unique_ptr<
       SampleConsensusEstimator<AbsolutePoseWithKnownOrientationEstimator> >
-      ransac = CreateAndInitializeRansacVariant(ransac_type,
-                                                ransac_params,
-                                                absolute_pose_estimator);
+      ransac = CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, absolute_pose_estimator);
   // Estimate the absolute pose.
-  return ransac->Estimate(rotated_correspondences,
-                          camera_position,
-                          ransac_summary);
+  return ransac->Estimate(
+      rotated_correspondences, camera_position, ransac_summary);
 }
 
 }  // namespace theia

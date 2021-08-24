@@ -7,7 +7,7 @@ namespace py = pybind11;
 namespace pytheia {
 namespace matching {
 
-void pytheia_matching(py::module &m);
+void pytheia_matching(py::module& m);
 
 }
-}
+}  // namespace pytheia

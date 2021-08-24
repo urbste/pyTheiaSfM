@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,14 +20,17 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+// edited by Steffen Urban (urbste@googlemail.com), August 2021
 
 #include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
 
@@ -44,21 +48,19 @@
 #include "spectra/include/MatOp/SparseSymMatProd.h"
 #include "spectra/include/SymEigsSolver.h"
 
-#include "theia/sfm/global_pose_estimation/rotation_estimator_util.h"
 #include "theia/math/bcm_sdp_solver.h"
-#include "theia/math/rbr_sdp_solver.h"
 #include "theia/math/rank_restricted_sdp_solver.h"
+#include "theia/math/rbr_sdp_solver.h"
 #include "theia/math/riemannian_staircase.h"
+#include "theia/sfm/global_pose_estimation/rotation_estimator_util.h"
 
 namespace theia {
-LagrangeDualRotationEstimator::LagrangeDualRotationEstimator(const int N,
-                                                             const int dim)
-    : LagrangeDualRotationEstimator(N, dim, math::SDPSolverOptions()) {}
+LagrangeDualRotationEstimator::LagrangeDualRotationEstimator()
+    : LagrangeDualRotationEstimator(math::SDPSolverOptions()) {}
 
 LagrangeDualRotationEstimator::LagrangeDualRotationEstimator(
-    const int N, const int dim, const math::SDPSolverOptions& options)
-    : options_(options), images_num_(N), dim_(dim) {
-  R_ = Eigen::SparseMatrix<double>(dim_ * N, dim_ * N);
+    const math::SDPSolverOptions& options)
+    : options_(options) {
   alpha_max_ = 0.0;
 }
 
@@ -83,10 +85,14 @@ double LagrangeDualRotationEstimator::GetErrorBound() const {
 bool LagrangeDualRotationEstimator::EstimateRotations(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     std::unordered_map<ViewId, Eigen::Vector3d>* global_rotations) {
+  images_num_ = global_rotations->size();
+  dim_ = 3;
   const int N = images_num_;
 
   CHECK_GT(view_pairs.size(), 0);
   CHECK_GT(N, 0);
+
+  R_ = Eigen::SparseMatrix<double>(dim_ * N, dim_ * N);
 
   if (view_id_to_index_.empty()) {
     ViewIdToAscentIndex(*global_rotations, &view_id_to_index_);
@@ -104,8 +110,8 @@ bool LagrangeDualRotationEstimator::EstimateRotations(
 
   RetrieveRotations(Y_, global_rotations);
 
-  LOG(INFO) << "LagrangeDual converged in "
-            << summary_.total_iterations_num << " iterations.";
+  LOG(INFO) << "LagrangeDual converged in " << summary_.total_iterations_num
+            << " iterations.";
   LOG(INFO) << "Total time [LagrangeDual]: " << summary_.TotalTime() << " ms.";
 
   return true;
@@ -154,7 +160,8 @@ void LagrangeDualRotationEstimator::ComputeErrorBound(
 
   // compute the bound of residual error
   Spectra::SparseSymMatProd<double> op(L);
-  Spectra::SymEigsSolver<double, Spectra::SMALLEST_ALGE,
+  Spectra::SymEigsSolver<double,
+                         Spectra::SMALLEST_ALGE,
                          Spectra::SparseSymMatProd<double>>
       eigs(&op, 2, 5);
   eigs.init();
@@ -224,8 +231,7 @@ void LagrangeDualRotationEstimator::FillinRelativeGraph(
   R.makeCompressed();
 }
 
-std::unique_ptr<math::SDPSolver>
-LagrangeDualRotationEstimator::CreateSDPSolver(
+std::unique_ptr<math::SDPSolver> LagrangeDualRotationEstimator::CreateSDPSolver(
     const int n, const int dim) {
   switch (options_.solver_type) {
     case math::RBR_BCM:
@@ -234,12 +240,12 @@ LagrangeDualRotationEstimator::CreateSDPSolver(
       break;
     case math::RANK_DEFICIENT_BCM:
       return std::unique_ptr<math::SDPSolver>(
-            new theia::math::RankRestrictedSDPSolver(n, dim, options_));
+          new theia::math::RankRestrictedSDPSolver(n, dim, options_));
       break;
     case math::RIEMANNIAN_STAIRCASE:
-        return std::unique_ptr<theia::math::SDPSolver>(
-            new theia::math::RiemannianStaircase(n, dim, options_));
-        break;
+      return std::unique_ptr<theia::math::SDPSolver>(
+          new theia::math::RiemannianStaircase(n, dim, options_));
+      break;
     default:
       LOG(WARNING) << "Solve Type is not supported!";
       return nullptr;
@@ -247,4 +253,11 @@ LagrangeDualRotationEstimator::CreateSDPSolver(
   }
 }
 
-}  // namespace gopt
+// Python wrapper, Requires an initial guess of the global_orientations
+void LagrangeDualRotationEstimator::EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    std::unordered_map<ViewId, Eigen::Vector3d>& global_orientations) {
+  EstimateRotations(view_pairs, &global_orientations);
+}
+
+}  // namespace theia

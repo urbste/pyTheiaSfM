@@ -95,8 +95,7 @@ class CameraAlignmentEstimator
 }  // namespace
 
 SimilarityTransformation AlignReconstructions(
-    const Reconstruction& reconstruction1,
-    Reconstruction* reconstruction2) {
+    const Reconstruction& reconstruction1, Reconstruction* reconstruction2) {
   CHECK_NOTNULL(reconstruction2);
 
   const std::vector<std::string> common_view_names =
@@ -110,21 +109,16 @@ SimilarityTransformation AlignReconstructions(
         reconstruction1.ViewIdFromName(common_view_names[i]);
     const ViewId view_id2 =
         reconstruction2->ViewIdFromName(common_view_names[i]);
-    positions1[i] =
-        reconstruction1.View(view_id1)->Camera().GetPosition();
-    positions2[i] =
-        reconstruction2->View(view_id2)->Camera().GetPosition();
+    positions1[i] = reconstruction1.View(view_id1)->Camera().GetPosition();
+    positions2[i] = reconstruction2->View(view_id2)->Camera().GetPosition();
   }
 
   // Align the positions.
   Eigen::Matrix3d rotation;
   Eigen::Vector3d translation;
   double scale;
-  AlignPointCloudsUmeyama(positions2,
-                          positions1,
-                          &rotation,
-                          &translation,
-                          &scale);
+  AlignPointCloudsUmeyama(
+      positions2, positions1, &rotation, &translation, &scale);
 
   // Apply the similarity transformation to the reconstruction.
   TransformReconstruction(rotation, translation, scale, reconstruction2);
@@ -189,11 +183,8 @@ SimilarityTransformation AlignReconstructionsRobust(
   Eigen::Matrix3d rotation;
   Eigen::Vector3d translation;
   double scale;
-  AlignPointCloudsUmeyama(positions2,
-                          positions1,
-                          &rotation,
-                          &translation,
-                          &scale);
+  AlignPointCloudsUmeyama(
+      positions2, positions1, &rotation, &translation, &scale);
 
   // Apply the similarity transformation to the reconstruction.
   TransformReconstruction(rotation, translation, scale, reconstruction2);

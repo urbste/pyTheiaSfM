@@ -32,14 +32,14 @@
 // Please contact the author of this file if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <math.h>
-#include <glog/logging.h>
-#include <Eigen/Core>
-#include <random>
 #include "gtest/gtest.h"
+#include <Eigen/Core>
+#include <glog/logging.h>
+#include <math.h>
+#include <random>
 
-#include "theia/test/test_utils.h"
 #include "theia/sfm/pose/five_point_focal_length_radial_distortion.h"
+#include "theia/test/test_utils.h"
 
 namespace theia {
 
@@ -71,7 +71,8 @@ void P5pfrTestWithNoise(const Matrix3d& gt_rotation,
 
   // Reproject 3D points to get undistorted image points.
   Matrix<double, 2, 5> undistorted_image_point =
-      (gt_projection * world_points.colwise().homogeneous()).colwise()
+      (gt_projection * world_points.colwise().homogeneous())
+          .colwise()
           .hnormalized();
 
   // Determine radius of undistorted points and use that to compute the radius
@@ -79,8 +80,9 @@ void P5pfrTestWithNoise(const Matrix3d& gt_rotation,
   Array<double, 1, 5> radius_undistorted =
       undistorted_image_point.colwise().norm();
   Array<double, 1, 5> radius_distorted =
-      (1.0 - (1.0 - 4.0 * radial_distortion * radius_undistorted.square())
-                 .sqrt()) / (2.0 * radial_distortion * radius_undistorted);
+      (1.0 -
+       (1.0 - 4.0 * radial_distortion * radius_undistorted.square()).sqrt()) /
+      (2.0 * radial_distortion * radius_undistorted);
   Array<double, 1, 5> distortion_vec = radius_distorted / radius_undistorted;
 
   // Apply radial distortion.
@@ -103,9 +105,12 @@ void P5pfrTestWithNoise(const Matrix3d& gt_rotation,
   // Run P5Pfr algorithm.
   std::vector<Matrix<double, 3, 4> > soln_projection;
   std::vector<std::vector<double> > soln_distortion;
-  CHECK(theia::FivePointFocalLengthRadialDistortion(
-               distorted_image_points_vector, world_points_vector, 1,
-               &soln_projection, &soln_distortion));
+  CHECK(
+      theia::FivePointFocalLengthRadialDistortion(distorted_image_points_vector,
+                                                  world_points_vector,
+                                                  1,
+                                                  &soln_projection,
+                                                  &soln_distortion));
 
   bool matched_transform = false;
   for (int i = 0; i < 4; ++i) {
@@ -146,15 +151,9 @@ void BasicTest(const double noise, const double reproj_tolerance) {
 
   // Create a ground truth pose.
   Matrix3d Rz, Ry, Rx;
-  Rz << cos(z), sin(z), 0,
-        -sin(z), cos(z), 0,
-        0, 0, 1;
-  Ry << cos(y), 0, -sin(y),
-        0, 1, 0,
-        sin(y), 0, cos(y);
-  Rx << 1, 0, 0,
-        0, cos(x), sin(x),
-        0, -sin(x), cos(x);
+  Rz << cos(z), sin(z), 0, -sin(z), cos(z), 0, 0, 0, 1;
+  Ry << cos(y), 0, -sin(y), 0, 1, 0, sin(y), 0, cos(y);
+  Rx << 1, 0, 0, 0, cos(x), sin(x), 0, -sin(x), cos(x);
   const Matrix3d gt_rotation = Rz * Ry * Rx;
   const Vector3d gt_translation =
       Vector3d(-0.00950692, 000.0171496, 000.0508743);
@@ -163,11 +162,15 @@ void BasicTest(const double noise, const double reproj_tolerance) {
   // extrinsics.
   std::vector<Vector3d> world_points_vector(5);
   Map<Matrix<double, 3, 5> > world_points(world_points_vector[0].data());
-  world_points << -0.42941, 0.000621211, -0.350949, -1.45205, -1.294,
-      0.415794, -0.556605, -1.92898, -1.89976, -1.12445,
-      1.4949, 0.838307, 1.41972, 1.25756, 0.805163;
-  P5pfrTestWithNoise(gt_rotation, gt_translation, focal_length,
-                     radial_distortion, world_points_vector, noise,
+  world_points << -0.42941, 0.000621211, -0.350949, -1.45205, -1.294, 0.415794,
+      -0.556605, -1.92898, -1.89976, -1.12445, 1.4949, 0.838307, 1.41972,
+      1.25756, 0.805163;
+  P5pfrTestWithNoise(gt_rotation,
+                     gt_translation,
+                     focal_length,
+                     radial_distortion,
+                     world_points_vector,
+                     noise,
                      reproj_tolerance);
 }
 
@@ -185,15 +188,9 @@ void PlanarTestWithNoise(const double noise, const double reproj_tolerance) {
 
   // Create a ground truth pose.
   Matrix3d Rz, Ry, Rx;
-  Rz << cos(z), sin(z), 0,
-        -sin(z), cos(z), 0,
-        0, 0, 1;
-  Ry << cos(y), 0, -sin(y),
-        0, 1, 0,
-        sin(y), 0, cos(y);
-  Rx << 1, 0, 0,
-        0, cos(x), sin(x),
-        0, -sin(x), cos(x);
+  Rz << cos(z), sin(z), 0, -sin(z), cos(z), 0, 0, 0, 1;
+  Ry << cos(y), 0, -sin(y), 0, 1, 0, sin(y), 0, cos(y);
+  Rx << 1, 0, 0, 0, cos(x), sin(x), 0, -sin(x), cos(x);
   const Matrix3d gt_rotation = Rz * Ry * Rx;
   const Vector3d gt_translation =
       Vector3d(-0.00950692, 000.0171496, 000.0508743);
@@ -201,29 +198,26 @@ void PlanarTestWithNoise(const double noise, const double reproj_tolerance) {
   // Create 3D world points that are viable based on the camera intrinsics and
   // extrinsics.
   std::vector<Vector3d> world_points_vector(5);
-  world_points_vector[0] = Eigen::Vector3d(-size/2, -size/2, depth);
-  world_points_vector[1] = Eigen::Vector3d(size/2, -size/2, depth);
-  world_points_vector[2] = Eigen::Vector3d(size/2, size/2, depth);
-  world_points_vector[3] = Eigen::Vector3d(-size/2, size/2, depth);
+  world_points_vector[0] = Eigen::Vector3d(-size / 2, -size / 2, depth);
+  world_points_vector[1] = Eigen::Vector3d(size / 2, -size / 2, depth);
+  world_points_vector[2] = Eigen::Vector3d(size / 2, size / 2, depth);
+  world_points_vector[3] = Eigen::Vector3d(-size / 2, size / 2, depth);
   world_points_vector[4] = Eigen::Vector3d(0.0, 0.0, depth);
 
-  P5pfrTestWithNoise(gt_rotation, gt_translation, focal_length,
-                     radial_distortion, world_points_vector, noise,
+  P5pfrTestWithNoise(gt_rotation,
+                     gt_translation,
+                     focal_length,
+                     radial_distortion,
+                     world_points_vector,
+                     noise,
                      reproj_tolerance);
 }
 
-TEST(P5Pfr, BasicTest) {
-  BasicTest(0.0, 1e-12);
-}
+TEST(P5Pfr, BasicTest) { BasicTest(0.0, 1e-12); }
 
-TEST(P5Pfr, BasicNoiseTest) {
-  BasicTest(0.5 / 800.0, 5 / 800.0);
-}
+TEST(P5Pfr, BasicNoiseTest) { BasicTest(0.5 / 800.0, 5 / 800.0); }
 
-
-TEST(P5Pfr, PlanarTestNoNoise) {
-  PlanarTestWithNoise(0.0, 1e-12);
-}
+TEST(P5Pfr, PlanarTestNoNoise) { PlanarTestWithNoise(0.0, 1e-12); }
 
 TEST(P5Pfr, PlanarTestWithNoise) {
   PlanarTestWithNoise(0.5 / 800.0, 5 / 800.0);

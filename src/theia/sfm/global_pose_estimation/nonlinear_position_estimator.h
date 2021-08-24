@@ -35,9 +35,9 @@
 #ifndef THEIA_SFM_GLOBAL_POSE_ESTIMATION_NONLINEAR_POSITION_ESTIMATOR_H_
 #define THEIA_SFM_GLOBAL_POSE_ESTIMATION_NONLINEAR_POSITION_ESTIMATOR_H_
 
+#include <Eigen/Core>
 #include <ceres/problem.h>
 #include <ceres/solver.h>
-#include <Eigen/Core>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -81,9 +81,8 @@ class NonlinearPositionEstimator : public PositionEstimator {
     double point_to_camera_weight = 0.5;
   };
 
-  NonlinearPositionEstimator(
-      const NonlinearPositionEstimator::Options& options,
-      const Reconstruction& reconstruction);
+  NonlinearPositionEstimator(const NonlinearPositionEstimator::Options& options,
+                             const Reconstruction& reconstruction);
 
   // Returns true if the optimization was a success, false if there was a
   // failure.
@@ -93,8 +92,8 @@ class NonlinearPositionEstimator : public PositionEstimator {
       std::unordered_map<ViewId, Eigen::Vector3d>* positions);
   // python
   std::unordered_map<ViewId, Eigen::Vector3d> EstimatePositionsWrapper(
-    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-    const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
+      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
 
  private:
   // Initialize all cameras to be random.

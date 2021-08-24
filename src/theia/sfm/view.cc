@@ -47,40 +47,50 @@
 namespace theia {
 using Vector2d = Eigen::Vector2d;
 
-View::View() : name_(""), is_estimated_(false), timestamp_(0.0), has_position_prior_(false) {
+View::View()
+    : name_(""),
+      is_estimated_(false),
+      timestamp_(0.0),
+      has_position_prior_(false) {
   position_prior_.setZero();
   position_prior_sqrt_information_.setIdentity();
 }
 
-View::View(const std::string &name)
-    : name_(name), is_estimated_(false), timestamp_(0.0), has_position_prior_(false) {
+View::View(const std::string& name)
+    : name_(name),
+      is_estimated_(false),
+      timestamp_(0.0),
+      has_position_prior_(false) {
   position_prior_.setZero();
   position_prior_sqrt_information_.setIdentity();
 }
 
-View::View(const std::string &name, const double timestamp)
-    : name_(name), is_estimated_(false), timestamp_(timestamp), has_position_prior_(false) {
+View::View(const std::string& name, const double timestamp)
+    : name_(name),
+      is_estimated_(false),
+      timestamp_(timestamp),
+      has_position_prior_(false) {
   position_prior_.setZero();
   position_prior_sqrt_information_.setIdentity();
 }
 
-const std::string &View::Name() const { return name_; }
+const std::string& View::Name() const { return name_; }
 
 void View::SetEstimated(bool is_estimated) { is_estimated_ = is_estimated; }
 
 bool View::IsEstimated() const { return is_estimated_; }
 
-const class Camera &View::Camera() const { return camera_; }
+const class Camera& View::Camera() const { return camera_; }
 
-class Camera *View::MutableCamera() {
+class Camera* View::MutableCamera() {
   return &camera_;
 }
 
-const struct CameraIntrinsicsPrior &View::CameraIntrinsicsPrior() const {
+const struct CameraIntrinsicsPrior& View::CameraIntrinsicsPrior() const {
   return camera_intrinsics_prior_;
 }
 
-struct CameraIntrinsicsPrior *View::MutableCameraIntrinsicsPrior() {
+struct CameraIntrinsicsPrior* View::MutableCameraIntrinsicsPrior() {
   return &camera_intrinsics_prior_;
 }
 
@@ -93,13 +103,13 @@ int View::NumFeatures() const { return features_.size(); }
 std::vector<TrackId> View::TrackIds() const {
   std::vector<TrackId> track_ids;
   track_ids.reserve(features_.size());
-  for (const auto &track : features_) {
+  for (const auto& track : features_) {
     track_ids.emplace_back(track.first);
   }
   return track_ids;
 }
 
-const Feature *View::GetFeature(const TrackId track_id) const {
+const Feature* View::GetFeature(const TrackId track_id) const {
   return FindOrNull(features_, track_id);
 }
 
@@ -119,7 +129,8 @@ void View::AddFeature(const TrackId track_id, const Feature& feature) {
 bool View::RemoveFeature(const TrackId track_id) {
   const auto feature = FindOrNull(features_, track_id);
   if (feature) {
-    return features_.erase(track_id) > 0 && features_to_tracks_.erase(*feature) > 0;
+    return features_.erase(track_id) > 0 &&
+           features_to_tracks_.erase(*feature) > 0;
   }
   return false;
 }
@@ -128,23 +139,20 @@ double View::GetTimestamp() const { return timestamp_; }
 
 void View::SetTimestamp(const double timestamp) { timestamp_ = timestamp; }
 
-void View::SetPositionPrior(const Eigen::Vector3d& position_prior, 
-  const Eigen::Matrix3d& position_prior_sqrt_information) {
+void View::SetPositionPrior(
+    const Eigen::Vector3d& position_prior,
+    const Eigen::Matrix3d& position_prior_sqrt_information) {
   position_prior_ = position_prior;
   position_prior_sqrt_information_ = position_prior_sqrt_information;
   has_position_prior_ = true;
 }
 
-Eigen::Vector3d View::GetPositionPrior() {
-  return position_prior_;
-}
+Eigen::Vector3d View::GetPositionPrior() { return position_prior_; }
 
 Eigen::Matrix3d View::GetPositionPriorSqrtInformation() {
   return position_prior_sqrt_information_;
 }
 
-bool View::HasPositionPrior() {
-  return has_position_prior_;
-}
+bool View::HasPositionPrior() { return has_position_prior_; }
 
-} // namespace theia
+}  // namespace theia

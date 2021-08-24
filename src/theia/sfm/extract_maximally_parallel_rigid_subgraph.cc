@@ -34,9 +34,9 @@
 
 #include "theia/sfm/extract_maximally_parallel_rigid_subgraph.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/LU>
+#include <ceres/rotation.h>
 
 #include <algorithm>
 #include <unordered_map>
@@ -91,7 +91,7 @@ void FormAngleMeasurementMatrix(
 double ComputeCosineDistance(const Eigen::MatrixXd& mat1,
                              const Eigen::MatrixXd& mat2) {
   Eigen::Vector3d cos_distance;
-  for (int i =0; i < 3; i++) {
+  for (int i = 0; i < 3; i++) {
     cos_distance(i) = 1.0 - std::abs(mat1.row(i).dot(mat2.row(i)));
   }
   return cos_distance.maxCoeff();
@@ -112,7 +112,7 @@ void FindMaximalParallelRigidComponent(const Eigen::MatrixXd& null_space,
   largest_cc->insert(fixed_node);
 
   const Eigen::MatrixXd fixed_null_space_component =
-    null_space.block(3 * fixed_node, 0, 3, null_space.cols());
+      null_space.block(3 * fixed_node, 0, 3, null_space.cols());
 
   // Remove the fixed node from the rest of the null space.
   Eigen::MatrixXd modified_null_space =
@@ -135,8 +135,7 @@ void FindMaximalParallelRigidComponent(const Eigen::MatrixXd& null_space,
 
     // Skip this index if it is nearly a 0-vector because this means it is
     // clearly part of the rigid component.
-    if (norms(3 * i) < kMaxNorm &&
-        norms(3 * i + 1) < kMaxNorm &&
+    if (norms(3 * i) < kMaxNorm && norms(3 * i + 1) < kMaxNorm &&
         norms(3 * i + 2) < kMaxNorm) {
       largest_cc->insert(i);
       continue;
@@ -187,10 +186,8 @@ void ExtractMaximallyParallelRigidSubgraph(
   //    t_{i,j} x (c_j - c_i) = 0.
   Eigen::MatrixXd angle_measurements(3 * view_graph->NumEdges(),
                                      3 * orientations.size());
-  FormAngleMeasurementMatrix(orientations,
-                             *view_graph,
-                             view_ids_to_index,
-                             &angle_measurements);
+  FormAngleMeasurementMatrix(
+      orientations, *view_graph, view_ids_to_index, &angle_measurements);
 
   // Extract the null space of the angle measurements matrix.
   Eigen::FullPivLU<Eigen::MatrixXd> lu(angle_measurements.transpose() *

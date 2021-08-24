@@ -35,8 +35,8 @@
 #ifndef THEIA_SFM_HYBRID_RECONSTRUCTION_ESTIMATOR_H_
 #define THEIA_SFM_HYBRID_RECONSTRUCTION_ESTIMATOR_H_
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/estimate_track.h"
@@ -85,8 +85,7 @@ class ViewGraph;
 //   "HSfM: Hybrid Structure-from-Motion" by Cui et al (CVPR 2017).
 class HybridReconstructionEstimator : public ReconstructionEstimator {
  public:
-  HybridReconstructionEstimator(
-      const ReconstructionEstimatorOptions& options);
+  HybridReconstructionEstimator(const ReconstructionEstimatorOptions& options);
 
   // Estimates the camera parameters and 3D points from the view graph and
   // tracks. The reconstruction may or may not contain estimated views and

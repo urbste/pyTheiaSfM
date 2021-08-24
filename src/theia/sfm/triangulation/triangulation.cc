@@ -52,9 +52,9 @@ namespace theia {
 namespace {
 
 using Eigen::Matrix;
-using Eigen::MatrixXd;
 using Eigen::Matrix3d;
 using Eigen::Matrix4d;
+using Eigen::MatrixXd;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;

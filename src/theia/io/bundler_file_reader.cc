@@ -57,9 +57,9 @@ bool ReadHeader(FILE* in, int* num_cameras, int* num_points) {
   VLOG(3) << "Comment: " << line;
   free(line);
   // Read number of points and cameras.
-  if (fscanf(in, "%d %d",
-             CHECK_NOTNULL(num_cameras),
-             CHECK_NOTNULL(num_points)) != 2 ||
+  if (fscanf(
+          in, "%d %d", CHECK_NOTNULL(num_cameras), CHECK_NOTNULL(num_points)) !=
+          2 ||
       *num_cameras < 1 || *num_points < 1) {
     return false;
   }
@@ -70,7 +70,8 @@ bool ReadHeader(FILE* in, int* num_cameras, int* num_points) {
 
 bool ReadCamera(FILE* in, BundlerCamera* camera) {
   // Read focal length and radial distortion coeffs.
-  if (fscanf(in, "%f %f %f",
+  if (fscanf(in,
+             "%f %f %f",
              &camera->focal_length,
              &camera->radial_coeff_1,
              &camera->radial_coeff_2) != 3) {
@@ -79,25 +80,37 @@ bool ReadCamera(FILE* in, BundlerCamera* camera) {
   }
   // Read rotation matrix.
   Eigen::Matrix3d& rotation = camera->rotation;
-  if (fscanf(in, "%lf %lf %lf",
-             &rotation(0, 0), &rotation(0, 1), &rotation(0, 2)) != 3) {
+  if (fscanf(in,
+             "%lf %lf %lf",
+             &rotation(0, 0),
+             &rotation(0, 1),
+             &rotation(0, 2)) != 3) {
     VLOG(3) << "Unable to read first row of rotation matrix.";
     return false;
   }
-  if (fscanf(in, "%lf %lf %lf",
-             &rotation(1, 0), &rotation(1, 1), &rotation(1, 2)) != 3) {
+  if (fscanf(in,
+             "%lf %lf %lf",
+             &rotation(1, 0),
+             &rotation(1, 1),
+             &rotation(1, 2)) != 3) {
     VLOG(3) << "Unable to read second row of rotation matrix.";
     return false;
   }
-  if (fscanf(in, "%lf %lf %lf",
-             &rotation(2, 0), &rotation(2, 1), &rotation(2, 2)) != 3) {
+  if (fscanf(in,
+             "%lf %lf %lf",
+             &rotation(2, 0),
+             &rotation(2, 1),
+             &rotation(2, 2)) != 3) {
     VLOG(3) << "Unable to read third row of rotation matrix.";
     return false;
   }
   // Read position.
   Eigen::Vector3d& translation = camera->translation;
-  if (fscanf(in, "%lf %lf %lf",
-             &translation(0), &translation(1), &translation(2)) != 3) {
+  if (fscanf(in,
+             "%lf %lf %lf",
+             &translation(0),
+             &translation(1),
+             &translation(2)) != 3) {
     VLOG(3) << "Unable to read camera translation.";
     return false;
   }
@@ -166,15 +179,14 @@ bool ReadViewList(FILE* in, std::vector<FeatureInfo>* view_list) {
 bool ReadPoint(FILE* in, BundlerPoint* point) {
   // Read position.
   Eigen::Vector3d& position = point->position;
-  if (fscanf(in, "%lf %lf %lf",
-             &position(0), &position(1), &position(2)) != 3) {
-      VLOG(3) << "Unable to read point position. ";
+  if (fscanf(in, "%lf %lf %lf", &position(0), &position(1), &position(2)) !=
+      3) {
+    VLOG(3) << "Unable to read point position. ";
     return false;
   }
   // Read color.
   Eigen::Vector3d& color = point->color;
-  if (fscanf(in, "%lf %lf %lf",
-             &color(0), &color(1), &color(2)) != 3) {
+  if (fscanf(in, "%lf %lf %lf", &color(0), &color(1), &color(2)) != 3) {
     VLOG(3) << "Unable to read point color.";
     return false;
   }
@@ -270,7 +282,6 @@ bool BundlerFileReader::ParseBundleFile() {
   return true;
 }
 
-
 // Description of the list files from the Big SfM website:
 // http://www.cs.cornell.edu/projects/p2f/README_Dubrovnik6K.txt
 //
@@ -306,9 +317,9 @@ bool BundlerFileReader::ParseListsFile() {
   while (getline(&line, &length, in) != -1) {
     img_entries_.emplace_back();
     ListImgEntry& entry = img_entries_.back();
-    const int read_items = sscanf(line, "%s %f %f",
-           filename, &entry.second_entry, &entry.focal_length);
-    if (read_items != 1 && read_items !=3 ) {
+    const int read_items = sscanf(
+        line, "%s %f %f", filename, &entry.second_entry, &entry.focal_length);
+    if (read_items != 1 && read_items != 3) {
       VLOG(3) << "Invalid line: " << line;
       return false;
     }

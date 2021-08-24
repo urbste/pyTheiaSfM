@@ -136,9 +136,8 @@ void ComputeTrackStatistics(
 
       // Compute the track statistics and add it to the output map.
       const TrackStatistics& statistics_for_this_track =
-          ComputeStatisticsForTrack(reconstruction,
-                                    track_id,
-                                    long_track_length_threshold);
+          ComputeStatisticsForTrack(
+              reconstruction, track_id, long_track_length_threshold);
       track_statistics->emplace(track_id, statistics_for_this_track);
     }
   }
@@ -154,7 +153,7 @@ void SelectBestTracksFromEachImageGridCell(
     const int grid_cell_size,
     const std::unordered_map<TrackId, TrackStatistics>& track_statistics,
     std::unordered_set<TrackId>* tracks_to_optimize) {
-  static const double inv_grid_cell_size =  1.0 / grid_cell_size;
+  static const double inv_grid_cell_size = 1.0 / grid_cell_size;
 
   // Hash each feature into a grid cell.
   ImageGrid image_grid;
@@ -286,10 +285,8 @@ bool SelectGoodTracksForBundleAdjustment(
     std::unordered_set<TrackId>* tracks_to_optimize) {
   // Compute the track mean reprojection errors.
   std::unordered_map<TrackId, TrackStatistics> track_statistics;
-  ComputeTrackStatistics(reconstruction,
-                         view_ids,
-                         long_track_length_threshold,
-                         &track_statistics);
+  ComputeTrackStatistics(
+      reconstruction, view_ids, long_track_length_threshold, &track_statistics);
 
   // For each image, divide the image into a grid and choose the highest quality
   // tracks from each grid cell. This encourages good spatial coverage of tracks

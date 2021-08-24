@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,22 +20,25 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 
-#include "rotation_averaging/hybrid_rotation_estimator.h"
+// edited by Steffen Urban (urbste@googlemail.com), August 2021
+
+#include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
 
 #include <ceres/rotation.h>
 
-#include <cstring>
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <unordered_map>
@@ -42,43 +46,47 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "geometry/rotation_utils.h"
-#include "math/distribution.h"
-#include "util/map_util.h"
-#include "util/random.h"
-#include "util/timer.h"
+#include "theia/math/distribution.h"
+#include "theia/math/rotation.h"
+#include "theia/util/map_util.h"
+#include "theia/util/random.h"
+#include "theia/util/timer.h"
 
 using namespace Eigen;
 
-namespace gopt {
+namespace theia {
+
+RandomNumberGenerator rng(62);
 
 class HybridRotationAveragingTest : public ::testing::Test {
  protected:
-  std::unordered_map<image_t, Vector3d> orientations_;
-  std::unordered_map<ImagePair, TwoViewGeometry> view_pairs_;
+  std::unordered_map<ViewId, Vector3d> orientations_;
+  std::unordered_map<ViewIdPair, TwoViewInfo> view_pairs_;
 
  public:
-  void TestHybridRotationEstimator(
-      const int num_views, const int num_view_pairs,
-      const double relative_rotation_noise, const double mean,
-      const double variance, const double rotation_tolerance_degrees) {
+  void TestHybridRotationEstimator(const int num_views,
+                                   const int num_view_pairs,
+                                   const double relative_rotation_noise,
+                                   const double mean,
+                                   const double variance,
+                                   const double rotation_tolerance_degrees) {
     // At least a cycle graph
     ASSERT_LE(num_views + 1, num_view_pairs);
 
     // Set up the cameras
     CreateGTOrientations(num_views);
-    CreateRelativeRotations(num_view_pairs, relative_rotation_noise, mean,
-                            variance);
+    CreateRelativeRotations(
+        num_view_pairs, relative_rotation_noise, mean, variance);
 
     // Initialize estimated orientations
-    std::unordered_map<image_t, Eigen::Vector3d> estimated_orientations;
+    std::unordered_map<ViewId, Eigen::Vector3d> estimated_orientations;
     // Or initialized randomly.
     this->InitializeRotationsFromSpanningTree(estimated_orientations);
 
     // Estimate global orientations.
     HybridRotationEstimator::HybridRotationEstimatorOptions options;
 
-    solver::SDPSolverOptions sdp_options;
+    math::SDPSolverOptions sdp_options;
     sdp_options.max_iterations = 100;
     sdp_options.tolerance = 1e-8;
     sdp_options.verbose = true;
@@ -89,15 +97,13 @@ class HybridRotationAveragingTest : public ::testing::Test {
     options.sdp_solver_options = sdp_options;
     options.irls_options = irls_options;
 
-    HybridRotationEstimator rotation_estimator(num_views, 3, options);
+    HybridRotationEstimator rotation_estimator(options);
 
     Timer timer;
-    timer.Start();
     EXPECT_TRUE(rotation_estimator.EstimateRotations(view_pairs_,
                                                      &estimated_orientations));
     EXPECT_EQ(estimated_orientations.size(), orientations_.size());
-    timer.Pause();
-    LOG(INFO) << "Elapsed time: " << timer.ElapsedSeconds();
+    LOG(INFO) << "Elapsed time: " << timer.ElapsedTimeInSeconds();
 
     // LOG(INFO) << "Align the rotations and measure the error";
     // // Align the rotations and measure the error
@@ -110,10 +116,9 @@ class HybridRotationAveragingTest : public ::testing::Test {
     for (unsigned i = 0; i < orientations_.size(); i++) {
       const auto& rotation = FindOrDie(orientations_, i);
       const Vector3d& estimated_rotation = FindOrDie(estimated_orientations, i);
-      const Vector3d relative_rotation =
-          geometry::RelativeRotationFromTwoRotations(estimated_rotation,
-                                                     rotation, 0.0);
-      const double angular_error = geometry::RadToDeg(relative_rotation.norm());
+      const Vector3d relative_rotation = RelativeRotationFromTwoRotations(
+          estimated_rotation, rotation, 0.0, rng);
+      const double angular_error = RadToDeg(relative_rotation.norm());
 
       sum_angular_error += angular_error;
       min_angular_error = std::min(min_angular_error, angular_error);
@@ -150,8 +155,10 @@ class HybridRotationAveragingTest : public ::testing::Test {
     }
   }
 
-  void CreateRelativeRotations(const int num_view_pairs, const double noise,
-                               const double mean, const double variance) {
+  void CreateRelativeRotations(const int num_view_pairs,
+                               const double noise,
+                               const double mean,
+                               const double variance) {
     RandomNumberGenerator rng;
     NormalDistribution normal_distribution(mean, variance);
     const double relative_rotation_noise = normal_distribution.Eval(noise);
@@ -163,21 +170,20 @@ class HybridRotationAveragingTest : public ::testing::Test {
                                       std::numeric_limits<double>::max());
       const double real_noise = normal_distribution.Eval(x);
 
-      const ImagePair view_id_pair(i - 1, i);
-      view_pairs_[view_id_pair].visibility_score = geometry::rng.RandInt(1, 10);
-      view_pairs_[view_id_pair].rotation_2 =
-          geometry::RelativeRotationFromTwoRotations(
-              FindOrDie(orientations_, view_id_pair.first),
-              FindOrDie(orientations_, view_id_pair.second),
-              noise_factor * real_noise /
-                  view_pairs_[view_id_pair].visibility_score);
+      const ViewIdPair view_id_pair(i - 1, i);
+      view_pairs_[view_id_pair].visibility_score = rng.RandInt(1, 10);
+      view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
+          FindOrDie(orientations_, view_id_pair.first),
+          FindOrDie(orientations_, view_id_pair.second),
+          noise_factor * real_noise /
+              view_pairs_[view_id_pair].visibility_score,
+          rng);
     }
 
     // Add random edges
     while (view_pairs_.size() < (unsigned)num_view_pairs) {
-      ImagePair view_id_pair(
-          geometry::rng.RandInt(0, orientations_.size() - 1),
-          geometry::rng.RandInt(0, orientations_.size() - 1));
+      ViewIdPair view_id_pair(rng.RandInt(0, orientations_.size() - 1),
+                              rng.RandInt(0, orientations_.size() - 1));
 
       // Ensure the first id is smaller than second id &&
       // do not add the views that already exists
@@ -186,23 +192,23 @@ class HybridRotationAveragingTest : public ::testing::Test {
         continue;
       }
 
-      view_pairs_[view_id_pair].visibility_score = geometry::rng.RandInt(1, 10);
-      view_pairs_[view_id_pair].rotation_2 =
-          geometry::RelativeRotationFromTwoRotations(
-              FindOrDie(orientations_, view_id_pair.first),
-              FindOrDie(orientations_, view_id_pair.second),
-              noise_factor * relative_rotation_noise /
-                  view_pairs_[view_id_pair].visibility_score);
+      view_pairs_[view_id_pair].visibility_score = rng.RandInt(1, 10);
+      view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
+          FindOrDie(orientations_, view_id_pair.first),
+          FindOrDie(orientations_, view_id_pair.second),
+          noise_factor * relative_rotation_noise /
+              view_pairs_[view_id_pair].visibility_score,
+          rng);
     }
   }
 
   void InitializeRotationsFromSpanningTree(
-      std::unordered_map<image_t, Vector3d>& initial_orientations) {
+      std::unordered_map<ViewId, Vector3d>& initial_orientations) {
     // initial_orientations[0] = Vector3d::Zero();
     // for (size_t i = 1; i < orientations_.size(); i++) {
     //   initial_orientations[i] = geometry::ApplyRelativeRotation(
     //       FindOrDie(initial_orientations, i - 1),
-    //       FindOrDieNoPrint(view_pairs_, ImagePair(i - 1, i)).rotation_2);
+    //       FindOrDieNoPrint(view_pairs_, ViewIdPair(i - 1, i)).rotation_2);
     // }
     for (size_t i = 0; i < orientations_.size(); i++) {
       initial_orientations[i] = Eigen::Vector3d::Zero();
@@ -217,8 +223,12 @@ TEST_F(HybridRotationAveragingTest, smallTestNoNoise) {
   const double mean = 0.0;
   const double variance = 0.1;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, TwentyViewsTestWithSmallNoise) {
@@ -228,8 +238,12 @@ TEST_F(HybridRotationAveragingTest, TwentyViewsTestWithSmallNoise) {
   const double mean = 0.0;
   const double variance = 0.2;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, TwentyViewsTestWithLargeNoise) {
@@ -239,8 +253,12 @@ TEST_F(HybridRotationAveragingTest, TwentyViewsTestWithLargeNoise) {
   const double mean = 0.0;
   const double variance = 0.5;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, FiftyViewsTestWithSmallNoise) {
@@ -250,8 +268,12 @@ TEST_F(HybridRotationAveragingTest, FiftyViewsTestWithSmallNoise) {
   const double mean = 0.0;
   const double variance = 0.2;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, FiftyViewsTestWithLargeNoise) {
@@ -261,8 +283,12 @@ TEST_F(HybridRotationAveragingTest, FiftyViewsTestWithLargeNoise) {
   const double mean = 0.0;
   const double variance = 0.5;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, OneHundredViewsTestWithSmallNoise) {
@@ -272,8 +298,12 @@ TEST_F(HybridRotationAveragingTest, OneHundredViewsTestWithSmallNoise) {
   const double mean = 0.0;
   const double variance = 0.2;
   const double rotation_tolerance_degrees = 1e-8;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, OneHundredViewsTestWithLargeNoise) {
@@ -283,8 +313,12 @@ TEST_F(HybridRotationAveragingTest, OneHundredViewsTestWithLargeNoise) {
   const double mean = 0.0;
   const double variance = 0.5;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, TwoHundredViewsTestWithSmallNoise) {
@@ -294,8 +328,12 @@ TEST_F(HybridRotationAveragingTest, TwoHundredViewsTestWithSmallNoise) {
   const double mean = 0.0;
   const double variance = 0.2;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, TwoHundredViewsTestWithLargeNoise) {
@@ -305,8 +343,12 @@ TEST_F(HybridRotationAveragingTest, TwoHundredViewsTestWithLargeNoise) {
   const double mean = 0.0;
   const double variance = 0.5;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, FiveHundredViewsTestWithSmallNoise) {
@@ -316,8 +358,12 @@ TEST_F(HybridRotationAveragingTest, FiveHundredViewsTestWithSmallNoise) {
   const double mean = 0.0;
   const double variance = 0.2;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, FiveHundredViewsTestWithLargeNoise) {
@@ -327,8 +373,12 @@ TEST_F(HybridRotationAveragingTest, FiveHundredViewsTestWithLargeNoise) {
   const double mean = 0.0;
   const double variance = 0.5;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, OneThousandViewsTestWithSmallNoise) {
@@ -338,8 +388,12 @@ TEST_F(HybridRotationAveragingTest, OneThousandViewsTestWithSmallNoise) {
   const double mean = 0.0;
   const double variance = 0.2;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, OneThousandViewsTestWithLargeNoise) {
@@ -349,8 +403,12 @@ TEST_F(HybridRotationAveragingTest, OneThousandViewsTestWithLargeNoise) {
   const double mean = 0.0;
   const double variance = 0.5;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, FiveThousandViewsTestWithSmallNoise) {
@@ -360,8 +418,12 @@ TEST_F(HybridRotationAveragingTest, FiveThousandViewsTestWithSmallNoise) {
   const double mean = 0.0;
   const double variance = 0.2;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
 TEST_F(HybridRotationAveragingTest, FiveThousandViewsTestWithLargeNoise) {
@@ -371,8 +433,12 @@ TEST_F(HybridRotationAveragingTest, FiveThousandViewsTestWithLargeNoise) {
   const double mean = 0.0;
   const double variance = 0.5;
   const double rotation_tolerance_degrees = 4.0;
-  TestHybridRotationEstimator(num_views, num_view_pairs, noise, mean,
-                                    variance, rotation_tolerance_degrees);
+  TestHybridRotationEstimator(num_views,
+                              num_view_pairs,
+                              noise,
+                              mean,
+                              variance,
+                              rotation_tolerance_degrees);
 }
 
-}  // namespace gopt
+}  // namespace theia

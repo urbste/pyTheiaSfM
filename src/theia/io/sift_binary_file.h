@@ -54,10 +54,9 @@ bool ReadSiftKeyBinaryFile(const std::string& input_sift_key_file,
 
 // Outputs the SIFT features in the same format as Lowe's sift key files, but
 // stores it as a binary file for faster loading.
-bool WriteSiftKeyBinaryFile(
-    const std::string& output_sift_key_file,
-    const std::vector<Eigen::VectorXf>& descriptor,
-    const std::vector<Keypoint>& keypoint);
+bool WriteSiftKeyBinaryFile(const std::string& output_sift_key_file,
+                            const std::vector<Eigen::VectorXf>& descriptor,
+                            const std::vector<Keypoint>& keypoint);
 
 }  // namespace theia
 

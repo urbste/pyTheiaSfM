@@ -53,10 +53,8 @@ void IntrinsicsToCalibrationMatrix(const double focal_length,
                                    const double principal_point_x,
                                    const double principal_point_y,
                                    Matrix3d* calibration_matrix) {
-  *calibration_matrix <<
-      focal_length, skew, principal_point_x,
-      0, focal_length * aspect_ratio, principal_point_y,
-      0, 0, 1.0;
+  *calibration_matrix << focal_length, skew, principal_point_x, 0,
+      focal_length * aspect_ratio, principal_point_y, 0, 0, 1.0;
 }
 
 void CalibrationMatrixToIntrinsics(const Matrix3d& calibration_matrix,
@@ -107,7 +105,7 @@ bool DecomposeProjectionMatrix(const Matrix3x4d pmatrix,
 
   // c = - R' * t, and flip the sign according to k_det;
   if (k_det > 0) {
-    *position = - rotation_matrix.transpose() * t;
+    *position = -rotation_matrix.transpose() * t;
   } else {
     *position = rotation_matrix.transpose() * t;
   }
@@ -126,11 +124,12 @@ bool ComposeProjectionMatrix(const Matrix3d& calibration_matrix,
   if (rotation_angle == 0) {
     pmatrix->block<3, 3>(0, 0) = Matrix3d::Identity();
   } else {
-    pmatrix->block<3, 3>(0, 0) = Eigen::AngleAxisd(
-        rotation_angle, rotation / rotation_angle).toRotationMatrix();
+    pmatrix->block<3, 3>(0, 0) =
+        Eigen::AngleAxisd(rotation_angle, rotation / rotation_angle)
+            .toRotationMatrix();
   }
 
-  pmatrix->col(3) = - (pmatrix->block<3, 3>(0, 0) *  position);
+  pmatrix->col(3) = -(pmatrix->block<3, 3>(0, 0) * position);
   *pmatrix = calibration_matrix * (*pmatrix);
   return true;
 }

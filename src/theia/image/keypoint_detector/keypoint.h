@@ -57,14 +57,17 @@ class Keypoint {
   };
 
   Keypoint(double x, double y, KeypointType type)
-      : x_(x), y_(y), keypoint_type_(type),
+      : x_(x),
+        y_(y),
+        keypoint_type_(type),
         strength_(THEIA_INVALID_KEYPOINT_VAR),
         scale_(THEIA_INVALID_KEYPOINT_VAR),
         orientation_(THEIA_INVALID_KEYPOINT_VAR) {}
 
-  Keypoint() : Keypoint(THEIA_INVALID_KEYPOINT_VAR,
-                        THEIA_INVALID_KEYPOINT_VAR,
-                        Keypoint::INVALID) {}
+  Keypoint()
+      : Keypoint(THEIA_INVALID_KEYPOINT_VAR,
+                 THEIA_INVALID_KEYPOINT_VAR,
+                 Keypoint::INVALID) {}
 
   ~Keypoint() {}
 
@@ -82,7 +85,8 @@ class Keypoint {
 
   // Optional variable strength.
   inline bool has_strength() const {
-    return strength_ != THEIA_INVALID_KEYPOINT_VAR; }
+    return strength_ != THEIA_INVALID_KEYPOINT_VAR;
+  }
   inline double strength() const { return strength_; }
   inline void set_strength(double strength) { strength_ = strength; }
 
@@ -93,10 +97,12 @@ class Keypoint {
 
   // Optional variable orientation.
   inline bool has_orientation() const {
-    return orientation_ != THEIA_INVALID_KEYPOINT_VAR; }
+    return orientation_ != THEIA_INVALID_KEYPOINT_VAR;
+  }
   inline double orientation() const { return orientation_; }
   inline void set_orientation(double orientation) {
-    orientation_ = orientation; }
+    orientation_ = orientation;
+  }
 
  private:
   double x_;

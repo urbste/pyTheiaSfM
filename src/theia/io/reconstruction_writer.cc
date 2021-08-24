@@ -34,8 +34,8 @@
 
 #include "theia/io/reconstruction_writer.h"
 
-#include <cereal/archives/portable_binary.hpp>
 #include <Eigen/Core>
+#include <cereal/archives/portable_binary.hpp>
 #include <glog/logging.h>
 
 #include <cstdio>
@@ -44,8 +44,8 @@
 #include <iostream>  // NOLINT
 #include <string>
 
-#include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/reconstruction.h"
+#include "theia/sfm/reconstruction_estimator_utils.h"
 
 #include "theia/util/json.h"
 
@@ -59,13 +59,13 @@ bool WriteReconstruction(const Reconstruction& reconstruction,
     return false;
   }
 
-  Reconstruction estimated_reconstruction;
-  CreateEstimatedSubreconstruction(reconstruction, &estimated_reconstruction);
+  //Reconstruction estimated_reconstruction;
+  //CreateEstimatedSubreconstruction(reconstruction, &estimated_reconstruction);
 
   // Make sure that Cereal is able to finish executing before returning.
   {
     cereal::PortableBinaryOutputArchive output_archive(output_writer);
-    output_archive(estimated_reconstruction);
+    output_archive(reconstruction);
   }
 
   return true;
@@ -73,25 +73,23 @@ bool WriteReconstruction(const Reconstruction& reconstruction,
 
 bool WriteReconstructionJson(const Reconstruction& reconstruction,
                              const std::string& output_json_file) {
-
-
   nlohmann::json calib_out_json;
 
   nlohmann::json views_json;
-  // iterate views 
+  // iterate views
   const auto view_ids = reconstruction.ViewIds();
   for (const theia::ViewId view_id : view_ids) {
-    const theia::View &view = *reconstruction.View(view_id);
+    const theia::View& view = *reconstruction.View(view_id);
     if (!view.IsEstimated()) {
       continue;
     }
-    const theia::Camera &camera = view.Camera();
+    const theia::Camera& camera = view.Camera();
 
     nlohmann::json current_view;
     current_view["timestamp"] = view.GetTimestamp();
     current_view["numFeatures"] = view.NumFeatures();
     current_view["trackIds"] = view.TrackIds();
-    // current_view["covariance"] = 
+    // current_view["covariance"] =
     // save features and tracks ids (view graph)
 
     // we save camera to world transformation so transpose rotation
@@ -115,12 +113,13 @@ bool WriteReconstructionJson(const Reconstruction& reconstruction,
     extrinsics[3] = {0.0, 0.0, 0.0, 1.0};
 
     current_view["cameraExtrinsics"] = extrinsics;
-  
+
     // check camera model and write parameters depending on model
     // nlohmann::json intrinsics;
     // intrinsics["focalLengthX"] = camera.FocalLength();
     // intrinsics["focalLengthY"] = camera.CameraIntrinsics()->GetParameter(
-    //                                  theia::PinholeCameraModel::ASPECT_RATIO) *
+    //                                  theia::PinholeCameraModel::ASPECT_RATIO)
+    //                                  *
     //                              camera.FocalLength();
     // intrinsics["principalPointX"] = camera.CameraIntrinsics()->GetParameter(
     //     theia::PinholeCameraModel::PRINCIPAL_POINT_X);
@@ -143,8 +142,8 @@ bool WriteReconstructionJson(const Reconstruction& reconstruction,
     nlohmann::json current_track;
     current_track["referenceViewId"] = track->ReferenceViewId();
     const Eigen::Vector3d pt = track->Point().hnormalized();
-    current_track["point"] = {pt[0],pt[1],pt[2]};
-    //current_track["covariance"] =
+    current_track["point"] = {pt[0], pt[1], pt[2]};
+    // current_track["covariance"] =
     tracks_json[std::to_string(t_id)] = current_track;
   }
   calib_out_json["tracks"] = tracks_json;

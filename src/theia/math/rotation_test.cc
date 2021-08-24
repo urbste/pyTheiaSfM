@@ -32,9 +32,9 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (sweeney.chris.m@gmail.com)
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 
 #include "gtest/gtest.h"
 

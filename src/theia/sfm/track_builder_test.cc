@@ -66,15 +66,12 @@ TEST(TrackBuilder, ConsistentTracks) {
   static const int kNumCorrespondences = 4;
 
   const ViewId view_ids[kNumCorrespondences][2] = {
-    { 0, 1 }, { 0, 1 }, { 1, 2 }, { 1, 2 }
-  };
+      {0, 1}, {0, 1}, {1, 2}, {1, 2}};
 
   TrackBuilder track_builder(kMinTrackLength, kMaxTrackLength);
   for (int i = 0; i < kNumCorrespondences; i++) {
-    track_builder.AddFeatureCorrespondence(view_ids[i][0],
-                                           Feature(i, i),
-                                           view_ids[i][1],
-                                           Feature(i, i));
+    track_builder.AddFeatureCorrespondence(
+        view_ids[i][0], Feature(i, i), view_ids[i][1], Feature(i, i));
   }
 
   Reconstruction reconstruction;
@@ -92,14 +89,12 @@ TEST(TrackBuilder, SingletonTracks) {
   static const int kMaxTrackLength = 2;
   static const int kNumCorrespondences = 2;
 
-  const ViewId view_ids[kNumCorrespondences][2] = {
-    { 0, 1 }, { 1, 2 } };
+  const ViewId view_ids[kNumCorrespondences][2] = {{0, 1}, {1, 2}};
 
   TrackBuilder track_builder(kMinTrackLength, kMaxTrackLength);
   for (int i = 0; i < kNumCorrespondences; i++) {
     track_builder.AddFeatureCorrespondence(
-        view_ids[i][0], Feature(0, 0),
-        view_ids[i][1], Feature(0, 0));
+        view_ids[i][0], Feature(0, 0), view_ids[i][1], Feature(0, 0));
   }
 
   Reconstruction reconstruction;
@@ -118,14 +113,12 @@ TEST(TrackBuilder, InconsistentTracks) {
   static const int kNumCorrespondences = 4;
 
   const ViewId view_ids[kNumCorrespondences][2] = {
-    { 0, 1 }, { 0, 1 }, { 1, 2 }, { 1, 2 }
-  };
+      {0, 1}, {0, 1}, {1, 2}, {1, 2}};
 
   TrackBuilder track_builder(kMinTrackLength, kMaxTrackLength);
   for (int i = 0; i < kNumCorrespondences; i++) {
     track_builder.AddFeatureCorrespondence(
-        view_ids[i][0], Feature(0, 0),
-        view_ids[i][1], Feature(i + 1, i + 1));
+        view_ids[i][0], Feature(0, 0), view_ids[i][1], Feature(i + 1, i + 1));
   }
 
   Reconstruction reconstruction;
@@ -143,13 +136,12 @@ TEST(TrackBuilder, MaxTrackLength) {
   static const int kMaxTrackLength = 2;
   static const int kNumViews = 6;
 
-  const ViewId view_ids[kNumViews] = { 0, 1, 2, 3, 4, 5 };
+  const ViewId view_ids[kNumViews] = {0, 1, 2, 3, 4, 5};
 
   TrackBuilder track_builder(kMinTrackLength, kMaxTrackLength);
   for (int i = 0; i < kNumViews - 1; i++) {
     track_builder.AddFeatureCorrespondence(
-        view_ids[i], Feature(0, 0),
-        view_ids[i + 1], Feature(0, 0));
+        view_ids[i], Feature(0, 0), view_ids[i + 1], Feature(0, 0));
   }
 
   Reconstruction reconstruction;
@@ -170,20 +162,19 @@ TEST(TrackBuilder, MinTrackLength) {
   static const int min_track_length = 3;
   static const int kNumViews = 6;
 
-  const ViewId view_ids[kNumViews] = { 0, 1, 2, 3, 4, 5 };
+  const ViewId view_ids[kNumViews] = {0, 1, 2, 3, 4, 5};
 
   TrackBuilder track_builder(min_track_length, kMaxTrackLength);
 
   // Add one track that is larger than the min track length.
   for (int i = 0; i < kNumViews - 1; i++) {
     track_builder.AddFeatureCorrespondence(
-        view_ids[i], Feature(0, 0),
-        view_ids[i + 1], Feature(0, 0));
+        view_ids[i], Feature(0, 0), view_ids[i + 1], Feature(0, 0));
   }
 
   // Add another track that is smaller than the min track length.
-  track_builder.AddFeatureCorrespondence(view_ids[0], Feature(1, 1),
-                                         view_ids[1], Feature(1, 1));
+  track_builder.AddFeatureCorrespondence(
+      view_ids[0], Feature(1, 1), view_ids[1], Feature(1, 1));
 
   Reconstruction reconstruction;
   reconstruction.AddView("0");

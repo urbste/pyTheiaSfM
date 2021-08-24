@@ -32,10 +32,10 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <glog/logging.h>
-#include <algorithm>
-#include <vector>
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <glog/logging.h>
+#include <vector>
 
 #include "theia/math/find_polynomial_roots_jenkins_traub.h"
 #include "theia/math/polynomial.h"
@@ -70,8 +70,7 @@ VectorXd AddRealRoot(const VectorXd& poly, double root) {
 
 // Return the polynomial
 // p(x) = poly(x) * (x - real - imag*i) * (x - real + imag*i).
-VectorXd AddComplexRootPair(const VectorXd& poly, double real,
-                            double imag) {
+VectorXd AddComplexRootPair(const VectorXd& poly, double real, double imag) {
   VectorXd poly2(poly.size() + 2);
   poly2.setZero();
   // Multiply poly by x^2 - 2real + abs(real,imag)^2
@@ -94,8 +93,10 @@ VectorXd SortVector(const VectorXd& in) {
 // FindPolynomialRoots. If use_imaginary is false, NULL is passed as the
 // imaginary argument to FindPolynomialRoots.
 template <int N>
-void RunPolynomialTestRealRoots(const double (&real_roots)[N], bool use_real,
-                                bool use_imaginary, double epsilon) {
+void RunPolynomialTestRealRoots(const double (&real_roots)[N],
+                                bool use_real,
+                                bool use_imaginary,
+                                double epsilon) {
   VectorXd real;
   VectorXd imaginary;
   VectorXd poly = ConstantPolynomial(1.23);
@@ -144,32 +145,32 @@ TEST(Polynomial, ConstantPolynomialReturnsNoRoots) {
 }
 
 TEST(Polynomial, LinearPolynomialWithPositiveRootWorks) {
-  const double roots[1] = { 42.42 };
+  const double roots[1] = {42.42};
   RunPolynomialTestRealRoots(roots, true, true, kEpsilon);
 }
 
 TEST(Polynomial, LinearPolynomialWithNegativeRootWorks) {
-  const double roots[1] = { -42.42 };
+  const double roots[1] = {-42.42};
   RunPolynomialTestRealRoots(roots, true, true, kEpsilon);
 }
 
 TEST(Polynomial, QuadraticPolynomialWithPositiveRootsWorks) {
-  const double roots[2] = { 1.0, 42.42 };
+  const double roots[2] = {1.0, 42.42};
   RunPolynomialTestRealRoots(roots, true, true, kEpsilon);
 }
 
 TEST(Polynomial, QuadraticPolynomialWithOneNegativeRootWorks) {
-  const double roots[2] = { -42.42, 1.0 };
+  const double roots[2] = {-42.42, 1.0};
   RunPolynomialTestRealRoots(roots, true, true, kEpsilon);
 }
 
 TEST(Polynomial, QuadraticPolynomialWithTwoNegativeRootsWorks) {
-  const double roots[2] = { -42.42, -1.0 };
+  const double roots[2] = {-42.42, -1.0};
   RunPolynomialTestRealRoots(roots, true, true, kEpsilon);
 }
 
 TEST(Polynomial, QuadraticPolynomialWithCloseRootsWorks) {
-  const double roots[2] = { 42.42, 42.43 };
+  const double roots[2] = {42.42, 42.43};
   RunPolynomialTestRealRoots(roots, true, false, kEpsilonLoose);
 }
 
@@ -192,37 +193,37 @@ TEST(Polynomial, QuadraticPolynomialWithComplexRootsWorks) {
 }
 
 TEST(Polynomial, QuarticPolynomialWorks) {
-  const double roots[4] = { 1.23e-4, 1.23e-1, 1.23e+2, 1.23e+5 };
+  const double roots[4] = {1.23e-4, 1.23e-1, 1.23e+2, 1.23e+5};
   RunPolynomialTestRealRoots(roots, true, true, kEpsilonLoose);
 }
 
 TEST(Polynomial, QuarticPolynomialWithTwoClustersOfCloseRootsWorks) {
-  const double roots[4] = { 1.23e-1, 2.46e-1, 1.23e+5, 2.46e+5 };
+  const double roots[4] = {1.23e-1, 2.46e-1, 1.23e+5, 2.46e+5};
   RunPolynomialTestRealRoots(roots, true, true, kEpsilonLoose);
 }
 
 TEST(Polynomial, QuarticPolynomialWithTwoZeroRootsWorks) {
-  const double roots[4] = { -42.42, 0.0, 0.0, 42.42 };
+  const double roots[4] = {-42.42, 0.0, 0.0, 42.42};
   RunPolynomialTestRealRoots(roots, true, true, kEpsilonLoose);
 }
 
 TEST(Polynomial, QuarticMonomialWorks) {
-  const double roots[4] = { 0.0, 0.0, 0.0, 0.0 };
+  const double roots[4] = {0.0, 0.0, 0.0, 0.0};
   RunPolynomialTestRealRoots(roots, true, true, kEpsilon);
 }
 
 TEST(Polynomial, NullPointerAsImaginaryPartWorks) {
-  const double roots[4] = { 1.23e-4, 1.23e-1, 1.23e+2, 1.23e+5 };
+  const double roots[4] = {1.23e-4, 1.23e-1, 1.23e+2, 1.23e+5};
   RunPolynomialTestRealRoots(roots, true, false, kEpsilonLoose);
 }
 
 TEST(Polynomial, NullPointerAsRealPartWorks) {
-  const double roots[4] = { 1.23e-4, 1.23e-1, 1.23e+2, 1.23e+5 };
+  const double roots[4] = {1.23e-4, 1.23e-1, 1.23e+2, 1.23e+5};
   RunPolynomialTestRealRoots(roots, false, true, kEpsilon);
 }
 
 TEST(Polynomial, BothOutputArgumentsNullWorks) {
-  const double roots[4] = { 1.23e-4, 1.23e-1, 1.23e+2, 1.23e+5 };
+  const double roots[4] = {1.23e-4, 1.23e-1, 1.23e+2, 1.23e+5};
   RunPolynomialTestRealRoots(roots, false, false, kEpsilon);
 }
 

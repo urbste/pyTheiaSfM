@@ -37,9 +37,9 @@
 
 #include <algorithm>
 #include <functional>
-#include <vector>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "theia/util/map_util.h"
 #include "theia/util/util.h"

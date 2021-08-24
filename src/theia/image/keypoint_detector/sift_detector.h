@@ -56,8 +56,8 @@ class SiftDetector : public KeypointDetector {
   //  We only implement the standard 128-dimension descriptor. Specify the
   //  number of image octaves, number of scale levels per octave, and where the
   //  first octave should start.
-  explicit SiftDetector(const SiftParameters& sift_params) :
-      sift_params_(sift_params), sift_filter_(nullptr) {}
+  explicit SiftDetector(const SiftParameters& sift_params)
+      : sift_params_(sift_params), sift_filter_(nullptr) {}
   SiftDetector(int num_octaves, int num_levels, int first_octave)
       : sift_params_(num_octaves, num_levels, first_octave),
         sift_filter_(nullptr) {}
@@ -67,6 +67,7 @@ class SiftDetector : public KeypointDetector {
   // Given an image, detect keypoints using the sift descriptor.
   bool DetectKeypoints(const FloatImage& image,
                        std::vector<Keypoint>* keypoints);
+
  private:
   const SiftParameters sift_params_;
   VlSiftFilt* sift_filter_;

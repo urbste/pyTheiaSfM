@@ -45,8 +45,7 @@ extern "C" {
 
 namespace theia {
 SiftDetector::~SiftDetector() {
-  if (sift_filter_ != nullptr)
-    vl_sift_delete(sift_filter_);
+  if (sift_filter_ != nullptr) vl_sift_delete(sift_filter_);
 }
 
 bool SiftDetector::DetectKeypoints(const FloatImage& image,
@@ -58,7 +57,8 @@ bool SiftDetector::DetectKeypoints(const FloatImage& image,
   if (sift_filter_ == nullptr || (sift_filter_->width != image.Cols() ||
                                   sift_filter_->height != image.Rows())) {
     vl_sift_delete(sift_filter_);
-    sift_filter_ = vl_sift_new(image.Cols(), image.Rows(),
+    sift_filter_ = vl_sift_new(image.Cols(),
+                               image.Rows(),
                                sift_params_.num_octaves,
                                sift_params_.num_levels,
                                sift_params_.first_octave);
@@ -72,8 +72,8 @@ bool SiftDetector::DetectKeypoints(const FloatImage& image,
   FloatImage mutable_image(image.AsGrayscaleImage());
 
   // Calculate the first octave to process.
-  int vl_status = vl_sift_process_first_octave(sift_filter_,
-                                               mutable_image.Data());
+  int vl_status =
+      vl_sift_process_first_octave(sift_filter_, mutable_image.Data());
   // Reserve an amount that is slightly larger than what a typical detector
   // would return.
   keypoints->reserve(2000);
@@ -89,9 +89,8 @@ bool SiftDetector::DetectKeypoints(const FloatImage& image,
     for (int i = 0; i < num_keypoints; i++) {
       // Calculate (up to 4) orientations of the keypoint.
       double angles[4];
-      int num_angles = vl_sift_calc_keypoint_orientations(sift_filter_,
-                                                          angles,
-                                                          &vl_keypoints[i]);
+      int num_angles = vl_sift_calc_keypoint_orientations(
+          sift_filter_, angles, &vl_keypoints[i]);
       // If upright sift is enabled, only use the first keypoint at a given
       // pixel location.
       if (sift_params_.upright_sift && num_angles > 1) {

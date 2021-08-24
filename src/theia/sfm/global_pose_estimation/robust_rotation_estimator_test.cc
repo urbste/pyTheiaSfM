@@ -32,21 +32,21 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include "theia/math/rotation.h"
 #include "theia/math/util.h"
 #include "theia/sfm/global_pose_estimation/robust_rotation_estimator.h"
 #include "theia/sfm/transformation/align_rotations.h"
 #include "theia/sfm/types.h"
 #include "theia/util/map_util.h"
 #include "theia/util/random.h"
-#include "theia/math/rotation.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -106,14 +106,16 @@ class EstimateRotationsRobustTest : public ::testing::Test {
     }
   }
 
-  void GetRelativeRotations(const int num_view_pairs, const double pose_noise) {
+  void GetRelativeRotations(const size_t num_view_pairs,
+                            const double pose_noise) {
     // Create a set of view id pairs that will contain a spanning tree.
-    for (int i = 1; i < orientations_.size(); i++) {
+    for (size_t i = 1; i < orientations_.size(); i++) {
       const ViewIdPair view_id_pair(i - 1, i);
       view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
           FindOrDie(orientations_, view_id_pair.first),
           FindOrDie(orientations_, view_id_pair.second),
-          pose_noise, rng);
+          pose_noise,
+          rng);
     }
 
     // Add random edges.
@@ -134,7 +136,8 @@ class EstimateRotationsRobustTest : public ::testing::Test {
       view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
           FindOrDie(orientations_, view_id_pair.first),
           FindOrDie(orientations_, view_id_pair.second),
-          pose_noise, rng);
+          pose_noise,
+          rng);
     }
   }
 
@@ -143,7 +146,7 @@ class EstimateRotationsRobustTest : public ::testing::Test {
       std::unordered_map<ViewId, Vector3d>* initial_orientations) {
     // Set the first view to be at the origin.
     (*initial_orientations)[0] = Vector3d::Zero();
-    for (int i = 1; i < orientations_.size(); i++) {
+    for (size_t i = 1; i < orientations_.size(); i++) {
       (*initial_orientations)[i] = ApplyRelativeRotation(
           FindOrDie(*initial_orientations, i - 1),
           FindOrDieNoPrint(view_pairs_, ViewIdPair(i - 1, i)).rotation_2);
@@ -166,10 +169,8 @@ TEST_F(EstimateRotationsRobustTest, SmallTestWithNoise) {
   static const int kNumViews = 4;
   static const int kNumViewPairs = 6;
   static const double kPoseNoiseDegrees = 1.0;
-  TestRobustRotationEstimator(kNumViews,
-                              kNumViewPairs,
-                              kPoseNoiseDegrees,
-                              kToleranceDegrees);
+  TestRobustRotationEstimator(
+      kNumViews, kNumViewPairs, kPoseNoiseDegrees, kToleranceDegrees);
 }
 
 TEST_F(EstimateRotationsRobustTest, LargeTestWithNoise) {
@@ -177,10 +178,8 @@ TEST_F(EstimateRotationsRobustTest, LargeTestWithNoise) {
   static const int kNumViews = 100;
   static const int kNumViewPairs = 800;
   static const double kPoseNoiseDegrees = 2.0;
-  TestRobustRotationEstimator(kNumViews,
-                              kNumViewPairs,
-                              kPoseNoiseDegrees,
-                              kToleranceDegrees);
+  TestRobustRotationEstimator(
+      kNumViews, kNumViewPairs, kPoseNoiseDegrees, kToleranceDegrees);
 }
 
 }  // namespace theia

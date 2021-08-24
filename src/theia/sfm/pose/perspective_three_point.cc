@@ -34,11 +34,11 @@
 
 #include "theia/sfm/pose/perspective_three_point.h"
 
+#include <Eigen/Dense>
+#include <algorithm>
+#include <complex>
 #include <glog/logging.h>
 #include <math.h>
-#include <Eigen/Dense>
-#include <complex>
-#include <algorithm>
 
 #include "theia/math/polynomial.h"
 #include "theia/sfm/pose/util.h"
@@ -65,10 +65,8 @@ int SolvePlaneRotation(const Vector3d normalized_image_points[3],
   // Calculate these parameters ahead of time for reuse and
   // readability. Notation for these variables is consistent with the notation
   // from the paper.
-  const double f_1 =
-      intermediate_image_point[0] / intermediate_image_point[2];
-  const double f_2 =
-      intermediate_image_point[1] / intermediate_image_point[2];
+  const double f_1 = intermediate_image_point[0] / intermediate_image_point[2];
+  const double f_2 = intermediate_image_point[1] / intermediate_image_point[2];
   const double p_1 = intermediate_world_point[0];
   const double p_2 = intermediate_world_point[1];
   const double cos_beta =
@@ -97,9 +95,9 @@ int SolvePlaneRotation(const Vector3d normalized_image_points[3],
   // Computation of coefficients of 4th degree polynomial.
   Eigen::VectorXd coefficients(5);
   coefficients(0) = -f_2_pw2 * p_2_pw4 - p_2_pw4 * f_1_pw2 - p_2_pw4;
-  coefficients(1) =
-      2.0 * p_2_pw3 * d_12 * (*b) + 2.0 * f_2_pw2 * p_2_pw3 * d_12 * (*b) -
-      2.0 * f_2 * p_2_pw3 * f_1 * d_12;
+  coefficients(1) = 2.0 * p_2_pw3 * d_12 * (*b) +
+                    2.0 * f_2_pw2 * p_2_pw3 * d_12 * (*b) -
+                    2.0 * f_2 * p_2_pw3 * f_1 * d_12;
   coefficients(2) =
       -f_2_pw2 * p_2_pw2 * p_1_pw2 - f_2_pw2 * p_2_pw2 * d_12_pw2 * b_pw2 -
       f_2_pw2 * p_2_pw2 * d_12_pw2 + f_2_pw2 * p_2_pw4 + p_2_pw4 * f_1_pw2 +
@@ -110,12 +108,12 @@ int SolvePlaneRotation(const Vector3d normalized_image_points[3],
   coefficients(3) =
       2.0 * p_1_pw2 * p_2 * d_12 * (*b) + 2.0 * f_2 * p_2_pw3 * f_1 * d_12 -
       2.0 * f_2_pw2 * p_2_pw3 * d_12 * (*b) - 2.0 * p_1 * p_2 * d_12_pw2 * (*b);
-  coefficients(4) =
-      -2 * f_2 * p_2_pw2 * f_1 * p_1 * d_12 * (*b) +
-      f_2_pw2 * p_2_pw2 * d_12_pw2 + 2.0 * p_1_pw3 * d_12 - p_1_pw2 * d_12_pw2 +
-      f_2_pw2 * p_2_pw2 * p_1_pw2 - p_1_pw4 -
-      2.0 * f_2_pw2 * p_2_pw2 * p_1 * d_12 + p_2_pw2 * f_1_pw2 * p_1_pw2 +
-      f_2_pw2 * p_2_pw2 * d_12_pw2 * b_pw2;
+  coefficients(4) = -2 * f_2 * p_2_pw2 * f_1 * p_1 * d_12 * (*b) +
+                    f_2_pw2 * p_2_pw2 * d_12_pw2 + 2.0 * p_1_pw3 * d_12 -
+                    p_1_pw2 * d_12_pw2 + f_2_pw2 * p_2_pw2 * p_1_pw2 - p_1_pw4 -
+                    2.0 * f_2_pw2 * p_2_pw2 * p_1 * d_12 +
+                    p_2_pw2 * f_1_pw2 * p_1_pw2 +
+                    f_2_pw2 * p_2_pw2 * d_12_pw2 * b_pw2;
 
   // Computation of roots.
   Eigen::VectorXd roots;
@@ -165,15 +163,15 @@ void Backsubstitute(const Matrix3d& intermediate_world_frame,
   // Construct the transformation from the intermediate world frame to the
   // intermediate camera frame.
   Matrix3d intermediate_world_to_camera_rotation;
-  intermediate_world_to_camera_rotation <<
-      -cos_alpha, -sin_alpha * cos_theta, -sin_alpha * sin_theta,
-      sin_alpha, -cos_alpha * cos_theta, -cos_alpha * sin_theta,
-      0, -sin_theta, cos_theta;
+  intermediate_world_to_camera_rotation << -cos_alpha, -sin_alpha * cos_theta,
+      -sin_alpha * sin_theta, sin_alpha, -cos_alpha * cos_theta,
+      -cos_alpha * sin_theta, 0, -sin_theta, cos_theta;
 
   // Construct the rotation matrix.
   *rotation = (intermediate_world_frame.transpose() *
-              intermediate_world_to_camera_rotation.transpose() *
-               intermediate_camera_frame).transpose();
+               intermediate_world_to_camera_rotation.transpose() *
+               intermediate_camera_frame)
+                  .transpose();
 
   // Adjust translation to account for rotation.
   *translation = -(*rotation) * (*translation);
@@ -228,9 +226,10 @@ bool PoseFromThreePoints(const Vector2d feature_point[3],
 
     intermediate_camera_frame.row(0) = normalized_image_points[0];
     intermediate_camera_frame.row(2) = normalized_image_points[0]
-        .cross(normalized_image_points[1]).normalized();
-    intermediate_camera_frame.row(1) = intermediate_camera_frame.row(2)
-        .cross(intermediate_camera_frame.row(0));
+                                           .cross(normalized_image_points[1])
+                                           .normalized();
+    intermediate_camera_frame.row(1) = intermediate_camera_frame.row(2).cross(
+        intermediate_camera_frame.row(0));
 
     intermediate_image_point =
         intermediate_camera_frame * normalized_image_points[2];
@@ -265,9 +264,13 @@ bool PoseFromThreePoints(const Vector2d feature_point[3],
   double cos_theta[4];
   double cot_alphas[4];
   double b;
-  const int num_solutions = SolvePlaneRotation(
-      normalized_image_points, intermediate_image_point,
-      intermediate_world_point, d_12, cos_theta, cot_alphas, &b);
+  const int num_solutions = SolvePlaneRotation(normalized_image_points,
+                                               intermediate_image_point,
+                                               intermediate_world_point,
+                                               d_12,
+                                               cos_theta,
+                                               cot_alphas,
+                                               &b);
 
   // Backsubstitution of each solution
   solution_translations->resize(num_solutions);

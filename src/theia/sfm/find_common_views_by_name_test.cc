@@ -34,14 +34,14 @@
 
 #include "theia/sfm/find_common_views_by_name.h"
 
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/types.h"
 #include "theia/util/stringprintf.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 

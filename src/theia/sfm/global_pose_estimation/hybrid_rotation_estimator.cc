@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,14 +20,17 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+// edited by Steffen Urban (urbste@googlemail.com), August 2021
 
 #include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
 
@@ -44,31 +48,29 @@
 #include "spectra/include/MatOp/SparseSymMatProd.h"
 #include "spectra/include/SymEigsSolver.h"
 
-#include "theia/sfm/global_pose_estimation/rotation_estimator_util.h"
 #include "theia/math/bcm_sdp_solver.h"
-#include "theia/math/rbr_sdp_solver.h"
 #include "theia/math/rank_restricted_sdp_solver.h"
+#include "theia/math/rbr_sdp_solver.h"
 #include "theia/math/riemannian_staircase.h"
+#include "theia/sfm/global_pose_estimation/rotation_estimator_util.h"
 
 namespace theia {
 
-HybridRotationEstimator::HybridRotationEstimator(
-    const int N, const int dim)
-    : HybridRotationEstimator(N, dim, HybridRotationEstimatorOptions()) {}
+HybridRotationEstimator::HybridRotationEstimator()
+    : HybridRotationEstimator(HybridRotationEstimatorOptions()) {}
 
 HybridRotationEstimator::HybridRotationEstimator(
-    const int N, const int dim,
     const HybridRotationEstimator::HybridRotationEstimatorOptions& options)
     : options_(options),
-      images_num_(N),
-      dim_(dim),
-      ld_rotation_estimator_(new LagrangeDualRotationEstimator(
-          N, dim, options.sdp_solver_options)),
+      ld_rotation_estimator_(
+          new LagrangeDualRotationEstimator(options.sdp_solver_options)),
       irls_rotation_refiner_(nullptr) {}
 
 bool HybridRotationEstimator::EstimateRotations(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     std::unordered_map<ViewId, Eigen::Vector3d>* global_rotations) {
+  images_num_ = global_rotations->size();
+  dim_ = 3;
   const int N = images_num_;
 
   CHECK_NOTNULL(global_rotations);
@@ -76,20 +78,21 @@ bool HybridRotationEstimator::EstimateRotations(
   CHECK_EQ(N, (*global_rotations).size());
   CHECK_GT(view_pairs.size(), 0);
 
-  irls_rotation_refiner_.reset(
-      new IRLSRotationLocalRefiner(N, view_pairs.size(), options_.irls_options));
-  
+  irls_rotation_refiner_.reset(new IRLSRotationLocalRefiner(
+      N, view_pairs.size(), options_.irls_options));
+
   ViewIdToAscentIndex(*global_rotations, &view_id_to_index_);
   ld_rotation_estimator_->SetViewIdToIndex(view_id_to_index_);
 
   Eigen::SparseMatrix<double> sparse_matrix;
-  SetupLinearSystem(
-      view_pairs, (*global_rotations).size(),
-      view_id_to_index_, &sparse_matrix);
+  SetupLinearSystem(view_pairs,
+                    (*global_rotations).size(),
+                    view_id_to_index_,
+                    &sparse_matrix);
   irls_rotation_refiner_->SetViewIdToIndex(view_id_to_index_);
   irls_rotation_refiner_->SetSparseMatrix(sparse_matrix);
 
-  // Estimate global rotations that resides within the cone of 
+  // Estimate global rotations that resides within the cone of
   // convergence for IRLS.
   LOG(INFO) << "Estimating Rotations Using LagrangeDual";
   ld_rotation_estimator_->EstimateRotations(view_pairs, global_rotations);
@@ -119,6 +122,13 @@ void HybridRotationEstimator::GlobalRotationsToTangentSpace(
 
     (*tangent_space_step).segment<3>(3 * view_index) = rotation.second;
   }
+}
+
+// Python wrapper, Requires an initial guess of the global_orientations
+void HybridRotationEstimator::EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    std::unordered_map<ViewId, Eigen::Vector3d>& global_orientations) {
+  EstimateRotations(view_pairs, &global_orientations);
 }
 
 }  // namespace theia

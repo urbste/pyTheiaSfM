@@ -51,9 +51,8 @@ ImageCache::ImageCache(const std::string& image_directory,
 
   // Set up the LRU image cache.
   const std::function<std::shared_ptr<const FloatImage>(const std::string)>
-      fetch_images = std::bind(&ImageCache::FetchImagesFromDisk,
-                               this,
-                               std::placeholders::_1);
+      fetch_images = std::bind(
+          &ImageCache::FetchImagesFromDisk, this, std::placeholders::_1);
   images_.reset(new ImageLRUCache(fetch_images, max_num_images_in_cache));
 }
 
@@ -61,7 +60,8 @@ ImageCache::~ImageCache() {}
 
 const std::shared_ptr<const FloatImage> ImageCache::FetchImage(
     const std::string& image_filename) const {
-  const std::shared_ptr<const FloatImage> image = images_->Fetch(image_filename);
+  const std::shared_ptr<const FloatImage> image =
+      images_->Fetch(image_filename);
   return image;
 }
 

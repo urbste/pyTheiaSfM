@@ -34,8 +34,8 @@
 
 #include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
 
-#include <ceres/ceres.h>
 #include <Eigen/Core>
+#include <ceres/ceres.h>
 #include <vector>
 
 #include "theia/matching/feature_correspondence.h"
@@ -92,16 +92,12 @@ void AddCameraParametersToProblem(const bool constant_extrinsic_parameters,
     // NOTE: We start at index 1 because the focal length is considered
     // variable.
     std::vector<int> constant_intrinsics(num_intrinsics - 1);
-    std::iota(constant_intrinsics.begin(),
-              constant_intrinsics.end(),
-              1);
+    std::iota(constant_intrinsics.begin(), constant_intrinsics.end(), 1);
 
     ceres::SubsetParameterization* subset_parameterization =
-        new ceres::SubsetParameterization(num_intrinsics,
-                                          constant_intrinsics);
-    problem->AddParameterBlock(camera_intrinsics,
-                               num_intrinsics,
-                               subset_parameterization);
+        new ceres::SubsetParameterization(num_intrinsics, constant_intrinsics);
+    problem->AddParameterBlock(
+        camera_intrinsics, num_intrinsics, subset_parameterization);
   }
 }
 
@@ -136,14 +132,10 @@ BundleAdjustmentSummary BundleAdjustTwoViews(
       solver_options.linear_solver_ordering.get();
 
   // Add the two cameras as parameter blocks.
-  AddCameraParametersToProblem(true,
-                               options.constant_camera1_intrinsics,
-                               camera1,
-                               &problem);
-  AddCameraParametersToProblem(false,
-                               options.constant_camera2_intrinsics,
-                               camera2,
-                               &problem);
+  AddCameraParametersToProblem(
+      true, options.constant_camera1_intrinsics, camera1, &problem);
+  AddCameraParametersToProblem(
+      false, options.constant_camera2_intrinsics, camera2, &problem);
   parameter_ordering->AddElementToGroup(camera1->mutable_extrinsics(), 2);
   parameter_ordering->AddElementToGroup(camera1->mutable_intrinsics(), 1);
 
@@ -216,20 +208,18 @@ BundleAdjustmentSummary BundleAdjustTwoViewsAngular(
   const int kParameterBlockSize = 3;
   problem.AddParameterBlock(info->rotation_2.data(), kParameterBlockSize);
   // Add the position as a parameter block, ensuring that the norm is 1.
-  ceres::LocalParameterization* position_parameterization =
-      new ceres::AutoDiffLocalParameterization<
-          UnitNormThreeVectorParameterization, 3, 3>;
-  problem.AddParameterBlock(info->position_2.data(),
-                            kParameterBlockSize,
-                            position_parameterization);
+  ceres::LocalParameterization* position_parameterization = new ceres::
+      AutoDiffLocalParameterization<UnitNormThreeVectorParameterization, 3, 3>;
+  problem.AddParameterBlock(
+      info->position_2.data(), kParameterBlockSize, position_parameterization);
 
   // Add all the epipolar constraints from feature matches.
   for (const FeatureCorrespondence& match : correspondences) {
-    problem.AddResidualBlock(
-        AngularEpipolarError::Create(match.feature1.point_, match.feature2.point_),
-        NULL,
-        info->rotation_2.data(),
-        info->position_2.data());
+    problem.AddResidualBlock(AngularEpipolarError::Create(
+                                 match.feature1.point_, match.feature2.point_),
+                             NULL,
+                             info->rotation_2.data(),
+                             info->position_2.data());
   }
   // End setup time.
   summary.setup_time_in_seconds = timer.ElapsedTimeInSeconds();

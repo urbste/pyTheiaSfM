@@ -95,8 +95,8 @@ int TopDownGaussJordan(const int last_row, Eigen::MatrixBase<Derived>* input) {
   CHECK_GE(last_row, 1) << "last_row must be larger than or equal to 1.";
   CHECK_GE(CHECK_NOTNULL(input)->cols(), input->rows())
       << "Expected a sqaured or fat matrix.";
-  const int num_rows_to_process = std::min(
-      static_cast<int>(input->rows()), last_row + 1);
+  const int num_rows_to_process =
+      std::min(static_cast<int>(input->rows()), last_row + 1);
   const int last_row_to_process = num_rows_to_process - 1;
 
   // This for loop eliminates entries in the lower-left triangular part, and it
@@ -106,9 +106,11 @@ int TopDownGaussJordan(const int last_row, Eigen::MatrixBase<Derived>* input) {
     const int tail_size = num_rows_to_process - current_row;
     int max_coeff_row_idx = 0;
     const ScalarType max_value =
-        FindLargestAbsoluteValueInColumn(
-            *input, current_row, current_row,
-            last_row_to_process, &max_coeff_row_idx);
+        FindLargestAbsoluteValueInColumn(*input,
+                                         current_row,
+                                         current_row,
+                                         last_row_to_process,
+                                         &max_coeff_row_idx);
 
     // Swap rows.
     input->row(current_row).swap(input->row(max_coeff_row_idx));
@@ -118,8 +120,8 @@ int TopDownGaussJordan(const int last_row, Eigen::MatrixBase<Derived>* input) {
     (*input)(current_row, current_row) = static_cast<ScalarType>(1.0);
 
     // Set the remaining entries of the column to zero.
-    for (int temp_row = current_row + 1;
-         temp_row < num_rows_to_process; ++temp_row) {
+    for (int temp_row = current_row + 1; temp_row < num_rows_to_process;
+         ++temp_row) {
       // If the number is too small, it is best to consider it as zero already.
       const ScalarType leading_coeff = (*input)(temp_row, current_row);
       if (std::abs(leading_coeff) < kPrecisionThreshold) {
@@ -151,9 +153,9 @@ void BottomUpGaussJordan(const int start_row,
                          Eigen::MatrixBase<Derived>* input) {
   using ScalarType = typename Derived::Scalar;
   const ScalarType kPrecisionThreshold = static_cast<ScalarType>(1e-9);
-  const int min_dimension = std::min(
-      static_cast<int>(CHECK_NOTNULL(input)->rows()),
-      static_cast<int>(input->cols()));
+  const int min_dimension =
+      std::min(static_cast<int>(CHECK_NOTNULL(input)->rows()),
+               static_cast<int>(input->cols()));
   CHECK_GE(start_row, 0);
   CHECK_LE(start_row, min_dimension);
   CHECK_GE(last_row_to_process, 0);
@@ -166,8 +168,8 @@ void BottomUpGaussJordan(const int start_row,
 
   // This for loop eliminates entries in the upper-left triangular part, and it
   // operates from bottom to top of the matrix.
-  for (int current_row = start_row - 1;
-       current_row >= last_row_to_process; --current_row) {
+  for (int current_row = start_row - 1; current_row >= last_row_to_process;
+       --current_row) {
     // Column to process.
     const int col = current_row;
     // Eliminate coefficients in column.
@@ -204,8 +206,8 @@ template <typename Derived>
 void GaussJordan(const int top_down_last_row,
                  const int bottom_up_last_row,
                  Eigen::MatrixBase<Derived>* input) {
-  using internal::TopDownGaussJordan;
   using internal::BottomUpGaussJordan;
+  using internal::TopDownGaussJordan;
   // Eliminate lower-triangular part of the upper-left squared block of the
   // input matrix.
   const int num_rows_processed = TopDownGaussJordan(top_down_last_row, input);

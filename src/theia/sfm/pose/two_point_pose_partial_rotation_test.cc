@@ -35,8 +35,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <cmath>
+#include <glog/logging.h>
 
 #include "gtest/gtest.h"
 
@@ -68,8 +68,8 @@ void TestTwoPointPoseWithNoise(
     const double max_difference_between_translation) {
   // Sets up the image rays, since the points_3d are in the image's coordinate
   // space they are just these points after normalization.
-  Vector3d image_rays[2] = { points_3d[0].normalized(),
-                             points_3d[1].normalized() };
+  Vector3d image_rays[2] = {points_3d[0].normalized(),
+                            points_3d[1].normalized()};
 
   // Sets up the model points by transforming the points_3d by the inverse
   // of the the test translation and rotation.
@@ -141,7 +141,8 @@ void TestTwoPointPoseWithNoise(
       static const double kMaxProjectionError = 1e-2;
       for (int d = 0; d < 2; ++d) {
         EXPECT_NEAR(image_rays[i][d] / image_rays[i].z(),
-                    proj_3d[d] / proj_3d.z(), kMaxProjectionError);
+                    proj_3d[d] / proj_3d.z(),
+                    kMaxProjectionError);
       }
     }
   }
@@ -154,16 +155,14 @@ void ManyPointsTest(const double model_noise,
                     const double max_rotation_difference,
                     const double max_difference_between_translation) {
   // Sets some test rotations and translations.
-  static const Vector3d kAxes[] = {
-      Vector3d(0.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized()
-  };
+  static const Vector3d kAxes[] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 0.0).normalized(),
+                                   Vector3d(1.0, 0.0, 0.0).normalized(),
+                                   Vector3d(1.0, 0.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 1.0).normalized(),
+                                   Vector3d(1.0, 1.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 1.0).normalized(),
+                                   Vector3d(1.0, 1.0, 1.0).normalized()};
 
   static const double kRotationAngles[THEIA_ARRAYSIZE(kAxes)] = {
       DegToRad(7.0),
@@ -184,7 +183,7 @@ void ManyPointsTest(const double model_noise,
       Vector3d(3.0, 1.5, 91.0),
       Vector3d(1.0, 7.0, 11.0),
       Vector3d(0.0, 0.0, 0.0),  // Tests no translation.
-      Vector3d(0.0, 0.0, 0.0)  // Tests no translation and no rotation.
+      Vector3d(0.0, 0.0, 0.0)   // Tests no translation and no rotation.
   };
 
   // Sets up some test points.
@@ -206,12 +205,11 @@ void ManyPointsTest(const double model_noise,
 
   for (int i = 0; i < THEIA_ARRAYSIZE(kTestPoints); ++i) {
     const Vector3d points_3d[2] = {
-      Vector3d(kTestPoints[i][0], kTestPoints[i][1], kTestPoints[i][2]),
-      Vector3d(kTestPoints[i][3], kTestPoints[i][4], kTestPoints[i][5]),
+        Vector3d(kTestPoints[i][0], kTestPoints[i][1], kTestPoints[i][2]),
+        Vector3d(kTestPoints[i][3], kTestPoints[i][4], kTestPoints[i][5]),
     };
 
-    for (int transform_index = 0;
-         transform_index < THEIA_ARRAYSIZE(kAxes);
+    for (int transform_index = 0; transform_index < THEIA_ARRAYSIZE(kAxes);
          ++transform_index) {
       const Quaterniond test_rotation(Eigen::AngleAxisd(
           kRotationAngles[transform_index], kAxes[transform_index]));
@@ -232,8 +230,8 @@ void ManyPointsTest(const double model_noise,
 // transformation consisting of a translation and a rotation around kAxis.
 void BasicTest() {
   // Sets up some points in the 3D scene
-  const Vector3d points_3d[2] = { Vector3d(5.0, 20.0, 23.0),
-                                  Vector3d(-6.0, 16.0, 33.0) };
+  const Vector3d points_3d[2] = {Vector3d(5.0, 20.0, 23.0),
+                                 Vector3d(-6.0, 16.0, 33.0)};
 
   const Vector3d kAxis(0.0, 1.0, 0.0);
   const Quaterniond kExpectedRotation(Eigen::AngleAxisd(0.15, kAxis));
@@ -253,30 +251,23 @@ void BasicTest() {
                             kMaxAllowedTranslationDifference);
 }
 
-TEST(TwoPointPoseTest, BasicTest) {
-  BasicTest();
-}
-
+TEST(TwoPointPoseTest, BasicTest) { BasicTest(); }
 
 // Tests a single set of model to image correspondences and multiple
 // transformations consisting of translation and rotations around different
 // axes.
 TEST(TwoPointPoseTest, DifferentAxesTest) {
-  const Vector3d points_3d[2] = {
-      Vector3d(5.0, 20.0, 23.0),
-      Vector3d(-6.0, 16.0, 33.0)
-  };
+  const Vector3d points_3d[2] = {Vector3d(5.0, 20.0, 23.0),
+                                 Vector3d(-6.0, 16.0, 33.0)};
 
-  static const Vector3d kAxes[] = {
-      Vector3d(0.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized(),
-      Vector3d(0.0, 1.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized()
-  };
+  static const Vector3d kAxes[] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 0.0).normalized(),
+                                   Vector3d(1.0, 0.0, 0.0).normalized(),
+                                   Vector3d(1.0, 0.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 1.0).normalized(),
+                                   Vector3d(1.0, 1.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 1.0).normalized(),
+                                   Vector3d(1.0, 1.0, 1.0).normalized()};
 
   static const double kRotationAngles[THEIA_ARRAYSIZE(kAxes)] = {
       DegToRad(7.0),
@@ -297,7 +288,7 @@ TEST(TwoPointPoseTest, DifferentAxesTest) {
       Vector3d(3.0, 1.5, 21.0),
       Vector3d(1.0, 7.0, 11.0),
       Vector3d(0.0, 0.0, 0.0),  // Tests no translation.
-      Vector3d(0.0, 0.0, 0.0)  // Tests no translation and no rotation.
+      Vector3d(0.0, 0.0, 0.0)   // Tests no translation and no rotation.
   };
 
   for (int i = 0; i < THEIA_ARRAYSIZE(kAxes); ++i) {

@@ -6,7 +6,8 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 
-// 1. Redistributions of source code must retain the above copyright notice, this
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
 
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -19,14 +20,17 @@
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+// edited by Steffen Urban (urbste@googlemail.com), August 2021
 
 #include "theia/math/rbr_sdp_solver.h"
 
@@ -50,10 +54,10 @@ namespace math {
 RBRSDPSolver::RBRSDPSolver(const size_t n, const size_t block_dim)
     : RBRSDPSolver(n, block_dim, SDPSolverOptions()) {}
 
-RBRSDPSolver::RBRSDPSolver(
-    const size_t n, const size_t block_dim,
-    const SDPSolverOptions& options)
-    : BCMSDPSolver(n, block_dim, options){
+RBRSDPSolver::RBRSDPSolver(const size_t n,
+                           const size_t block_dim,
+                           const SDPSolverOptions& options)
+    : BCMSDPSolver(n, block_dim, options) {
   X_ = Eigen::MatrixXd::Identity(dim_ * n, dim_ * n);
 }
 
@@ -66,11 +70,17 @@ void RBRSDPSolver::Solve(math::Summary& summary) {
   summary.begin_time = std::chrono::high_resolution_clock::now();
   while (summary.total_iterations_num < sdp_solver_options_.max_iterations) {
     if (sdp_solver_options_.verbose) {
-      this->LogToStd(summary.total_iterations_num, prev_func_val, cur_func_val,
-                     error, duration);
+      this->LogToStd(summary.total_iterations_num,
+                     prev_func_val,
+                     cur_func_val,
+                     error,
+                     duration);
     }
 
-    if (IsConverge(prev_func_val, cur_func_val, sdp_solver_options_.tolerance, &error)) {
+    if (IsConverge(prev_func_val,
+                   cur_func_val,
+                   sdp_solver_options_.tolerance,
+                   &error)) {
       break;
     }
 
@@ -116,14 +126,15 @@ void RBRSDPSolver::Solve(math::Summary& summary) {
 
   summary.total_iterations_num++;
   if (sdp_solver_options_.verbose) {
-    this->LogToStd(summary.total_iterations_num, prev_func_val, cur_func_val,
-                   error, duration);
+    this->LogToStd(summary.total_iterations_num,
+                   prev_func_val,
+                   cur_func_val,
+                   error,
+                   duration);
   }
 }
 
-double RBRSDPSolver::EvaluateFuncVal() const {
-  return EvaluateFuncVal(X_);
-}
+double RBRSDPSolver::EvaluateFuncVal() const { return EvaluateFuncVal(X_); }
 
 double RBRSDPSolver::EvaluateFuncVal(const Eigen::MatrixXd& Y) const {
   return (Q_ * Y).trace();
@@ -156,7 +167,8 @@ void RBRSDPSolver::ReformingW(const size_t k, Eigen::MatrixXd& W) {
   }
 }
 
-void RBRSDPSolver::ReorderingUnknown(const size_t k, const Eigen::MatrixXd& B,
+void RBRSDPSolver::ReorderingUnknown(const size_t k,
+                                     const Eigen::MatrixXd& B,
                                      const Eigen::MatrixXd& S) {
   // Reordering X according to [Algorithm 1] in paper:
   // - Z. Wen, D. Goldfarb, S. Ma, and K. Scheinberg.
@@ -183,5 +195,5 @@ void RBRSDPSolver::ReorderingUnknown(const size_t k, const Eigen::MatrixXd& B,
   }
 }
 
-}  // namespace solver
-}  // namespace gopt
+}  // namespace math
+}  // namespace theia

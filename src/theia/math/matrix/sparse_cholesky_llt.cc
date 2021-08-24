@@ -72,9 +72,9 @@
 
 #include "theia/math/matrix/sparse_cholesky_llt.h"
 
-#include <glog/logging.h>
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
+#include <glog/logging.h>
 
 // UF_long is deprecated but SuiteSparse_long is only available in
 // newer versions of SuiteSparse. So for older versions of
@@ -153,4 +153,3 @@ Eigen::VectorXd SparseCholeskyLLt::Solve(const Eigen::VectorXd& rhs) {
 }
 
 }  // namespace theia
-

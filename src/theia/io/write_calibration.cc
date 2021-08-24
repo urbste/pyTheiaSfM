@@ -54,8 +54,8 @@ bool WritePrior(const std::string& img_name,
   out << "\"image_name\" : \"" << img_name << "\",\n";
   out << "\"width\" : " << prior.image_width << ",\n";
   out << "\"height\" : " << prior.image_height << ",\n";
-  out << "\"camera_intrinsics_type\" : \""
-      << prior.camera_intrinsics_model_type << "\"";
+  out << "\"camera_intrinsics_type\" : \"" << prior.camera_intrinsics_model_type
+      << "\"";
   // Place coma before any of the additional attributes if one is set.
   if (prior.focal_length.is_set) {
     out << ",\n";
@@ -63,14 +63,12 @@ bool WritePrior(const std::string& img_name,
   }
   if (prior.principal_point.is_set) {
     out << ",\n";
-    out << "\"principal_point\" : ["
-        << prior.principal_point.value[0] << ", "
+    out << "\"principal_point\" : [" << prior.principal_point.value[0] << ", "
         << prior.principal_point.value[1] << "]";
   }
   if (prior.aspect_ratio.is_set) {
     out << ",\n";
-    out << "\"aspect_ratio\" : "
-        << prior.aspect_ratio.value[0];
+    out << "\"aspect_ratio\" : " << prior.aspect_ratio.value[0];
   }
   if (prior.skew.is_set) {
     out << ",\n";
@@ -92,17 +90,14 @@ bool WritePrior(const std::string& img_name,
   }
   if (prior.position.is_set) {
     out << ",\n";
-    out << "\"position\" : ["
-        << prior.position.value[0] << ", "
-        << prior.position.value[1] << ", "
-        << prior.position.value[2] << "]";
+    out << "\"position\" : [" << prior.position.value[0] << ", "
+        << prior.position.value[1] << ", " << prior.position.value[2] << "]";
   }
   if (prior.orientation.is_set) {
     out << ",\n";
-    out << "\"orientation\" : ["
-        << prior.orientation.value[0] << ", "
-        << prior.orientation.value[1] << ", "
-        << prior.orientation.value[2] << "]";
+    out << "\"orientation\" : [" << prior.orientation.value[0] << ", "
+        << prior.orientation.value[1] << ", " << prior.orientation.value[2]
+        << "]";
   }
   if (prior.latitude.is_set) {
     out << ",\n";
@@ -139,7 +134,7 @@ bool WriteCalibration(
 
   // Start the json file.
   out << "{\n\"priors\" : [\n";
-  
+
   // Write each of the priors.
   std::unordered_map<std::string, CameraIntrinsicsPrior>::const_iterator it;
   it = priors.begin();
@@ -148,7 +143,7 @@ bool WriteCalibration(
   ++it;
 
   // Write the remaining priors.
-  for ( ; it != priors.end(); ++it) {
+  for (; it != priors.end(); ++it) {
     out << ",\n";
     WritePrior(it->first, it->second, &out);
   }

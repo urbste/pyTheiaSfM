@@ -32,8 +32,8 @@
 // Please contact the author of this library if you have any questions.
 // Author: Victor Fragoso (victor.fragoso@mail.wvu.edu)
 
-#include <Eigen/Dense>
 #include "gtest/gtest.h"
+#include <Eigen/Dense>
 
 #include "theia/math/matrix/gauss_jordan.h"
 
@@ -68,7 +68,8 @@ TEST(GaussJordan, EliminationOnFatMatrix) {
   GaussJordan(&mat);
   // Verify that the left-block (rows, rows) is diagonalized.
   EXPECT_NEAR(mat.block(0, 0, kNumRows, kNumRows).sum(),
-              mat.block(0, 0, kNumRows, kNumRows).trace(), 1e-6);
+              mat.block(0, 0, kNumRows, kNumRows).trace(),
+              1e-6);
 }
 
 TEST(GaussJordan, PartialEliminationOnFatMatrix) {
@@ -91,21 +92,30 @@ TEST(GaussJordan, PartialDiagonalizationOnFatMatrix) {
   RowMajorMatrixXd mat = RowMajorMatrixXd::Random(kNumRows, kNumCols);
   GaussJordan(kNumRows - 1, kLastRowToProcess, &mat);
   // Verify that the left-block (rows, rows) is partially diagonalized.
-  EXPECT_NEAR(mat.block(kLastRowToProcess, kLastRowToProcess,
+  EXPECT_NEAR(mat.block(kLastRowToProcess,
+                        kLastRowToProcess,
                         kNumRows - kLastRowToProcess,
-                        kNumRows - kLastRowToProcess).sum(),
-              kNumRows - kLastRowToProcess, 1e-6);
-  EXPECT_NEAR(mat.block(kLastRowToProcess, kLastRowToProcess,
+                        kNumRows - kLastRowToProcess)
+                  .sum(),
+              kNumRows - kLastRowToProcess,
+              1e-6);
+  EXPECT_NEAR(mat.block(kLastRowToProcess,
+                        kLastRowToProcess,
                         kNumRows - kLastRowToProcess,
-                        kNumRows - kLastRowToProcess).sum(),
-              mat.block(kLastRowToProcess, kLastRowToProcess,
+                        kNumRows - kLastRowToProcess)
+                  .sum(),
+              mat.block(kLastRowToProcess,
+                        kLastRowToProcess,
                         kNumRows - kLastRowToProcess,
-                        kNumRows - kLastRowToProcess).trace(),
+                        kNumRows - kLastRowToProcess)
+                  .trace(),
               1e-6);
   EXPECT_NE(mat.block(0, 0, kNumRows, kNumRows).sum(),
-            mat.block(kLastRowToProcess, kLastRowToProcess,
+            mat.block(kLastRowToProcess,
+                      kLastRowToProcess,
                       kNumRows - kLastRowToProcess,
-                      kNumRows - kLastRowToProcess).sum());
+                      kNumRows - kLastRowToProcess)
+                .sum());
 }
 
 TEST(GaussJordan, FullDiagonalizationOnLargeSquaredMatrix) {
