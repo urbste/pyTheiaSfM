@@ -77,7 +77,7 @@ enum class GlobalPositionEstimatorType {
   NONLINEAR = 0,
   LINEAR_TRIPLET = 1,
   LEAST_UNSQUARED_DEVIATION = 2,
-  LiGT = 3
+  LIGT = 3
 };
 
 // Options for the reconstruction estimation.

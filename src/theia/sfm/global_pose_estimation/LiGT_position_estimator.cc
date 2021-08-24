@@ -188,47 +188,46 @@ bool LiGTPositionEstimator::EstimatePositions(
       const auto view3 = reconstruction_.View(std::get<2>(vids));
       std::tuple<Matrix3d, Matrix3d, Matrix3d> BCD;
       CalculateBCDForTrack(view1, view2, view3, t_id, BCD);
+
+//      Eigen::Vector3d shouldnull = std::get<1>(BCD)*view1->Camera().GetPosition() +
+//              std::get<0>(BCD)*view2->Camera().GetPosition() +
+//              std::get<2>(BCD)*view3->Camera().GetPosition();
+//      std::cout<<"shouldnull: "<<shouldnull<<"\n";
+
       BCDs_[t_id].push_back(BCD);
     }
   }
 
 
-    VLOG(2) << "Building the constraint matrix...";
-    // Create the linear system based on triplet constraints.
-    Eigen::SparseMatrix<double> constraint_matrix;
-    //Eigen::MatrixXd constraint_matrix;
-    CreateLinearSystem(&constraint_matrix);
-    std::cout<<"constraint_matrix"<<constraint_matrix<<"\n";
+  VLOG(2) << "Building the constraint matrix...";
+  // Create the linear system based on triplet constraints.
+  Eigen::SparseMatrix<double> constraint_matrix;
+  CreateLinearSystem(&constraint_matrix);
+
   // Solve for positions by examining the smallest eigenvalues. Since we have
   // set one position constant at the origin, we only need to solve for the
   // eigenvector corresponding to the smallest eigenvalue. This can be done
   // efficiently with inverse power iterations.
-//  VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
+  VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
   SparseSymShiftSolveLLT op(constraint_matrix);
   Spectra::SymEigsShiftSolver<double, Spectra::LARGEST_MAGN,
                               SparseSymShiftSolveLLT>
   eigs(&op, 1, 6, 0.0);
   eigs.init();
   eigs.compute();
-//    Eigen::FullPivLU<Eigen::MatrixXd> lu_decomp(constraint_matrix);
-//    auto rank = lu_decomp.rank();
-//    std::cout<<"rank"<<rank<<"\n";
-//    Eigen::JacobiSVD<Eigen::MatrixXd> svd(constraint_matrix.transpose()*constraint_matrix, Eigen::ComputeFullU | Eigen::ComputeFullV);
-//    const Eigen::VectorXd solution = svd.matrixV().col(0);
-//    std::cout<<"svd.matrixV(): "<<solution<<"\n";
-    // Compute with power iterations.
-    const Eigen::VectorXd solution = eigs.eigenvectors().col(0);
-    std::cout<<"eigs.eigenvectors(): "<<eigs.eigenvectors()<<"\n";
-    // Add the solutions to the output. Set the position with an index of -1 to
-    // be at the origin.
-    for (const auto &view_index : linear_system_index_) {
-      if (view_index.second < 0) {
-        (*positions)[view_index.first].setZero();
-      } else {
-        (*positions)[view_index.first] =
-            solution.segment<3>(view_index.second * 3);
-      }
+
+  // Compute with power iterations.
+  const Eigen::VectorXd solution = eigs.eigenvectors().col(0);
+  // Add the solutions to the output. Set the position with an index of -1 to
+  // be at the origin.
+  for (const auto &view_index : linear_system_index_) {
+    if (view_index.second < 0) {
+      (*positions)[view_index.first].setZero();
+    } else {
+      (*positions)[view_index.first] =
+          solution.segment<3>(view_index.second * 3);
     }
+  }
 
   return true;
 }
@@ -305,102 +304,6 @@ void LiGTPositionEstimator::AddTripletConstraint(
                      std::get<2>(view_triplet),
                      linear_system_index_.size() - 1);
 }
-
-void LiGTPositionEstimator::ComputeBaselineRatioForTriplet(
-    const ViewIdTriplet& triplet, Vector3d* baseline) {
-  baseline->setZero();
-
-  const View& view1 = *reconstruction_.View(std::get<0>(triplet));
-  const View& view2 = *reconstruction_.View(std::get<1>(triplet));
-  const View& view3 = *reconstruction_.View(std::get<2>(triplet));
-
-  // Find common tracks.
-  const std::vector<ViewId> triplet_view_ids = {
-      std::get<0>(triplet), std::get<1>(triplet), std::get<2>(triplet)};
-  const std::vector<TrackId>& common_tracks =
-      FindCommonTracksInViews(reconstruction_, triplet_view_ids);
-
-  // Normalize all features.
-  std::vector<Vector3d> feature1, feature2, feature3;
-  feature1.reserve(common_tracks.size());
-  feature2.reserve(common_tracks.size());
-  feature3.reserve(common_tracks.size());
-  for (const TrackId track_id : common_tracks) {
-    feature1.emplace_back(
-        GetNormalizedFeature(view1, track_id).point_.homogeneous());
-    feature2.emplace_back(
-        GetNormalizedFeature(view2, track_id).point_.homogeneous());
-    feature3.emplace_back(
-        GetNormalizedFeature(view3, track_id).point_.homogeneous());
-  }
-
-  //  // Get the baseline ratios.
-  //  ViewTriplet view_triplet;
-  //  view_triplet.view_ids[0] = std::get<0>(triplet);
-  //  view_triplet.view_ids[1] = std::get<1>(triplet);
-  //  view_triplet.view_ids[2] = std::get<2>(triplet);
-  //  view_triplet.info_one_two = FindOrDieNoPrint(
-  //      *view_pairs_,
-  //      ViewIdPair(view_triplet.view_ids[0], view_triplet.view_ids[1]));
-  //  view_triplet.info_one_three = FindOrDieNoPrint(
-  //      *view_pairs_,
-  //      ViewIdPair(view_triplet.view_ids[0], view_triplet.view_ids[2]));
-  //  view_triplet.info_two_three = FindOrDieNoPrint(
-  //      *view_pairs_,
-  //      ViewIdPair(view_triplet.view_ids[1], view_triplet.view_ids[2]));
-
-  //  ComputeTripletBaselineRatios(
-  //      view_triplet, feature1, feature2, feature3, baseline);
-}
-
-//void LiGTPositionEstimator::CreateLinearSystem(
-//    Eigen::MatrixXd& constraint_matrix) {
-//  const int num_views = num_triplets_for_view_.size();
-
-//  constraint_matrix = Eigen::MatrixXd::Zero((num_views - 1) * 3, (num_views - 1) * 3);
-
-//    std::unordered_map<std::pair<int, int>, double> sparse_matrix_entries;
-//    sparse_matrix_entries.reserve(27 * num_triplets_for_view_.size());
-//    for (const auto& triplet_vector : triplets_for_tracks_) {
-//        const TrackId t_id = triplet_vector.first;
-//        const std::vector<ViewIdTriplet> triplet_v = triplet_vector.second;
-//        for (size_t i = 0; i < triplet_v.size(); ++i) {
-//            const ViewId &view_id1 = std::get<0>(triplet_v[i]);
-//            const ViewId &view_id2 = std::get<1>(triplet_v[i]);
-//            const ViewId &view_id3 = std::get<2>(triplet_v[i]);
-//            AddTripletConstraintToSparseMatrix(view_id1, view_id2, view_id3,
-//                                               BCDs_[t_id][i],
-//                                               &sparse_matrix_entries);
-
-//        }
-//    }
-
-//    // Set the sparse matrix from the container of the accumulated entries.
-//    //std::vector<Eigen::Triplet<double>> triplet_list;
-//    //triplet_list.reserve(sparse_matrix_entries.size());
-//    for (const auto &sparse_matrix_entry : sparse_matrix_entries) {
-//      // Skip this entry if the indices are invalid. This only occurs when we
-//      // encounter a constraint with the constant camera (which has a view index
-//      // of -1).
-//      if (sparse_matrix_entry.first.first < 0 ||
-//          sparse_matrix_entry.first.second < 0) {
-//        continue;
-//      }
-//      constraint_matrix(sparse_matrix_entry.first.first,
-//                        sparse_matrix_entry.first.second) = sparse_matrix_entry.second;
-////      triplet_list.emplace_back(sparse_matrix_entry.first.first,
-////                                sparse_matrix_entry.first.second,
-////                                sparse_matrix_entry.second);
-//    }
-
-//    // We construct the constraint matrix A^t * A directly, which is an
-//    // N - 1 x N - 1 matrix where N is the number of cameras (and 3 entries per
-//    // camera, corresponding to the camera position entries).
-
-//    //constraint_matrix->resize((num_views - 1) * 3, (num_views - 1) * 3);
-//    //constraint_matrix->setFromTriplets(triplet_list.begin(),
-//    //triplet_list.end());
-//}
 
 // Sets up the linear system with the constraints that each triplet adds.
 void LiGTPositionEstimator::CreateLinearSystem(
@@ -500,12 +403,9 @@ void LiGTPositionEstimator::AddTripletConstraintToSparseMatrix(
       static_cast<int>(3 * FindOrDie(linear_system_index_, view_id1)),
       static_cast<int>(3 * FindOrDie(linear_system_index_, view_id2))};
 
-  std::vector<Matrix3d> constraints = {std::get<0>(BCD),std::get<1>(BCD),std::get<2>(BCD)};
-  // Assume that t01 is perfect and solve for c2.
+  std::vector<Matrix3d> constraints = {std::get<1>(BCD),std::get<0>(BCD),std::get<2>(BCD)};
   AddTripletConstraintToSymmetricMatrix(
       constraints, view_indices, sparse_matrix_entries);
-
-  std::cout<<"sparse_matrix_entries: "<<sparse_matrix_entries<<"\n";
 }
 
 Feature LiGTPositionEstimator::GetNormalizedFeature(const View& view,
@@ -556,6 +456,15 @@ void LiGTPositionEstimator::FlipSignOfPositionsIfNecessary(
       position.second *= -1.0;
     }
   }
+}
+
+std::unordered_map<ViewId, Eigen::Vector3d>
+LiGTPositionEstimator::EstimatePositionsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    const std::unordered_map<ViewId, Eigen::Vector3d>& orientation) {
+  std::unordered_map<ViewId, Eigen::Vector3d> positions;
+  EstimatePositions(view_pairs, orientation, &positions);
+  return positions;
 }
 
 }  // namespace theia

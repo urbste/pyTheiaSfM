@@ -47,6 +47,7 @@
 #include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
+#include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_rotation_estimator.h"
@@ -1459,6 +1460,13 @@ void pytheia_sfm_classes(py::module& m) {
       .def("EstimatePositions",
            &theia::LeastUnsquaredDeviationPositionEstimator::
                EstimatePositionsWrapper);
+
+  py::class_<theia::LiGTPositionEstimator, theia::PositionEstimator>(
+      m, "LiGTPositionEstimator")
+      .def(py::init<theia::LiGTPositionEstimator::Options,
+                    theia::Reconstruction>())
+      .def("EstimatePositions",
+           &theia::LiGTPositionEstimator::EstimatePositionsWrapper);
 
   // base RotationEstimator class
   py::class_<theia::RotationEstimator>(m, "RotationEstimator");

@@ -47,6 +47,7 @@
 #include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
+#include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
@@ -431,6 +432,12 @@ bool GlobalReconstructionEstimator::EstimatePosition() {
           *reconstruction_));
       break;
     }
+    case GlobalPositionEstimatorType::LIGT: {
+      position_estimator.reset(new LiGTPositionEstimator(
+          options_.ligt_position_estimator_options,
+          *reconstruction_));
+      break;
+  }
     default: {
       LOG(FATAL) << "Invalid type of global position estimation chosen.";
       break;

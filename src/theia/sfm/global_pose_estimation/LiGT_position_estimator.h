@@ -87,23 +87,22 @@ class LiGTPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation,
       std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
+  // python
+  std::unordered_map<ViewId, Eigen::Vector3d> EstimatePositionsWrapper(
+      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
+
  private:
   // Returns the features as a unit-norm pixel ray after camera intrinsics
   // (i.e. focal length an principal point) have been removed.
   Feature GetNormalizedFeature(const View& view, const TrackId track_id);
-
-  // Computes the relative baselines between three views in a triplet. The
-  // baseline is estimated from the depths of triangulated 3D points. The
-  // relative positions of the triplets are then scaled to account for the
-  // baseline ratios.
-  void ComputeBaselineRatioForTriplet(const ViewIdTriplet& triplet,
-                                      Eigen::Vector3d* baseline);
 
   // Store the triplet.
   void AddTripletConstraint(const ViewIdTriplet& view_triplet);
 
   // Sets up the linear system with the constraints that each triplet adds.
   void CreateLinearSystem(Eigen::SparseMatrix<double>* constraint_matrix);
+
   //void CreateLinearSystem(Eigen::MatrixXd& constraint_matrix);
   void AddTripletConstraintToSparseMatrix(const ViewId view_id1,
       const ViewId view_id2,

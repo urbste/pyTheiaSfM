@@ -126,7 +126,7 @@ void AlignPositions(const std::unordered_map<ViewId, Vector3d>& gt_positions,
 
 }  // namespace
 
-class EstimatePositionsLinearTest : public ::testing::Test {
+class EstimatePositionsLiGTTest : public ::testing::Test {
  public:
   void TestLiGTPositionEstimator(const int num_views,
                                    const int num_tracks,
@@ -254,13 +254,26 @@ class EstimatePositionsLinearTest : public ::testing::Test {
   Reconstruction reconstruction_;
 };
 
-TEST_F(EstimatePositionsLinearTest, SmallTestNoNoise) {
-  static const double kTolerance = 1e-4;
-  static const int kNumViews = 3;
-  static const int kNumTracksPerView = 3;
-  static const int kNumViewPairs = 3;
-  TestLiGTPositionEstimator(
-      kNumViews, kNumTracksPerView, kNumViewPairs, 0.0, kTolerance);
+//TEST_F(EstimatePositionsLiGTTest, SmallTestNoNoise) {
+//  static const double kTolerance = 1e-4;
+//  static const int kNumViews = 4;
+//  static const int kNumTracksPerView = 50;
+//  static const int kNumViewPairs = 6;
+//  TestLiGTPositionEstimator(
+//      kNumViews, kNumTracksPerView, kNumViewPairs, 0.0, kTolerance);
+//}
+
+TEST_F(EstimatePositionsLiGTTest, SmallTestWithNoise) {
+  static const double kTolerance = 0.25;
+  static const int kNumViews = 4;
+  static const int kNumTracksPerView = 50;
+  static const int kNumViewPairs = 6;
+  static const double kPoseNoiseDegrees = 1.00;
+  TestLiGTPositionEstimator(kNumViews,
+                              kNumTracksPerView,
+                              kNumViewPairs,
+                              kPoseNoiseDegrees,
+                              kTolerance);
 }
 
 
