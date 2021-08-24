@@ -128,7 +128,7 @@ void AlignPositions(const std::unordered_map<ViewId, Vector3d>& gt_positions,
 
 class EstimatePositionsLinearTest : public ::testing::Test {
  public:
-  void TestLinearPositionEstimator(const int num_views,
+  void TestLiGTPositionEstimator(const int num_views,
                                    const int num_tracks,
                                    const int num_view_pairs,
                                    const double pose_noise,
@@ -257,23 +257,11 @@ class EstimatePositionsLinearTest : public ::testing::Test {
 TEST_F(EstimatePositionsLinearTest, SmallTestNoNoise) {
   static const double kTolerance = 1e-4;
   static const int kNumViews = 3;
-  static const int kNumTracksPerView = 10;
+  static const int kNumTracksPerView = 3;
   static const int kNumViewPairs = 3;
-  TestLinearPositionEstimator(
+  TestLiGTPositionEstimator(
       kNumViews, kNumTracksPerView, kNumViewPairs, 0.0, kTolerance);
 }
 
-TEST_F(EstimatePositionsLinearTest, SmallTestWithNoise) {
-  static const double kTolerance = 0.25;
-  static const int kNumViews = 4;
-  static const int kNumTracksPerView = 50;
-  static const int kNumViewPairs = 6;
-  static const double kPoseNoiseDegrees = 1.0;
-  TestLinearPositionEstimator(kNumViews,
-                              kNumTracksPerView,
-                              kNumViewPairs,
-                              kPoseNoiseDegrees,
-                              kTolerance);
-}
 
 }  // namespace theia

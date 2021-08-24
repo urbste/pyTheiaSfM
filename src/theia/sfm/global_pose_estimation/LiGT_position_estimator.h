@@ -53,9 +53,18 @@ class Reconstruction;
 class TwoViewInfo;
 class View;
 
-// Estimates the camera position of views given global orientations and view
-// triplets. The constraints formed by each triplet are used to create a sparse
+// Estimates the camera position of views given global orientations and
+// normalized image correspondeces of the same scene point across image triplets.
+// The constraints formed by each triplet are used to create a sparse
 // linear system to solve for the positions.
+
+// Implements the paper:
+//@article{cai2021pose,
+//  title={A Pose-only Solution to Visual Reconstruction and Navigation},
+//  author={Cai, Qi and Zhang, Lilian and Wu, Yuanxin and Yu, Wenxian and Hu, Dewen},
+//  journal={arXiv preprint arXiv:2103.01530},
+//  year={2021}
+//}
 class LiGTPositionEstimator : public PositionEstimator {
  public:
   struct Options {
@@ -95,12 +104,11 @@ class LiGTPositionEstimator : public PositionEstimator {
 
   // Sets up the linear system with the constraints that each triplet adds.
   void CreateLinearSystem(Eigen::SparseMatrix<double>* constraint_matrix);
-
-  void AddTripletConstraintToSparseMatrix(
-      const ViewId view_id1,
+  //void CreateLinearSystem(Eigen::MatrixXd& constraint_matrix);
+  void AddTripletConstraintToSparseMatrix(const ViewId view_id1,
       const ViewId view_id2,
       const ViewId view_id3,
-      const Eigen::Vector3d& baseline,
+      const std::tuple<Matrix3d, Matrix3d, Matrix3d> &BCD,
       std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries);
 
   void CalculateBCDForTrack(
@@ -135,7 +143,8 @@ class LiGTPositionEstimator : public PositionEstimator {
 
   // save a view triplet for each track, eq. 29
   std::unordered_map<TrackId, std::vector<ViewIdTriplet>> triplets_for_tracks_;
-  std::vector<Eigen::Vector3d> baselines_;
+  std::unordered_map<TrackId,
+                     std::vector<std::tuple<Matrix3d, Matrix3d, Matrix3d>>> BCDs_;
 
   // We keep one of the positions as constant to remove the ambiguity of the
   // origin of the linear system.
