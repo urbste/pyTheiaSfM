@@ -178,7 +178,7 @@ bool LinearPositionEstimator::EstimatePositions(
   // second, and third view pair in the triplet.
   std::unique_ptr<ThreadPool> pool(new ThreadPool(options_.num_threads));
   baselines_.resize(triplets_.size());
-  for (int i = 0; i < triplets_.size(); i++) {
+  for (size_t i = 0; i < triplets_.size(); i++) {
     AddTripletConstraint(triplets_[i]);
     pool->Add(&LinearPositionEstimator::ComputeBaselineRatioForTriplet,
               this,

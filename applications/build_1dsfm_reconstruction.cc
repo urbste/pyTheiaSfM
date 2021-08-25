@@ -127,7 +127,7 @@ DEFINE_int32(num_retriangulation_iterations,
 // Nonlinear position estimation options.
 DEFINE_int32(
     position_estimation_min_num_tracks_per_view,
-    0,
+    10,
     "Minimum number of point to camera constraints for position estimation.");
 DEFINE_double(position_estimation_robust_loss_width,
               0.1,

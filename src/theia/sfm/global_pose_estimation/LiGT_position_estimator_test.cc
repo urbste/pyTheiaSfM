@@ -52,6 +52,7 @@
 #include "theia/util/map_util.h"
 #include "theia/util/random.h"
 #include "theia/util/stringprintf.h"
+#include "theia/sfm/pose/test_util.h"
 #include "gtest/gtest.h"
 
 namespace theia {
@@ -60,7 +61,7 @@ using Eigen::Vector3d;
 
 namespace {
 
-RandomNumberGenerator rng(62);
+RandomNumberGenerator rng(42);
 
 Camera RandomCamera() {
   Camera camera;
@@ -126,15 +127,16 @@ void AlignPositions(const std::unordered_map<ViewId, Vector3d>& gt_positions,
 
 }  // namespace
 
-class EstimatePositionsLiGTTest : public ::testing::Test {
+class EstimatePositionsLiGTTest { // : public ::testing::Test {
  public:
-  void TestLiGTPositionEstimator(const int num_views,
-                                   const int num_tracks,
-                                   const int num_view_pairs,
-                                   const double pose_noise,
-                                   const double position_tolerance) {
+   EstimatePositionsLiGTTest(const int num_views,
+                           const int num_tracks,
+                           const int num_view_pairs,
+                           const double pose_noise,
+                           const double image_noise,
+                           const double position_tolerance) {
     // Set up the camera.
-    SetupReconstruction(num_views, num_tracks);
+    SetupReconstruction(num_views, num_tracks, image_noise);
     GetTwoViewInfos(num_view_pairs, pose_noise);
 
     // Estimate the positions.
@@ -150,6 +152,8 @@ class EstimatePositionsLiGTTest : public ::testing::Test {
     for (const auto& position : positions_) {
       const Vector3d& estimated_position =
           FindOrDie(estimated_positions, position.first);
+      std::cout<< "\ng.t. position      = " << position.second.transpose()
+      << "\nestimated position = " << estimated_position.transpose() <<"\n";
       const double position_error =
           (position.second - estimated_position).norm();
       EXPECT_LT(position_error, position_tolerance)
@@ -161,11 +165,11 @@ class EstimatePositionsLiGTTest : public ::testing::Test {
  protected:
   void SetUp() {}
 
-  void SetupReconstruction(const int num_views, const int num_tracks) {
+  void SetupReconstruction(const int num_views, const int num_tracks, const double image_noise) {
     // Create random views.
     std::vector<ViewId> view_ids;
     for (int i = 0; i < num_views; i++) {
-      const ViewId view_id = reconstruction_.AddView(StringPrintf("%d", i), i);
+      const ViewId view_id = reconstruction_.AddView(StringPrintf("%d", i), 0, i);
       view_ids.push_back(view_id);
 
       // Create a random pose.
@@ -190,6 +194,7 @@ class EstimatePositionsLiGTTest : public ::testing::Test {
         const View* view = reconstruction_.View(view_ids[j]);
         Eigen::Vector2d pixel;
         view->Camera().ProjectPoint(point, &pixel);
+        AddNoiseToProjection(image_noise, &rng, &pixel);
         features.emplace_back(view_ids[j], pixel);
       }
       Track* track =
@@ -254,27 +259,60 @@ class EstimatePositionsLiGTTest : public ::testing::Test {
   Reconstruction reconstruction_;
 };
 
-//TEST_F(EstimatePositionsLiGTTest, SmallTestNoNoise) {
-//  static const double kTolerance = 1e-4;
-//  static const int kNumViews = 4;
-//  static const int kNumTracksPerView = 50;
-//  static const int kNumViewPairs = 6;
-//  TestLiGTPositionEstimator(
-//      kNumViews, kNumTracksPerView, kNumViewPairs, 0.0, kTolerance);
-//}
-
-TEST_F(EstimatePositionsLiGTTest, SmallTestWithNoise) {
-  static const double kTolerance = 0.25;
-  static const int kNumViews = 4;
-  static const int kNumTracksPerView = 50;
-  static const int kNumViewPairs = 6;
-  static const double kPoseNoiseDegrees = 1.00;
-  TestLiGTPositionEstimator(kNumViews,
+TEST(EstimatePositionsLiGTTest1, MinimalTestNoNoise) {
+  static const double kTolerance = 1e-4;
+  static const int kNumViews = 3;
+  static const int kNumTracksPerView = 5;
+  static const int kNumViewPairs = 3;
+  EstimatePositionsLiGTTest test_class(kNumViews,
                               kNumTracksPerView,
                               kNumViewPairs,
-                              kPoseNoiseDegrees,
+                              0.0,
+                              0.0,
                               kTolerance);
 }
 
+TEST(EstimatePositionsLiGTTest2, MinimalTestWithNoise) {
+  static const double kTolerance = 0.25;
+  static const int kNumViews = 3;
+  static const int kNumTracksPerView = 5;
+  static const int kNumViewPairs = 3;
+  static const double kPoseNoiseDegrees = 1.00;
+  static const double kImageNoiseDegrees = 0.5;
+  EstimatePositionsLiGTTest test_class(kNumViews,
+                              kNumTracksPerView,
+                              kNumViewPairs,
+                              kPoseNoiseDegrees,
+                              kImageNoiseDegrees,
+                              kTolerance);
+}
+
+TEST(EstimatePositionsLiGTTest3, TestNoNoise) {
+  static const double kTolerance = 0.25;
+  static const int kNumViews = 200;
+  static const int kNumTracksPerView = 100;
+  static const int kNumViewPairs = 500;
+  EstimatePositionsLiGTTest test_class(kNumViews,
+                              kNumTracksPerView,
+                              kNumViewPairs,
+                              0.0, 0.0,
+                              kTolerance);
+}
+
+TEST(EstimatePositionsLiGTTest4, TestWithNoise) {
+  static const double kTolerance = 0.5;
+  static const int kNumViews = 200;
+  static const int kNumTracksPerView = 100;
+  static const int kNumViewPairs = 500;
+
+  static const double kPoseNoiseDegrees = 1.00;
+  static const double kImageNoiseDegrees = 1.0;
+  EstimatePositionsLiGTTest test_class(kNumViews,
+                              kNumTracksPerView,
+                              kNumViewPairs,
+                              kPoseNoiseDegrees,
+                              kImageNoiseDegrees,
+                              kTolerance);
+}
 
 }  // namespace theia

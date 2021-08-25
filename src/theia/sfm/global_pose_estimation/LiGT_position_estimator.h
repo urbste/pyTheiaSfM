@@ -93,10 +93,6 @@ class LiGTPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
 
  private:
-  // Returns the features as a unit-norm pixel ray after camera intrinsics
-  // (i.e. focal length an principal point) have been removed.
-  Feature GetNormalizedFeature(const View& view, const TrackId track_id);
-
   // Store the triplet.
   void AddTripletConstraint(const ViewIdTriplet& view_triplet);
 

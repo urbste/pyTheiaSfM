@@ -159,6 +159,49 @@ bool VectorsAreSameDirection(const Vector3d& position1,
   return rotated_relative_position.dot(relative_position12) > 0;
 }
 
+// Returns the features as a unit-norm pixel ray after camera intrinsics
+// (i.e. focal length an principal point) have been removed.
+Feature GetNormalizedFeature(const View& view, const TrackId track_id) {
+  Feature feature = *view.GetFeature(track_id);
+  const Camera& camera = view.Camera();
+  Eigen::Vector3d ray = camera.PixelToNormalizedCoordinates(feature.point_);
+  Feature normalized_Feature(ray.hnormalized());
+  // todo normalized covariance?
+  return normalized_Feature;
+}
+
+std::pair<ViewId, ViewId> GetBestBaseViews(
+    const Reconstruction& reconstruction,
+    const TrackId& track_id) {
+
+    const Track* track = reconstruction.Track(track_id);
+    std::vector<ViewId> view_ids(track->ViewIds().begin(), track->ViewIds().end());
+    double theta_max = 0.0;
+    std::pair<ViewId, ViewId> base_views;
+    for (size_t i = 0; i < view_ids.size(); ++i) {
+      for (size_t j = i+1; j < view_ids.size(); ++j) {
+        ViewId id1 = view_ids[i];
+        ViewId id2 = view_ids[j];
+        const View* view1 = reconstruction.View(id1);
+        const View* view2 = reconstruction.View(id2);
+        const Vector3d feature1 =
+            GetNormalizedFeature(*view1, track_id).point_.homogeneous();
+        const Vector3d feature2 =
+            GetNormalizedFeature(*view2, track_id).point_.homogeneous();
+
+        const Eigen::Matrix3d R1 = view1->Camera().GetOrientationAsRotationMatrix();
+        const Eigen::Matrix3d R2 = view2->Camera().GetOrientationAsRotationMatrix();
+        const Matrix3d R12 = GetRij(R1, R2);
+        const double theta = GetThetaSq(feature1, feature2, R12);
+        if (theta > theta_max) {
+            base_views = std::make_pair(id1, id2);
+            theta_max = theta;
+        }
+      }
+    }
+    return base_views;
+}
+
 }  // namespace
 
 LiGTPositionEstimator::LiGTPositionEstimator(
@@ -172,32 +215,37 @@ bool LiGTPositionEstimator::EstimatePositions(
     const std::unordered_map<ViewId, Vector3d>& orientations,
     std::unordered_map<ViewId, Vector3d>* positions) {
   CHECK_NOTNULL(positions)->clear();
+
+  num_triplets_for_view_.clear();
+  linear_system_index_.clear();
+  BCDs_.clear();
+  triplets_for_tracks_.clear();
+
   view_pairs_ = &view_pairs;
   orientations_ = &orientations;
 
-  VLOG(2) << "Extracting triplets from tracks.";
+  VLOG(2) << "Extracting triplets from tracks and calculating BCDs for tracks.";
   FindTripletsForTracks();
 
-  VLOG(2) << "Calculating BCD for tracks.";
-  for (const auto& t : triplets_for_tracks_) {
-    auto t_id = t.first;
-    auto view_ids = t.second;
-    for (const auto& vids : view_ids) {
-      const auto view1 = reconstruction_.View(std::get<0>(vids));
-      const auto view2 = reconstruction_.View(std::get<1>(vids));
-      const auto view3 = reconstruction_.View(std::get<2>(vids));
-      std::tuple<Matrix3d, Matrix3d, Matrix3d> BCD;
-      CalculateBCDForTrack(view1, view2, view3, t_id, BCD);
+//  VLOG(2) << "Calculating BCD for tracks.";
+//  for (const auto& t : triplets_for_tracks_) {
+//    auto t_id = t.first;
+//    auto view_ids = t.second;
+//    for (const auto& vids : view_ids) {
+//      const auto view1 = reconstruction_.View(std::get<0>(vids));
+//      const auto view2 = reconstruction_.View(std::get<1>(vids));
+//      const auto view3 = reconstruction_.View(std::get<2>(vids));
+//      std::tuple<Matrix3d, Matrix3d, Matrix3d> BCD;
+//      CalculateBCDForTrack(view1, view2, view3, t_id, BCD);
 
-//      Eigen::Vector3d shouldnull = std::get<1>(BCD)*view1->Camera().GetPosition() +
-//              std::get<0>(BCD)*view2->Camera().GetPosition() +
-//              std::get<2>(BCD)*view3->Camera().GetPosition();
-//      std::cout<<"shouldnull: "<<shouldnull<<"\n";
+////      Eigen::Vector3d shouldnull = std::get<1>(BCD)*view1->Camera().GetPosition() +
+////              std::get<0>(BCD)*view2->Camera().GetPosition() +
+////              std::get<2>(BCD)*view3->Camera().GetPosition();
+////      std::cout<<"shouldnull: "<<shouldnull<<"\n";
 
-      BCDs_[t_id].push_back(BCD);
-    }
-  }
-
+//      BCDs_[t_id].push_back(BCD);
+//    }
+//  }
 
   VLOG(2) << "Building the constraint matrix...";
   // Create the linear system based on triplet constraints.
@@ -265,21 +313,46 @@ void LiGTPositionEstimator::CalculateBCDForTrack(
 }
 
 void LiGTPositionEstimator::FindTripletsForTracks() {
-  std::vector<TrackId> track_ids = reconstruction_.TrackIds();
+  auto track_ids = reconstruction_.TrackIds();
+  uint32_t total_nr_triplets = 0;
   for (size_t t = 0; t < track_ids.size(); ++t) {
-    auto view_ids_for_track = reconstruction_.Track(track_ids[t])->ViewIds();
+    auto t_id = track_ids[t];
+    auto view_ids_for_track = reconstruction_.Track(t_id)->ViewIds();
     if (view_ids_for_track.size() < 3) {
       continue;
     }
-    // todo implement eq 29
-    for (size_t v = 1; v < view_ids_for_track.size() - 1; ++v) {
-        ViewIdTriplet triplet = std::make_tuple(*std::next(view_ids_for_track.begin(), v - 1),
-                                                *std::next(view_ids_for_track.begin(), v),
-                                                *std::next(view_ids_for_track.begin(), v + 1));
+    // implements equation 29 from paper. Get base views for point
+    std::pair<ViewId, ViewId> base_views = GetBestBaseViews(reconstruction_, t_id);
+    // now iterate all other observations beside the base views
+    for (size_t v = 0; v < view_ids_for_track.size(); ++v) {
+      ViewId cur_id = *std::next(view_ids_for_track.begin(), v);
+      // check if the current id is one of the base views
+      if (cur_id == base_views.first || cur_id == base_views.second) {
+          continue;
+      }
+      std::cout<<"Track: "<<t_id<<" triplet: (base l, central, base r) ("<<base_views.first<<", "<<cur_id<<", "<<base_views.second<<")\n";
+
+      ViewIdTriplet triplet = std::make_tuple(base_views.first, cur_id, base_views.second);
       AddTripletConstraint(triplet);
-      triplets_for_tracks_[track_ids[t]].push_back(triplet);
+
+      const auto view1 = reconstruction_.View(base_views.first);
+      const auto view2 = reconstruction_.View(cur_id);
+      const auto view3 = reconstruction_.View(base_views.second);
+      std::tuple<Matrix3d, Matrix3d, Matrix3d> BCD;
+      CalculateBCDForTrack(view1, view2, view3, t_id, BCD);
+
+//      Eigen::Vector3d shouldbezero = std::get<1>(BCD)*view1->Camera().GetPosition() +
+//              std::get<0>(BCD)*view2->Camera().GetPosition() +
+//              std::get<2>(BCD)*view3->Camera().GetPosition();
+//      std::cout<<"shouldbezero: "<<shouldbezero<<"\n";
+
+      triplets_for_tracks_[t_id].push_back(triplet);
+      BCDs_[t_id].push_back(BCD);
+      total_nr_triplets++;
     }
   }
+
+  std::cout<<"Total number of triplets: "<<total_nr_triplets<<" for "<< track_ids.size()<<" tracks and "<<reconstruction_.ViewIds().size()<<" views.\n";
 }
 
 // An alternative interface is to instead add triplets one by one to linear
@@ -403,19 +476,11 @@ void LiGTPositionEstimator::AddTripletConstraintToSparseMatrix(
       static_cast<int>(3 * FindOrDie(linear_system_index_, view_id1)),
       static_cast<int>(3 * FindOrDie(linear_system_index_, view_id2))};
 
+  // important to use index 1 0 2 here.
+  // 0 ist the central camera and equation 17 is using it that way
   std::vector<Matrix3d> constraints = {std::get<1>(BCD),std::get<0>(BCD),std::get<2>(BCD)};
   AddTripletConstraintToSymmetricMatrix(
       constraints, view_indices, sparse_matrix_entries);
-}
-
-Feature LiGTPositionEstimator::GetNormalizedFeature(const View& view,
-                                                    const TrackId track_id) {
-  Feature feature = *view.GetFeature(track_id);
-  const Camera& camera = view.Camera();
-  Eigen::Vector3d ray = camera.PixelToNormalizedCoordinates(feature.point_);
-  Feature normalized_Feature(ray.hnormalized());
-  // todo normalized covariance?
-  return normalized_Feature;
 }
 
 void LiGTPositionEstimator::FlipSignOfPositionsIfNecessary(
