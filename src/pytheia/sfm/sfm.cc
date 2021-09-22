@@ -1091,6 +1091,8 @@ void pytheia_sfm_classes(py::module& m) {
              theia::GlobalPositionEstimatorType::LINEAR_TRIPLET)
       .value("LEAST_UNSQUARED_DEVIATION",
              theia::GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION)
+      .value("LIGT",
+             theia::GlobalPositionEstimatorType::LIGT)
       .export_values();
 
   py::enum_<theia::GlobalRotationEstimatorType>(m,
