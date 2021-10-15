@@ -92,6 +92,8 @@ class BundleAdjuster {
   bool GetCovarianceForViews(const std::vector<ViewId> &track_ids, 
     std::map<ViewId, Matrix6d>* covariance_matrices);
     
+  void SetCameraExtrinsicsConstant(const ViewId view_id);
+
  protected:
   // Add all camera extrinsics and intrinsics to the optimization problem.
   void SetCameraExtrinsicsParameterization();
@@ -102,7 +104,6 @@ class BundleAdjuster {
       const CameraIntrinsicsGroupId camera_intrinsics_group);
 
   // Methods for setting camera extrinsics to be (partially) constant.
-  virtual void SetCameraExtrinsicsConstant(const ViewId view_id);
   virtual void SetCameraPositionConstant(const ViewId view_id);
   virtual void SetCameraOrientationConstant(const ViewId view_id);
   virtual void SetTrackConstant(const TrackId track_id);
@@ -120,6 +121,11 @@ class BundleAdjuster {
   // Add a position prior residual. This can for example be a GPS position.
   virtual void AddPositionPriorErrorResidual(View *view, Camera *camera);
 
+  // Add a depth prior residual. Could be used e.g. for RGB-D cameras
+  virtual void AddDepthPriorErrorResidual(const Feature& feature,
+                                          Camera* camera,
+                                          Track* track);
+
   const BundleAdjustmentOptions options_;
   Reconstruction* reconstruction_;
   Timer timer_;
@@ -131,6 +137,11 @@ class BundleAdjuster {
   // The potentially robust loss function to use for reprojection error
   // minimization.
   std::unique_ptr<ceres::LossFunction> loss_function_;
+
+  // The potentially robust loss function to use for reprojection error
+  // minimization.
+  std::unique_ptr<ceres::LossFunction> depth_prior_loss_function_;
+
   // The parameter group ordering for bundle adjustment.
   ceres::ParameterBlockOrdering* parameter_ordering_;
 

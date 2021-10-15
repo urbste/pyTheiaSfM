@@ -46,6 +46,7 @@
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/create_reprojection_error_cost_function.h"
 #include "theia/sfm/bundle_adjustment/position_error.h"
+#include "theia/sfm/bundle_adjustment/depth_prior_error.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/types.h"
@@ -91,6 +92,10 @@ BundleAdjuster::BundleAdjuster(const BundleAdjustmentOptions &options,
   // Get the loss function that will be used for BA.
   loss_function_ =
       CreateLossFunction(options.loss_function_type, options.robust_loss_width);
+  // Get the loss function that will be used for BA.
+  depth_prior_loss_function_ =
+      CreateLossFunction(options.loss_function_type, options.robust_loss_width_depth_prior);
+
   ceres::Problem::Options problem_options;
   problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
   problem_.reset(new ceres::Problem(problem_options));
@@ -135,6 +140,12 @@ void BundleAdjuster::AddView(const ViewId view_id) {
 
     // Add the point to group 0.
     SetTrackConstant(track_id);
+
+    // Add depth priors
+    // a depth of zero does not make much sense for a camera
+    if (options_.use_depth_priors && feature->depth_prior() != 0.0) {
+      AddDepthPriorErrorResidual(*feature, camera, track);
+    }
   }
 
   // add a position prior if available
@@ -441,6 +452,16 @@ void BundleAdjuster::AddPositionPriorErrorResidual(View *view,
                               view->GetPositionPriorSqrtInformation()),
         NULL,
         camera->mutable_extrinsics());
+}
+
+void BundleAdjuster::AddDepthPriorErrorResidual(const Feature& feature,
+                                          Camera* camera,
+                                          Track* track) {
+
+  problem_->AddResidualBlock(
+    DepthPriorError::Create(feature),
+    depth_prior_loss_function_.get(),
+    camera->mutable_extrinsics(), track->MutablePoint()->data());
 }
 
 bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id,

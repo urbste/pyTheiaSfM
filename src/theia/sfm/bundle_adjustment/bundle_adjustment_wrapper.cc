@@ -70,13 +70,24 @@ BundleAdjustmentSummary BundleAdjustReconstructionWrapper(
 
 BundleAdjustmentSummary BundleAdjustPartialReconstructionWrapper(
         const BundleAdjustmentOptions& options,
-        Reconstruction& reconstruction,
         const std::unordered_set<ViewId>& views_to_optimize,
-        const std::unordered_set<TrackId>& tracks_to_optimize) {
+        const std::unordered_set<TrackId>& tracks_to_optimize,
+        Reconstruction& reconstruction) {
     BundleAdjustmentSummary ba_summary = BundleAdjustPartialReconstruction(
         options, views_to_optimize, tracks_to_optimize, &reconstruction);
     return ba_summary;
 }
+
+BundleAdjustmentSummary BundleAdjustPartialViewsConstantWrapper(
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId> &var_view_ids,
+    const std::vector<ViewId> &const_view_ids,
+    Reconstruction& reconstruction) {
+    BundleAdjustmentSummary ba_summary = BundleAdjustPartialViewsConstant(
+        options, var_view_ids, const_view_ids, &reconstruction);
+    return ba_summary;
+}
+
 
 // std::tuple<BundleAdjustmentSummary, Camera, Camera, std::vector<Eigen::Vector4d>> BundleAdjustTwoViewsWrapper(
 //     const TwoViewBundleAdjustmentOptions& options,

@@ -54,14 +54,27 @@ EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   //! 2D standard deviation
   Eigen::Matrix2d covariance_ = Eigen::Matrix2d::Identity();
 
+  //! depth cue, some features might have a depth cue from an RGB-D image
+  double depth_prior_ = 0.0;
+
+  //! depth prior variance 
+  double depth_prior_variance_ = 0.0;
+
   Feature() {}
   Feature(const double x, const double y) { point_ << x, y; }
+  Feature(const double x, const double y, const double depth_prior) { point_ << x, y; depth_prior_ = depth_prior; }
   Feature(const Eigen::Vector2d &point) : point_(point) {}
+  Feature(const Eigen::Vector2d &point, double depth_prior) : point_(point), depth_prior_(depth_prior) {}
   Feature(const Eigen::Vector2d &point, const Eigen::Matrix2d &covariance_)
       : point_(point), covariance_(covariance_) {}
+  Feature(const Eigen::Vector2d &point, const Eigen::Matrix2d &covariance_, const double depth_prior, const double depth_prior_variance)
+      : point_(point), covariance_(covariance_), depth_prior_(depth_prior), depth_prior_variance_(depth_prior_variance) {}
 
   double x() const { return point_[0]; }
   double y() const { return point_[1]; }
+
+  double depth_prior() const { return depth_prior_; }
+  double depth_prior_variance() const { return depth_prior_variance_; }
 
   // make it hashable
   bool operator==(const Feature &o) const {
@@ -79,7 +92,7 @@ private:
   friend class cereal::access;
   template <class Archive>
   void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
-    ar(point_, covariance_);
+    ar(point_, covariance_, depth_prior_, depth_prior_variance_);
   }
 };
 

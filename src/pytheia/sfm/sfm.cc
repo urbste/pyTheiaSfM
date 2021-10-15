@@ -404,17 +404,23 @@ void pytheia_sfm_classes(py::module &m) {
     .def_readwrite("translation", &theia::RigidTransformation::translation)
   ;
 
-  // estimator
 
   py::class_<theia::Feature>(m, "Feature")
     .def(py::init<>())
     .def(py::init<double, double>())
+    .def(py::init<double, double, double>())
     .def(py::init<Eigen::Vector2d>())
+    .def(py::init<Eigen::Vector2d, double>())
     .def(py::init<Eigen::Vector2d,Eigen::Matrix2d>())
+    .def(py::init<Eigen::Vector2d,Eigen::Matrix2d, double, double>())
     .def_readwrite("point", &theia::Feature::point_)
     .def_readwrite("covariance", &theia::Feature::covariance_)
+    .def_readwrite("depth_prior", &theia::Feature::depth_prior_)
+    .def_readwrite("depth_prior_variance", &theia::Feature::depth_prior_variance_)
     .def("x", &theia::Feature::x)
     .def("y", &theia::Feature::y)
+    .def("get_depth_prior", &theia::Feature::depth_prior)
+    .def("get_depth_prior_variance", &theia::Feature::depth_prior_variance)
   ;
 
   py::class_<theia::CameraAndFeatureCorrespondence2D3D>(m, "CameraAndFeatureCorrespondence2D3D")
@@ -480,8 +486,6 @@ void pytheia_sfm_classes(py::module &m) {
 
   ;
 
-
-
   // estimator ransac
   py::enum_<theia::RansacType>(m, "RansacType")
     .value("RANSAC", theia::RansacType::RANSAC)
@@ -491,6 +495,7 @@ void pytheia_sfm_classes(py::module &m) {
     .export_values()
   ;
 
+  // estimators
   m.def("EstimateAbsolutePoseWithKnownOrientation", theia::EstimateAbsolutePoseWithKnownOrientationWrapper);
   m.def("EstimateCalibratedAbsolutePose", theia::EstimateCalibratedAbsolutePoseWrapper);
   m.def("EstimateDominantPlaneFromPoints", theia::EstimateDominantPlaneFromPointsWrapper);
@@ -665,6 +670,7 @@ void pytheia_sfm_classes(py::module &m) {
     .def(py::init<>())
     .def_readwrite("loss_function_type", &theia::BundleAdjustmentOptions::loss_function_type)
     .def_readwrite("robust_loss_width", &theia::BundleAdjustmentOptions::robust_loss_width)
+    .def_readwrite("robust_loss_width_depth_prior", &theia::BundleAdjustmentOptions::robust_loss_width_depth_prior)
     .def_readwrite("verbose", &theia::BundleAdjustmentOptions::verbose)
     .def_readwrite("constant_camera_orientation", &theia::BundleAdjustmentOptions::constant_camera_orientation)
     .def_readwrite("constant_camera_position", &theia::BundleAdjustmentOptions::constant_camera_position)
@@ -677,7 +683,9 @@ void pytheia_sfm_classes(py::module &m) {
     .def_readwrite("gradient_tolerance", &theia::BundleAdjustmentOptions::gradient_tolerance)
     .def_readwrite("parameter_tolerance", &theia::BundleAdjustmentOptions::parameter_tolerance)
     .def_readwrite("max_trust_region_radius", &theia::BundleAdjustmentOptions::max_trust_region_radius)
+    .def_readwrite("use_homogeneous_local_point_parametrization", &theia::BundleAdjustmentOptions::use_homogeneous_local_point_parametrization)
     .def_readwrite("use_position_priors", &theia::BundleAdjustmentOptions::use_position_priors)
+    .def_readwrite("use_depth_priors", &theia::BundleAdjustmentOptions::use_depth_priors)
   ;
 
 
@@ -993,6 +1001,7 @@ void pytheia_sfm_classes(py::module &m) {
   ;
 
   m.def("BundleAdjustPartialReconstruction", theia::BundleAdjustPartialReconstructionWrapper);
+  m.def("BundleAdjustPartialViewsConstant", theia::BundleAdjustPartialViewsConstantWrapper);
   m.def("BundleAdjustReconstruction", theia::BundleAdjustReconstructionWrapper);
   m.def("BundleAdjustView", theia::BundleAdjustViewWrapper);
   m.def("BundleAdjustTrack", theia::BundleAdjustTrackWrapper);
@@ -1027,8 +1036,14 @@ void pytheia_sfm_classes(py::module &m) {
   // Global SfM
   m.def("ComputeTripletBaselineRatios", theia::ComputeTripletBaselineRatiosWrapper);
 
-  // base PositionEstimator class
+  // Global position estimator options
   py::class_<theia::PositionEstimator>(m, "PositionEstimator");
+
+  py::class_<theia::LinearPositionEstimator::Options>(m, "LinearPositionEstimatorOptions")
+    .def(py::init<>())
+    .def_readwrite("num_threads", &theia::LinearPositionEstimator::Options::num_threads)
+    .def_readwrite("max_power_iterations", &theia::LinearPositionEstimator::Options::max_power_iterations)
+    .def_readwrite("eigensolver_threshold", &theia::LinearPositionEstimator::Options::eigensolver_threshold);
 
   // Global Position Estimators
   py::class_<theia::LinearPositionEstimator, theia::PositionEstimator>(m, "LinearPositionEstimator")

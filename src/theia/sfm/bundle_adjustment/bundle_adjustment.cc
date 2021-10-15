@@ -63,6 +63,32 @@ BundleAdjustPartialReconstruction(const BundleAdjustmentOptions &options,
   return bundle_adjuster.Optimize();
 }
 
+// Bundle adjust the specified views.
+BundleAdjustmentSummary
+BundleAdjustPartialViewsConstant(const BundleAdjustmentOptions &options,
+                                 const std::vector<ViewId> &var_view_ids,
+                                 const std::vector<ViewId> &const_view_ids,
+                                 Reconstruction *reconstruction) {
+  CHECK_NOTNULL(reconstruction);
+
+  BundleAdjuster bundle_adjuster(options, reconstruction);
+
+  for (const ViewId view_id : var_view_ids) {
+    bundle_adjuster.AddView(view_id);
+  }
+  for (const ViewId view_id : const_view_ids) {
+    bundle_adjuster.AddView(view_id);
+    bundle_adjuster.SetCameraExtrinsicsConstant(view_id);
+  }
+
+  for (const TrackId track_id : reconstruction->TrackIds()) {
+    bundle_adjuster.AddTrack(
+        track_id, options.use_homogeneous_local_point_parametrization);
+  }
+
+  return bundle_adjuster.Optimize();
+}
+
 // Bundle adjust the entire reconstruction.
 BundleAdjustmentSummary
 BundleAdjustReconstruction(const BundleAdjustmentOptions &options,

@@ -87,6 +87,8 @@ struct BundleAdjustmentOptions {
   // loss function, but robust cost functions could be used.
   LossFunctionType loss_function_type = LossFunctionType::TRIVIAL;
   double robust_loss_width = 2.0;
+  // e.g. 1cm for downweighting depth priors as outliers
+  double robust_loss_width_depth_prior = 0.01;
 
   // For larger problems (> 1000 cameras) it is recommended to use the
   // ITERATIVE_SCHUR solver.
@@ -133,6 +135,9 @@ struct BundleAdjustmentOptions {
 
   // Use position priors
   bool use_position_priors = false;
+
+  // Add depth priors
+  bool use_depth_priors = false;
 };
 
 // Some important metrics for analyzing bundle adjustment results.
@@ -156,6 +161,13 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
     const BundleAdjustmentOptions &options,
     const std::unordered_set<ViewId> &views_to_optimize,
     const std::unordered_set<TrackId> &tracks_to_optimize,
+    Reconstruction *reconstruction);
+
+BundleAdjustmentSummary
+BundleAdjustPartialViewsConstant(
+    const BundleAdjustmentOptions &options,
+    const std::vector<ViewId> &var_view_ids,
+    const std::vector<ViewId> &const_view_ids,
     Reconstruction *reconstruction);
 
 // Bundle adjust a single view.

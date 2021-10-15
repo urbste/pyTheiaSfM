@@ -274,7 +274,7 @@ std::tuple<std::vector<Eigen::Matrix<double,4,1>>, std::vector<Eigen::Vector3d>,
 std::tuple<std::vector<Eigen::Matrix<double,4,1>>, std::vector<Vector3d>> ThreePointRelativePosePartialRotationWrapper(
     const Vector3d& rotation_axis,
     const std::vector<Vector3d> image_1_rays_in,
-    const std::vector<Vector3d> image_2_rays_in){
+    const std::vector<Vector3d> image_2_rays_in) {
     std::vector<Eigen::Quaterniond> soln_rotations_q;
     std::vector<Vector3d> soln_translations;
     Vector3d image_1_rays[3] = {image_1_rays_in[0], image_1_rays_in[1], image_1_rays_in[2]};
