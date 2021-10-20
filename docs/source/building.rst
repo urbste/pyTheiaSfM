@@ -1,11 +1,11 @@
 .. _chapter-building:
 
 ======================
-Building Theia Library
+Building pyTheia Library
 ======================
 
 Theia source code and documentation are hosted on `Github
-<https://github.com/sweeneychris/TheiaSfM>`_ where you can always grab the latest version
+<https://github.com/urbste/pyTheiaSfM>`_ where you can always grab the latest version
 
 .. _section-dependencies:
 
@@ -18,10 +18,7 @@ Theia relies on a number of open source libraries. Luckily, most of the will be 
 
 2. `CMake <http://www.cmake.org>`_ is a cross platform build system. Theia needs a relatively recent version of CMake (version 2.8.0 or better).
 
-
 3. `eigen3 <http://eigen.tuxfamily.org/index.php?title=Main_Page>`_ is used extensively for doing nearly all the matrix and linear algebra operations.
-
-4. `OpenImageIO <https://sites.google.com/site/openimageio/home>`_ is used to read and write image files. It is recommended to install version 1.6 or higher.
 
 5. `Ceres Solver <https://code.google.com/p/ceres-solver/>`_ is a library for solving non-linear least squares problems. In particular, Theia uses it for Bundle Adjustment.
 
@@ -35,41 +32,30 @@ Make sure all of these libraries are installed properly before proceeding. Impro
 
 .. _section-building:
 
-Building
+Building on Linux or WSL2 (on Windows)
 --------
-
-Building should be equivalent on all platforms, thanks to CMake. To install Theia, simply run the following commands after you have installed the :ref:`section-dependencies`.
-
-First, navigate to the source directory of the Theia library. Then execute the following commands:
+This section describes how to build on Ubuntu locally or on WSL2 both with sudo rights. The basic dependency is:
+First we need the basic libraries: Eigen3 and the ceres-solver
 
 .. code-block:: bash
+  sudo apt install cmake build-essential libgflags-dev libgoogle-glog-dev libatlas-base-dev
+  # cd to your favourite library folder
+  mkdir LIBS && cd LIBS
+ 
+  git clone https://gitlab.com/libeigen/eigen
+  cd eigen && git checkout 3.3.9
+  mkdir -p build && cd build && cmake .. && sudo make install
 
- mkdir theia-build
- cd theia-build
- cmake ..
- make -j4
- make test
+  # ceres solver
+  cd LIBS
+  git clone https://ceres-solver.googlesource.com/ceres-solver
+  cd ceres-solver && git checkout 2.0.0 && mkdir build && cd build 
+  cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF
+  make -j && make install
 
-If all tests pass, then you are ready to install. If not all tests pass, you should examine the individual test to determine if it affects your performance. For instance, if the global SfM methods fail but you are only going to use incremental SfM, you probably do not need to worry about the failing tests. Email the mailing list if you are unsure about failing tests.
-
-Theia can be install using the make install command
+Then, navigate to the source directory of the pyTheiaSfM library to build the Python wheel. 
+In your favorite Python environment execute the following commands:
 
 .. code-block:: bash
-
- make install
-
-You can also try running the unit tests individually. The executables should be located in the bin directory of the theia-build folder.
-
-
-.. _section-customizing:
-
-Customizing the build
----------------------
-
-It is possible to customize the build process by passing appropriate flags to
-``CMake``. Use these flags only if you really know what you are doing.
-
-
-#. ``-DBUILD_TESTING=OFF``: Use this flag to enable or disable building the unit tests. By default, this option is enabled.
-
-#. ``-DBUILD_DOCUMENTATION=ON``: Turn this flag to ``ON`` to build the documentation with Theia. This option is disabled by default.
+  python3 setup.py bdist_wheel
+  cd dist && pip install *.whl

@@ -3,19 +3,26 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-=====
-Theia
-=====
+=============
+pyTheia
+=============
 
-Theia is a computer vision library developed by `Chris Sweeney <http://homes.cs.washington.edu/~csweeney>`_ aimed at providing efficient and reliable
-algorithms for Structure from Motion (SfM). The goal of this library is to provide researchers with an out of the box tool for multi-view reconstruction that can be easily extended. Many common algorithms for pose, feature detection and description, matching, and reconstruction have been implemented. All contain simple interfaces, limited dependencies, and extensive documentation.
+Theia is a computer vision library initially developed by `Chris Sweeney <http://homes.cs.washington.edu/~csweeney>`_ aimed at providing efficient and reliable
+algorithms for Structure from Motion (SfM). 
 
-* Download the latest `release <https://github.com/sweeneychris/TheiaSfM>`_ or clone the
-  `repo <https://github.com/sweeneychris/Theia>`_ for development.
+pyTheia provides extensive Python wrappers for Theia and actually extends the original library in several parts:
 
-* Read the :ref:`chapter-api` and the :ref:`chapter-applications` to learn more about Theia
+* Removed some libraries: OpenImageIO, RapidJSON, RocksDB
+* Image processing and feature detection is supposed to be done in Python
+* GPL SuiteSparse: Optional for ceres, however all GPL related code was removed from src/math/matrix/sparse_cholesky_llt.cc (cholmod -> Eigen::SimplicialLDLT). This will probably be slower on large problems and potentially numerically a bit more unstable.
+* Added GlobalSfM methods
+* Added some pose algorithms
+* Added camera models (DoubleSphere, EUCM)
+* Added some features to BA (e.g. pose or depth priors, covariance for points and cameras, homogeneous tangent)
+* Added covariance estimation to BA
 
-* If you have questions, please email the `Theia mailing list <http://groups.google.com/group/theia-vision-library>`_.
+The goal of this library is still the same: provide researchers and engineers with an out of the box tool for multi-view reconstruction that can be easily extended. 
+Adding the Python wrappers just makes prototyping new applications that require geometric vision or SfM capabilities quicker.
 
 .. _section-Documentation:
 
@@ -23,39 +30,11 @@ algorithms for Structure from Motion (SfM). The goal of this library is to provi
 Documentation
 =============
 
-To use Theia, simply add the following line to your program after you build and
-link the library:
+After building and installing the pyTheia wheel, simply import it in your Python script:
 
-``#include <theia/theia.h>``
+``import pytheia as pt``
 
-After compiling and executing ``make install``, the simplest way to add and link
-the library is with the following CMake commands:
-
-.. code::
-
-  find_package(Theia REQUIRED)
-  include_directories(${THEIA_INCLUDE_DIRS})
-  target_link_libraries(my_library ${THEIA_LIBRARIES})
-
-We attempt to provide sufficient documentation but often further documentation
-can be found in the source code itself. You will likely find the API
-documentation useful as well. Additionally, (nearly) every file is covered by a
-unit test that can be viewed as an example use case of the various methods and
-classes in Theia. If you have looked at the documentation, the tutorials, the
-source code, and the unit tests and still have confusion please email `the Theia
-mailing list <http://groups.google.com/group/theia-vision-library>`_
-
-Finally, it should be noted that all the code in Theia is under the namespace
-theia, so you will have to reference that namespace in order to use functions
-from this library.
-
-Performance
-===========
-
-Theia achieves state-of-the-art SfM performance on large-scale
-datasets. Efficiency and robustness is a key component of the library. You can
-see the latest performance benchmarks for small and large-scale datasets on the
-:ref:`chapter-performance` page.
+You can find more examples on how to use the library in: ...
 
 Citation
 ========
