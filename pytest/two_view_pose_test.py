@@ -1,5 +1,7 @@
 import pytheia as pt
 import numpy as np
+import cv2
+from scipy.spatial.transform import Rotation as R
 from random_recon_gen import RandomReconGenerator
 from random_recon_gen import CameraPrior
 
@@ -9,14 +11,16 @@ class GroundTruthRelPose:
         self.cam0 = cam0
         self.cam1 = cam1
 
-        self.R_rel_gt = cam1.GetOrientationAsRotationMatrix() * cam0.GetOrientationAsRotationMatrix().T
-        self.t_rel_gt =  cam0.GetOrientationAsRotationMatrix() @ (cam1.Position - cam0.Position)
+        R0 = cam0.GetOrientationAsRotationMatrix()
+        R1 = cam1.GetOrientationAsRotationMatrix()
+        self.R_rel_gt = R1 * R0.T
+        self.t_rel_gt = R0 @ (cam1.Position - cam0.Position)
         self.t_rel_gt /= np.linalg.norm(self.t_rel_gt)
+        self.p_rel_gt = -R0.T @ self.t_rel_gt
 
-def test_8ptFundamentalMatrix(img_pts0, img_pts1, gt_pose):
+def test_8ptFundamentalMatrix(pts0, pts1, gt_pose):
 
-    success, F = pt.sfm.NormalizedEightPointFundamentalMatrix(img_pts0, img_pts1)
-    print(F)
+    success, F = pt.sfm.NormalizedEightPointFundamentalMatrix(pts0, pts1)
     # do some decompositions
     success_f, f0, f1 = pt.sfm.FocalLengthsFromFundamentalMatrix(F)
     # focal_length = pt.sfm.SharedFocalLengthsFromFundamentalMatrix(F)
@@ -27,47 +31,57 @@ def test_8ptFundamentalMatrix(img_pts0, img_pts1, gt_pose):
     assert np.linalg.norm(f1 - gt_pose.cam1.FocalLength) < 1e-4
 
 
-def test_7ptFundamentalMatrix(img_pts0, img_pts1, gt_pose):
+# def test_7ptFundamentalMatrix(pts0, pts1, gt_pose):
 
-    success, Fs = pt.sfm.SevenPointFundamentalMatrix(img_pts0[:7], img_pts1[:7])
-    # do some decompositions
-    min_f_dist = 10000000.
-    F = None
-    for i in range(len(Fs)):
-        _, f0, f1 = pt.sfm.FocalLengthsFromFundamentalMatrix(Fs[i])
-        print(pt.sfm.FocalLengthsFromFundamentalMatrix(Fs[i]))
+#     success, Fs = pt.sfm.SevenPointFundamentalMatrix(pts0[:7], pts1[:7])
+#     # do some 
+#     min_f_dist = 10000000.
+#     F = None
+#     for i in range(len(Fs)):
+#         _, f0, f1 = pt.sfm.FocalLengthsFromFundamentalMatrix(Fs[i])
+#         print(pt.sfm.FocalLengthsFromFundamentalMatrix(Fs[i]))
 
-        dist = np.linalg.norm(f0 - gt_pose.cam0.FocalLength)
-        if dist < min_f_dist:
-            min_f_dist = dist
-            F = Fs[i]
-    print(F)
-    print(pt.sfm.FocalLengthsFromFundamentalMatrix(F))
-    success_f, f0, f1 = pt.sfm.FocalLengthsFromFundamentalMatrix(F)
-    print(np.linalg.norm(f0 - gt_pose.cam0.FocalLength))
-    assert success
-    assert success_f
-    assert np.linalg.norm(f0 - gt_pose.cam0.FocalLength) < 1e-4
-    assert np.linalg.norm(f1 - gt_pose.cam1.FocalLength) < 1e-4
+#         dist = np.linalg.norm(f0 - gt_pose.cam0.FocalLength)
+#         if dist < min_f_dist:
+#             min_f_dist = dist
+#             F = Fs[i]
+#     print(F)
+#     print(pt.sfm.FocalLengthsFromFundamentalMatrix(F))
+#     success_f, f0, f1 = pt.sfm.FocalLengthsFromFundamentalMatrix(F)
+#     print(np.linalg.norm(f0 - gt_pose.cam0.FocalLength))
+#     assert success
+#     assert success_f
+#     assert np.linalg.norm(f0 - gt_pose.cam0.FocalLength) < 1e-4
+#     assert np.linalg.norm(f1 - gt_pose.cam1.FocalLength) < 1e-4
 
 
-def test_5ptEssentialMatrix(img_pts0, img_pts1, gt_pose):
+def test_5ptEssentialMatrix(normalized_corrs, gt_pose):
 
     success, Es = pt.sfm.FivePointRelativePose(img_pts0, img_pts1)
 
-    normalized_corr = []
-    for p0, p1 in zip(img_pts0, img_pts1):
-        normalized_corr.append(pt.sfm.Feature(p0), pt.sfm.Feature(p1))
-
+    # find closest to GT
+    min_r_dist = 100000
+    min_t_dist = 100000
+    sol_idx = 0
     for sol in range(len(Es)):
-        print(pt.sfm.GetBestPoseFromEssentialMatrix(Es[sol],normalized_corr))
-
-
+        pose_res = pt.sfm.GetBestPoseFromEssentialMatrix(Es[sol],normalized_corrs)
+        r_dist = np.linalg.norm(cv2.Rodrigues(pose_res[1] @ gt_pose.R_rel_gt.T)[0])
+        t_dist = np.arccos(np.dot(pose_res[2],gt_pose.t_rel_gt))
+        if r_dist < min_r_dist and t_dist < min_t_dist: 
+            min_r_dist = r_dist
+            min_t_dist = t_dist
+            sol_idx = sol
+    pose_res = pt.sfm.GetBestPoseFromEssentialMatrix(Es[sol_idx],normalized_corrs)
+    print(min_t_dist* 180/np.pi)
+    print(min_r_dist* 180/np.pi)
+    assert success
+    assert min_t_dist * 180/np.pi < 5.0
+    assert min_r_dist * 180./np.pi < 2.0
     
 #def test_PositionFromTwoRays():
 
 
-def test_RelativePoseFromTwoPointsWithKnownRotation(R0, R1, img_pts0, img_pts1, gt_pose):
+def test_RelativePoseFromTwoPointsWithKnownRotation(R0, R1, pts0, pts1, gt_pose):
 
     unrotated_norm_img_pts0 = []
     unrotated_norm_img_pts1 = []
@@ -78,6 +92,24 @@ def test_RelativePoseFromTwoPointsWithKnownRotation(R0, R1, img_pts0, img_pts1, 
     success, position2 = pt.sfm.RelativePoseFromTwoPointsWithKnownRotation(
         unrotated_norm_img_pts0, unrotated_norm_img_pts1)
 
+def test_EstimateRelativeOrientation(normalized_corrs, gt_pose):
+    params = pt.solvers.RansacParameters()
+    params.error_thresh = 1e-4
+    params.max_iterations = 20
+    params.min_iterations = 1
+
+
+    success, rel_ori, ransac_sum = pt.sfm.EstimateRelativePose(params, pt.sfm.RansacType(0), normalized_corrs)
+    print(ransac_sum.inliers)
+    print(ransac_sum.num_iterations)
+    print(gt_pose.R_rel_gt)
+    print(rel_ori.rotation)
+    r_dist = np.linalg.norm(cv2.Rodrigues(rel_ori.rotation.T @ gt_pose.R_rel_gt)[0])
+    print(r_dist*180/np.pi)
+    assert success
+    assert r_dist < 1e-5
+
+
 # def test_FourPointRelativePosePartialRotation():
 
 
@@ -87,14 +119,12 @@ def test_RelativePoseFromTwoPointsWithKnownRotation(R0, R1, img_pts0, img_pts1, 
 # def test_TwoPointPosePartialRotation():
 
 
-
-
 if __name__ == "__main__":
-    pinhole_cam = CameraPrior(500.,1.0, (1000,1000))
-    gen = RandomReconGenerator(cam_prior=pinhole_cam)
+    pinhole_cam = CameraPrior(300., 1.0, (1000,1000))
+    gen = RandomReconGenerator(verbose=False,cam_prior=pinhole_cam)
 
     # generate a random scene
-    gen.generate_random_recon(nr_views=2, nr_tracks=10)
+    gen.generate_random_recon(nr_views=2, nr_tracks=10, cam_rot_max_angle=1e-3)
 
     # get ground truth relative orientation and get observations
     view0 = gen.recon.View(0)
@@ -115,40 +145,27 @@ if __name__ == "__main__":
         feat2 = view1.GetFeature(t_id)
         if not feat1 or not feat2:
             continue
-        img_pts0.append(feat1.point) # remove pp to recover focal lenghts
-        img_pts1.append(feat2.point)
+        # remove pp to recover focal lenghts
+        img_pts0.append(feat1.point - principal_point0) 
+        img_pts1.append(feat2.point - principal_point1)
         img_pt0_norm = cam0.PixelToNormalizedCoordinates(feat1.point)[:2]
-        img_pt1_norm = cam0.PixelToNormalizedCoordinates(feat1.point)[:2]
-        img_pts0_norm.append(img_pt0_norm)
-        img_pts1_norm.append(img_pt1_norm)
+        img_pt1_norm = cam1.PixelToNormalizedCoordinates(feat2.point)[:2]
+        print(feat1.point)
+        print(feat2.point)
         normalized_corr.append(
             pt.matching.FeatureCorrespondence(
                 pt.sfm.Feature(img_pt0_norm), pt.sfm.Feature(img_pt1_norm)))
     
     gt_pose = GroundTruthRelPose(cam0, cam1)
 
-    #test_8ptFundamentalMatrix(img_pts0, img_pts1, gt_pose)
+    test_8ptFundamentalMatrix(img_pts0, img_pts1, gt_pose)
 
-    test_7ptFundamentalMatrix(img_pts0, img_pts1, gt_pose)
+    # test_7ptFundamentalMatrix(img_pts0, img_pts1, gt_pose)
 
-    # F_gt = pt.sfm.ComposeFundamentalMatrix(cam0.FocalLength, 
-    #     cam1.FocalLength, R_rel_gt, t_rel_gt)
-    # rt = pt.sfm.NormalizedEightPointFundamentalMatrix(img_pts0, img_pts1)
-    # focal_lenghts = pt.sfm.FocalLengthsFromFundamentalMatrix(rt[1])
-    # focal_length = pt.sfm.SharedFocalLengthsFromFundamentalMatrix(rt[1])
-    # proj_mats = pt.sfm.ProjectionMatricesFromFundamentalMatrix(rt[1])
+    # test_5ptEssentialMatrix(normalized_corr, gt_pose)
 
-    # # decompose
-    # print("diff: ", F_gt - rt[1])
-    # print(rt)
-    # print(focal_lenghts)
-    # print(focal_length)
-    # print(proj_mats)
-    # t_est = proj_mats[1][:3,3]/np.linalg.norm(proj_mats[1][:3,3])
-    # print("t_estimage: ",t_est - t_rel_gt)
-    # rt = pt.sfm.FivePointRelativePose(img_pts0, img_pts1)
-    # for sol in range(len(rt[1])):
-    #     print(pt.sfm.GetBestPoseFromEssentialMatrix(rt[1][sol],normalized_corr))
+
+    # test_EstimateRelativeOrientation(normalized_corr, gt_pose)
 
 
     #

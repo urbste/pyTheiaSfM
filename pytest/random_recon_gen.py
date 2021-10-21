@@ -5,14 +5,16 @@ import numpy as np
 
 class CameraPrior:
     def __init__(self, 
-                 focal_length=500.0,
+                 focal_length=900.0,
                  aspect_ratio=1.0, 
-                 img_size=(1000,1000)):
+                 img_size=(1440,1080)):
         self.cam_prior = pt.sfm.CameraIntrinsicsPrior()
         self.cam_prior.focal_length.value = [focal_length]
         self.cam_prior.principal_point.value = [int(img_size[0]/2.0), int(img_size[1]/2.0)]
         self.cam_prior.aspect_ratio.value = [aspect_ratio]
         self.cam_prior.camera_intrinsics_model_type = "PINHOLE"
+        self.cam_prior.image_width = img_size[0]
+        self.cam_prior.image_height = img_size[1]
 
     def set_to_division_undistortion(self, distortion=1e-6):
         self.cam_prior.camera_intrinsics_model_type = "DIVISION_UNDISTORTION"
@@ -56,7 +58,9 @@ class RandomReconGenerator:
             m_cam = view.MutableCamera()
             m_cam.DeepCopy(self.camera)
             m_cam.Position = np.array([X[i],Y[i],Z[i]])
-            m_cam.SetOrientationFromAngleAxis(angles[i] * np.array([RX[i], RY[i], RZ[i]]))
+            rot_axis = np.array([RX[i], RY[i], RZ[i]])
+            rot_axis /= np.linalg.norm(rot_axis)
+            m_cam.SetOrientationFromAngleAxis(angles[i] * rot_axis)
             view.IsEstimated = True
 
     def _sample_tracks(self, nr_tracks, xyz_min=[-2,-2,-2], xyz_max=[2,2,2]):
@@ -74,17 +78,14 @@ class RandomReconGenerator:
             track.Point = point
             track.IsEstimated = True
 
-    #def _project_points_to_views(self):
-
-
     def generate_random_recon(self, 
                             nr_views = 10, 
                             nr_tracks = 100, 
-                             pt3_xyz_min = [-4,-4,-1], 
+                             pt3_xyz_min = [-4,-4, 0], 
                              pt3_xyz_max = [4, 4, 6],
-                             cam_xyz_min = [-6, -6,-2], 
-                             cam_xyz_max = [6, 6,-6],
-                             cam_rot_ax_min = [-0.1,-0.1,-0.1], 
+                             cam_xyz_min = [-6, -6, -1], 
+                             cam_xyz_max = [6, 6, -10],
+                             cam_rot_ax_min = [-0.2,-0.2,-0.2], 
                              cam_rot_ax_max = [0.1,0.1,0.1],
                              cam_rot_max_angle = np.pi/4,
                              pixel_noise = 0.0):
@@ -103,8 +104,9 @@ class RandomReconGenerator:
                 view = self.recon.View(vid)
                 cam = view.Camera()
                 obs = cam.ProjectPoint(track)
-                if obs[0] <= 0:
+                if obs[0] <= 0 or obs[1][0] < 0.0 or obs[1][0] > self.camera.ImageWidth or obs[1][1] < 0.0 or obs[1][1] > self.camera.ImageHeight:
                     continue
+
                 point2d = obs[1] + np.random.randn(2) * pixel_noise
                 if self.verbose:
                     print("Adding observation: track {} in view {} projection {}".format(tid, vid, point2d))
