@@ -3,8 +3,25 @@ import pytheia as pt
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 
+class CameraPrior:
+    def __init__(self, 
+                 focal_length=500.0,
+                 aspect_ratio=1.0, 
+                 img_size=(1000,1000)):
+        self.cam_prior = pt.sfm.CameraIntrinsicsPrior()
+        self.cam_prior.focal_length.value = [focal_length]
+        self.cam_prior.principal_point.value = [int(img_size[0]/2.0), int(img_size[1]/2.0)]
+        self.cam_prior.aspect_ratio.value = [aspect_ratio]
+        self.cam_prior.camera_intrinsics_model_type = "PINHOLE"
+
+    def set_to_division_undistortion(self, distortion=1e-6):
+        self.cam_prior.camera_intrinsics_model_type = "DIVISION_UNDISTORTION"
+        self.cam_prior.radial_distortion.value = [distortion,0.0,0.0,0.0]
+
+
 class RandomReconGenerator:
-    def __init__(self, seed=42, verbose=False):
+    def __init__(self, seed=42, 
+        verbose=False, cam_prior=CameraPrior()):
 
         self.seed = seed
         np.random.seed(self.seed)
@@ -13,9 +30,7 @@ class RandomReconGenerator:
         self.nr_views = 0
 
         self.camera = pt.sfm.Camera()
-        self.camera.FocalLength = 500
-        self.camera.SetPrincipalPoint(500,500)
-        self.camera.SetImageSize(1000,1000)
+        self.camera.SetFromCameraIntrinsicsPriors(cam_prior.cam_prior)
 
         self.verbose = verbose
 

@@ -45,6 +45,7 @@ for i in range(len(d[1])):
         break
 
 
+# comparison to opencv timings
 start = time.time()
 for i in range(nr_runs):
     d = cv2.solveP3P(pts3d.T, pts2d.T, np.eye(3, dtype=dtype), np.zeros((1,5), dtype=dtype), cv2.SOLVEPNP_AP3P)
