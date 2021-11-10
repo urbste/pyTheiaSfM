@@ -14,11 +14,11 @@ class GroundTruthRelPose:
         R0 = cam0.GetOrientationAsRotationMatrix()
         R1 = cam1.GetOrientationAsRotationMatrix()
         self.R_rel_gt = R1 * R0.T
-        self.t_rel_gt = R0 @ (cam1.Position - cam0.Position)
+        self.t_rel_gt = R0 @ (cam0.Position - cam1.Position)
         self.t_rel_gt /= np.linalg.norm(self.t_rel_gt)
         self.p_rel_gt = -R0.T @ self.t_rel_gt
 
-def test_8ptFundamentalMatrix(pts0, pts1, gt_pose):
+def test_8ptFundamentalMatrix(pts0, pts1):
 
     success, F = pt.sfm.NormalizedEightPointFundamentalMatrix(pts0, pts1)
     # do some decompositions
@@ -27,8 +27,8 @@ def test_8ptFundamentalMatrix(pts0, pts1, gt_pose):
     # proj_mats = pt.sfm.ProjectionMatricesFromFundamentalMatrix(F)
     assert success
     assert success_f
-    assert np.linalg.norm(f0 - gt_pose.cam0.FocalLength) < 1e-4
-    assert np.linalg.norm(f1 - gt_pose.cam1.FocalLength) < 1e-4
+    assert np.linalg.norm(f0 - 1.0) < 1e-4
+    assert np.linalg.norm(f1 - 1.0) < 1e-4
 
 
 # def test_7ptFundamentalMatrix(pts0, pts1, gt_pose):
@@ -55,28 +55,24 @@ def test_8ptFundamentalMatrix(pts0, pts1, gt_pose):
 #     assert np.linalg.norm(f1 - gt_pose.cam1.FocalLength) < 1e-4
 
 
-def test_5ptEssentialMatrix(normalized_corrs, gt_pose):
+def test_5ptEssentialMatrix(img_pts0, img_pts1, normalized_corrs, gt_pose, max_error_deg):
 
-    success, Es = pt.sfm.FivePointRelativePose(img_pts0, img_pts1)
+    success, Es = pt.sfm.FivePointRelativePose(img_pts0[:5], img_pts1[:5])
 
+    norm_t_gt = gt_pose.p_rel_gt/np.linalg.norm(gt_pose.p_rel_gt)
     # find closest to GT
-    min_r_dist = 100000
     min_t_dist = 100000
     sol_idx = 0
     for sol in range(len(Es)):
         pose_res = pt.sfm.GetBestPoseFromEssentialMatrix(Es[sol],normalized_corrs)
-        r_dist = np.linalg.norm(cv2.Rodrigues(pose_res[1] @ gt_pose.R_rel_gt.T)[0])
-        t_dist = np.arccos(np.dot(pose_res[2],gt_pose.t_rel_gt))
-        if r_dist < min_r_dist and t_dist < min_t_dist: 
-            min_r_dist = r_dist
+        t_dist = np.arccos(np.dot(pose_res[2], norm_t_gt))
+        if t_dist < min_t_dist: 
             min_t_dist = t_dist
             sol_idx = sol
     pose_res = pt.sfm.GetBestPoseFromEssentialMatrix(Es[sol_idx],normalized_corrs)
-    print(min_t_dist* 180/np.pi)
-    print(min_r_dist* 180/np.pi)
+    t_angle = np.arccos(np.dot(pose_res[2], norm_t_gt)) * 180./np.pi
     assert success
-    assert min_t_dist * 180/np.pi < 5.0
-    assert min_r_dist * 180./np.pi < 2.0
+    assert t_angle < max_error_deg
     
 #def test_PositionFromTwoRays():
 
@@ -92,22 +88,20 @@ def test_RelativePoseFromTwoPointsWithKnownRotation(R0, R1, pts0, pts1, gt_pose)
     success, position2 = pt.sfm.RelativePoseFromTwoPointsWithKnownRotation(
         unrotated_norm_img_pts0, unrotated_norm_img_pts1)
 
-def test_EstimateRelativeOrientation(normalized_corrs, gt_pose):
+def test_EstimateRelativeOrientation(normalized_corrs, gt_pose, max_error_deg):
     params = pt.solvers.RansacParameters()
     params.error_thresh = 1e-4
     params.max_iterations = 20
     params.min_iterations = 1
 
+    norm_p_gt = gt_pose.p_rel_gt/np.linalg.norm(gt_pose.p_rel_gt)
 
     success, rel_ori, ransac_sum = pt.sfm.EstimateRelativePose(params, pt.sfm.RansacType(0), normalized_corrs)
-    print(ransac_sum.inliers)
-    print(ransac_sum.num_iterations)
-    print(gt_pose.R_rel_gt)
-    print(rel_ori.rotation)
-    r_dist = np.linalg.norm(cv2.Rodrigues(rel_ori.rotation.T @ gt_pose.R_rel_gt)[0])
-    print(r_dist*180/np.pi)
+
+    #r_dist = np.linalg.norm(cv2.Rodrigues(rel_ori.rotation.T @ gt_pose.R_rel_gt)[0])
+    t_angle = np.arccos(np.dot(rel_ori.position, norm_p_gt)) * 180./np.pi
     assert success
-    assert r_dist < 1e-5
+    assert t_angle < max_error_deg
 
 
 # def test_FourPointRelativePosePartialRotation():
@@ -150,22 +144,22 @@ if __name__ == "__main__":
         img_pts1.append(feat2.point - principal_point1)
         img_pt0_norm = cam0.PixelToNormalizedCoordinates(feat1.point)[:2]
         img_pt1_norm = cam1.PixelToNormalizedCoordinates(feat2.point)[:2]
-        print(feat1.point)
-        print(feat2.point)
+        img_pts0_norm.append(img_pt0_norm)
+        img_pts1_norm.append(img_pt1_norm)
         normalized_corr.append(
             pt.matching.FeatureCorrespondence(
                 pt.sfm.Feature(img_pt0_norm), pt.sfm.Feature(img_pt1_norm)))
     
     gt_pose = GroundTruthRelPose(cam0, cam1)
 
-    test_8ptFundamentalMatrix(img_pts0, img_pts1, gt_pose)
+    test_8ptFundamentalMatrix(img_pts0_norm, img_pts1_norm)
+    test_5ptEssentialMatrix(img_pts0_norm, img_pts1_norm, normalized_corr, gt_pose, max_error_deg=0.1)
+    test_EstimateRelativeOrientation(normalized_corr, gt_pose, max_error_deg=0.1)
 
-    # test_7ptFundamentalMatrix(img_pts0, img_pts1, gt_pose)
-
-    # test_5ptEssentialMatrix(normalized_corr, gt_pose)
-
-
-    # test_EstimateRelativeOrientation(normalized_corr, gt_pose)
+    # add noise and test again
+    test_8ptFundamentalMatrix(img_pts0_norm, img_pts1_norm)
+    test_5ptEssentialMatrix(img_pts0_norm, img_pts1_norm, normalized_corr, gt_pose, max_error_deg=0.1)
+    test_EstimateRelativeOrientation(normalized_corr, gt_pose, max_error_deg=0.1)
 
 
     #
