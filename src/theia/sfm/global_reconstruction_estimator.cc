@@ -488,6 +488,7 @@ bool GlobalReconstructionEstimator::BundleAdjustment() {
                                         views_to_optimize,
                                         tracks_to_optimize,
                                         reconstruction_);
+
   return bundle_adjustment_summary.success;
 }
 

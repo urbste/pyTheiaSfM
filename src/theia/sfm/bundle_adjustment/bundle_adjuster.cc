@@ -285,7 +285,7 @@ void BundleAdjuster::SetCameraIntrinsicsParameterization() {
 
     // set lower bound for focal length (>0)
     problem_->SetParameterLowerBound(camera_intrinsics->mutable_parameters(),
-                                     focal_length_id[0], 100.0);
+                                     focal_length_id[0], 1.0);
     if (camera_intrinsics->Type() ==
         theia::CameraIntrinsicsModelType::DOUBLE_SPHERE) {
       problem_->SetParameterLowerBound(camera_intrinsics->mutable_parameters(),
