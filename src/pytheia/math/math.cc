@@ -9,6 +9,7 @@
 #include <math.h>
 
 #include "theia/math/polynomial.h"
+#include "theia/math/rotation.h"
 
 // for overloaded function in CameraInstrinsicsModel
 template <typename... Args>
@@ -25,7 +26,19 @@ namespace pytheia {
 namespace math {
 
 void pytheia_math_classes(py::module& m) {
-  m.def("FindQuadraticPolynomialRoots", theia::FindQuadraticPolynomialRoots);
+  m.def("FindQuadraticPolynomialRoots", &theia::FindQuadraticPolynomialRoots);
+  
+  // rotation.h
+  m.def("AlignRotations", &theia::AlignRotations,
+    "Solves a nonlinear least squares problem so that: rotations * R = gt_rotations.");
+  m.def("AlignOrientations", &theia::AlignOrientations,
+    "This functions takes as input a dictionary of view_ids to global orientations that should be aligned. Then it calls AlignRotations internally.");
+  m.def("MultiplyRotations", &theia::MultiplyRotations, "return R = R1 * R2");
+  m.def("RelativeRotationFromTwoRotations", 
+    py::overload_cast<const Eigen::Vector3d&, const Eigen::Vector3d&>(
+      &theia::RelativeRotationFromTwoRotations), "returns R12 = R2 * R1^T");
+  m.def("ApplyRelativeRotation", &theia::ApplyRelativeRotation, "returns R2 = R12 * R1");
+  m.def("RelativeTranslationFromTwoPositions", &theia::RelativeTranslationFromTwoPositions, "returns t12 = R1*(p2-p1)");
 }
 
 void pytheia_math(py::module& m) {
