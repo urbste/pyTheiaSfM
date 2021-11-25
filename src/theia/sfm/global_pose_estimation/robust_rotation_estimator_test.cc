@@ -108,7 +108,7 @@ void AlignOrientations(const std::unordered_map<ViewId, Vector3d>& gt_rotations,
 
   AlignRotations(gt_rot, &rot);
 
-  for (int i = 0; i < rot.size(); i++) {
+  for (size_t i = 0; i < rot.size(); i++) {
     const ViewId view_id = FindOrDie(index_to_view_id, i);
     (*rotations)[view_id] = rot[i];
   }
@@ -121,7 +121,8 @@ class EstimateRotationsRobustTest : public ::testing::Test {
   void TestRobustRotationEstimator(const int num_views,
                                    const int num_view_pairs,
                                    const double rotation_noise,
-                                   const double rotation_tolerance_degrees) {
+                                   const double rotation_tolerance_degrees,
+                                   const int nr_fix_views = 1) {
     // Set up the camera.
     CreateGTOrientations(num_views);
     GetRelativeRotations(num_view_pairs, rotation_noise);
@@ -133,6 +134,11 @@ class EstimateRotationsRobustTest : public ::testing::Test {
     // Set the initial rotation estimations.
     std::unordered_map<ViewId, Vector3d> estimated_rotations;
     InitializeRotationsFromSpanningTree(&estimated_rotations);
+    std::set<ViewId> fixed_views;
+    for (int i=0; i < nr_fix_views; ++i) {
+        fixed_views.insert(i);
+    }
+    rotation_estimator.SetFixedGlobalRotations(fixed_views);
 
     EXPECT_TRUE(rotation_estimator.EstimateRotations(view_pairs_,
                                                      &estimated_rotations));
@@ -166,7 +172,7 @@ class EstimateRotationsRobustTest : public ::testing::Test {
 
   void GetRelativeRotations(const int num_view_pairs, const double pose_noise) {
     // Create a set of view id pairs that will contain a spanning tree.
-    for (int i = 1; i < orientations_.size(); i++) {
+    for (size_t i = 1; i < orientations_.size(); i++) {
       const ViewIdPair view_id_pair(i - 1, i);
       view_pairs_[view_id_pair].rotation_2 = RelativeRotationFromTwoRotations(
           FindOrDie(orientations_, view_id_pair.first),
@@ -201,7 +207,7 @@ class EstimateRotationsRobustTest : public ::testing::Test {
       std::unordered_map<ViewId, Vector3d>* initial_orientations) {
     // Set the first view to be at the origin.
     (*initial_orientations)[0] = Vector3d::Zero();
-    for (int i = 1; i < orientations_.size(); i++) {
+    for (size_t i = 1; i < orientations_.size(); i++) {
       (*initial_orientations)[i] = ApplyRelativeRotation(
           FindOrDie(*initial_orientations, i - 1),
           FindOrDieNoPrint(view_pairs_, ViewIdPair(i - 1, i)).rotation_2);
@@ -240,5 +246,32 @@ TEST_F(EstimateRotationsRobustTest, LargeTestWithNoise) {
                               kPoseNoiseDegrees,
                               kToleranceDegrees);
 }
+
+TEST_F(EstimateRotationsRobustTest, SmallTestNoNoiseFixedViews) {
+  static const double kToleranceDegrees = 5.0;
+  static const int kNumViews = 4;
+  static const int kNumViewPairs = 6;
+  static const double kPoseNoiseDegrees = 2.0;
+  static const int kNrFixViews = 2;
+  TestRobustRotationEstimator(kNumViews,
+                              kNumViewPairs,
+                              kPoseNoiseDegrees,
+                              kToleranceDegrees,
+                              kNrFixViews);
+}
+
+TEST_F(EstimateRotationsRobustTest, LargeTestWithNoiseFixedViews) {
+  static const double kToleranceDegrees = 5.0;
+  static const int kNumViews = 100;
+  static const int kNumViewPairs = 800;
+  static const double kPoseNoiseDegrees = 2.0;
+  static const int kNrFixViews = 5;
+  TestRobustRotationEstimator(kNumViews,
+                              kNumViewPairs,
+                              kPoseNoiseDegrees,
+                              kToleranceDegrees,
+                              kNrFixViews);
+}
+
 
 }  // namespace theia

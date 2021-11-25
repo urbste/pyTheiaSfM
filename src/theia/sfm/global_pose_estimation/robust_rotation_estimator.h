@@ -38,6 +38,7 @@
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 #include <unordered_map>
+#include <set>
 
 #include "theia/sfm/global_pose_estimation/rotation_estimator.h"
 #include "theia/sfm/types.h"
@@ -90,8 +91,9 @@ class RobustRotationEstimator : public RotationEstimator {
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
   // python wrapper
-  std::unordered_map<ViewId, Eigen::Vector3d> EstimateRotationsWrapper(
-    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs);
+  bool EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    std::unordered_map<ViewId, Eigen::Vector3d>& global_orientations);
 
   // An alternative interface is to instead add relative rotation constraints
   // one by one with AddRelativeRotationConstraint, then call the
@@ -111,7 +113,9 @@ class RobustRotationEstimator : public RotationEstimator {
   // estimate of the global orientations.
   bool EstimateRotations(
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
-  //std::unordered_map<ViewId, Eigen::Vector3d> EstimateRotationsWrapper();
+  
+
+  void SetFixedGlobalRotations(const std::set<ViewId>& fixed_views);
 
  protected:
   // Sets up the sparse linear system such that dR_ij = dR_j - dR_i. This is the
@@ -153,7 +157,7 @@ class RobustRotationEstimator : public RotationEstimator {
   // Map of ViewIds to the corresponding positions of the view's orientation in
   // the linear system.
   std::unordered_map<ViewId, int> view_id_to_index_;
-
+  
   // The sparse matrix used to maintain the linear system. This is matrix A in
   // Ax = b.
   Eigen::SparseMatrix<double> sparse_matrix_;
@@ -163,6 +167,11 @@ class RobustRotationEstimator : public RotationEstimator {
 
   // b in the linear system Ax = b.
   Eigen::VectorXd tangent_space_residual_;
+
+  // Set all view_ids that we would like to fix during estimation, e.g. for incremental estimation
+  std::set<ViewId> fixed_view_ids_;
+
+  size_t nr_fixed_rotations_ = 1;
 };
 
 }  // namespace theia

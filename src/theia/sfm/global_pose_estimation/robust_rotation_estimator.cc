@@ -70,15 +70,26 @@ bool RobustRotationEstimator::EstimateRotations(
          "solver before estimating global rotations.";
   global_orientations_ = CHECK_NOTNULL(global_orientations);
 
+  if (fixed_view_ids_.size() == 0) {
+    // just set the first rotation fix
+    fixed_view_ids_.insert(std::begin(*global_orientations)->first);
+    nr_fixed_rotations_ = 1;
+  }
   // Compute a mapping of view ids to indices in the linear system. One rotation
   // will have an index of -1 and will not be added to the linear system. This
   // will remove the gauge freedom (effectively holding one camera as the
   // identity rotation).
-  int index = -1;
+  int index = 0;
+  int fix_index = -nr_fixed_rotations_;
   view_id_to_index_.reserve(global_orientations->size());
   for (const auto& orientation : *global_orientations) {
-    view_id_to_index_[orientation.first] = index;
-    ++index;
+      if (fixed_view_ids_.find(orientation.first) == fixed_view_ids_.end()) {
+          view_id_to_index_[orientation.first] = index;
+          ++index;
+      } else {
+          view_id_to_index_[orientation.first] = fix_index;
+          ++fix_index;
+      }
   }
 
   Eigen::SparseMatrix<double> sparse_mat;
@@ -101,10 +112,10 @@ bool RobustRotationEstimator::EstimateRotations(
 void RobustRotationEstimator::SetupLinearSystem() {
   // The rotation change is one less than the number of global rotations because
   // we keep one rotation constant.
-  tangent_space_step_.resize((global_orientations_->size() - 1) * 3);
+  tangent_space_step_.resize((global_orientations_->size() - nr_fixed_rotations_) * 3);
   tangent_space_residual_.resize(relative_rotations_.size() * 3);
   sparse_matrix_.resize(relative_rotations_.size() * 3,
-                        (global_orientations_->size() - 1) * 3);
+                        (global_orientations_->size() - nr_fixed_rotations_) * 3);
 
   // For each relative rotation constraint, add an entry to the sparse
   // matrix. We use the first order approximation of angle axis such that:
@@ -113,9 +124,12 @@ void RobustRotationEstimator::SetupLinearSystem() {
   int rotation_error_index = 0;
   std::vector<Eigen::Triplet<double> > triplet_list;
   for (const auto& relative_rotation : relative_rotations_) {
-    const int view1_index =
+
+    // see if this rotation should be fixed
+    if (fixed_view_ids_.find(relative_rotation.first.first) == fixed_view_ids_.end()) {
+      const int view1_index =
         FindOrDie(view_id_to_index_, relative_rotation.first.first);
-    if (view1_index != kConstantRotationIndex) {
+
       triplet_list.emplace_back(3 * rotation_error_index,
                                 3 * view1_index,
                                 -1.0);
@@ -126,10 +140,10 @@ void RobustRotationEstimator::SetupLinearSystem() {
                                 3 * view1_index + 2,
                                 -1.0);
     }
-
-    const int view2_index =
+    if (fixed_view_ids_.find(relative_rotation.first.second) == fixed_view_ids_.end())  {
+      const int view2_index =
         FindOrDie(view_id_to_index_, relative_rotation.first.second);
-    if (view2_index != kConstantRotationIndex) {
+
       triplet_list.emplace_back(3 * rotation_error_index + 0,
                                 3 * view2_index + 0,
                                 1.0);
@@ -239,11 +253,11 @@ bool RobustRotationEstimator::SolveIRLS() {
 // rotation_change.
 void RobustRotationEstimator::UpdateGlobalRotations() {
   for (auto& rotation : *global_orientations_) {
-    const int view_index = FindOrDie(view_id_to_index_, rotation.first);
-    if (view_index == kConstantRotationIndex) {
+    if (fixed_view_ids_.find(rotation.first) != fixed_view_ids_.end()) {
       continue;
     }
 
+    const int view_index = FindOrDie(view_id_to_index_, rotation.first);
     // Apply the rotation change to the global orientation.
     const Eigen::Vector3d& rotation_change =
         tangent_space_step_.segment<3>(3 * view_index);
@@ -281,11 +295,15 @@ double RobustRotationEstimator::ComputeAverageStepSize() {
   return delta_V / numVertices;
 }
 
-std::unordered_map<ViewId, Eigen::Vector3d> RobustRotationEstimator::EstimateRotationsWrapper(
-    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs) {
-    std::unordered_map<ViewId, Eigen::Vector3d> rotations;
-    EstimateRotations(view_pairs, &rotations);
-    return rotations;
+bool RobustRotationEstimator::EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    std::unordered_map<ViewId, Eigen::Vector3d>& init_global_orientations) {
+    return EstimateRotations(view_pairs, &init_global_orientations);
+}
+
+void RobustRotationEstimator::SetFixedGlobalRotations(const std::set<ViewId>& fixed_views) {
+    fixed_view_ids_ = fixed_views;
+    nr_fixed_rotations_ = fixed_view_ids_.size();
 }
 
 }  // namespace theia

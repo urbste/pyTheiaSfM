@@ -101,9 +101,9 @@ bool NonlinearRotationEstimator::EstimateRotations(
 
 std::unordered_map<ViewId, Eigen::Vector3d> NonlinearRotationEstimator::EstimateRotationsWrapper(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs) {
-    std::unordered_map<ViewId, Eigen::Vector3d> rotations;
-    EstimateRotations(view_pairs, &rotations);
-    return rotations;
+    std::unordered_map<ViewId, Eigen::Vector3d> global_orientations;
+    EstimateRotations(view_pairs, &global_orientations);
+    return global_orientations;
 }
 
 }  // namespace theia

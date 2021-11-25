@@ -113,10 +113,13 @@ std::tuple<bool, RelativePose, RansacSummary> EstimateRelativePoseWrapper(
 std::tuple<bool, Eigen::Vector3d, RansacSummary>  EstimateRelativePoseWithKnownOrientationWrapper(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
-    const std::vector<FeatureCorrespondence>& rotated_correspondences){
+    const std::vector<FeatureCorrespondence>& rotated_correspondences) {
     Eigen::Vector3d relative_camera2_position;
     RansacSummary ransac_summary;
-    const bool success = EstimateRelativePoseWithKnownOrientation(ransac_params, ransac_type, rotated_correspondences, &relative_camera2_position, &ransac_summary);
+    const bool success = EstimateRelativePoseWithKnownOrientation(
+        ransac_params, ransac_type, 
+        rotated_correspondences, 
+        &relative_camera2_position, &ransac_summary);
     return std::make_tuple(success, relative_camera2_position, ransac_summary);
 
 }

@@ -1054,6 +1054,13 @@ void pytheia_sfm_classes(py::module &m) {
     .def(py::init<theia::NonlinearPositionEstimator::Options, theia::Reconstruction>())
     .def("EstimatePositions", &theia::NonlinearPositionEstimator::EstimatePositionsWrapper);
 
+  // TwoViewMatchGeometricVerification Options
+  py::class_<theia::LeastUnsquaredDeviationPositionEstimator::Options>(m, "LeastUnsquaredDeviationPositionEstimatorOptions")
+    .def(py::init<>())
+    .def_readwrite("max_num_iterations", &theia::LeastUnsquaredDeviationPositionEstimator::Options::max_num_iterations)
+    .def_readwrite("max_num_reweighted_iterations", &theia::LeastUnsquaredDeviationPositionEstimator::Options::max_num_reweighted_iterations)
+    .def_readwrite("convergence_criterion", &theia::LeastUnsquaredDeviationPositionEstimator::Options::convergence_criterion);
+
   py::class_<theia::LeastUnsquaredDeviationPositionEstimator, theia::PositionEstimator>(m, "LeastUnsquaredDeviationPositionEstimator")
     .def(py::init<theia::LeastUnsquaredDeviationPositionEstimator::Options>())
     .def("EstimatePositions", &theia::LeastUnsquaredDeviationPositionEstimator::EstimatePositionsWrapper);
@@ -1061,11 +1068,22 @@ void pytheia_sfm_classes(py::module &m) {
   // base RotationEstimator class
   py::class_<theia::RotationEstimator>(m, "RotationEstimator");
   
+  // TwoViewMatchGeometricVerification Options
+  py::class_<theia::RobustRotationEstimator::Options>(m, "RobustRotationEstimatorOptions")
+    .def(py::init<>())
+    .def_readwrite("max_num_l1_iterations", &theia::RobustRotationEstimator::Options::max_num_l1_iterations)
+    .def_readwrite("l1_step_convergence_threshold", &theia::RobustRotationEstimator::Options::l1_step_convergence_threshold)
+    .def_readwrite("max_num_irls_iterations", &theia::RobustRotationEstimator::Options::max_num_irls_iterations)
+    .def_readwrite("irls_step_convergence_threshold", &theia::RobustRotationEstimator::Options::irls_step_convergence_threshold)
+    .def_readwrite("irls_loss_parameter_sigma", &theia::RobustRotationEstimator::Options::irls_loss_parameter_sigma);
+
   // Global Rotation Estimators
   py::class_<theia::RobustRotationEstimator, theia::RotationEstimator>(m, "RobustRotationEstimator")
     .def(py::init<theia::RobustRotationEstimator::Options>())
     .def("EstimateRotations", &theia::RobustRotationEstimator::EstimateRotationsWrapper)
-    .def("AddRelativeRotationConstraint", &theia::RobustRotationEstimator::AddRelativeRotationConstraint);
+    .def("AddRelativeRotationConstraint", &theia::RobustRotationEstimator::AddRelativeRotationConstraint)
+    .def("SetFixedGlobalRotations", &theia::RobustRotationEstimator::SetFixedGlobalRotations)
+  ;
 
   py::class_<theia::NonlinearRotationEstimator, theia::RotationEstimator>(m, "NonlinearRotationEstimator")
     .def(py::init<>())
