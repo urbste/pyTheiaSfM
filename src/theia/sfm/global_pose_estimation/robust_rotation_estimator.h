@@ -90,18 +90,12 @@ class RobustRotationEstimator : public RotationEstimator {
   bool EstimateRotations(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
-<<<<<<< HEAD
+
   // python wrapper
   bool EstimateRotationsWrapper(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     std::unordered_map<ViewId, Eigen::Vector3d>& global_orientations);
-=======
 
-  // Python wrapper, Requires an initial guess of the global_orientations
-  void EstimateRotationsWrapper(
-      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      std::unordered_map<ViewId, Eigen::Vector3d>& global_orientations);
->>>>>>> feature/more_global_rot_solvers
 
   // An alternative interface is to instead add relative rotation constraints
   // one by one with AddRelativeRotationConstraint, then call the
@@ -120,13 +114,10 @@ class RobustRotationEstimator : public RotationEstimator {
   // global camera orientations. Like the method above, this requires an initial
   // estimate of the global orientations.
   bool EstimateRotations(
-      std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
-<<<<<<< HEAD
-  
+      std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations); 
 
+  // With this function multiple views can be set to constant during estimation (e.g. keyframes in incremental estimation)
   void SetFixedGlobalRotations(const std::set<ViewId>& fixed_views);
-=======
->>>>>>> feature/more_global_rot_solvers
 
  protected:
   // Sets up the sparse linear system such that dR_ij = dR_j - dR_i. This is the

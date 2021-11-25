@@ -62,15 +62,11 @@ class Feature {
 
   Feature() {}
   Feature(const double x, const double y) { point_ << x, y; }
-<<<<<<< HEAD
   Feature(const double x, const double y, const double depth_prior) { point_ << x, y; depth_prior_ = depth_prior; }
   Feature(const Eigen::Vector2d &point) : point_(point) {}
   Feature(const Eigen::Vector2d &point, double depth_prior) : point_(point), depth_prior_(depth_prior) {}
   Feature(const Eigen::Vector2d &point, const Eigen::Matrix2d &covariance_)
-=======
-  Feature(const Eigen::Vector2d& point) : point_(point) {}
-  Feature(const Eigen::Vector2d& point, const Eigen::Matrix2d& covariance_)
->>>>>>> feature/more_global_rot_solvers
+
       : point_(point), covariance_(covariance_) {}
   Feature(const Eigen::Vector2d &point, const Eigen::Matrix2d &covariance_, const double depth_prior, const double depth_prior_variance)
       : point_(point), covariance_(covariance_), depth_prior_(depth_prior), depth_prior_variance_(depth_prior_variance) {}

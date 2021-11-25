@@ -63,7 +63,7 @@ class LinearRotationEstimator : public RotationEstimator {
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
 
   // Python Wrapper
-  void EstimateRotationsWrapper(
+  bool EstimateRotationsWrapper(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       std::unordered_map<ViewId, Eigen::Vector3d>& global_orientations);
 

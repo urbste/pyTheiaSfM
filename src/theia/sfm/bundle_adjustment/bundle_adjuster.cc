@@ -285,14 +285,10 @@ void BundleAdjuster::SetCameraIntrinsicsParameterization() {
             OptimizeIntrinsicsType::SKEW |
             OptimizeIntrinsicsType::TANGENTIAL_DISTORTION);
 
-    // set lower bound for focal length (>0)
-<<<<<<< HEAD
+    // set lower bound for focal length (>1)
     problem_->SetParameterLowerBound(camera_intrinsics->mutable_parameters(),
                                      focal_length_id[0], 1.0);
-=======
-    problem_->SetParameterLowerBound(
-        camera_intrinsics->mutable_parameters(), focal_length_id[0], 100.0);
->>>>>>> feature/more_global_rot_solvers
+
     if (camera_intrinsics->Type() ==
         theia::CameraIntrinsicsModelType::DOUBLE_SPHERE) {
       problem_->SetParameterLowerBound(

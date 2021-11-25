@@ -1494,12 +1494,17 @@ void pytheia_sfm_classes(py::module& m) {
   py::class_<theia::RotationEstimator>(m, "RotationEstimator");
 
   py::class_<theia::RobustRotationEstimator::Options>(m, "RobustRotationEstimatorOptions")
-    .def(py::init<>())
-    .def_readwrite("max_num_l1_iterations", &theia::RobustRotationEstimator::Options::max_num_l1_iterations)
-    .def_readwrite("l1_step_convergence_threshold", &theia::RobustRotationEstimator::Options::l1_step_convergence_threshold)
-    .def_readwrite("max_num_irls_iterations", &theia::RobustRotationEstimator::Options::max_num_irls_iterations)
-    .def_readwrite("irls_step_convergence_threshold", &theia::RobustRotationEstimator::Options::irls_step_convergence_threshold)
-    .def_readwrite("irls_loss_parameter_sigma", &theia::RobustRotationEstimator::Options::irls_loss_parameter_sigma);
+      .def(py::init<>())
+      .def_readwrite("max_num_l1_iterations", 
+          &theia::RobustRotationEstimator::Options::max_num_l1_iterations)
+      .def_readwrite("l1_step_convergence_threshold", 
+          &theia::RobustRotationEstimator::Options::l1_step_convergence_threshold)
+      .def_readwrite("max_num_irls_iterations", 
+          &theia::RobustRotationEstimator::Options::max_num_irls_iterations)
+      .def_readwrite("irls_step_convergence_threshold", 
+          &theia::RobustRotationEstimator::Options::irls_step_convergence_threshold)
+      .def_readwrite("irls_loss_parameter_sigma", 
+          &theia::RobustRotationEstimator::Options::irls_loss_parameter_sigma);
 
   // Global Rotation Estimators
   py::class_<theia::RobustRotationEstimator, theia::RotationEstimator>(

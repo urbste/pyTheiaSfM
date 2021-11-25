@@ -201,14 +201,10 @@ bool LinearRotationEstimator::EstimateRotations(
   return true;
 }
 
-std::unordered_map<ViewId, Eigen::Vector3d> LinearRotationEstimator::EstimateRotationsWrapper(
-    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs) {
-    std::unordered_map<ViewId, Eigen::Vector3d> global_orientations;
-    for (const auto& view_pair : view_pairs) {
-      AddRelativeRotationConstraint(view_pair.first, view_pair.second.rotation_2);
-    }
-    EstimateRotations(&global_orientations);
-    return global_orientations;
+bool LinearRotationEstimator::EstimateRotationsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    std::unordered_map<ViewId, Eigen::Vector3d>& global_orientations) {
+  return EstimateRotations(view_pairs, &global_orientations);
 }
 
 }  // namespace theia

@@ -80,8 +80,8 @@ BundleAdjustmentSummary BundleAdjustReconstructionWrapper(
   return ba_summary;
 }
 
+
 BundleAdjustmentSummary BundleAdjustPartialReconstructionWrapper(
-<<<<<<< HEAD
         const BundleAdjustmentOptions& options,
         const std::unordered_set<ViewId>& views_to_optimize,
         const std::unordered_set<TrackId>& tracks_to_optimize,
@@ -101,21 +101,7 @@ BundleAdjustmentSummary BundleAdjustPartialViewsConstantWrapper(
     return ba_summary;
 }
 
-
 // std::tuple<BundleAdjustmentSummary, Camera, Camera, std::vector<Eigen::Vector4d>> BundleAdjustTwoViewsWrapper(
-=======
-    const BundleAdjustmentOptions& options,
-    Reconstruction& reconstruction,
-    const std::unordered_set<ViewId>& views_to_optimize,
-    const std::unordered_set<TrackId>& tracks_to_optimize) {
-  BundleAdjustmentSummary ba_summary = BundleAdjustPartialReconstruction(
-      options, views_to_optimize, tracks_to_optimize, &reconstruction);
-  return ba_summary;
-}
-
-// std::tuple<BundleAdjustmentSummary, Camera, Camera,
-// std::vector<Eigen::Vector4d>> BundleAdjustTwoViewsWrapper(
->>>>>>> feature/more_global_rot_solvers
 //     const TwoViewBundleAdjustmentOptions& options,
 //     const theia::TwoViewInfo& two_view_info,
 //     const std::vector<FeatureCorrespondence>& correspondences){
