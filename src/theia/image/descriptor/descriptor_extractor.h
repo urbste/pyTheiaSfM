@@ -67,10 +67,9 @@ class DescriptorExtractor {
   // descriptors could not be extracted at a given keypoint, that keypoint will
   // be removed from the container. Returns true on success and false on
   // failure.
-  virtual bool ComputeDescriptors(
-      const FloatImage& image,
-      std::vector<Keypoint>* keypoints,
-      std::vector<Eigen::VectorXf>* descriptors);
+  virtual bool ComputeDescriptors(const FloatImage& image,
+                                  std::vector<Keypoint>* keypoints,
+                                  std::vector<Eigen::VectorXf>* descriptors);
 
   // Detects keypoints using the default method for the given descriptor. This
   // can be more efficient (e.g., with SIFT) because there is some overhead

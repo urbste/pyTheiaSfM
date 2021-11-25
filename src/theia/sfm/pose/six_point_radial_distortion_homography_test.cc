@@ -36,10 +36,10 @@
 // company address (steffen.urban@zeiss.com)
 // January 2019
 
-#include <glog/logging.h>
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include "gtest/gtest.h"
+#include <glog/logging.h>
 
 #include "theia/math/util.h"
 #include "theia/sfm/pose/six_point_radial_distortion_homography.h"
@@ -61,9 +61,12 @@ RandomNumberGenerator rng(53);
 // noise).
 void GenerateDistortedImagePoints(
     const std::vector<Vector3d>& points_3d,
-    const double projection_noise_std_dev, const Quaterniond& expected_rotation,
-    const Vector3d& expected_translation, const double focal_length1,
-    const double focal_length2, const double radial_distortion1,
+    const double projection_noise_std_dev,
+    const Quaterniond& expected_rotation,
+    const Vector3d& expected_translation,
+    const double focal_length1,
+    const double focal_length2,
+    const double radial_distortion1,
     const double radial_distortion2,
     std::vector<Vector2d>* image_1_points_normalized,
     std::vector<Vector2d>* image_2_points_normalized,
@@ -78,20 +81,20 @@ void GenerateDistortedImagePoints(
         (expected_rotation * points_3d[i] + expected_translation);
 
     Vector2d distorted_point1, distorted_point2;
-    DistortPoint(point3_cam1, focal_length1, radial_distortion1,
-                 distorted_point1);
-    DistortPoint(point3_cam2, focal_length2, radial_distortion2,
-                 distorted_point2);
+    DistortPoint(
+        point3_cam1, focal_length1, radial_distortion1, distorted_point1);
+    DistortPoint(
+        point3_cam2, focal_length2, radial_distortion2, distorted_point2);
 
     image_1_points->push_back(distorted_point1);
     image_2_points->push_back(distorted_point2);
 
     if (projection_noise_std_dev) {
       for (int i = 0; i < points_3d.size(); i++) {
-        AddNoiseToProjection(projection_noise_std_dev, &rng,
-                             &((*image_1_points)[i]));
-        AddNoiseToProjection(projection_noise_std_dev, &rng,
-                             &((*image_2_points)[i]));
+        AddNoiseToProjection(
+            projection_noise_std_dev, &rng, &((*image_1_points)[i]));
+        AddNoiseToProjection(
+            projection_noise_std_dev, &rng, &((*image_2_points)[i]));
       }
     }
 
@@ -107,20 +110,30 @@ void GenerateDistortedImagePoints(
 }
 
 // Run a test for the homography with at least 4 points.
-void SixPointHomographyWithNoiseTest(
-    const std::vector<Vector3d>& points_3d,
-    const double projection_noise_std_dev, const Quaterniond& expected_rotation,
-    const Vector3d& expected_translation, const double kMaxSymmetricError,
-    const double focal_length1, const double focal_length2,
-    const double radial_distortion1, const double radial_distortion2) {
+void SixPointHomographyWithNoiseTest(const std::vector<Vector3d>& points_3d,
+                                     const double projection_noise_std_dev,
+                                     const Quaterniond& expected_rotation,
+                                     const Vector3d& expected_translation,
+                                     const double kMaxSymmetricError,
+                                     const double focal_length1,
+                                     const double focal_length2,
+                                     const double radial_distortion1,
+                                     const double radial_distortion2) {
   std::vector<Vector2d> image_1_points, image_points_1_normalized;
   std::vector<Vector2d> image_2_points, image_points_2_normalized;
   // generate distorted points for both cameras
-  GenerateDistortedImagePoints(
-      points_3d, projection_noise_std_dev, expected_rotation,
-      expected_translation, focal_length1, focal_length2, radial_distortion1,
-      radial_distortion2, &image_points_1_normalized,
-      &image_points_2_normalized, &image_1_points, &image_2_points);
+  GenerateDistortedImagePoints(points_3d,
+                               projection_noise_std_dev,
+                               expected_rotation,
+                               expected_translation,
+                               focal_length1,
+                               focal_length2,
+                               radial_distortion1,
+                               radial_distortion2,
+                               &image_points_1_normalized,
+                               &image_points_2_normalized,
+                               &image_1_points,
+                               &image_2_points);
   // Compute two-sided radial distortion homography matrix.
   std::vector<RadialHomographyResult> radial_homography_result;
   EXPECT_TRUE(SixPointRadialDistortionHomography(image_points_1_normalized,
@@ -135,9 +148,11 @@ void SixPointHomographyWithNoiseTest(
 
     double sym_error = 0.0;
     for (int p = 0; p < image_1_points.size(); ++p) {
-      sym_error += CheckRadialSymmetricError(
-          radial_homography_result[i], image_1_points[p], image_2_points[p],
-          focal_length1, focal_length2);
+      sym_error += CheckRadialSymmetricError(radial_homography_result[i],
+                                             image_1_points[p],
+                                             image_2_points[p],
+                                             focal_length1,
+                                             focal_length2);
     }
     sym_error /= (double)image_1_points.size();
     if (sym_error < kMaxSymmetricError) {
@@ -148,10 +163,12 @@ void SixPointHomographyWithNoiseTest(
 }
 
 void BasicTest() {
-  const std::vector<Vector3d> points_3d = {
-      Vector3d(-1.0, 3.0, 1.0), Vector3d(1.0, -1.0, 1.0),
-      Vector3d(-1.0, 1.0, 1.0), Vector3d(2.0, 1.0, 1.0),
-      Vector3d(3.0, 1.0, 1.0),  Vector3d(2.0, 2.0, 1.0)};
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 1.0),
+                                           Vector3d(1.0, -1.0, 1.0),
+                                           Vector3d(-1.0, 1.0, 1.0),
+                                           Vector3d(2.0, 1.0, 1.0),
+                                           Vector3d(3.0, 1.0, 1.0),
+                                           Vector3d(2.0, 2.0, 1.0)};
 
   const Quaterniond soln_rotation(
       AngleAxisd(DegToRad(10.0), Vector3d(0.0, 0.0, 1.0)));
@@ -164,18 +181,26 @@ void BasicTest() {
   const double radial_distortion1 = -1e-7;
   const double radial_distortion2 = -2e-7;
 
-  SixPointHomographyWithNoiseTest(
-      points_3d, kNoise, soln_rotation, soln_translation, kMaxSymmetricError,
-      focal_length1, focal_length2, radial_distortion1, radial_distortion2);
+  SixPointHomographyWithNoiseTest(points_3d,
+                                  kNoise,
+                                  soln_rotation,
+                                  soln_translation,
+                                  kMaxSymmetricError,
+                                  focal_length1,
+                                  focal_length2,
+                                  radial_distortion1,
+                                  radial_distortion2);
 }
 
 TEST(SixPointRadialHomography, BasicTest) { BasicTest(); }
 
 TEST(SixPointRadialHomography, NoiseTest) {
-  const std::vector<Vector3d> points_3d = {
-      Vector3d(-1.0, 3.0, 1.0), Vector3d(1.0, -1.0, 1.0),
-      Vector3d(-1.0, 1.0, 1.0), Vector3d(2.0, 1.0, 1.0),
-      Vector3d(3.0, 1.0, 1.0),  Vector3d(2.0, 2.0, 1.0)};
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 1.0),
+                                           Vector3d(1.0, -1.0, 1.0),
+                                           Vector3d(-1.0, 1.0, 1.0),
+                                           Vector3d(2.0, 1.0, 1.0),
+                                           Vector3d(3.0, 1.0, 1.0),
+                                           Vector3d(2.0, 2.0, 1.0)};
 
   const Quaterniond soln_rotation(
       AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
@@ -188,9 +213,15 @@ TEST(SixPointRadialHomography, NoiseTest) {
   const double radial_distortion1 = -1e-7;
   const double radial_distortion2 = -2e-7;
 
-  SixPointHomographyWithNoiseTest(
-      points_3d, kNoise, soln_rotation, soln_translation, kMaxSymmetricError,
-      focal_length1, focal_length2, radial_distortion1, radial_distortion2);
+  SixPointHomographyWithNoiseTest(points_3d,
+                                  kNoise,
+                                  soln_rotation,
+                                  soln_translation,
+                                  kMaxSymmetricError,
+                                  focal_length1,
+                                  focal_length2,
+                                  radial_distortion1,
+                                  radial_distortion2);
 }
 
 }  // namespace

@@ -35,8 +35,8 @@
 #include <ceres/rotation.h>
 #include <glog/logging.h>
 
-#include "gtest/gtest.h"
 #include "theia/sfm/global_pose_estimation/pairwise_translation_and_scale_error.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -60,16 +60,13 @@ void PairwiseTranslationAndScaleErrorTest(const Vector3d& orientation,
   const Vector3d local_position2 = (rotation * position_2) / scale;
   const Vector3d expected_error =
       (position_2 - position_1) -
-    scale * rotation.transpose() * (local_position2 - local_position1);
+      scale * rotation.transpose() * (local_position2 - local_position1);
 
   // Initialize error function and compute rotation error.
   const PairwiseTranslationAndScaleError translation_error(
       orientation, local_position2 - local_position1);
   Vector3d error = Vector3d::Random();
-  translation_error(position_1.data(),
-                    position_2.data(),
-                    &scale,
-                    error.data());
+  translation_error(position_1.data(), position_2.data(), &scale, error.data());
 
   EXPECT_NEAR(error(0), expected_error(0), kTolerance);
   EXPECT_NEAR(error(1), expected_error(1), kTolerance);
@@ -84,10 +81,8 @@ TEST(PairwiseTranslationAndScaleError, TranslationNoNoise) {
   const Vector3d orientation(0.1, -0.3, 0.2);
 
   const double scale = (position_2 - position_1).norm();
-  PairwiseTranslationAndScaleErrorTest(orientation,
-                                       scale,
-                                       position_1,
-                                       position_2);
+  PairwiseTranslationAndScaleErrorTest(
+      orientation, scale, position_1, position_2);
 }
 
 }  // namespace theia

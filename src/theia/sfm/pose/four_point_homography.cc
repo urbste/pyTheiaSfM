@@ -83,16 +83,17 @@ bool FourPointHomography(const std::vector<Vector2d>& image_1_points,
 
   // Create the constraint matrix based on x' = Hx (Eq. 4.1 in Hartley and
   // Zisserman).
-  Matrix<double, Eigen::Dynamic, 9> action_matrix(
-      2 * image_1_points.size(), 9);
+  Matrix<double, Eigen::Dynamic, 9> action_matrix(2 * image_1_points.size(), 9);
   for (int i = 0; i < image_1_points.size(); i++) {
     action_matrix.block<2, 9>(2 * i, 0) =
         CreateActionConstraint(norm_image_1_points[i], norm_image_2_points[i]);
   }
 
   const Matrix<double, 9, 1> null_vector =
-      (action_matrix.transpose() * action_matrix).jacobiSvd(Eigen::ComputeFullV)
-          .matrixV().rightCols<1>();
+      (action_matrix.transpose() * action_matrix)
+          .jacobiSvd(Eigen::ComputeFullV)
+          .matrixV()
+          .rightCols<1>();
 
   *homography = norm_image_2_mat.inverse() *
                 Eigen::Map<const Matrix3d>(null_vector.data()).transpose() *

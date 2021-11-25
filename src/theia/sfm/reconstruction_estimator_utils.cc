@@ -34,9 +34,9 @@
 
 #include "theia/sfm/reconstruction_estimator_utils.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/LU>
+#include <ceres/rotation.h>
 
 #include <algorithm>
 #include <unordered_map>
@@ -63,7 +63,8 @@ namespace {
 // Accumulate all two view feature matches between the input views. The features
 // are normalized according to the camera intrinsics.
 void GetNormalizedFeatureCorrespondences(
-    const View& view1, const View& view2,
+    const View& view1,
+    const View& view2,
     std::vector<FeatureCorrespondence>* matches) {
   const Camera& camera1 = view1.Camera();
   const Camera& camera2 = view2.Camera();
@@ -83,9 +84,11 @@ void GetNormalizedFeatureCorrespondences(
 
     // Normalize for camera intrinsics.
     match.feature1.point_ =
-        camera1.PixelToNormalizedCoordinates(match.feature1.point_).hnormalized();
+        camera1.PixelToNormalizedCoordinates(match.feature1.point_)
+            .hnormalized();
     match.feature2.point_ =
-        camera2.PixelToNormalizedCoordinates(match.feature2.point_).hnormalized();
+        camera2.PixelToNormalizedCoordinates(match.feature2.point_)
+            .hnormalized();
     matches->emplace_back(match);
   }
 }

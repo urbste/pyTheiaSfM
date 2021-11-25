@@ -68,9 +68,8 @@ class DominantPlaneEstimator : public Estimator<Vector3d, Plane> {
     const Vector3d b = points[2] - points[0];
     const Vector3d cross = a.cross(b);
     if (cross.squaredNorm() < kTolerance) {
-      VLOG(3)
-          << "The 3 world points are collinear! No solution for a plane "
-             "exists.";
+      VLOG(3) << "The 3 world points are collinear! No solution for a plane "
+                 "exists.";
       return false;
     }
     Plane plane;
@@ -92,17 +91,15 @@ class DominantPlaneEstimator : public Estimator<Vector3d, Plane> {
 
 }  // namespace
 
-bool EstimateDominantPlaneFromPoints(
-    const RansacParameters& ransac_params,
-    const RansacType& ransac_type,
-    const std::vector<Vector3d>& points,
-    Plane* plane,
-    RansacSummary* ransac_summary) {
+bool EstimateDominantPlaneFromPoints(const RansacParameters& ransac_params,
+                                     const RansacType& ransac_type,
+                                     const std::vector<Vector3d>& points,
+                                     Plane* plane,
+                                     RansacSummary* ransac_summary) {
   DominantPlaneEstimator dominant_plane_estimator;
   std::unique_ptr<SampleConsensusEstimator<DominantPlaneEstimator> > ransac =
-      CreateAndInitializeRansacVariant(ransac_type,
-                                       ransac_params,
-                                       dominant_plane_estimator);
+      CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, dominant_plane_estimator);
   // Estimate the dominant plane.
   return ransac->Estimate(points, plane, ransac_summary);
 }

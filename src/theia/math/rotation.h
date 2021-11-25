@@ -32,18 +32,59 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+// edited Steffen Urban (urbste@googlemail.com), 2021
+
 #ifndef THEIA_MATH_ROTATION_H_
 #define THEIA_MATH_ROTATION_H_
 
 #include <Eigen/Core>
 
+#include "theia/sfm/types.h"
+#include "theia/util/random.h"
+#include <unordered_map>
+#include <vector>
+
 namespace theia {
 
-// Multiply two angle-axis rotations without having to form the rotation
-// matrices. Given the corresponding rotation matrices R1 and R2, this method
-// computes: R3 = R1 * R2.
+Eigen::MatrixXd ProjectToSOd(const Eigen::MatrixXd& M);
+
+// Rotates the "rotation" set of orientations such that the orientations are
+// most closely aligned in an L2 sense. That is, "rotation" is transformed such
+// that R_rotation * R_gt_rotation^t is minimized.
+void AlignRotations(const std::vector<Eigen::Vector3d>& gt_rotation,
+                    std::vector<Eigen::Vector3d>* rotation);
+
+// Aligns rotations to the ground truth rotations via a similarity
+// transformation.
+void AlignOrientations(
+    const std::unordered_map<ViewId, Eigen::Vector3d>& gt_rotations,
+    std::unordered_map<ViewId, Eigen::Vector3d>* rotations);
+
+// Use Ceres to perform a stable composition of rotations. This is not as
+// efficient as directly composing angle axis vectors (see the old
+// implementation commented above) but is more stable.
 Eigen::Vector3d MultiplyRotations(const Eigen::Vector3d& rotation1,
                                   const Eigen::Vector3d& rotation2);
+
+// Computes R_ij = R_j * R_i^t.
+Eigen::Vector3d RelativeRotationFromTwoRotations(
+    const Eigen::Vector3d& rotation1, const Eigen::Vector3d& rotation2);
+
+// Computes R_ij = R_j * R_i^t with noise
+Eigen::Vector3d RelativeRotationFromTwoRotations(
+    const Eigen::Vector3d& rotation1,
+    const Eigen::Vector3d& rotation2,
+    const double noise,
+    theia::RandomNumberGenerator& rng);
+
+// return R_j = R_ij * R_i.
+Eigen::Vector3d ApplyRelativeRotation(const Eigen::Vector3d& rotation1,
+                                      const Eigen::Vector3d& relative_rotation);
+
+Eigen::Vector3d RelativeTranslationFromTwoPositions(
+    const Eigen::Vector3d& position1,
+    const Eigen::Vector3d& position2,
+    const Eigen::Vector3d& rotation1);
 }  // namespace theia
 
 #endif  // THEIA_MATH_ROTATION_H_

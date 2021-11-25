@@ -98,7 +98,8 @@ class GuidedEpipolarMatcher {
     void AddFeature(const int feature_index, const double x, const double y);
 
     // Retrieve the closest cell center to the point.
-    void GetClosestGridCenter(const double x, const double y,
+    void GetClosestGridCenter(const double x,
+                              const double y,
                               Eigen::Vector2i* grid_center);
 
     // Get all features that lie within the cell specified by the center.
@@ -150,12 +151,12 @@ class GuidedEpipolarMatcher {
   // closest neighbor by descriptor distance.
   void FindKNearestNeighbors(const std::vector<int>& query_feature_indices,
                              const std::vector<int>& candidate_feature_indices,
-                             std::vector<std::vector<float> >* nn_distances,
-                             std::vector<std::vector<int> >* nn_indices);
+                             std::vector<std::vector<float>>* nn_distances,
+                             std::vector<std::vector<int>>* nn_indices);
 
   const Options options_;
-  const Camera& camera1_, camera2_;
-  const KeypointsAndDescriptors& features1_, features2_;
+  const Camera &camera1_, camera2_;
+  const KeypointsAndDescriptors &features1_, features2_;
 
   std::shared_ptr<RandomNumberGenerator> rng_;
 

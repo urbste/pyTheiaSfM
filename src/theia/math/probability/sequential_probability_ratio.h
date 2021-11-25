@@ -48,7 +48,8 @@ namespace theia {
 //   the same time as verification of time_compute_model_ratio data points.
 //   Matas et. al. use 200.
 // num_model_verified: Number of models that are verified per sample.
-double CalculateSPRTDecisionThreshold(double sigma, double epsilon,
+double CalculateSPRTDecisionThreshold(double sigma,
+                                      double epsilon,
                                       double time_compute_model_ratio = 200.0,
                                       int num_models_verified = 1);
 
@@ -62,8 +63,10 @@ double CalculateSPRTDecisionThreshold(double sigma, double epsilon,
 // decision_threshold: The decision threshold at which to terminate.
 // observed_inlier_ratio: Output parameter of inlier ratio tested.
 bool SequentialProbabilityRatioTest(const std::vector<double>& residuals,
-                                    double error_thresh, double sigma,
-                                    double epsilon, double decision_threshold,
+                                    double error_thresh,
+                                    double sigma,
+                                    double epsilon,
+                                    double decision_threshold,
                                     int* num_tested_points,
                                     double* observed_inlier_ratio);
 

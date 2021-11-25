@@ -71,12 +71,11 @@ bool FeatureExtractor::Extract(
       continue;
     }
 
-    feature_extractor_pool.Add(
-        &FeatureExtractor::ExtractFeatures,
-        this,
-        filenames[i],
-        &(*keypoints)[i],
-        &(*descriptors)[i]);
+    feature_extractor_pool.Add(&FeatureExtractor::ExtractFeatures,
+                               this,
+                               filenames[i],
+                               &(*keypoints)[i],
+                               &(*descriptors)[i]);
   }
   return true;
 }
@@ -148,7 +147,8 @@ bool FeatureExtractor::ExtractFeatures(
   //   std::string features_file = output_dir + image_filename + ".features";
 
   //   // Write the features to disk.
-  //   CHECK(WriteKeypointsAndDescriptors(features_file, *keypoints, *descriptors))
+  //   CHECK(WriteKeypointsAndDescriptors(features_file, *keypoints,
+  //   *descriptors))
   //     << "Could not write features for image " << image_filename
   //     << " from file " << features_file;
 
@@ -168,7 +168,8 @@ bool FeatureExtractor::ExtractFeatures(
 //   // static thread_local keywords, but apparently Mac OS-X's version of clang
 //   // does not actually support it!
 //   //
-//   // TODO(cmsweeney): Change this so that each thread in the threadpool receives
+//   // TODO(cmsweeney): Change this so that each thread in the threadpool
+//   receives
 //   // exactly one object.
 //   std::unique_ptr<DescriptorExtractor> descriptor_extractor =
 //       CreateDescriptorExtractor(options_.descriptor_extractor_type,

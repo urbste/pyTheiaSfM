@@ -34,9 +34,9 @@
 
 #include <Eigen/Dense>
 
+#include "gtest/gtest.h"
 #include <ceres/rotation.h>
 #include <math.h>
-#include "gtest/gtest.h"
 
 #include "theia/alignment/alignment.h"
 #include "theia/sfm/camera/camera.h"
@@ -48,8 +48,8 @@
 namespace theia {
 
 using Eigen::AngleAxisd;
-using Eigen::Matrix3d;
 using Eigen::Matrix;
+using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
@@ -64,16 +64,13 @@ TEST(Camera, ProjectionMatrix) {
   Matrix3x4d gt_projection_matrix;
   for (int i = 0; i < 100; i++) {
     rng.SetRandom(&gt_projection_matrix);
-    EXPECT_TRUE(camera.InitializeFromProjectionMatrix(image_size,
-                                                      image_size,
-                                                      gt_projection_matrix));
+    EXPECT_TRUE(camera.InitializeFromProjectionMatrix(
+        image_size, image_size, gt_projection_matrix));
     Matrix3x4d projection_matrix;
     camera.GetProjectionMatrix(&projection_matrix);
 
-    EXPECT_TRUE(test::ArraysEqualUpToScale(12,
-                                           gt_projection_matrix.data(),
-                                           projection_matrix.data(),
-                                           kTolerance));
+    EXPECT_TRUE(test::ArraysEqualUpToScale(
+        12, gt_projection_matrix.data(), projection_matrix.data(), kTolerance));
   }
 }
 
@@ -114,9 +111,10 @@ TEST(Camera, ExternalParameterGettersAndSetters) {
   // Check that the default values are set.
   EXPECT_DOUBLE_EQ(camera.GetPosition().squaredNorm(), 0.0);
   EXPECT_DOUBLE_EQ(camera.GetOrientationAsAngleAxis().squaredNorm(), 0.0);
-  EXPECT_DOUBLE_EQ((camera.GetOrientationAsRotationMatrix() -
-                    Matrix3d::Identity()).squaredNorm(),
-                   0.0);
+  EXPECT_DOUBLE_EQ(
+      (camera.GetOrientationAsRotationMatrix() - Matrix3d::Identity())
+          .squaredNorm(),
+      0.0);
 
   // Check that position getter/setters work.
   camera.SetPosition(Vector3d::Ones());
@@ -130,24 +128,22 @@ TEST(Camera, ExternalParameterGettersAndSetters) {
   ceres::AngleAxisToRotationMatrix(gt_angle_axis.data(),
                                    gt_rotation_matrix.data());
   camera.SetOrientationFromRotationMatrix(gt_rotation_matrix);
-  EXPECT_LT(
-      (camera.GetOrientationAsAngleAxis() - gt_angle_axis).squaredNorm(),
-      kTolerance);
+  EXPECT_LT((camera.GetOrientationAsAngleAxis() - gt_angle_axis).squaredNorm(),
+            kTolerance);
   EXPECT_LT((camera.GetOrientationAsRotationMatrix() - gt_rotation_matrix)
                 .squaredNorm(),
-              kTolerance);
+            kTolerance);
 
   // Check that rotation matrix getter/setters work.
   gt_angle_axis = Vector3d(0.3, 0.7, 0.4);
   ceres::AngleAxisToRotationMatrix(gt_angle_axis.data(),
                                    gt_rotation_matrix.data());
   camera.SetOrientationFromRotationMatrix(gt_rotation_matrix);
-  EXPECT_LT(
-      (camera.GetOrientationAsAngleAxis() - gt_angle_axis).squaredNorm(),
-      kTolerance);
+  EXPECT_LT((camera.GetOrientationAsAngleAxis() - gt_angle_axis).squaredNorm(),
+            kTolerance);
   EXPECT_LT((camera.GetOrientationAsRotationMatrix() - gt_rotation_matrix)
                 .squaredNorm(),
-              kTolerance);
+            kTolerance);
 }
 
 TEST(Camera, SetFromCameraIntrinsicsPrior) {
@@ -192,16 +188,13 @@ void ReprojectionTest(const Camera& camera) {
 
     const double random_depth = rng.RandDouble(0.01, 100.0);
     const Vector4d random_point =
-        (camera.GetPosition() + normalized_ray * random_depth)
-            .homogeneous();
+        (camera.GetPosition() + normalized_ray * random_depth).homogeneous();
 
     Vector2d reprojected_pixel;
-    const double depth =
-        camera.ProjectPoint(random_point, &reprojected_pixel);
+    const double depth = camera.ProjectPoint(random_point, &reprojected_pixel);
 
     // Expect the reconstructed 3d points to be close.
-    EXPECT_LT(std::abs(random_depth - depth),
-              kTolerance * random_depth)
+    EXPECT_LT(std::abs(random_depth - depth), kTolerance * random_depth)
         << "real depth = " << random_depth
         << " and reconstructed depth = " << depth;
 
@@ -219,8 +212,8 @@ TEST(Camera, Reprojection) {
   for (int i = 0; i < 100; i++) {
     // Initialize a random camera.
     rng.SetRandom(&projection_mat);
-    camera.InitializeFromProjectionMatrix(image_size, image_size,
-                                          projection_mat);
+    camera.InitializeFromProjectionMatrix(
+        image_size, image_size, projection_mat);
 
     ReprojectionTest(camera);
   }

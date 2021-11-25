@@ -125,8 +125,11 @@ void DividePolynomial(const Eigen::VectorXd& polynomial,
 // interval [x_min, x_max] are considered as well as the end points
 // x_min and x_max. Since polynomials are differentiable functions,
 // this ensures that the true minimum is found.
-void MinimizePolynomial(const Eigen::VectorXd& polynomial, double x_min,
-                        double x_max, double* optimal_x, double* optimal_value);
+void MinimizePolynomial(const Eigen::VectorXd& polynomial,
+                        double x_min,
+                        double x_max,
+                        double* optimal_x,
+                        double* optimal_value);
 
 // Find roots of polynomials of the form a * x + b = 0. The real or imaginary
 // output variable may be NULL if the respective output is not desired.

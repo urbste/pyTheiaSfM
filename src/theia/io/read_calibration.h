@@ -103,7 +103,7 @@ bool ReadCalibration(const std::string& calibration_file,
 bool ExtractCameraIntrinsicPriorsFromJson(
     const char* json_str,
     std::unordered_map<std::string, CameraIntrinsicsPrior>*
-      camera_intrinsics_prior);
+        camera_intrinsics_prior);
 
 }  // namespace theia
 

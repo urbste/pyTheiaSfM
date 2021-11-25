@@ -32,9 +32,9 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <algorithm>
 #include <complex>
-#include "gtest/gtest.h"
 
 #include "theia/math/closed_form_polynomial_solver.h"
 
@@ -71,7 +71,7 @@ TEST(SolveQuadraticPolynomial, SolveReals) {
   num_roots = SolveQuadraticReals(a, b, c, kTolerance, roots);
   EXPECT_EQ(num_roots, 2);
 
-  const double soln_roots[2] = { 5.0, 6.0 };
+  const double soln_roots[2] = {5.0, 6.0};
   std::sort(std::begin(roots), std::end(roots));
   for (int i = 0; i < num_roots; i++) {
     EXPECT_DOUBLE_EQ(roots[i], soln_roots[i]);
@@ -104,7 +104,7 @@ TEST(SolveCubicPolynomial, SolveReals) {
 
   // Check that each root is valid.
   std::sort(std::begin(roots), std::end(roots));
-  const double soln_roots[3] = { 1.0, 2.0, 3.0 };
+  const double soln_roots[3] = {1.0, 2.0, 3.0};
   for (int i = 0; i < num_roots; i++) {
     EXPECT_DOUBLE_EQ(roots[i], soln_roots[i]);
   }
@@ -124,7 +124,7 @@ TEST(SolveQuarticPolynomial, SolveReals) {
 
   // Check that each root is valid.
   std::sort(std::begin(roots), std::end(roots));
-  const long double soln_roots[4] = { -6.0, -4.0, 3.0, 5.0 };
+  const long double soln_roots[4] = {-6.0, -4.0, 3.0, 5.0};
   for (int i = 0; i < num_roots; i++) {
     EXPECT_DOUBLE_EQ(roots[i], soln_roots[i]);
   }

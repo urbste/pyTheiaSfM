@@ -80,8 +80,8 @@
 namespace theia {
 
 using Eigen::MatrixXd;
-using Eigen::VectorXd;
 using Eigen::VectorXcd;
+using Eigen::VectorXd;
 
 bool FindPolynomialRoots(const VectorXd& polynomial,
                          VectorXd* real,
@@ -118,7 +118,8 @@ VectorXd DifferentiatePolynomial(const VectorXd& polynomial) {
 }
 
 VectorXd MultiplyPolynomials(const VectorXd& poly1, const VectorXd& poly2) {
-  VectorXd multiplied_poly = VectorXd::Zero(poly1.size() + poly2.size() - 1);;
+  VectorXd multiplied_poly = VectorXd::Zero(poly1.size() + poly2.size() - 1);
+  ;
   for (int i = 0; i < poly1.size(); i++) {
     for (int j = 0; j < poly2.size(); j++) {
       multiplied_poly.reverse().operator()(i + j) +=
@@ -310,7 +311,7 @@ double FindRootIterativeLaguerre(const VectorXd& polynomial,
     const double h = g * g - EvaluatePolynomial(f_prime_prime, x) / f_of_x;
     const double denom_part = std::sqrt(std::abs((k - 1.0) * (k * h - g * g)));
     const double denom = (g < 0) ? g - denom_part : g + denom_part;
-    const double delta =  k / denom;
+    const double delta = k / denom;
     if (std::abs(delta) < epsilon) {
       break;
     }

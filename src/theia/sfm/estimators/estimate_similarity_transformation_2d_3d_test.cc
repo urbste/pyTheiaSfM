@@ -32,10 +32,10 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <glog/logging.h>
-#include "gtest/gtest.h"
 
 #include "theia/math/util.h"
 #include "theia/sfm/camera/camera.h"
@@ -90,8 +90,8 @@ void ExecuteRandomTest(
                                                rng.RandDouble(10, 20),
                                                1.0);
 
-      depth = correspondence.camera.ProjectPoint(correspondence.point3d,
-                                                 &correspondence.observation.point_);
+      depth = correspondence.camera.ProjectPoint(
+          correspondence.point3d, &correspondence.observation.point_);
     } while (depth < 0);
     correspondences.emplace_back(std::move(correspondence));
   }
@@ -114,21 +114,21 @@ void ExecuteRandomTest(
   for (int i = 0; i < kNumCameras; i++) {
     const Eigen::Vector3d old_point = correspondences[i].point3d.hnormalized();
     const Eigen::Vector3d new_point = similarity_transformation.scale *
-        similarity_transformation.rotation *
-        old_point +
-        similarity_transformation.translation;
+                                          similarity_transformation.rotation *
+                                          old_point +
+                                      similarity_transformation.translation;
     correspondences[i].point3d = new_point.homogeneous();
   }
 
   // Estimate the similarity transformation;
   SimilarityTransformation estimated_similarity_transformation;
   RansacSummary ransac_summary;
-  EXPECT_TRUE(EstimateSimilarityTransformation2D3D(
-      params,
-      RansacType::RANSAC,
-      correspondences,
-      &estimated_similarity_transformation,
-      &ransac_summary));
+  EXPECT_TRUE(
+      EstimateSimilarityTransformation2D3D(params,
+                                           RansacType::RANSAC,
+                                           correspondences,
+                                           &estimated_similarity_transformation,
+                                           &ransac_summary));
 
   // We should have found at least one good solution.
   EXPECT_GT(ransac_summary.inliers.size(), 4);
@@ -162,15 +162,13 @@ TEST(EstimateSimilarityTransformation2D3D, AllInliersNoNoise) {
 
   SimilarityTransformation similarity_transformation;
   similarity_transformation.rotation =
-      Eigen::AngleAxisd(DegToRad(12.0), Eigen::Vector3d(1.0, 0.2, -0.8)
-                        .normalized()).toRotationMatrix();
+      Eigen::AngleAxisd(DegToRad(12.0),
+                        Eigen::Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix();
   similarity_transformation.translation = Eigen::Vector3d(-1.3, 2.1, 0.5);
   similarity_transformation.scale = 0.8;
-  ExecuteRandomTest(options,
-                    similarity_transformation,
-                    kInlierRatio,
-                    kNoise,
-                    kPoseTolerance);
+  ExecuteRandomTest(
+      options, similarity_transformation, kInlierRatio, kNoise, kPoseTolerance);
 }
 
 TEST(EstimateSimilarityTransformation2D3D, AllInliersWithNoise) {
@@ -186,15 +184,13 @@ TEST(EstimateSimilarityTransformation2D3D, AllInliersWithNoise) {
 
   SimilarityTransformation similarity_transformation;
   similarity_transformation.rotation =
-      Eigen::AngleAxisd(DegToRad(12.0), Eigen::Vector3d(1.0, 0.2, -0.8)
-                        .normalized()).toRotationMatrix();
+      Eigen::AngleAxisd(DegToRad(12.0),
+                        Eigen::Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix();
   similarity_transformation.translation = Eigen::Vector3d(-1.3, 2.1, 0.5);
   similarity_transformation.scale = 0.8;
-  ExecuteRandomTest(options,
-                    similarity_transformation,
-                    kInlierRatio,
-                    kNoise,
-                    kPoseTolerance);
+  ExecuteRandomTest(
+      options, similarity_transformation, kInlierRatio, kNoise, kPoseTolerance);
 }
 
 TEST(EstimateSimilarityTransformation2D3D, OutliersNoNoise) {
@@ -210,15 +206,13 @@ TEST(EstimateSimilarityTransformation2D3D, OutliersNoNoise) {
 
   SimilarityTransformation similarity_transformation;
   similarity_transformation.rotation =
-      Eigen::AngleAxisd(DegToRad(12.0), Eigen::Vector3d(1.0, 0.2, -0.8)
-                        .normalized()).toRotationMatrix();
+      Eigen::AngleAxisd(DegToRad(12.0),
+                        Eigen::Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix();
   similarity_transformation.translation = Eigen::Vector3d(-1.3, 2.1, 0.5);
   similarity_transformation.scale = 0.8;
-  ExecuteRandomTest(options,
-                    similarity_transformation,
-                    kInlierRatio,
-                    kNoise,
-                    kPoseTolerance);
+  ExecuteRandomTest(
+      options, similarity_transformation, kInlierRatio, kNoise, kPoseTolerance);
 }
 
 TEST(EstimateSimilarityTransformation2D3D, OutliersWithNoise) {
@@ -234,15 +228,13 @@ TEST(EstimateSimilarityTransformation2D3D, OutliersWithNoise) {
 
   SimilarityTransformation similarity_transformation;
   similarity_transformation.rotation =
-      Eigen::AngleAxisd(DegToRad(12.0), Eigen::Vector3d(1.0, 0.2, -0.8)
-                        .normalized()).toRotationMatrix();
+      Eigen::AngleAxisd(DegToRad(12.0),
+                        Eigen::Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix();
   similarity_transformation.translation = Eigen::Vector3d(-1.3, 2.1, 0.5);
   similarity_transformation.scale = 0.8;
-  ExecuteRandomTest(options,
-                    similarity_transformation,
-                    kInlierRatio,
-                    kNoise,
-                    kPoseTolerance);
+  ExecuteRandomTest(
+      options, similarity_transformation, kInlierRatio, kNoise, kPoseTolerance);
 }
 
 }  // namespace theia

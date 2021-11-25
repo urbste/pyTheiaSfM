@@ -32,12 +32,12 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <math.h>
 #include <vector>
-#include "gtest/gtest.h"
 
-#include "theia/solvers/estimator.h"
 #include "theia/math/probability/sequential_probability_ratio.h"
+#include "theia/solvers/estimator.h"
 #include "theia/util/random.h"
 
 using std::vector;
@@ -129,9 +129,13 @@ TEST(SPRTTest, SequentialProbabilityRatioTestPass) {
   double observed_inlier_ratio;
 
   // Execute SPRT with a line we expect to fit the data.
-  bool sprt_success = SequentialProbabilityRatioTest(
-      residuals, error_thresh, sigma, epsilon, decision_threshold,
-      &num_tested_points, &observed_inlier_ratio);
+  bool sprt_success = SequentialProbabilityRatioTest(residuals,
+                                                     error_thresh,
+                                                     sigma,
+                                                     epsilon,
+                                                     decision_threshold,
+                                                     &num_tested_points,
+                                                     &observed_inlier_ratio);
   EXPECT_TRUE(sprt_success);
 }
 
@@ -165,23 +169,35 @@ TEST(SPRTTest, SequentialProbabilityRatioTestFail) {
   std::vector<double> residuals =
       estimator.Residuals(input_points, not_fitting_line);
 
-  bool sprt_success = SequentialProbabilityRatioTest(
-      residuals, error_thresh, sigma, epsilon, decision_threshold,
-      &num_tested_points, &observed_inlier_ratio);
+  bool sprt_success = SequentialProbabilityRatioTest(residuals,
+                                                     error_thresh,
+                                                     sigma,
+                                                     epsilon,
+                                                     decision_threshold,
+                                                     &num_tested_points,
+                                                     &observed_inlier_ratio);
   EXPECT_FALSE(sprt_success);
 
   not_fitting_line = Line(1.0, 10);
   residuals = estimator.Residuals(input_points, not_fitting_line);
-  sprt_success = SequentialProbabilityRatioTest(
-      residuals, error_thresh, sigma, epsilon, decision_threshold,
-      &num_tested_points, &observed_inlier_ratio);
+  sprt_success = SequentialProbabilityRatioTest(residuals,
+                                                error_thresh,
+                                                sigma,
+                                                epsilon,
+                                                decision_threshold,
+                                                &num_tested_points,
+                                                &observed_inlier_ratio);
   EXPECT_FALSE(sprt_success);
 
   not_fitting_line = Line(2.0, 0);
   residuals = estimator.Residuals(input_points, not_fitting_line);
-  sprt_success = SequentialProbabilityRatioTest(
-      residuals, error_thresh, sigma, epsilon, decision_threshold,
-      &num_tested_points, &observed_inlier_ratio);
+  sprt_success = SequentialProbabilityRatioTest(residuals,
+                                                error_thresh,
+                                                sigma,
+                                                epsilon,
+                                                decision_threshold,
+                                                &num_tested_points,
+                                                &observed_inlier_ratio);
   EXPECT_FALSE(sprt_success);
 }
 

@@ -55,36 +55,36 @@ namespace theia {
 // captured. This includes the name, EXIF metadata, and track information that
 // is found through feature matching.
 class View {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   View();
-  explicit View(const std::string &name);
-  explicit View(const std::string &name, const double timestamp);
+  explicit View(const std::string& name);
+  explicit View(const std::string& name, const double timestamp);
 
   ~View() {}
 
-  const std::string &Name() const;
+  const std::string& Name() const;
 
   void SetEstimated(bool is_estimated);
   bool IsEstimated() const;
 
-  const class Camera &Camera() const;
-  class Camera *MutableCamera();
+  const class Camera& Camera() const;
+  class Camera* MutableCamera();
 
-  const struct CameraIntrinsicsPrior &CameraIntrinsicsPrior() const;
-  struct CameraIntrinsicsPrior *MutableCameraIntrinsicsPrior();
+  const struct CameraIntrinsicsPrior& CameraIntrinsicsPrior() const;
+  struct CameraIntrinsicsPrior* MutableCameraIntrinsicsPrior();
   void SetCameraIntrinsicsPrior(struct CameraIntrinsicsPrior prior);
 
   int NumFeatures() const;
 
   std::vector<TrackId> TrackIds() const;
 
-  const Feature *GetFeature(const TrackId track_id) const;
+  const Feature* GetFeature(const TrackId track_id) const;
 
   const TrackId GetTrack(const Feature& feature) const;
 
-  void AddFeature(const TrackId track_id, const Feature &feature);
+  void AddFeature(const TrackId track_id, const Feature& feature);
 
   bool RemoveFeature(const TrackId track_id);
 
@@ -92,23 +92,30 @@ public:
 
   void SetTimestamp(const double timestamp);
 
-  void SetPositionPrior(const Eigen::Vector3d& position_prior, 
-    const Eigen::Matrix3d& position_prior_information);
-  
+  void SetPositionPrior(const Eigen::Vector3d& position_prior,
+                        const Eigen::Matrix3d& position_prior_information);
+
   Eigen::Vector3d GetPositionPrior();
 
   Eigen::Matrix3d GetPositionPriorSqrtInformation();
 
   bool HasPositionPrior();
 
-private:
+ private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
   template <class Archive>
-  void serialize(Archive &ar, const std::uint32_t version) { // NOLINT
-    ar(name_, timestamp_, is_estimated_, camera_, camera_intrinsics_prior_,
-       features_, features_to_tracks_, position_prior_, position_prior_sqrt_information_,
+  void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
+    ar(name_,
+       timestamp_,
+       is_estimated_,
+       camera_,
+       camera_intrinsics_prior_,
+       features_,
+       features_to_tracks_,
+       position_prior_,
+       position_prior_sqrt_information_,
        has_position_prior_);
   }
 
@@ -126,8 +133,8 @@ private:
   bool has_position_prior_;
 };
 
-} // namespace theia
+}  // namespace theia
 
 CEREAL_CLASS_VERSION(theia::View, 0);
 
-#endif // THEIA_SFM_VIEW_H_
+#endif  // THEIA_SFM_VIEW_H_

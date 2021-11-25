@@ -35,14 +35,14 @@
 #ifndef THEIA_SFM_CAMERA_FOV_CAMERA_MODEL_H_
 #define THEIA_SFM_CAMERA_FOV_CAMERA_MODEL_H_
 
-#include <ceres/jet.h>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <cereal/access.hpp>
 #include <cereal/cereal.hpp>
 #include <cereal/types/base_class.hpp>
 #include <cereal/types/polymorphic.hpp>
+#include <ceres/jet.h>
 #include <stdint.h>
-#include <Eigen/Core>
-#include <Eigen/Geometry>
 #include <vector>
 
 #include "theia/sfm/camera/camera_intrinsics_model.h"
@@ -66,7 +66,7 @@ class FOVCameraModel : public CameraIntrinsicsModel {
 
   static const int kIntrinsicsSize = 5;
 
-  enum InternalParametersIndex{
+  enum InternalParametersIndex {
     FOCAL_LENGTH = 0,
     ASPECT_RATIO = 1,
     PRINCIPAL_POINT_X = 2,
@@ -153,24 +153,21 @@ class FOVCameraModel : public CameraIntrinsicsModel {
 };
 
 template <typename T>
-bool FOVCameraModel::CameraToPixelCoordinates(
-    const T* intrinsic_parameters, const T* point, T* pixel) {
+bool FOVCameraModel::CameraToPixelCoordinates(const T* intrinsic_parameters,
+                                              const T* point,
+                                              T* pixel) {
   // Get normalized pixel projection at image plane depth = 1.
   const T& depth = point[2];
-  const T normalized_pixel[2] = { point[0] / depth,
-                                  point[1] / depth };
+  const T normalized_pixel[2] = {point[0] / depth, point[1] / depth};
 
   // Apply radial distortion.
   T distorted_pixel[2];
-  FOVCameraModel::DistortPoint(intrinsic_parameters,
-                               normalized_pixel,
-                               distorted_pixel);
+  FOVCameraModel::DistortPoint(
+      intrinsic_parameters, normalized_pixel, distorted_pixel);
 
   // Apply calibration parameters to transform normalized units into pixels.
-  const T& focal_length =
-      intrinsic_parameters[FOVCameraModel::FOCAL_LENGTH];
-  const T& aspect_ratio =
-      intrinsic_parameters[FOVCameraModel::ASPECT_RATIO];
+  const T& focal_length = intrinsic_parameters[FOVCameraModel::FOCAL_LENGTH];
+  const T& aspect_ratio = intrinsic_parameters[FOVCameraModel::ASPECT_RATIO];
   const T focal_length_y = focal_length * aspect_ratio;
   const T& principal_point_x =
       intrinsic_parameters[FOVCameraModel::PRINCIPAL_POINT_X];
@@ -187,10 +184,8 @@ template <typename T>
 bool FOVCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
                                               const T* pixel,
                                               T* point) {
-  const T& focal_length =
-      intrinsic_parameters[FOVCameraModel::FOCAL_LENGTH];
-  const T& aspect_ratio =
-      intrinsic_parameters[FOVCameraModel::ASPECT_RATIO];
+  const T& focal_length = intrinsic_parameters[FOVCameraModel::FOCAL_LENGTH];
+  const T& aspect_ratio = intrinsic_parameters[FOVCameraModel::ASPECT_RATIO];
   const T focal_length_y = focal_length * aspect_ratio;
   const T& principal_point_x =
       intrinsic_parameters[FOVCameraModel::PRINCIPAL_POINT_X];
@@ -204,9 +199,7 @@ bool FOVCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
 
   // Undo the radial distortion.
   T undistorted_point[2];
-  FOVCameraModel::UndistortPoint(intrinsic_parameters,
-                                 distorted_point,
-                                 point);
+  FOVCameraModel::UndistortPoint(intrinsic_parameters, distorted_point, point);
   point[2] = T(1.0);
 
   return true;
@@ -253,8 +246,7 @@ bool FOVCameraModel::DistortPoint(const T* intrinsic_parameters,
     // Compute the radius of the distorted image point based on the FOV model
     // equations.
     const T r_u = ceres::sqrt(r_u_sq);
-    r_d =
-        ceres::atan(2.0 * r_u * ceres::tan(omega / 2.0)) / (r_u * omega);
+    r_d = ceres::atan(2.0 * r_u * ceres::tan(omega / 2.0)) / (r_u * omega);
   }
 
   // Compute the radius of the distorted image point based on the FOV model

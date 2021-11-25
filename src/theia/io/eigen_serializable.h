@@ -35,21 +35,27 @@
 #ifndef THEIA_IO_EIGEN_SERIALIZABLE_H_
 #define THEIA_IO_EIGEN_SERIALIZABLE_H_
 
-#include <cereal/cereal.hpp>
-#include <cereal/archives/portable_binary.hpp>
 #include <Eigen/Dense>
+#include <cereal/archives/portable_binary.hpp>
+#include <cereal/cereal.hpp>
 
 namespace cereal {
 
 // This code is really ugly, but it allows for Eigen types to be read from or
 // written to disk using the Cereal IO library.
-template <class Archive, class _Scalar, int _Rows, int _Cols, int _Options,
-          int _MaxRows, int _MaxCols>
+template <class Archive,
+          class _Scalar,
+          int _Rows,
+          int _Cols,
+          int _Options,
+          int _MaxRows,
+          int _MaxCols>
 inline typename std::enable_if<
     traits::is_output_serializable<BinaryData<_Scalar>, Archive>::value,
     void>::type
-save(Archive& ar, Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows,
-                                _MaxCols> const& m) {
+save(Archive& ar,
+     Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols> const&
+         m) {
   int32_t rows = m.rows();
   int32_t cols = m.cols();
   ar(rows);
@@ -57,8 +63,13 @@ save(Archive& ar, Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows,
   ar(binary_data(m.data(), rows * cols * sizeof(_Scalar)));
 }
 
-template <class Archive, class _Scalar, int _Rows, int _Cols, int _Options,
-          int _MaxRows, int _MaxCols>
+template <class Archive,
+          class _Scalar,
+          int _Rows,
+          int _Cols,
+          int _Options,
+          int _MaxRows,
+          int _MaxCols>
 inline typename std::enable_if<
     traits::is_input_serializable<BinaryData<_Scalar>, Archive>::value,
     void>::type
@@ -73,13 +84,19 @@ load(Archive& ar,
                  static_cast<std::size_t>(rows * cols * sizeof(_Scalar))));
 }
 
-template <class Archive, class _Scalar, int _Rows, int _Cols, int _Options,
-          int _MaxRows, int _MaxCols>
+template <class Archive,
+          class _Scalar,
+          int _Rows,
+          int _Cols,
+          int _Options,
+          int _MaxRows,
+          int _MaxCols>
 inline typename std::enable_if<
     traits::is_output_serializable<BinaryData<_Scalar>, Archive>::value,
     void>::type
-save(Archive& ar, Eigen::Array<_Scalar, _Rows, _Cols, _Options, _MaxRows,
-                                _MaxCols> const& m) {
+save(Archive& ar,
+     Eigen::Array<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols> const&
+         m) {
   int32_t rows = m.rows();
   int32_t cols = m.cols();
   ar(rows);
@@ -87,8 +104,13 @@ save(Archive& ar, Eigen::Array<_Scalar, _Rows, _Cols, _Options, _MaxRows,
   ar(binary_data(m.data(), rows * cols * sizeof(_Scalar)));
 }
 
-template <class Archive, class _Scalar, int _Rows, int _Cols, int _Options,
-          int _MaxRows, int _MaxCols>
+template <class Archive,
+          class _Scalar,
+          int _Rows,
+          int _Cols,
+          int _Options,
+          int _MaxRows,
+          int _MaxCols>
 inline typename std::enable_if<
     traits::is_input_serializable<BinaryData<_Scalar>, Archive>::value,
     void>::type

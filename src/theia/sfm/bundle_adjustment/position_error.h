@@ -45,26 +45,28 @@ struct PositionError {
  public:
   explicit PositionError(const Eigen::Vector3d& position_prior,
                          const Eigen::Matrix3d& position_prior_sqrt_information)
-      : position_prior_(position_prior), 
+      : position_prior_(position_prior),
         position_prior_sqrt_information_(position_prior_sqrt_information) {}
 
   template <typename T>
   bool operator()(const T* camera_extrinsics, T* residual) const {
     Eigen::Map<Eigen::Matrix<T, 3, 1>> res(residual);
-    Eigen::Map<const Eigen::Matrix<T, 3, 1>> position(camera_extrinsics + Camera::POSITION);
+    Eigen::Map<const Eigen::Matrix<T, 3, 1>> position(camera_extrinsics +
+                                                      Camera::POSITION);
 
-    res = position_prior_sqrt_information_.cast<T>() * (position_prior_.cast<T>() - position);
+    res = position_prior_sqrt_information_.cast<T>() *
+          (position_prior_.cast<T>() - position);
     return true;
   }
 
-  static ceres::CostFunction* Create(const Eigen::Vector3d& position_prior,
+  static ceres::CostFunction* Create(
+      const Eigen::Vector3d& position_prior,
       const Eigen::Matrix3d& position_prior_sqrt_information) {
     static const int kParameterSize = 6;
     static const int kNumResiduals = 3;
-    return new ceres::AutoDiffCostFunction<PositionError,
-                                           kNumResiduals,
-                                           kParameterSize>(
-        new PositionError(position_prior, position_prior_sqrt_information));
+    return new ceres::
+        AutoDiffCostFunction<PositionError, kNumResiduals, kParameterSize>(
+            new PositionError(position_prior, position_prior_sqrt_information));
   }
 
  private:

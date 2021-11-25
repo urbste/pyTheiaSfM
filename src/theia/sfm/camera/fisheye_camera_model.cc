@@ -34,14 +34,14 @@
 
 #include "theia/sfm/camera/fisheye_camera_model.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <glog/logging.h>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
-#include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/camera/projection_matrix_utils.h"
+#include "theia/sfm/camera_intrinsics_prior.h"
 
 namespace theia {
 
@@ -65,7 +65,7 @@ FisheyeCameraModel::FisheyeCameraModel() {
   SetParameter(RADIAL_DISTORTION_4, 0.0);
 }
 
-int FisheyeCameraModel::NumParameters() const {return kIntrinsicsSize;}
+int FisheyeCameraModel::NumParameters() const { return kIntrinsicsSize; }
 
 // Returns the camera model type of the object.
 CameraIntrinsicsModelType FisheyeCameraModel::Type() const {
@@ -146,8 +146,8 @@ std::vector<int> FisheyeCameraModel::GetSubsetFromOptimizeIntrinsicsType(
     return constant_intrinsics;
   }
 
-  if ((intrinsics_to_optimize &
-      OptimizeIntrinsicsType::FOCAL_LENGTH) == OptimizeIntrinsicsType::NONE) {
+  if ((intrinsics_to_optimize & OptimizeIntrinsicsType::FOCAL_LENGTH) ==
+      OptimizeIntrinsicsType::NONE) {
     constant_intrinsics.emplace_back(FOCAL_LENGTH);
   }
   if ((intrinsics_to_optimize & OptimizeIntrinsicsType::ASPECT_RATIO) ==
@@ -207,9 +207,7 @@ void FisheyeCameraModel::SetSkew(const double skew) {
   parameters_[SKEW] = skew;
 }
 
-double FisheyeCameraModel::Skew() const {
-  return parameters_[SKEW];
-}
+double FisheyeCameraModel::Skew() const { return parameters_[SKEW]; }
 
 void FisheyeCameraModel::SetRadialDistortion(const double radial_distortion_1,
                                              const double radial_distortion_2,

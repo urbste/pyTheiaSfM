@@ -35,9 +35,9 @@
 #ifndef THEIA_SOLVERS_LMED_QUALITY_MEASUREMENT_H_
 #define THEIA_SOLVERS_LMED_QUALITY_MEASUREMENT_H_
 
-#include <glog/logging.h>
 #include <algorithm>
 #include <cmath>
+#include <glog/logging.h>
 #include <vector>
 
 #include "theia/solvers/quality_measurement.h"
@@ -82,19 +82,21 @@ class LmedQualityMeasurement : public QualityMeasurement {
   double CalculateMedianOfSquaredResiduals(
       const std::vector<double>& residuals) {
     std::vector<double> squared_residuals(residuals.size());
-    std::transform(residuals.begin(), residuals.end(),
-                   squared_residuals.begin(), ComputeSquaredResidual);
+    std::transform(residuals.begin(),
+                   residuals.end(),
+                   squared_residuals.begin(),
+                   ComputeSquaredResidual);
     std::nth_element(squared_residuals.begin(),
                      squared_residuals.begin() + squared_residuals.size() / 2,
                      squared_residuals.end());
     double median = squared_residuals[squared_residuals.size() / 2];
     if ((squared_residuals.size() % 2) != 0) {
-      std::nth_element(squared_residuals.begin(),
-                       squared_residuals.begin() +
-                       (squared_residuals.size() / 2) - 1,
-                       squared_residuals.end());
-      median = 0.5 * (squared_residuals[(squared_residuals.size() / 2) - 1] +
-                      median);
+      std::nth_element(
+          squared_residuals.begin(),
+          squared_residuals.begin() + (squared_residuals.size() / 2) - 1,
+          squared_residuals.end());
+      median = 0.5 *
+               (squared_residuals[(squared_residuals.size() / 2) - 1] + median);
     }
     return median;
   }
@@ -107,8 +109,9 @@ class LmedQualityMeasurement : public QualityMeasurement {
     // The median holds a squared residual. Thus, we take the squared root.
     // The threshold calculated here is computed based on a heuristic that
     // OpenCV uses. See modules/calib3d/src/ptsetreg.cpp
-    const double inlier_threshold = 2.5 * 1.4826 *
-        (1 + 5.0 / (residuals.size() - min_num_samples)) * std::sqrt(median);
+    const double inlier_threshold =
+        2.5 * 1.4826 * (1 + 5.0 / (residuals.size() - min_num_samples)) *
+        std::sqrt(median);
     const double squared_inlier_threshold = inlier_threshold * inlier_threshold;
     for (int i = 0; i < residuals.size(); i++) {
       if ((residuals[i] * residuals[i]) < squared_inlier_threshold) {

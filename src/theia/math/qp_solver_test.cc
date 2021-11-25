@@ -32,9 +32,9 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/LU>
-#include "gtest/gtest.h"
 
 #include "theia/math/qp_solver.h"
 #include "theia/util/random.h"
@@ -57,9 +57,7 @@ TEST(QPSolver, Unbounded) {
   static const double kTolerance = 1e-4;
 
   Eigen::MatrixXd P(3, 3);
-  P << 5, -2, -1,
-    -2, 4, 3,
-    -1, 3, 5;
+  P << 5, -2, -1, -2, 4, 3, -1, 3, 5;
   Eigen::VectorXd q(3);
   q << 2, -35, -47;
   const double r = 5;
@@ -89,9 +87,7 @@ TEST(QPSolver, LooseBounds) {
   static const double kTolerance = 1e-4;
 
   Eigen::MatrixXd P(3, 3);
-  P << 5, -2, -1,
-    -2, 4, 3,
-    -1, 3, 5;
+  P << 5, -2, -1, -2, 4, 3, -1, 3, 5;
   Eigen::VectorXd q(3);
   q << 2, -35, -47;
   const double r = 5;
@@ -132,9 +128,7 @@ TEST(QPSolver, TightBounds) {
   static const double kTolerance = 1e-4;
 
   Eigen::MatrixXd P(3, 3);
-  P << 5, -2, -1,
-    -2, 4, 3,
-    -1, 3, 5;
+  P << 5, -2, -1, -2, 4, 3, -1, 3, 5;
   Eigen::VectorXd q(3);
   q << 2, -35, -47;
   const double r = 5;
@@ -174,9 +168,7 @@ TEST(QPSolver, TightBounds) {
 
 TEST(QPSolver, InvalidBounds) {
   Eigen::MatrixXd P(3, 3);
-  P << 5, -2, -1,
-    -2, 4, 3,
-    -1, 3, 5;
+  P << 5, -2, -1, -2, 4, 3, -1, 3, 5;
   Eigen::VectorXd q(3);
   q << 2, -35, -47;
   const double r = 5;

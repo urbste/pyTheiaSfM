@@ -54,12 +54,11 @@ struct Plane {
 // scale of the 3D points is known a priori, LMed is the recommended RANSAC
 // method for this function. This is because the point-to-plane distance error
 // threshold is dependent on the scale of the 3D points.
-bool EstimateDominantPlaneFromPoints(
-    const RansacParameters& ransac_params,
-    const RansacType& ransac_type,
-    const std::vector<Eigen::Vector3d>& points,
-    Plane* plane,
-    RansacSummary* ransac_summary);
+bool EstimateDominantPlaneFromPoints(const RansacParameters& ransac_params,
+                                     const RansacType& ransac_type,
+                                     const std::vector<Eigen::Vector3d>& points,
+                                     Plane* plane,
+                                     RansacSummary* ransac_summary);
 
 }  // namespace theia
 

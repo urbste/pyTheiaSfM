@@ -62,7 +62,6 @@ TEST(ReservoirSampler, Sanity) {
   std::set<int> sorted_samples(samples.begin(), samples.end());
   LOG(INFO) << "Num unique reservoir samples: " << sorted_samples.size();
   LOG(INFO) << "Num unique random samples: " << rand_samples.size();
-
 }
 
 }  // namespace theia

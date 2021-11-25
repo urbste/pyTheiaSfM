@@ -75,10 +75,9 @@ bool TriangulateDLT(const Matrix3x4d& pose1,
 // Computes n-view triangulation by computing the SVD that wil approximately
 // minimize reprojection error. The inputs are the projection matrices and the
 // image observations. Returns true on success and false on failure.
-bool TriangulateNViewSVD(
-    const std::vector<Matrix3x4d>& poses,
-    const std::vector<Eigen::Vector2d>& points,
-    Eigen::Vector4d* triangulated_point);
+bool TriangulateNViewSVD(const std::vector<Matrix3x4d>& poses,
+                         const std::vector<Eigen::Vector2d>& points,
+                         Eigen::Vector4d* triangulated_point);
 
 // Computes n-view triangulation by an efficient L2 minimization of the
 // algebraic error. This minimization is independent of the number of points, so

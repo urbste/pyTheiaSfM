@@ -33,13 +33,14 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 #include <string>
 
-DEFINE_string(image_directory, "",
+DEFINE_string(image_directory,
+              "",
               "Full path to the directory containing the images used to create "
               "the reconstructions. Must contain a trailing slash.");
 DEFINE_string(input_reconstruction_file, "", "Input reconstruction file.");
@@ -55,9 +56,8 @@ int main(int argc, char* argv[]) {
   CHECK(theia::ReadReconstruction(FLAGS_input_reconstruction_file,
                                   &reconstruction));
 
-  theia::ColorizeReconstruction(FLAGS_image_directory,
-                                FLAGS_num_threads,
-                                &reconstruction);
+  theia::ColorizeReconstruction(
+      FLAGS_image_directory, FLAGS_num_threads, &reconstruction);
 
   CHECK(theia::WriteReconstruction(reconstruction,
                                    FLAGS_output_reconstruction_file));

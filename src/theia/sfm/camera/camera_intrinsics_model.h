@@ -35,12 +35,12 @@
 #ifndef THEIA_SFM_CAMERA_CAMERA_INTRINSICS_MODEL_H_
 #define THEIA_SFM_CAMERA_CAMERA_INTRINSICS_MODEL_H_
 
+#include <Eigen/Core>
 #include <cereal/access.hpp>
 #include <cereal/cereal.hpp>
 #include <cereal/types/vector.hpp>
-#include <stdint.h>
-#include <Eigen/Core>
 #include <memory>
+#include <stdint.h>
 #include <vector>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"

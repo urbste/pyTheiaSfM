@@ -42,7 +42,7 @@ namespace theia {
 // A parameterization for Ceres that keeps a 3-dimensional vector as a unit-norm
 // vector throughout optimization.
 struct UnitNormThreeVectorParameterization {
-  template<typename T>
+  template <typename T>
   bool operator()(const T* x, const T* delta, T* x_plus_delta) const {
     x_plus_delta[0] = x[0] + delta[0];
     x_plus_delta[1] = x[1] + delta[1];

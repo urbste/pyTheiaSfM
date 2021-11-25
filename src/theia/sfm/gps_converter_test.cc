@@ -32,9 +32,9 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <glog/logging.h>
-#include "gtest/gtest.h"
 
 #include "theia/sfm/gps_converter.h"
 #include "theia/util/random.h"
@@ -44,9 +44,8 @@ namespace theia {
 TEST(GPSConverter, ECEFToLLA) {
   static const double kTolerance = 1e-8;
   const Eigen::Vector3d taj_mahal_lla(27.173891, 78.042068, 168.0);
-  const Eigen::Vector3d ecef(1176498.769459714,
-                             5555043.905503586,
-                             2895446.8901510699);
+  const Eigen::Vector3d ecef(
+      1176498.769459714, 5555043.905503586, 2895446.8901510699);
   const Eigen::Vector3d lla = GPSConverter::ECEFToLLA(ecef);
   EXPECT_NEAR(taj_mahal_lla[0], lla[0], kTolerance);
   EXPECT_NEAR(taj_mahal_lla[1], lla[1], kTolerance);
@@ -56,9 +55,8 @@ TEST(GPSConverter, ECEFToLLA) {
 TEST(GPSConverter, LLAToECEF) {
   static const double kTolerance = 1e-8;
   const Eigen::Vector3d taj_mahal_lla(27.173891, 78.042068, 168.0);
-  const Eigen::Vector3d gt_ecef(1176498.769459714,
-                                5555043.905503586,
-                                2895446.8901510699);
+  const Eigen::Vector3d gt_ecef(
+      1176498.769459714, 5555043.905503586, 2895446.8901510699);
   const Eigen::Vector3d ecef = GPSConverter::LLAToECEF(taj_mahal_lla);
   EXPECT_NEAR(gt_ecef[0], ecef[0], kTolerance);
   EXPECT_NEAR(gt_ecef[1], ecef[1], kTolerance);

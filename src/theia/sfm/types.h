@@ -39,9 +39,9 @@
 #include <cstdint>
 #include <limits>
 #include <stdint.h>
-#include <utility>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 
 namespace theia {
 
@@ -61,9 +61,11 @@ typedef Eigen::Matrix<double, 3, 4> Matrix3x4d;
 
 template <typename K, typename V>
 using aligned_unordered_map =
-    std::unordered_map<K, V, std::hash<K>, std::equal_to<K>,
+    std::unordered_map<K,
+                       V,
+                       std::hash<K>,
+                       std::equal_to<K>,
                        Eigen::aligned_allocator<std::pair<K const, V>>>;
-
 
 }  // namespace theia
 

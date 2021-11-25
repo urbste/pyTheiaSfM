@@ -155,9 +155,9 @@ void ConstrainedL1Solver::Solve(Eigen::VectorXd* solution) {
     const double max_norm = std::max({a_times_x.norm(), z.norm(), rhs_norm});
     const double primal_eps =
         primal_abs_tolerance_eps + options_.relative_tolerance * max_norm;
-    const double dual_eps = dual_abs_tolerance_eps +
-                            options_.relative_tolerance *
-                                (options_.rho * A_.transpose() * u).norm();
+    const double dual_eps =
+        dual_abs_tolerance_eps + options_.relative_tolerance *
+                                     (options_.rho * A_.transpose() * u).norm();
 
     // Log the result to the screen.
     VLOG(2) << theia::StringPrintf(

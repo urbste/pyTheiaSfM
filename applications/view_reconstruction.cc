@@ -33,10 +33,10 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
-#include <theia/theia.h>
+#include <glog/logging.h>
 #include <string>
+#include <theia/theia.h>
 #include <vector>
 
 #ifdef __APPLE__
@@ -46,11 +46,11 @@
 #else  // FREEGLUT
 #include <GLUT/glut.h>
 #endif  // FREEGLUT
-#else  // __APPLE__
+#else   // __APPLE__
 #ifdef _WIN32
-#include <windows.h>
 #include <GL/glew.h>
 #include <GL/glut.h>
+#include <windows.h>
 #else  // _WIN32
 #define GL_GLEXT_PROTOTYPES 1
 #include <GL/gl.h>
@@ -205,7 +205,7 @@ void DrawPoints(const float point_scale,
 
   // TODO(cmsweeney): Render points with the actual 3D point color! This would
   // require Theia to save the colors during feature extraction.
-  //const Eigen::Vector3f default_color(0.05, 0.05, 0.05);
+  // const Eigen::Vector3f default_color(0.05, 0.05, 0.05);
 
   // Enable anti-aliasing for round points and alpha blending that helps make
   // points look nicer.
@@ -222,7 +222,6 @@ void DrawPoints(const float point_scale,
   point_size_coords[1] = 0.055f;
   point_size_coords[2] = 0.0f;
   glPointParameterfv(GL_POINT_DISTANCE_ATTENUATION, point_size_coords);
-
 
   glPointSize(point_scale * default_point_size);
   glBegin(GL_POINTS);
@@ -460,8 +459,7 @@ int main(int argc, char* argv[]) {
 
 #ifdef _WIN32
   // Set up glew.
-  CHECK_EQ(GLEW_OK, glewInit())
-      << "Failed initializing GLEW.";
+  CHECK_EQ(GLEW_OK, glewInit()) << "Failed initializing GLEW.";
 #endif
 
   // Set the camera

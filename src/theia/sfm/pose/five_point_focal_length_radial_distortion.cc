@@ -42,8 +42,8 @@
 #include "theia/math/polynomial.h"
 
 namespace theia {
-using Eigen::Matrix;
 using Eigen::Map;
+using Eigen::Matrix;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
@@ -56,7 +56,8 @@ namespace {
 // matrix. See Eq 10, 11 in the paper for details. This has been precomputed
 // with matlab for optimal runtime.
 void SetupAndSolveSylvesterMatrix(const Matrix<double, 8, 3>& n,
-                                  double* y1_soln, double* y2_soln) {
+                                  double* y1_soln,
+                                  double* y2_soln) {
   static const double kTolerance = 1e-12;
 
   // The Sylvester matrix will help us solve for one of the two unknown
@@ -191,8 +192,8 @@ bool FivePointFocalLengthRadialDistortion(
   // Set up 5x8 constraint from row3 of the projection constraint in Eq 7.
   Matrix<double, 5, 8> row3_constraint;
   for (int i = 0; i < 5; i++) {
-    row3_constraint.row(i)
-        << -feature_vectors[i].y() * world_points[i].homogeneous().transpose(),
+    row3_constraint.row(i) << -feature_vectors[i].y() *
+                                  world_points[i].homogeneous().transpose(),
         feature_vectors[i].x() * world_points[i].homogeneous().transpose();
   }
 
@@ -212,8 +213,7 @@ bool FivePointFocalLengthRadialDistortion(
     // projection matrix (up to scale). Set those rows here.
     Matrix<double, 3, 4, Eigen::RowMajor> candidate_proj =
         Matrix<double, 3, 4, Eigen::RowMajor>::Zero();
-    Map<Matrix<double, 8, 1> > candidate_proj_map(
-        candidate_proj.data());
+    Map<Matrix<double, 8, 1> > candidate_proj_map(candidate_proj.data());
     candidate_proj_map =
         projrow12_basis * Vector3d(y1_solution[i], y2_solution[i], 1.0);
 
@@ -223,9 +223,11 @@ bool FivePointFocalLengthRadialDistortion(
                                candidate_proj(0, 1) * candidate_proj(1, 0);
     candidate_proj.block<1, 3>(2, 0)
         << (candidate_proj(0, 1) * candidate_proj(1, 2) -
-            candidate_proj(0, 2) * candidate_proj(1, 1)) / denominator,
+            candidate_proj(0, 2) * candidate_proj(1, 1)) /
+               denominator,
         -(candidate_proj(0, 0) * candidate_proj(1, 2) -
-          candidate_proj(0, 2) * candidate_proj(1, 0)) / denominator,
+          candidate_proj(0, 2) * candidate_proj(1, 0)) /
+            denominator,
         1.0;
 
     // Set up constraints from Eq 6, 12, and 13. This equation is set up as an
@@ -265,7 +267,7 @@ bool FivePointFocalLengthRadialDistortion(
     // Solve our Ax = b equation to yield k1, w, p34.
     if (num_radial_distortion_params == 3) {
       const Matrix<double, 5, 1> unknowns_soln =
-        row12_constraint.colPivHouseholderQr().solve(row12_constraint_soln);
+          row12_constraint.colPivHouseholderQr().solve(row12_constraint_soln);
       delta = unknowns_soln(0);
       p34 = unknowns_soln(1);
       // Set output distortion params.
@@ -273,16 +275,18 @@ bool FivePointFocalLengthRadialDistortion(
       rad_dist_soln.push_back(unknowns_soln[3]);
       rad_dist_soln.push_back(unknowns_soln[4]);
     } else if (num_radial_distortion_params == 2) {
-      const Vector4d unknowns_soln = row12_constraint.leftCols<4>()
-          .colPivHouseholderQr().solve(row12_constraint_soln);
+      const Vector4d unknowns_soln =
+          row12_constraint.leftCols<4>().colPivHouseholderQr().solve(
+              row12_constraint_soln);
       delta = unknowns_soln(0);
       p34 = unknowns_soln(1);
       // Set output distortion params.
       rad_dist_soln.push_back(unknowns_soln[2]);
       rad_dist_soln.push_back(unknowns_soln[3]);
     } else {
-      const Vector3d unknowns_soln = row12_constraint.leftCols<3>()
-          .colPivHouseholderQr().solve(row12_constraint_soln);
+      const Vector3d unknowns_soln =
+          row12_constraint.leftCols<3>().colPivHouseholderQr().solve(
+              row12_constraint_soln);
       delta = unknowns_soln(0);
       p34 = unknowns_soln(1);
       // Set output distortion params.

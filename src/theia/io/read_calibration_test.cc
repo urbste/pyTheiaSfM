@@ -32,13 +32,13 @@
 // Please contact the author of this library if you have any questions.
 // Author: Victor Fragoso (victor.fragoso@mail.wvu.edu)
 
+#include <glog/logging.h>
 #include <string>
 #include <unordered_map>
-#include <glog/logging.h>
 
-#include "gtest/gtest.h"
-#include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/io/read_calibration.h"
+#include "theia/sfm/camera_intrinsics_prior.h"
+#include "gtest/gtest.h"
 
 DEFINE_string(json_file, "io/calibration_test.json", "JSON testing file.");
 
@@ -102,8 +102,8 @@ static const char* kCameraIntrinsicsPriorsJson =
 TEST(ReadCalibrationTest, ParseIntrinsicPriorsFromJsonStr) {
   VLOG(3) << "Input JSON: \n" << kCameraIntrinsicsPriorsJson;
   std::unordered_map<std::string, CameraIntrinsicsPrior> view_to_prior;
-  EXPECT_TRUE(ExtractCameraIntrinsicPriorsFromJson(
-      kCameraIntrinsicsPriorsJson, &view_to_prior));
+  EXPECT_TRUE(ExtractCameraIntrinsicPriorsFromJson(kCameraIntrinsicsPriorsJson,
+                                                   &view_to_prior));
   // Check first camera.
   EXPECT_TRUE(view_to_prior.find("view_1.jpg") != view_to_prior.end());
   const CameraIntrinsicsPrior prior1 = view_to_prior["view_1.jpg"];

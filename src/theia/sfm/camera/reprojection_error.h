@@ -43,13 +43,16 @@
 
 namespace theia {
 
-template <class CameraModel> struct ReprojectionError {
-public:
-  explicit ReprojectionError(const Feature &feature) : feature_(feature) {}
+template <class CameraModel>
+struct ReprojectionError {
+ public:
+  explicit ReprojectionError(const Feature& feature) : feature_(feature) {}
 
   template <typename T>
-  bool operator()(const T *extrinsic_parameters, const T *intrinsic_parameters,
-                  const T *point, T *reprojection_error) const {
+  bool operator()(const T* extrinsic_parameters,
+                  const T* intrinsic_parameters,
+                  const T* point,
+                  T* reprojection_error) const {
     typedef Eigen::Matrix<T, 3, 1> Matrix3T;
     typedef Eigen::Map<const Matrix3T> ConstMap3T;
 
@@ -76,7 +79,8 @@ public:
     // Rotate the point to obtain the point in the camera coordinate system.
     T rotated_point[3];
     ceres::AngleAxisRotatePoint(extrinsic_parameters + Camera::ORIENTATION,
-                                adjusted_point.data(), rotated_point);
+                                adjusted_point.data(),
+                                rotated_point);
 
     // Apply the camera intrinsics to get the reprojected pixel.
     T reprojection[2];
@@ -86,8 +90,10 @@ public:
     // if (res) {
     // TODO FULL COVARIANCE WEIGHTING? -> Although most of the time the off
     // diagonal of image point covs are zero
-    const T sqrt_information_x = T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-    const T sqrt_information_y = T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
+    const T sqrt_information_x =
+        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
+    const T sqrt_information_y =
+        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
     reprojection_error[0] =
         sqrt_information_x * (reprojection[0] - feature_.point_.x());
     reprojection_error[1] =
@@ -100,10 +106,10 @@ public:
     return res;
   }
 
-private:
+ private:
   const Feature feature_;
 };
 
-} // namespace theia
+}  // namespace theia
 
-#endif // THEIA_SFM_CAMERA_REPROJECTION_ERROR_H_
+#endif  // THEIA_SFM_CAMERA_REPROJECTION_ERROR_H_

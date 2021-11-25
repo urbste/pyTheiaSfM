@@ -68,10 +68,10 @@ const int kNumMinCorrespondences = 4;
 struct InputDatum {
   InputDatum(const std::vector<Eigen::Vector3d>& _ray_origins,
              const std::vector<Eigen::Vector3d>& _ray_directions,
-             const std::vector<Eigen::Vector3d>& _world_points) :
-      ray_origins(_ray_origins),
-      ray_directions(_ray_directions),
-      world_points(_world_points) {}
+             const std::vector<Eigen::Vector3d>& _world_points)
+      : ray_origins(_ray_origins),
+        ray_directions(_ray_directions),
+        world_points(_world_points) {}
   ~InputDatum() = default;
 
   const std::vector<Eigen::Vector3d>& ray_origins;
@@ -149,8 +149,8 @@ inline std::vector<Eigen::Matrix3d> ComputeHelperMatrices(
   CHECK_NOTNULL(g_matrix)->setZero();
   CHECK_NOTNULL(j_matrix)->setZero();
   const Eigen::Matrix3d identity = Eigen::Matrix3d::Identity();
-  std::vector<Eigen::Matrix3d> v_matrices(
-      world_points.size(), Eigen::Matrix3d::Zero());
+  std::vector<Eigen::Matrix3d> v_matrices(world_points.size(),
+                                          Eigen::Matrix3d::Zero());
   for (int i = 0; i < ray_origins.size(); ++i) {
     const Eigen::Matrix3d& outer_product = outer_products[i];
     // Computation following Eq. (5).
@@ -169,12 +169,11 @@ inline std::vector<Eigen::Matrix3d> ComputeHelperMatrices(
 // quadratic_penalty_matrix = \sum A_i^T * A_i,
 // linear_penalty_vector = \sum A_i^T * b_i ,
 // gamma = \sum b_i^T * b_i.
-void ComputeCostParameters(
-    const InputDatum& input_datum,
-    const std::vector<Eigen::Matrix3d>& outer_products,
-    const Matrix3x10d& g_matrix,
-    const Eigen::Vector3d& j_matrix,
-    Upnp::CostParameters* cost_params) {
+void ComputeCostParameters(const InputDatum& input_datum,
+                           const std::vector<Eigen::Matrix3d>& outer_products,
+                           const Matrix3x10d& g_matrix,
+                           const Eigen::Vector3d& j_matrix,
+                           Upnp::CostParameters* cost_params) {
   const Eigen::Matrix3d identity = Eigen::Matrix3d::Identity();
   const std::vector<Eigen::Vector3d>& world_points = input_datum.world_points;
   const std::vector<Eigen::Vector3d>& ray_origins = input_datum.ray_origins;
@@ -227,9 +226,8 @@ Eigen::Vector3d ComputeTranslation(
     const std::vector<Eigen::Matrix3d>& v_matrices) {
   Eigen::Vector3d translation = Eigen::Vector3d::Zero();
   for (int i = 0; i < input_datum.world_points.size(); ++i) {
-    translation +=
-        v_matrices[i] *
-        (rotation * input_datum.world_points[i] - input_datum.ray_origins[i]);
+    translation += v_matrices[i] * (rotation * input_datum.world_points[i] -
+                                    input_datum.ray_origins[i]);
   }
   return translation;
 }
@@ -262,11 +260,12 @@ std::vector<double> ComputeCostsAndRankSolutions(
 
   // 2. Sort the costs such that the best rotation (i.e., lowest error) is the
   // first solution.
-  std::sort(indexes_and_costs.begin(), indexes_and_costs.end(),
-            [](const std::pair<int, double>& lhs,
-               const std::pair<int, double>& rhs) {
-              return lhs.second < rhs.second;
-            });
+  std::sort(
+      indexes_and_costs.begin(),
+      indexes_and_costs.end(),
+      [](const std::pair<int, double>& lhs, const std::pair<int, double>& rhs) {
+        return lhs.second < rhs.second;
+      });
 
   // 3. Rank the solutions.
   std::vector<Eigen::Quaterniond> ranked_rotations(costs.size());
@@ -280,7 +279,7 @@ std::vector<double> ComputeCostsAndRankSolutions(
 
   *solution_rotations = std::move(ranked_rotations);
   *solution_translations = std::move(ranked_translations);
-  
+
   return costs;
 }
 
@@ -315,9 +314,8 @@ void DiscardBadSolutions(const InputDatum& input_datum,
 
       // Find the rotation that puts the image ray at [0, 0, 1] i.e. looking
       // straightforward from the camera.
-      const Eigen::Quaterniond unrot =
-          Eigen::Quaterniond::FromTwoVectors(ray_directions[j],
-                                             Eigen::Vector3d::UnitZ());
+      const Eigen::Quaterniond unrot = Eigen::Quaterniond::FromTwoVectors(
+          ray_directions[j], Eigen::Vector3d::UnitZ());
 
       // Rotate the transformed point and check if the z coordinate is
       // negative. This will indicate if the point is projected behind the
@@ -371,8 +369,8 @@ std::vector<Eigen::Quaterniond> RemoveDuplicateRotations(
 
 }  // namespace
 
-inline std::vector<Eigen::Quaterniond>
-Upnp::ComputeRotations(const int num_correspondences) {
+inline std::vector<Eigen::Quaterniond> Upnp::ComputeRotations(
+    const int num_correspondences) {
   // Build the action matrix.
   std::vector<Eigen::Quaterniond> candidate_rotations;
   if (use_minimal_template_ && num_correspondences <= kNumMinCorrespondences) {
@@ -387,10 +385,11 @@ double Upnp::EvaluateCost(const Upnp::CostParameters& parameters,
                           const Eigen::Quaterniond& rotation) {
   // Compute the quaternion vector.
   const Vector10d rotation_vector = ComputeRotationVector(rotation);
-  return (rotation_vector.transpose() *
-          parameters.quadratic_penalty_mat * rotation_vector +
-          2.0 * parameters.linear_penalty_vector.transpose() *
-          rotation_vector)(0, 0) + parameters.gamma;
+  return (rotation_vector.transpose() * parameters.quadratic_penalty_mat *
+              rotation_vector +
+          2.0 * parameters.linear_penalty_vector.transpose() * rotation_vector)(
+             0, 0) +
+         parameters.gamma;
 }
 
 double Upnp::ComputeResidual(const Eigen::Vector3d& ray_origin,
@@ -398,15 +397,15 @@ double Upnp::ComputeResidual(const Eigen::Vector3d& ray_origin,
                              const Eigen::Vector3d& world_point,
                              const Eigen::Quaterniond& rotation,
                              const Eigen::Vector3d& translation) {
-  const Eigen::Quaterniond unrot =
-      Eigen::Quaterniond::FromTwoVectors(ray_direction,
-                                         Eigen::Vector3d::UnitZ());
+  const Eigen::Quaterniond unrot = Eigen::Quaterniond::FromTwoVectors(
+      ray_direction, Eigen::Vector3d::UnitZ());
   const Eigen::Vector3d reprojected_point =
       rotation * world_point + translation - ray_origin;
   const Eigen::Vector3d unrot_reprojected_point = unrot * reprojected_point;
   const Eigen::Vector3d unrot_ray_direction = unrot * ray_direction;
   return (unrot_reprojected_point.hnormalized() -
-          unrot_ray_direction.hnormalized()).norm();
+          unrot_ray_direction.hnormalized())
+      .norm();
 }
 
 std::vector<Eigen::Matrix3d> Upnp::ComputeCostParameters(
@@ -422,31 +421,23 @@ std::vector<Eigen::Matrix3d> Upnp::ComputeCostParameters(
   // 2. Compute matrices J and G from page 132 or 6-th page in the paper.
   Matrix3x10d g_matrix;
   Eigen::Vector3d j_matrix;
-  const std::vector<Eigen::Matrix3d> v_matrices =
-      ComputeHelperMatrices(input_datum,
-                            outer_products,
-                            h_matrix,
-                            &g_matrix,
-                            &j_matrix);
+  const std::vector<Eigen::Matrix3d> v_matrices = ComputeHelperMatrices(
+      input_datum, outer_products, h_matrix, &g_matrix, &j_matrix);
 
   // 3. Compute matrix the block-matrix of matrix M from Eq. 17.
-  theia::ComputeCostParameters(input_datum,
-                               outer_products,
-                               g_matrix,
-                               j_matrix,
-                               &cost_params_);
+  theia::ComputeCostParameters(
+      input_datum, outer_products, g_matrix, j_matrix, &cost_params_);
 
   return v_matrices;
 }
 
-
 std::vector<Eigen::Quaterniond> Upnp::SolveForRotationsFromNonMinimalSample() {
   std::vector<Eigen::Quaterniond> rotations(kNumMaxRotationsExploitingSymmetry);
   // Build action matrix.
-  const Matrix8d action_matrix = BuildActionMatrixUsingSymmetry(
-      cost_params_.quadratic_penalty_mat,
-      cost_params_.linear_penalty_vector,
-      &non_minimal_sample_template_matrix_);
+  const Matrix8d action_matrix =
+      BuildActionMatrixUsingSymmetry(cost_params_.quadratic_penalty_mat,
+                                     cost_params_.linear_penalty_vector,
+                                     &non_minimal_sample_template_matrix_);
 
   const Eigen::EigenSolver<Matrix8d> eigen_solver(action_matrix);
   const Matrix8cd eigen_vectors = eigen_solver.eigenvectors();
@@ -458,7 +449,8 @@ std::vector<Eigen::Quaterniond> Upnp::SolveForRotationsFromNonMinimalSample() {
     rotations[i] = Eigen::Quaterniond(eigen_vectors(4, i).real(),
                                       eigen_vectors(5, i).real(),
                                       eigen_vectors(6, i).real(),
-                                      eigen_vectors(7, i).real()).normalized();
+                                      eigen_vectors(7, i).real())
+                       .normalized();
   }
 
   return rotations;
@@ -488,10 +480,10 @@ std::vector<Eigen::Quaterniond> Upnp::SolveForRotationsFromMinimalSample() {
       quaternion *= -1.0;
     }
 
-    rotations[i] = Eigen::Quaterniond(quaternion[0],
-                                      quaternion[1],
-                                      quaternion[2],
-                                      quaternion[3]).normalized();
+    rotations[i] =
+        Eigen::Quaterniond(
+            quaternion[0], quaternion[1], quaternion[2], quaternion[3])
+            .normalized();
   }
 
   return rotations;
@@ -524,9 +516,8 @@ bool Upnp::EstimatePose(const std::vector<Eigen::Vector3d>& ray_origins,
   DiscardBadSolutions(input_datum, solution_rotations, solution_translations);
 
   if (solution_costs) {
-    *solution_costs = ComputeCostsAndRankSolutions(cost_params_,
-                                                   solution_rotations,
-                                                   solution_translations);
+    *solution_costs = ComputeCostsAndRankSolutions(
+        cost_params_, solution_rotations, solution_translations);
   }
 
   return !solution_rotations->empty();
@@ -561,9 +552,11 @@ Upnp::CostParameters Upnp(const std::vector<Eigen::Vector2d>& normalized_pixels,
     ray_origins[i].setZero();
   }
 
-  return Upnp(ray_origins, ray_directions, world_points,
-              solution_rotations, solution_translations);
+  return Upnp(ray_origins,
+              ray_directions,
+              world_points,
+              solution_rotations,
+              solution_translations);
 }
 
 }  // namespace theia
-

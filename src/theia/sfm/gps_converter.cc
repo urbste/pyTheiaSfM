@@ -34,8 +34,8 @@
 
 #include <glog/logging.h>
 
-#include "theia/sfm/gps_converter.h"
 #include "theia/math/util.h"
+#include "theia/sfm/gps_converter.h"
 
 namespace theia {
 namespace {

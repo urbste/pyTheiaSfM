@@ -42,12 +42,12 @@
 #include "gtest/gtest.h"
 
 #include "theia/math/util.h"
-#include "theia/solvers/sample_consensus_estimator.h"
-#include "theia/test/test_utils.h"
 #include "theia/sfm/estimators/estimate_calibrated_absolute_pose.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/pose/util.h"
+#include "theia/solvers/sample_consensus_estimator.h"
+#include "theia/test/test_utils.h"
 #include "theia/util/random.h"
 
 namespace theia {
@@ -93,31 +93,25 @@ void ExecuteRandomTest(const RansacParameters& options,
 
   if (noise) {
     for (int i = 0; i < kNumPoints; i++) {
-      AddNoiseToProjection(noise / kFocalLength, &rng, &correspondences[i].feature);
+      AddNoiseToProjection(
+          noise / kFocalLength, &rng, &correspondences[i].feature);
     }
   }
 
   // Estimate the absolute pose.
   CalibratedAbsolutePose pose;
   RansacSummary ransac_summary;
-  EXPECT_TRUE(EstimateCalibratedAbsolutePose(options,
-                                             RansacType::RANSAC,
-                                             correspondences,
-                                             &pose,
-                                             &ransac_summary));
+  EXPECT_TRUE(EstimateCalibratedAbsolutePose(
+      options, RansacType::RANSAC, correspondences, &pose, &ransac_summary));
 
   // Expect that the inlier ratio is close to the ground truth.
   EXPECT_GT(static_cast<double>(ransac_summary.inliers.size()), 3);
 
   // Expect poses are near.
-  EXPECT_TRUE(test::ArraysEqualUpToScale(9,
-                                         rotation.data(),
-                                         pose.rotation.data(),
-                                         tolerance));
-  EXPECT_TRUE(test::ArraysEqualUpToScale(3,
-                                         position.data(),
-                                         pose.position.data(),
-                                         tolerance));
+  EXPECT_TRUE(test::ArraysEqualUpToScale(
+      9, rotation.data(), pose.rotation.data(), tolerance));
+  EXPECT_TRUE(test::ArraysEqualUpToScale(
+      3, position.data(), pose.position.data(), tolerance));
 }
 
 TEST(EstimateCalibratedAbsolutePose, AllInliersNoNoise) {
@@ -131,13 +125,12 @@ TEST(EstimateCalibratedAbsolutePose, AllInliersNoNoise) {
   const double kPoseTolerance = 1e-4;
 
   const std::vector<Matrix3d> rotations = {
-    Matrix3d::Identity(),
-    AngleAxisd(DegToRad(12.0), Vector3d::UnitY()).toRotationMatrix(),
-    AngleAxisd(DegToRad(-9.0), Vector3d(1.0, 0.2, -0.8).normalized())
-        .toRotationMatrix()
-  };
-  const std::vector<Vector3d> positions = { Vector3d(-1.3, 0, 0),
-                                            Vector3d(0, 0, 0.5) };
+      Matrix3d::Identity(),
+      AngleAxisd(DegToRad(12.0), Vector3d::UnitY()).toRotationMatrix(),
+      AngleAxisd(DegToRad(-9.0), Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix()};
+  const std::vector<Vector3d> positions = {Vector3d(-1.3, 0, 0),
+                                           Vector3d(0, 0, 0.5)};
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
       ExecuteRandomTest(options,
@@ -161,13 +154,12 @@ TEST(EstimateCalibratedAbsolutePose, AllInliersWithNoise) {
   const double kPoseTolerance = 1e-2;
 
   const std::vector<Matrix3d> rotations = {
-    Matrix3d::Identity(),
-    AngleAxisd(DegToRad(12.0), Vector3d::UnitY()).toRotationMatrix(),
-    AngleAxisd(DegToRad(-9.0), Vector3d(1.0, 0.2, -0.8).normalized())
-        .toRotationMatrix()
-  };
-  const std::vector<Vector3d> positions = { Vector3d(-1.3, 0, 0),
-                                            Vector3d(0, 0, 0.5) };
+      Matrix3d::Identity(),
+      AngleAxisd(DegToRad(12.0), Vector3d::UnitY()).toRotationMatrix(),
+      AngleAxisd(DegToRad(-9.0), Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix()};
+  const std::vector<Vector3d> positions = {Vector3d(-1.3, 0, 0),
+                                           Vector3d(0, 0, 0.5)};
 
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
@@ -193,8 +185,8 @@ TEST(EstimateCalibratedAbsolutePose, OutliersNoNoise) {
 
   const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
                                            RandomRotation(10.0, &rng)};
-  const std::vector<Vector3d> positions = { Vector3d(1, 0, 0),
-                                            Vector3d(0, 1, 0) };
+  const std::vector<Vector3d> positions = {Vector3d(1, 0, 0),
+                                           Vector3d(0, 1, 0)};
 
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {

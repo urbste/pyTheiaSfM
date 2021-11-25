@@ -34,14 +34,14 @@
 
 #include "theia/io/read_keypoints_and_descriptors.h"
 
+#include <Eigen/Core>
 #include <cereal/archives/portable_binary.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
-#include <Eigen/Core>
 
-#include <glog/logging.h>
 #include <cstdlib>
-#include <fstream>   // NOLINT
+#include <fstream>  // NOLINT
+#include <glog/logging.h>
 #include <iostream>  // NOLINT
 #include <string>
 #include <vector>

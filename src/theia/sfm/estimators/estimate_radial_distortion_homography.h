@@ -67,7 +67,7 @@ struct RadialDistortionFeatureCorrespondence {
 
   double min_radial_distortion = -5.0;
   double max_radial_distortion = 0.0;
-EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 // Estimates the homography matrix from feature correspondences
@@ -75,10 +75,12 @@ EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 // Apart from the homography it also returns a distortion estimation for both
 // cameras
 bool EstimateRadialHomographyMatrix(
-    const RansacParameters& ransac_params, const RansacType& ransac_type,
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
     const std::vector<RadialDistortionFeatureCorrespondence>&
         normalized_correspondences,
-    RadialHomographyResult* result, RansacSummary* ransac_summary);
+    RadialHomographyResult* result,
+    RansacSummary* ransac_summary);
 
 }  // namespace theia
 

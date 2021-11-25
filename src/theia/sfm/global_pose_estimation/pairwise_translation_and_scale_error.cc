@@ -53,9 +53,10 @@ ceres::CostFunction* PairwiseTranslationAndScaleError::Create(
     const Eigen::Vector3d& orientation1,
     const Eigen::Vector3d& relative_translation) {
   return (
-      new ceres::AutoDiffCostFunction<PairwiseTranslationAndScaleError, 3, 3, 3,
-                                      1>(new PairwiseTranslationAndScaleError(
-          orientation1, relative_translation)));
+      new ceres::
+          AutoDiffCostFunction<PairwiseTranslationAndScaleError, 3, 3, 3, 1>(
+              new PairwiseTranslationAndScaleError(orientation1,
+                                                   relative_translation)));
 }
 
 }  // namespace theia

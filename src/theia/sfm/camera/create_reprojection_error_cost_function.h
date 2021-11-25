@@ -36,9 +36,9 @@
 #define THEIA_SFM_CAMERA_CREATE_REPROJECTION_ERROR_COST_FUNCTION_H_
 
 #include "theia/sfm/camera/camera_intrinsics_model.h"
-#include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/sfm/camera/division_undistortion_camera_model.h"
 #include "theia/sfm/camera/double_sphere_camera_model.h"
+#include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/sfm/camera/fisheye_camera_model.h"
 #include "theia/sfm/camera/fov_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
@@ -60,50 +60,63 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
   switch (camera_model_type) {
     case CameraIntrinsicsModelType::PINHOLE:
       return new ceres::AutoDiffCostFunction<
-          ReprojectionError<PinholeCameraModel>, kResidualSize,
-          Camera::kExtrinsicsSize, PinholeCameraModel::kIntrinsicsSize,
+          ReprojectionError<PinholeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize,
+          PinholeCameraModel::kIntrinsicsSize,
           kPointSize>(new ReprojectionError<PinholeCameraModel>(feature));
       break;
     case CameraIntrinsicsModelType::PINHOLE_RADIAL_TANGENTIAL:
       return new ceres::AutoDiffCostFunction<
-          ReprojectionError<PinholeRadialTangentialCameraModel>, kResidualSize,
+          ReprojectionError<PinholeRadialTangentialCameraModel>,
+          kResidualSize,
           Camera::kExtrinsicsSize,
-          PinholeRadialTangentialCameraModel::kIntrinsicsSize, kPointSize>(
+          PinholeRadialTangentialCameraModel::kIntrinsicsSize,
+          kPointSize>(
           new ReprojectionError<PinholeRadialTangentialCameraModel>(feature));
       break;
     case CameraIntrinsicsModelType::FISHEYE:
       return new ceres::AutoDiffCostFunction<
-          ReprojectionError<FisheyeCameraModel>, kResidualSize,
-          Camera::kExtrinsicsSize, FisheyeCameraModel::kIntrinsicsSize,
+          ReprojectionError<FisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize,
+          FisheyeCameraModel::kIntrinsicsSize,
           kPointSize>(new ReprojectionError<FisheyeCameraModel>(feature));
       break;
     case CameraIntrinsicsModelType::FOV:
-      return new ceres::AutoDiffCostFunction<
-          ReprojectionError<FOVCameraModel>, kResidualSize,
-          Camera::kExtrinsicsSize, FOVCameraModel::kIntrinsicsSize,
-          kPointSize>(new ReprojectionError<FOVCameraModel>(feature));
+      return new ceres::AutoDiffCostFunction<ReprojectionError<FOVCameraModel>,
+                                             kResidualSize,
+                                             Camera::kExtrinsicsSize,
+                                             FOVCameraModel::kIntrinsicsSize,
+                                             kPointSize>(
+          new ReprojectionError<FOVCameraModel>(feature));
       break;
     case CameraIntrinsicsModelType::DIVISION_UNDISTORTION:
       return new ceres::AutoDiffCostFunction<
-          ReprojectionError<DivisionUndistortionCameraModel>, kResidualSize,
+          ReprojectionError<DivisionUndistortionCameraModel>,
+          kResidualSize,
           Camera::kExtrinsicsSize,
-          DivisionUndistortionCameraModel::kIntrinsicsSize, kPointSize>(
+          DivisionUndistortionCameraModel::kIntrinsicsSize,
+          kPointSize>(
           new ReprojectionError<DivisionUndistortionCameraModel>(feature));
       break;
-  case CameraIntrinsicsModelType::DOUBLE_SPHERE:
-    return new ceres::AutoDiffCostFunction<
-        ReprojectionError<DoubleSphereCameraModel>, kResidualSize,
-        Camera::kExtrinsicsSize,
-        DoubleSphereCameraModel::kIntrinsicsSize, kPointSize>(
-        new ReprojectionError<DoubleSphereCameraModel>(feature));
-    break;
-  case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
-    return new ceres::AutoDiffCostFunction<
-        ReprojectionError<ExtendedUnifiedCameraModel>, kResidualSize,
-        Camera::kExtrinsicsSize,
-        ExtendedUnifiedCameraModel::kIntrinsicsSize, kPointSize>(
-        new ReprojectionError<ExtendedUnifiedCameraModel>(feature));
-    break;
+    case CameraIntrinsicsModelType::DOUBLE_SPHERE:
+      return new ceres::AutoDiffCostFunction<
+          ReprojectionError<DoubleSphereCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize,
+          DoubleSphereCameraModel::kIntrinsicsSize,
+          kPointSize>(new ReprojectionError<DoubleSphereCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
+      return new ceres::AutoDiffCostFunction<
+          ReprojectionError<ExtendedUnifiedCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize,
+          ExtendedUnifiedCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new ReprojectionError<ExtendedUnifiedCameraModel>(feature));
+      break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "
                     "for a list of valid camera models.";

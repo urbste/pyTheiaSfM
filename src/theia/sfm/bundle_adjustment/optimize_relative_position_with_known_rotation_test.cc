@@ -32,19 +32,19 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/LU>
-#include <glog/logging.h>
 #include <algorithm>
+#include <ceres/rotation.h>
+#include <glog/logging.h>
 
-#include "gtest/gtest.h"
+#include "theia/matching/feature_correspondence.h"
 #include "theia/math/util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.h"
 #include "theia/sfm/camera/camera.h"
-#include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/pose/test_util.h"
+#include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -90,9 +90,11 @@ void TestOptimization(const Camera& camera1,
 
     // Undo the calibration.
     match.feature1.point_ =
-        camera1.PixelToNormalizedCoordinates(match.feature1.point_).hnormalized();
+        camera1.PixelToNormalizedCoordinates(match.feature1.point_)
+            .hnormalized();
     match.feature2.point_ =
-        camera2.PixelToNormalizedCoordinates(match.feature2.point_).hnormalized();
+        camera2.PixelToNormalizedCoordinates(match.feature2.point_)
+            .hnormalized();
     matches.emplace_back(match);
   }
 
@@ -143,8 +145,8 @@ TEST(OptimizeRelativePositionWithKnownRotationTest, NoNoise) {
   Camera camera1 = RandomCamera();
   Camera camera2 = RandomCamera();
   camera2.SetPosition(camera2.GetPosition().normalized());
-  TestOptimization(camera1, camera2, points, kPixelNoise, kTranslationNoise,
-                   kTolerance);
+  TestOptimization(
+      camera1, camera2, points, kPixelNoise, kTranslationNoise, kTolerance);
 }
 
 TEST(OptimizeRelativePositionWithKnownRotationTest, PixelNoise) {
@@ -166,10 +168,9 @@ TEST(OptimizeRelativePositionWithKnownRotationTest, PixelNoise) {
   Camera camera1 = RandomCamera();
   Camera camera2 = RandomCamera();
   camera2.SetPosition(camera2.GetPosition().normalized());
-  TestOptimization(camera1, camera2, points, kPixelNoise, kTranslationNoise,
-                   kTolerance);
+  TestOptimization(
+      camera1, camera2, points, kPixelNoise, kTranslationNoise, kTolerance);
 }
-
 
 TEST(OptimizeRelativePositionWithKnownRotationTest, TranslationNoise) {
   static const double kTolerance = 2.0;
@@ -190,10 +191,9 @@ TEST(OptimizeRelativePositionWithKnownRotationTest, TranslationNoise) {
   Camera camera1 = RandomCamera();
   Camera camera2 = RandomCamera();
   camera2.SetPosition(camera2.GetPosition().normalized());
-  TestOptimization(camera1, camera2, points, kPixelNoise, kTranslationNoise,
-                   kTolerance);
+  TestOptimization(
+      camera1, camera2, points, kPixelNoise, kTranslationNoise, kTolerance);
 }
-
 
 TEST(OptimizeRelativePositionWithKnownRotationTest, PixelAndTranslationNoise) {
   static const double kTolerance = 5.0;
@@ -214,8 +214,8 @@ TEST(OptimizeRelativePositionWithKnownRotationTest, PixelAndTranslationNoise) {
   Camera camera1 = RandomCamera();
   Camera camera2 = RandomCamera();
   camera2.SetPosition(camera2.GetPosition().normalized());
-  TestOptimization(camera1, camera2, points, kPixelNoise, kTranslationNoise,
-                   kTolerance);
+  TestOptimization(
+      camera1, camera2, points, kPixelNoise, kTranslationNoise, kTolerance);
 }
 
 }  // namespace theia

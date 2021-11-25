@@ -176,7 +176,7 @@ ReconstructionEstimatorSummary HybridReconstructionEstimator::Estimate(
   LOG(INFO) << "Attempting to initialize the camera translation estimation.";
   if (!ChooseInitialViewPair()) {
     LOG(ERROR) << "Could not find a suitable initial pair for starting "
-        "hybrid SfM!";
+                  "hybrid SfM!";
     summary_.success = false;
     return summary_;
   }
@@ -263,7 +263,6 @@ ReconstructionEstimatorSummary HybridReconstructionEstimator::Estimate(
         summary_.success = false;
         return summary_;
       }
-
     }
   }
 
@@ -300,10 +299,8 @@ bool HybridReconstructionEstimator::LocalizeView(const ViewId view_id) {
   // only the position failed.
   localization_options_.assume_known_orientation = false;
   RansacSummary unused_ransac_summary;
-  return LocalizeViewToReconstruction(view_id,
-                                      localization_options_,
-                                      reconstruction_,
-                                      &unused_ransac_summary);
+  return LocalizeViewToReconstruction(
+      view_id, localization_options_, reconstruction_, &unused_ransac_summary);
 }
 
 bool HybridReconstructionEstimator::EstimateCameraOrientations() {
@@ -396,7 +393,8 @@ double HybridReconstructionEstimator::ComputeMedianTriangulationAngle(
   //
   // std::vector<double> triangulation_angles;
   // triangulation_angles.reserve(common_tracks.size());
-  // // Compute the triangulation angle for each view. We store the cosine of the
+  // // Compute the triangulation angle for each view. We store the cosine of
+  // the
   // // dot product to save computation.
   // for (const TrackId track_id : common_tracks) {
   //   const Feature* feature1 = view1->GetFeature(track_id);
@@ -473,9 +471,11 @@ bool HybridReconstructionEstimator::InitializeCamerasWithKnownOrientation(
     // Retrieve the rotated and normalized correspondences.
     FeatureCorrespondence match;
     match.feature1 = Feature(
-        camera1.PixelToUnitDepthRay((*view1->GetFeature(track_id)).point_).hnormalized());
-    match.feature2 = Feature(camera2->PixelToUnitDepthRay((*view2->GetFeature(track_id)).point_)
-                         .hnormalized());
+        camera1.PixelToUnitDepthRay((*view1->GetFeature(track_id)).point_)
+            .hnormalized());
+    match.feature2 = Feature(
+        camera2->PixelToUnitDepthRay((*view2->GetFeature(track_id)).point_)
+            .hnormalized());
     rotated_correspondences.emplace_back(match);
   }
 
@@ -505,7 +505,7 @@ bool HybridReconstructionEstimator::InitializeCamerasWithKnownOrientation(
           ransac_type,
           rotated_correspondences,
           &relative_camera2_position,
-          &ransac_summary)){
+          &ransac_summary)) {
     return false;
   }
 
@@ -581,10 +581,9 @@ bool HybridReconstructionEstimator::ChooseInitialViewPair() {
   return false;
 }
 
-void HybridReconstructionEstimator::
-    OrderViewPairsByInitializationCriterion(
-        const int min_num_verified_matches,
-        std::vector<ViewIdPair>* view_id_pairs) {
+void HybridReconstructionEstimator::OrderViewPairsByInitializationCriterion(
+    const int min_num_verified_matches,
+    std::vector<ViewIdPair>* view_id_pairs) {
   static const double kMaxTriangulationAngleDegrees = 45;
 
   const auto& view_pairs = view_graph_->GetAllEdges();
@@ -684,8 +683,7 @@ void HybridReconstructionEstimator::FindViewsToLocalize(
   }
 }
 
-void HybridReconstructionEstimator::EstimateStructure(
-    const ViewId view_id) {
+void HybridReconstructionEstimator::EstimateStructure(const ViewId view_id) {
   // Estimate all tracks.
   TrackEstimator track_estimator(triangulation_options_, reconstruction_);
   const std::vector<TrackId>& tracks_in_view =
@@ -730,9 +728,8 @@ bool HybridReconstructionEstimator::FullBundleAdjustment() {
           options_.track_selection_image_grid_cell_size_pixels,
           options_.min_num_optimized_tracks_per_view,
           &tracks_to_optimize)) {
-    SetTracksInViewsToUnestimated(reconstructed_views_,
-                                  tracks_to_optimize,
-                                  reconstruction_);
+    SetTracksInViewsToUnestimated(
+        reconstructed_views_, tracks_to_optimize, reconstruction_);
   } else {
     GetEstimatedTracksFromReconstruction(*reconstruction_, &tracks_to_optimize);
   }
@@ -740,8 +737,7 @@ bool HybridReconstructionEstimator::FullBundleAdjustment() {
             << " tracks to optimize.";
 
   std::unordered_set<ViewId> views_to_optimize;
-  GetEstimatedViewsFromReconstruction(*reconstruction_,
-                                      &views_to_optimize);
+  GetEstimatedViewsFromReconstruction(*reconstruction_, &views_to_optimize);
   const auto& ba_summary =
       BundleAdjustPartialReconstruction(bundle_adjustment_options_,
                                         views_to_optimize,
@@ -758,11 +754,11 @@ bool HybridReconstructionEstimator::FullBundleAdjustment() {
 }
 
 bool HybridReconstructionEstimator::PartialBundleAdjustment() {
-// Partial bundle adjustment only only the k most recently added views that
+  // Partial bundle adjustment only only the k most recently added views that
   // have not been optimized by full BA.
   const int partial_ba_size =
-    std::min(static_cast<int>(reconstructed_views_.size()),
-             options_.partial_bundle_adjustment_num_views);
+      std::min(static_cast<int>(reconstructed_views_.size()),
+               options_.partial_bundle_adjustment_num_views);
   LOG(INFO) << "Running partial bundle adjustment on " << partial_ba_size
             << " views.";
 
@@ -786,8 +782,7 @@ bool HybridReconstructionEstimator::PartialBundleAdjustment() {
 
   // Get the views to optimize for partial BA.
   std::unordered_set<ViewId> views_to_optimize(
-      reconstructed_views_.end() - partial_ba_size,
-      reconstructed_views_.end());
+      reconstructed_views_.end() - partial_ba_size, reconstructed_views_.end());
 
   // If desired, select good tracks to optimize for BA. This dramatically
   // reduces the number of parameters in bundle adjustment, and does a decent
@@ -802,9 +797,8 @@ bool HybridReconstructionEstimator::PartialBundleAdjustment() {
           options_.track_selection_image_grid_cell_size_pixels,
           options_.min_num_optimized_tracks_per_view,
           &tracks_to_optimize)) {
-    SetTracksInViewsToUnestimated(views_to_optimize,
-                                  tracks_to_optimize,
-                                  reconstruction_);
+    SetTracksInViewsToUnestimated(
+        views_to_optimize, tracks_to_optimize, reconstruction_);
   } else {
     // If the track selection fails or is not desired, then add all tracks from
     // the views we wish to optimize.
@@ -838,11 +832,11 @@ void HybridReconstructionEstimator::RemoveOutlierTracks(
     const double max_reprojection_error_in_pixels) {
   // Remove the outlier points based on the reprojection error and how
   // well-constrained the 3D points are.
-  int num_points_removed = SetOutlierTracksToUnestimated(
-      tracks_to_check,
-      max_reprojection_error_in_pixels,
-      options_.min_triangulation_angle_degrees,
-      reconstruction_);
+  int num_points_removed =
+      SetOutlierTracksToUnestimated(tracks_to_check,
+                                    max_reprojection_error_in_pixels,
+                                    options_.min_triangulation_angle_degrees,
+                                    reconstruction_);
   LOG(INFO) << num_points_removed << " outlier points were removed.";
 }
 
@@ -866,8 +860,8 @@ void HybridReconstructionEstimator::SetUnderconstrainedAsUnestimated() {
         unlocalized_views_.insert(view_id);
 
         // Remove the view from the list of localized views.
-        auto view_to_remove = std::find(reconstructed_views_.begin(),
-                                        reconstructed_views_.end(), view_id);
+        auto view_to_remove = std::find(
+            reconstructed_views_.begin(), reconstructed_views_.end(), view_id);
         reconstructed_views_.erase(view_to_remove);
         --num_optimized_views_;
       }

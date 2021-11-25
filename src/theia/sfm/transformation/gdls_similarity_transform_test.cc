@@ -32,12 +32,12 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
 #include <vector>
-#include "gtest/gtest.h"
 
 #include "theia/alignment/alignment.h"
 #include "theia/math/util.h"
@@ -76,14 +76,16 @@ void TestGdlsSimilarityTransformWithNoise(
   ray_origins.reserve(num_points);
   for (int i = 0; i < num_points; i++) {
     Vector3d ray_origin = (expected_rotation * camera_centers[i % num_cameras] +
-                           expected_translation) / expected_scale;
+                           expected_translation) /
+                          expected_scale;
 
     ray_origins.push_back(ray_origin);
 
     // Reproject 3D points into camera frame.
-    camera_rays.push_back(
-        (expected_rotation * world_points[i] + expected_translation -
-         expected_scale * ray_origins[i]).normalized());
+    camera_rays.push_back((expected_rotation * world_points[i] +
+                           expected_translation -
+                           expected_scale * ray_origins[i])
+                              .normalized());
   }
 
   if (projection_noise_std_dev) {
@@ -97,8 +99,12 @@ void TestGdlsSimilarityTransformWithNoise(
   std::vector<Quaterniond> soln_rotation;
   std::vector<Vector3d> soln_translation;
   std::vector<double> soln_scale;
-  GdlsSimilarityTransform(ray_origins, camera_rays, world_points,
-                          &soln_rotation, &soln_translation, &soln_scale);
+  GdlsSimilarityTransform(ray_origins,
+                          camera_rays,
+                          world_points,
+                          &soln_rotation,
+                          &soln_translation,
+                          &soln_scale);
 
   // Check solutions and verify at least one is close to the actual solution.
 
@@ -113,7 +119,8 @@ void TestGdlsSimilarityTransformWithNoise(
           Quaterniond::FromTwoVectors(camera_rays[j], Vector3d(0, 0, 1));
       const Vector3d reprojected_point =
           (soln_rotation[i] * world_points[j] + soln_translation[i]) /
-              soln_scale[i] - ray_origins[j];
+              soln_scale[i] -
+          ray_origins[j];
 
       const Vector3d unrot_cam_ray = unrot * camera_rays[j];
       const Vector3d unrot_reproj_pt = unrot * reprojected_point;
@@ -147,12 +154,12 @@ void TestGdlsSimilarityTransformWithNoise(
 }
 
 void BasicTest() {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0) };
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0)};
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   const double soln_scale = 2.5;
   const double kNoise = 0.0;
@@ -161,45 +168,41 @@ void BasicTest() {
   const double kMaxAllowedTranslationDifference = 1e-6;
   const double kMaxAllowedScaleDifference = 1e-6;
 
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
 
-  TestGdlsSimilarityTransformWithNoise(
-      kImageOrigins,
-      points_3d,
-      kNoise,
-      soln_rotation,
-      soln_translation,
-      soln_scale,
-      kMaxReprojectionError,
-      kMaxAllowedRotationDifference,
-      kMaxAllowedTranslationDifference,
-      kMaxAllowedScaleDifference);
+  TestGdlsSimilarityTransformWithNoise(kImageOrigins,
+                                       points_3d,
+                                       kNoise,
+                                       soln_rotation,
+                                       soln_translation,
+                                       soln_scale,
+                                       kMaxReprojectionError,
+                                       kMaxAllowedRotationDifference,
+                                       kMaxAllowedTranslationDifference,
+                                       kMaxAllowedScaleDifference);
 }
 
-TEST(GdlsSimilarityTransform, Basic) {
-  BasicTest();
-}
+TEST(GdlsSimilarityTransform, Basic) { BasicTest(); }
 
 TEST(GdlsSimilarityTransform, NoiseTest) {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
-                                            Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(0.0, 1.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(0.0, 2.0, 0.0),
-                                                Vector3d(0.0, 3.0, 0.0) };
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(0.0, 1.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(0.0, 2.0, 0.0),
+                                               Vector3d(0.0, 3.0, 0.0)};
 
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   const double soln_scale = 2.5;
   const double kNoise = 1.0 / 512.0;
@@ -208,71 +211,60 @@ TEST(GdlsSimilarityTransform, NoiseTest) {
   const double kMaxAllowedTranslationDifference = 1e-3;
   const double kMaxAllowedScaleDifference = 1e-2;
 
-  TestGdlsSimilarityTransformWithNoise(
-      kImageOrigins,
-      points_3d,
-      kNoise,
-      soln_rotation,
-      soln_translation,
-      soln_scale,
-      kMaxReprojectionError,
-      kMaxAllowedRotationDifference,
-      kMaxAllowedTranslationDifference,
-      kMaxAllowedScaleDifference);
+  TestGdlsSimilarityTransformWithNoise(kImageOrigins,
+                                       points_3d,
+                                       kNoise,
+                                       soln_rotation,
+                                       soln_translation,
+                                       soln_scale,
+                                       kMaxReprojectionError,
+                                       kMaxAllowedRotationDifference,
+                                       kMaxAllowedTranslationDifference,
+                                       kMaxAllowedScaleDifference);
 }
 
 TEST(GdlsSimilarityTransform, ManyPoints) {
   // Sets some test rotations and translations.
-  static const Vector3d kAxes[] = {
-    Vector3d(0.0, 0.0, 1.0).normalized(),
-    Vector3d(0.0, 1.0, 0.0).normalized(),
-    Vector3d(1.0, 0.0, 0.0).normalized(),
-    Vector3d(1.0, 0.0, 1.0).normalized(),
-    Vector3d(0.0, 1.0, 1.0).normalized(),
-    Vector3d(1.0, 1.0, 1.0).normalized(),
-    Vector3d(0.0, 1.0, 1.0).normalized(),
-    Vector3d(1.0, 1.0, 1.0).normalized()
-  };
+  static const Vector3d kAxes[] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 0.0).normalized(),
+                                   Vector3d(1.0, 0.0, 0.0).normalized(),
+                                   Vector3d(1.0, 0.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 1.0).normalized(),
+                                   Vector3d(1.0, 1.0, 1.0).normalized(),
+                                   Vector3d(0.0, 1.0, 1.0).normalized(),
+                                   Vector3d(1.0, 1.0, 1.0).normalized()};
 
   static const double kRotationAngles[THEIA_ARRAYSIZE(kAxes)] = {
-    DegToRad(7.0),
-    DegToRad(12.0),
-    DegToRad(15.0),
-    DegToRad(20.0),
-    DegToRad(11.0),
-    DegToRad(0.0),  // Tests no rotation.
-    DegToRad(5.0),
-    DegToRad(0.0)  // Tests no rotation and no translation.
+      DegToRad(7.0),
+      DegToRad(12.0),
+      DegToRad(15.0),
+      DegToRad(20.0),
+      DegToRad(11.0),
+      DegToRad(0.0),  // Tests no rotation.
+      DegToRad(5.0),
+      DegToRad(0.0)  // Tests no rotation and no translation.
   };
 
   static const Vector3d kTranslations[THEIA_ARRAYSIZE(kAxes)] = {
-    Vector3d(1.0, 1.0, 1.0),
-    Vector3d(3.0, 2.0, 13.0),
-    Vector3d(4.0, 5.0, 11.0),
-    Vector3d(1.0, 2.0, 15.0),
-    Vector3d(3.0, 1.5, 18.0),
-    Vector3d(1.0, 7.0, 11.0),
-    Vector3d(0.0, 0.0, 0.0),  // Tests no translation.
-    Vector3d(0.0, 0.0, 0.0)  // Tests no translation and no rotation.
+      Vector3d(1.0, 1.0, 1.0),
+      Vector3d(3.0, 2.0, 13.0),
+      Vector3d(4.0, 5.0, 11.0),
+      Vector3d(1.0, 2.0, 15.0),
+      Vector3d(3.0, 1.5, 18.0),
+      Vector3d(1.0, 7.0, 11.0),
+      Vector3d(0.0, 0.0, 0.0),  // Tests no translation.
+      Vector3d(0.0, 0.0, 0.0)   // Tests no translation and no rotation.
   };
 
   static const double kScales[THEIA_ARRAYSIZE(kAxes)] = {
-    0.33,
-    1.0,
-    4.2,
-    10.13,
-    3.14,
-    7.22,
-    0.1,
-    10.0
-  };
+      0.33, 1.0, 4.2, 10.13, 3.14, 7.22, 0.1, 10.0};
 
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
 
-  static const int num_points[3] = { 100, 500, 1000 };
+  static const int num_points[3] = {100, 500, 1000};
   const double kNoise = 0.5 / 512.0;
   const double kMaxReprojectionError = 10.0 / 512.0;
   const double kMaxAllowedRotationDifference = DegToRad(0.3);
@@ -290,38 +282,36 @@ TEST(GdlsSimilarityTransform, ManyPoints) {
                                      rng.RandDouble(2.0, 10.0)));
       }
 
-      TestGdlsSimilarityTransformWithNoise(
-          kImageOrigins,
-          points_3d,
-          kNoise,
-          soln_rotation,
-          kTranslations[i],
-          kScales[i],
-          kMaxReprojectionError,
-          kMaxAllowedRotationDifference,
-          kMaxAllowedTranslationDifference,
-          kMaxAllowedScaleDifference);
+      TestGdlsSimilarityTransformWithNoise(kImageOrigins,
+                                           points_3d,
+                                           kNoise,
+                                           soln_rotation,
+                                           kTranslations[i],
+                                           kScales[i],
+                                           kMaxReprojectionError,
+                                           kMaxAllowedRotationDifference,
+                                           kMaxAllowedTranslationDifference,
+                                           kMaxAllowedScaleDifference);
     }
   }
 }
 
 TEST(GdlsSimilarityTransform, NoRotation) {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
-                                            Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
 
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(0.0), Vector3d(0.0, 0.0, 1.0)));
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(0.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(1.0, 1.0, 1.0);
   const double soln_scale = 0.77;
   const double kNoise = 0.5 / 512.0;
@@ -330,36 +320,34 @@ TEST(GdlsSimilarityTransform, NoRotation) {
   const double kMaxAllowedTranslationDifference = 5e-4;
   const double kMaxAllowedScaleDifference = 1e-2;
 
-  TestGdlsSimilarityTransformWithNoise(
-      kImageOrigins,
-      points_3d,
-      kNoise,
-      soln_rotation,
-      soln_translation,
-      soln_scale,
-      kMaxReprojectionError,
-      kMaxAllowedRotationDifference,
-      kMaxAllowedTranslationDifference,
-      kMaxAllowedScaleDifference);
+  TestGdlsSimilarityTransformWithNoise(kImageOrigins,
+                                       points_3d,
+                                       kNoise,
+                                       soln_rotation,
+                                       soln_translation,
+                                       soln_scale,
+                                       kMaxReprojectionError,
+                                       kMaxAllowedRotationDifference,
+                                       kMaxAllowedTranslationDifference,
+                                       kMaxAllowedScaleDifference);
 }
 
 TEST(GdlsSimilarityTransform, NoTranslation) {
-  const std::vector<Vector3d> points_3d = { Vector3d(-1.0, 3.0, 3.0),
-                                            Vector3d(1.0, -1.0, 2.0),
-                                            Vector3d(-1.0, 1.0, 2.0),
-                                            Vector3d(2.0, 1.0, 3.0),
-                                            Vector3d(-1.0, -3.0, 2.0),
-                                            Vector3d(1.0, -2.0, 1.0),
-                                            Vector3d(-1.0, 4.0, 2.0),
-                                            Vector3d(-2.0, 2.0, 3.0)
-  };
-  const std::vector<Vector3d> kImageOrigins = { Vector3d(-1.0, 0.0, 0.0),
-                                                Vector3d(0.0, 0.0, 0.0),
-                                                Vector3d(2.0, 0.0, 0.0),
-                                                Vector3d(3.0, 0.0, 0.0) };
+  const std::vector<Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const std::vector<Vector3d> kImageOrigins = {Vector3d(-1.0, 0.0, 0.0),
+                                               Vector3d(0.0, 0.0, 0.0),
+                                               Vector3d(2.0, 0.0, 0.0),
+                                               Vector3d(3.0, 0.0, 0.0)};
 
-  const Quaterniond soln_rotation = Quaterniond(
-      AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
+  const Quaterniond soln_rotation =
+      Quaterniond(AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)));
   const Vector3d soln_translation(0.0, 0.0, 0.0);
   const double soln_scale = 2.5;
   const double kNoise = 1.0 / 512.0;
@@ -368,17 +356,16 @@ TEST(GdlsSimilarityTransform, NoTranslation) {
   const double kMaxAllowedTranslationDifference = 1e-3;
   const double kMaxAllowedScaleDifference = 1e-2;
 
-  TestGdlsSimilarityTransformWithNoise(
-      kImageOrigins,
-      points_3d,
-      kNoise,
-      soln_rotation,
-      soln_translation,
-      soln_scale,
-      kMaxReprojectionError,
-      kMaxAllowedRotationDifference,
-      kMaxAllowedTranslationDifference,
-      kMaxAllowedScaleDifference);
+  TestGdlsSimilarityTransformWithNoise(kImageOrigins,
+                                       points_3d,
+                                       kNoise,
+                                       soln_rotation,
+                                       soln_translation,
+                                       soln_scale,
+                                       kMaxReprojectionError,
+                                       kMaxAllowedRotationDifference,
+                                       kMaxAllowedTranslationDifference,
+                                       kMaxAllowedScaleDifference);
 }
 
 }  // namespace

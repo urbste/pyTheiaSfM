@@ -44,7 +44,10 @@
 #include "theia/sfm/filter_view_graph_cycles_by_rotation.h"
 #include "theia/sfm/filter_view_pairs_from_orientation.h"
 #include "theia/sfm/filter_view_pairs_from_relative_translation.h"
+#include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
+#include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
+#include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
@@ -83,7 +86,7 @@ struct GlobalReconstructionEstimatorTimings {
 };
 
 FilterViewPairsFromRelativeTranslationOptions
-SetRelativeTranslationFilteringOptions(
+SetRelativeTranslationFilterintheiaions(
     const ReconstructionEstimatorOptions& options) {
   FilterViewPairsFromRelativeTranslationOptions fvpfrt_options;
   fvpfrt_options.num_threads = options.num_threads;
@@ -109,7 +112,8 @@ void SetUnderconstrainedAsUnestimated(Reconstruction* reconstruction) {
 GlobalReconstructionEstimator::GlobalReconstructionEstimator(
     const ReconstructionEstimatorOptions& options) {
   options_ = options;
-  translation_filter_options_ = SetRelativeTranslationFilteringOptions(options);
+  translation_filter_options_ =
+      SetRelativeTranslationFilterintheiaions(options);
   options_.nonlinear_position_estimator_options.rng = options.rng;
   options_.nonlinear_position_estimator_options.num_threads =
       options_.num_threads;
@@ -217,10 +221,8 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
       global_estimator_timings.position_estimation_time;
 
   // Set the poses in the reconstruction object.
-  SetReconstructionFromEstimatedPoses(orientations_,
-                                      positions_,
-                                      reconstruction_);
-
+  SetReconstructionFromEstimatedPoses(
+      orientations_, positions_, reconstruction_);
 
   // Always triangulate once, then retriangulate and remove outliers depending
   // on the reconstruciton estimator options.
@@ -245,7 +247,6 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
       summary.bundle_adjustment_time += timer.ElapsedTimeInSeconds();
     }
 
-
     // Step 9. Bundle Adjustment.
     LOG(INFO) << "Performing bundle adjustment.";
     timer.Reset();
@@ -256,10 +257,10 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
     }
     summary.bundle_adjustment_time += timer.ElapsedTimeInSeconds();
 
-    int num_points_removed = SetOutlierTracksToUnestimated(
-        options_.max_reprojection_error_in_pixels,
-        options_.min_triangulation_angle_degrees,
-        reconstruction_);
+    int num_points_removed =
+        SetOutlierTracksToUnestimated(options_.max_reprojection_error_in_pixels,
+                                      options_.min_triangulation_angle_degrees,
+                                      reconstruction_);
     LOG(INFO) << num_points_removed << " outlier points were removed.";
   }
 
@@ -345,6 +346,16 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
       rotation_estimator.reset(new LinearRotationEstimator());
       break;
     }
+    case GlobalRotationEstimatorType::LAGRANGE_DUAL: {
+      OrientationsFromMaximumSpanningTree(*view_graph_, &orientations_);
+      rotation_estimator.reset(new LagrangeDualRotationEstimator());
+      break;
+    }
+    case GlobalRotationEstimatorType::HYBRID: {
+      OrientationsFromMaximumSpanningTree(*view_graph_, &orientations_);
+      rotation_estimator.reset(new HybridRotationEstimator());
+      break;
+    }
     default: {
       LOG(FATAL) << "Invalid type of global rotation estimation chosen.";
       break;
@@ -371,10 +382,8 @@ void GlobalReconstructionEstimator::FilterRotations() {
 
 void GlobalReconstructionEstimator::OptimizePairwiseTranslations() {
   if (options_.refine_relative_translations_after_rotation_estimation) {
-    RefineRelativeTranslationsWithKnownRotations(*reconstruction_,
-                                                 orientations_,
-                                                 options_.num_threads,
-                                                 view_graph_);
+    RefineRelativeTranslationsWithKnownRotations(
+        *reconstruction_, orientations_, options_.num_threads, view_graph_);
   }
 }
 
@@ -389,9 +398,8 @@ void GlobalReconstructionEstimator::FilterRelativeTranslation() {
   // Filter potentially bad relative translations.
   if (options_.filter_relative_translations_with_1dsfm) {
     LOG(INFO) << "Filtering relative translations with 1DSfM filter.";
-    FilterViewPairsFromRelativeTranslation(translation_filter_options_,
-                                           orientations_,
-                                           view_graph_);
+    FilterViewPairsFromRelativeTranslation(
+        translation_filter_options_, orientations_, view_graph_);
   }
   // Remove any disconnected views from the estimation.
   const std::unordered_set<ViewId> removed_views =
@@ -424,15 +432,20 @@ bool GlobalReconstructionEstimator::EstimatePosition() {
           *reconstruction_));
       break;
     }
+    case GlobalPositionEstimatorType::LIGT: {
+      position_estimator.reset(new LiGTPositionEstimator(
+          options_.ligt_position_estimator_options,
+          *reconstruction_));
+      break;
+  }
     default: {
       LOG(FATAL) << "Invalid type of global position estimation chosen.";
       break;
     }
   }
 
-  return position_estimator->EstimatePositions(view_pairs,
-                                               orientations_,
-                                               &positions_);
+  return position_estimator->EstimatePositions(
+      view_pairs, orientations_, &positions_);
 }
 
 void GlobalReconstructionEstimator::EstimateStructure() {
@@ -471,9 +484,8 @@ bool GlobalReconstructionEstimator::BundleAdjustment() {
     // Set all tracks that were not chosen for BA to be unestimated so that they
     // do not affect the bundle adjustment optimization.
     const auto& view_ids = reconstruction_->ViewIds();
-    SetTracksInViewsToUnestimated(view_ids,
-                                  tracks_to_optimize,
-                                  reconstruction_);
+    SetTracksInViewsToUnestimated(
+        view_ids, tracks_to_optimize, reconstruction_);
   } else {
     GetEstimatedTracksFromReconstruction(*reconstruction_, &tracks_to_optimize);
   }
@@ -481,8 +493,7 @@ bool GlobalReconstructionEstimator::BundleAdjustment() {
             << " tracks to optimize.";
 
   std::unordered_set<ViewId> views_to_optimize;
-  GetEstimatedViewsFromReconstruction(*reconstruction_,
-                                      &views_to_optimize);
+  GetEstimatedViewsFromReconstruction(*reconstruction_, &views_to_optimize);
   const auto& bundle_adjustment_summary =
       BundleAdjustPartialReconstruction(bundle_adjustment_options_,
                                         views_to_optimize,
@@ -517,8 +528,7 @@ bool GlobalReconstructionEstimator::BundleAdjustCameraPositionsAndPoints() {
             << " tracks to optimize.";
 
   std::unordered_set<ViewId> views_to_optimize;
-  GetEstimatedViewsFromReconstruction(*reconstruction_,
-                                      &views_to_optimize);
+  GetEstimatedViewsFromReconstruction(*reconstruction_, &views_to_optimize);
   const auto& bundle_adjustment_summary =
       BundleAdjustPartialReconstruction(bundle_adjustment_options_,
                                         views_to_optimize,

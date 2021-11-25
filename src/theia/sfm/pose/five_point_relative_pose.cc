@@ -47,9 +47,9 @@
 namespace theia {
 
 using Eigen::Map;
+using Eigen::Matrix;
 using Eigen::Matrix3d;
 using Eigen::Matrix4d;
-using Eigen::Matrix;
 using Eigen::MatrixXd;
 using Eigen::RowVector3d;
 using Eigen::RowVector4d;
@@ -145,27 +145,27 @@ Matrix<double, 1, 20> GetDeterminantConstraint(
   const Matrix<double, 1, 20> determinant =
       MultiplyDegTwoDegOnePoly(
           MultiplyDegOnePoly(null_space[0][1], null_space[1][2]) -
-          MultiplyDegOnePoly(null_space[0][2], null_space[1][1]),
+              MultiplyDegOnePoly(null_space[0][2], null_space[1][1]),
           null_space[2][0]) +
       MultiplyDegTwoDegOnePoly(
           MultiplyDegOnePoly(null_space[0][2], null_space[1][0]) -
-          MultiplyDegOnePoly(null_space[0][0], null_space[1][2]),
+              MultiplyDegOnePoly(null_space[0][0], null_space[1][2]),
           null_space[2][1]) +
       MultiplyDegTwoDegOnePoly(
           MultiplyDegOnePoly(null_space[0][0], null_space[1][1]) -
-          MultiplyDegOnePoly(null_space[0][1], null_space[1][0]),
+              MultiplyDegOnePoly(null_space[0][1], null_space[1][0]),
           null_space[2][2]);
   return determinant;
 }
 
 // Shorthand for multiplying the Essential matrix with its transpose.
-Matrix<double, 1, 10> EETranspose(
-    const Matrix<double, 1, 4> null_space[3][3], int i, int j) {
+Matrix<double, 1, 10> EETranspose(const Matrix<double, 1, 4> null_space[3][3],
+                                  int i,
+                                  int j) {
   return MultiplyDegOnePoly(null_space[i][0], null_space[j][0]) +
-      MultiplyDegOnePoly(null_space[i][1], null_space[j][1]) +
-      MultiplyDegOnePoly(null_space[i][2], null_space[j][2]);
+         MultiplyDegOnePoly(null_space[i][1], null_space[j][1]) +
+         MultiplyDegOnePoly(null_space[i][2], null_space[j][2]);
 }
-
 
 // Builds the trace constraint: EEtE - 1/2 trace(EEt)E = 0
 Matrix<double, 9, 20> GetTraceConstraint(
@@ -224,16 +224,11 @@ bool FivePointRelativePose(const std::vector<Vector2d>& image1_points,
   for (int i = 0; i < image1_points.size(); i++) {
     // Fill matrix with the epipolar constraint from q'_t*E*q = 0. Where q is
     // from the first image, and q' is from the second.
-    epipolar_constraint.row(i) <<
-        image2_points[i].x() * image1_points[i].x(),
-        image2_points[i].y() * image1_points[i].x(),
-        image1_points[i].x(),
+    epipolar_constraint.row(i) << image2_points[i].x() * image1_points[i].x(),
+        image2_points[i].y() * image1_points[i].x(), image1_points[i].x(),
         image2_points[i].x() * image1_points[i].y(),
-        image2_points[i].y() * image1_points[i].y(),
-        image1_points[i].y(),
-        image2_points[i].x(),
-        image2_points[i].y(),
-        1.0;
+        image2_points[i].y() * image1_points[i].y(), image1_points[i].y(),
+        image2_points[i].x(), image2_points[i].y(), 1.0;
   }
 
   Matrix<double, 9, 4> null_space;
@@ -254,10 +249,9 @@ bool FivePointRelativePose(const std::vector<Vector2d>& image1_points,
   }
 
   const Matrix<double, 1, 4> null_space_matrix[3][3] = {
-    { null_space.row(0), null_space.row(3), null_space.row(6) },
-    { null_space.row(1), null_space.row(4), null_space.row(7) },
-    { null_space.row(2), null_space.row(5), null_space.row(8) }
-  };
+      {null_space.row(0), null_space.row(3), null_space.row(6)},
+      {null_space.row(1), null_space.row(4), null_space.row(7)},
+      {null_space.row(2), null_space.row(5), null_space.row(8)}};
 
   // Step 2. Expansion of the epipolar constraints on the determinant and trace.
   const Matrix<double, 10, 20> constraint_matrix =

@@ -71,7 +71,8 @@ struct RadialDistUncalibratedAbsolutePoseMetaData {
 // data. The feature correspondences should be normalized such that
 // the principal point is at (0, 0).
 bool EstimateRadialDistUncalibratedAbsolutePose(
-    const RansacParameters& ransac_params, const RansacType& ransac_type,
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
     const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences,
     const RadialDistUncalibratedAbsolutePoseMetaData& meta_data,
     RadialDistUncalibratedAbsolutePose* absolute_pose,

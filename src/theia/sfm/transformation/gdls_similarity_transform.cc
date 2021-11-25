@@ -37,25 +37,25 @@
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <cmath>
+#include <glog/logging.h>
 #include <vector>
 
 #include "theia/alignment/alignment.h"
-#include "theia/util/random.h"
 #include "theia/sfm/pose/dls_impl.h"
+#include "theia/util/random.h"
 
 namespace theia {
 
-using Eigen::Matrix3d;
-using Eigen::Matrix4d;
-using Eigen::Matrix;
-using Eigen::MatrixXd;
-using Eigen::Quaterniond;
-using Eigen::Vector3d;
 using dls_impl::CreateMacaulayMatrix;
 using dls_impl::ExtractJacobianCoefficients;
 using dls_impl::LeftMultiplyMatrix;
+using Eigen::Matrix;
+using Eigen::Matrix3d;
+using Eigen::Matrix4d;
+using Eigen::MatrixXd;
+using Eigen::Quaterniond;
+using Eigen::Vector3d;
 
 // This implementation is based off of the DLS PnP implementation. The general
 // approach is to first rewrite the reprojection constraint (i.e., cost
@@ -107,9 +107,11 @@ void GdlsSimilarityTransform(const std::vector<Vector3d>& ray_origin,
             LeftMultiplyMatrix(world_point[i]);
 
     // Translation factor.
-    sv_helper.block<3, 9>(1, 0) = sv_helper.block<3, 9>(
-        1, 0) + (ray_direction[i] * ray_direction[i].transpose() -
-                 Matrix3d::Identity()) * LeftMultiplyMatrix(world_point[i]);
+    sv_helper.block<3, 9>(1, 0) =
+        sv_helper.block<3, 9>(1, 0) +
+        (ray_direction[i] * ray_direction[i].transpose() -
+         Matrix3d::Identity()) *
+            LeftMultiplyMatrix(world_point[i]);
   }
 
   sv_helper = h_matrix * sv_helper;
@@ -139,16 +141,14 @@ void GdlsSimilarityTransform(const std::vector<Vector3d>& ray_origin,
   double f1_coeff[20];
   double f2_coeff[20];
   double f3_coeff[20];
-  ExtractJacobianCoefficients(ls_cost_coefficients, f1_coeff, f2_coeff,
-                              f3_coeff);
+  ExtractJacobianCoefficients(
+      ls_cost_coefficients, f1_coeff, f2_coeff, f3_coeff);
 
   // We create one equation with random terms that is generally non-zero at the
   // roots of our system.
   const Eigen::Vector4d rand_vec = 100.0 * Eigen::Vector4d::Random();
-  const double macaulay_term[4] = {rand_vec(0),
-                                   rand_vec(1),
-                                   rand_vec(2),
-                                   rand_vec(3)};
+  const double macaulay_term[4] = {
+      rand_vec(0), rand_vec(1), rand_vec(2), rand_vec(3)};
 
   // Create Macaulay matrix that will be used to solve our polynonomial system.
   const MatrixXd& macaulay_matrix =
@@ -200,9 +200,9 @@ void GdlsSimilarityTransform(const std::vector<Vector3d>& ray_origin,
       bool all_points_in_front_of_camera = true;
 
       for (int j = 0; j < num_correspondences; j++) {
-        const Vector3d transformed_point =
-            soln_rotation * world_point[j] + soln_translation -
-            soln_scale * ray_origin[j];
+        const Vector3d transformed_point = soln_rotation * world_point[j] +
+                                           soln_translation -
+                                           soln_scale * ray_origin[j];
 
         // Find the rotation that puts the image ray at [0, 0, 1] i.e. looking
         // straightforward from the camera.

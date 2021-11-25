@@ -32,9 +32,9 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <vector>
-#include "gtest/gtest.h"
 
 #include "theia/sfm/track.h"
 #include "theia/sfm/types.h"
@@ -113,7 +113,7 @@ TEST(Track, InverseDepth) {
   for (int i = 0; i < view_ids.size(); i++) {
     track.RemoveView(view_ids[i]);
     EXPECT_EQ(track.NumViews(), 3 - i - 1);
-    if (i == view_ids.size()-1) {
+    if (i == view_ids.size() - 1) {
       EXPECT_TRUE(track.ReferenceViewId() == kInvalidViewId);
     } else {
       EXPECT_TRUE(track.ReferenceViewId() != kInvalidViewId);
@@ -126,15 +126,15 @@ TEST(Track, Descriptor) {
   // Add views.
   track.AddView(0);
   Eigen::Vector3f desc_test;
-  desc_test << 1.f,2.f,3.f;
+  desc_test << 1.f, 2.f, 3.f;
   track.SetReferenceDescriptor(desc_test);
-  for (int i=0; i < 3; ++i) {
+  for (int i = 0; i < 3; ++i) {
     EXPECT_FLOAT_EQ(track.ReferenceDescriptor()[i], desc_test[i]);
   }
 
   Eigen::VectorXf desc_large = Eigen::VectorXf::Random(128);
   track.SetReferenceDescriptor(desc_large);
-  for (int i=0; i < 3; ++i) {
+  for (int i = 0; i < 3; ++i) {
     EXPECT_FLOAT_EQ(track.ReferenceDescriptor()[i], desc_large[i]);
   }
 }

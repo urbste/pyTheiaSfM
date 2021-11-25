@@ -35,8 +35,8 @@
 #ifndef THEIA_SOLVERS_MLE_QUALITY_MEASUREMENT_H_
 #define THEIA_SOLVERS_MLE_QUALITY_MEASUREMENT_H_
 
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
 #include <limits>
 #include <memory>
 #include <vector>
@@ -59,7 +59,7 @@ class MLEQualityMeasurement : public QualityMeasurement {
                      std::vector<int>* inliers) override {
     inliers->reserve(residuals.size());
     double mle_score = 0.0;
-    for (int i = 0; i < residuals.size(); i++) {
+    for (size_t i = 0; i < residuals.size(); i++) {
       if (residuals[i] < error_thresh_) {
         mle_score += residuals[i];
         inliers->emplace_back(i);

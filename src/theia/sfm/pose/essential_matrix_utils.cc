@@ -101,7 +101,8 @@ void EssentialMatrixFromTwoProjectionMatrices(
 
   // Relative transformation between to cameras.
   const Eigen::Matrix3d relative_rotation = R1 * R2.transpose();
-  const Eigen::Vector3d translation = (t1 - relative_rotation * t2).normalized();
+  const Eigen::Vector3d translation =
+      (t1 - relative_rotation * t2).normalized();
   *essential_matrix = CrossProductMatrix(translation) * relative_rotation;
 }
 

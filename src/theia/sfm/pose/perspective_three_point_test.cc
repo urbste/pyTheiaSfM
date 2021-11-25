@@ -32,18 +32,18 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <glog/logging.h>
 #include <math.h>
-#include "gtest/gtest.h"
 
 #include "theia/math/util.h"
-#include "theia/test/test_utils.h"
-#include "theia/util/random.h"
 #include "theia/sfm/pose/perspective_three_point.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/types.h"
+#include "theia/test/test_utils.h"
+#include "theia/util/random.h"
 
 namespace theia {
 
@@ -65,9 +65,9 @@ void PoseFromThreeCalibratedTest(const double noise) {
   projection_mat << gt_rotation, gt_translation;
 
   // Points in the 3D scene.
-  const Vector3d kPoints3d[3] = { Vector3d(-0.3001, -0.5840, 1.2271),
-                                  Vector3d(-1.4487, 0.6965, 0.3889),
-                                  Vector3d(-0.7815, 0.7642, 0.1257)};
+  const Vector3d kPoints3d[3] = {Vector3d(-0.3001, -0.5840, 1.2271),
+                                 Vector3d(-1.4487, 0.6965, 0.3889),
+                                 Vector3d(-0.7815, 0.7642, 0.1257)};
 
   // Points in the camera view.
   Vector2d kPoints2d[3];
@@ -81,16 +81,17 @@ void PoseFromThreeCalibratedTest(const double noise) {
 
   std::vector<Matrix3d> rotations;
   std::vector<Vector3d> translations;
-  CHECK(
-      PoseFromThreePoints(kPoints2d, kPoints3d, &rotations, &translations));
+  CHECK(PoseFromThreePoints(kPoints2d, kPoints3d, &rotations, &translations));
 
   bool matched_transform = false;
   for (int i = 0; i < rotations.size(); ++i) {
     // Check that the rotation and translation are close.
-    double angular_diff = RadToDeg(Eigen::Quaterniond(
-        rotations[i]).angularDistance(Eigen::Quaterniond(gt_rotation)));
-    double trans_diff = ((-gt_rotation * gt_translation) -
-                         (-rotations[i] * translations[i])).norm();
+    double angular_diff =
+        RadToDeg(Eigen::Quaterniond(rotations[i])
+                     .angularDistance(Eigen::Quaterniond(gt_rotation)));
+    double trans_diff =
+        ((-gt_rotation * gt_translation) - (-rotations[i] * translations[i]))
+            .norm();
     bool rot_match = angular_diff < 1.0;
     bool trans_match = trans_diff < 0.1;
     if (rot_match && trans_match) {
@@ -109,9 +110,7 @@ void PoseFromThreeCalibratedTest(const double noise) {
   EXPECT_TRUE(matched_transform);
 }
 
-TEST(P3P, PoseFromThreeCalibrated) {
-  PoseFromThreeCalibratedTest(0.0 / 800.0);
-}
+TEST(P3P, PoseFromThreeCalibrated) { PoseFromThreeCalibratedTest(0.0 / 800.0); }
 
 TEST(P3P, PoseFromThreeCalibratedNoise) {
   PoseFromThreeCalibratedTest(1.0 / 800.0);

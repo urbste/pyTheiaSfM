@@ -55,7 +55,7 @@ DEFINE_string(
 
 // Multithreading.
 DEFINE_int32(num_threads,
-             1,
+             8,
              "Number of threads to use for feature extraction and matching.");
 
 // Reconstruction building options.
@@ -68,7 +68,7 @@ DEFINE_int32(min_num_inliers_for_valid_match,
              "images must have in order to be considered a valid two-view "
              "match.");
 DEFINE_bool(reconstruct_largest_connected_component,
-            false,
+            true,
             "If set to true, only the single largest connected component is "
             "reconstructed. Otherwise, as many models as possible are "
             "estimated.");
@@ -76,14 +76,14 @@ DEFINE_bool(only_calibrated_views,
             false,
             "Set to true to only reconstruct the views where calibration is "
             "provided or can be extracted from EXIF");
-DEFINE_int32(min_track_length, 2, "Minimum length of a track.");
+DEFINE_int32(min_track_length, 3, "Minimum length of a track.");
 DEFINE_int32(max_track_length, 50, "Maximum length of a track.");
 DEFINE_string(intrinsics_to_optimize,
               "NONE",
               "Set to control which intrinsics parameters are optimized during "
               "bundle adjustment.");
 DEFINE_double(max_reprojection_error_pixels,
-              4.0,
+              6.0,
               "Maximum reprojection error for a correspondence to be "
               "considered an inlier after bundle adjustment.");
 
@@ -92,7 +92,7 @@ DEFINE_string(global_rotation_estimator,
               "ROBUST_L1L2",
               "Type of global rotation estimation to use for global SfM.");
 DEFINE_string(global_position_estimator,
-              "NONLINEAR",
+              "LEAST_UNSQUARED_DEVIATION",
               "Type of global position estimation to use for global SfM.");
 DEFINE_bool(refine_relative_translations_after_rotation_estimation,
             true,
@@ -100,7 +100,7 @@ DEFINE_bool(refine_relative_translations_after_rotation_estimation,
             "absolute rotations. This can help improve the accuracy of the "
             "position estimation.");
 DEFINE_double(post_rotation_filtering_degrees,
-              5.0,
+              15.0,
               "Max degrees difference in relative rotation and rotation "
               "estimates for rotation filtering.");
 DEFINE_bool(extract_maximal_rigid_subgraph,
@@ -127,7 +127,7 @@ DEFINE_int32(num_retriangulation_iterations,
 // Nonlinear position estimation options.
 DEFINE_int32(
     position_estimation_min_num_tracks_per_view,
-    0,
+    10,
     "Minimum number of point to camera constraints for position estimation.");
 DEFINE_double(position_estimation_robust_loss_width,
               0.1,
@@ -153,11 +153,11 @@ DEFINE_int32(partial_bundle_adjustment_num_views,
 
 // Triangulation options.
 DEFINE_double(min_triangulation_angle_degrees,
-              4.0,
+              3.0,
               "Minimum angle between views for triangulation.");
 DEFINE_double(
     triangulation_reprojection_error_pixels,
-    15.0,
+    12.0,
     "Max allowable reprojection error on initial triangulation of points.");
 DEFINE_bool(bundle_adjust_tracks,
             true,
@@ -165,7 +165,7 @@ DEFINE_bool(bundle_adjust_tracks,
 
 // Bundle adjustment parameters.
 DEFINE_string(bundle_adjustment_robust_loss_function,
-              "NONE",
+              "CAUCHY",
               "By setting this to an option other than NONE, a robust loss "
               "function will be used during bundle adjustment which can "
               "improve robustness to outliers. Options are NONE, HUBER, "
@@ -317,13 +317,29 @@ int main(int argc, char* argv[]) {
     LOG(FATAL) << "You must specifiy the directory of the 1dsfm dataset.";
   }
 
+  // reading ground truth files
+  const std::string lists_file = FLAGS_1dsfm_dataset_directory + "/list.txt";
+  const std::string bundle_file =
+      FLAGS_1dsfm_dataset_directory + "/gt_bundle.out";
+  std::unique_ptr<theia::Reconstruction> gt_reconstruction(
+      new theia::Reconstruction());
+  LOG(INFO) << "Converting ground truth bundler file to Theia reconstruction.";
+  CHECK(
+      theia::ReadBundlerFiles(lists_file, bundle_file, gt_reconstruction.get()))
+      << "Could not the ground truth Bundler file at " << bundle_file;
+
+  CHECK(theia::WriteReconstruction(*gt_reconstruction.get(),
+                                   FLAGS_output_reconstruction +"_gt"))
+      << "Could not write ground truth reconstruction to file.";
+
   std::unique_ptr<ReconstructionBuilder> reconstruction_builder =
       InitializeReconstructionBuilderFrom1DSFM();
   std::vector<Reconstruction*> reconstructions;
   CHECK(reconstruction_builder->BuildReconstruction(&reconstructions))
       << "Could not create a reconstruction.";
 
-  for (int i = 0; i < reconstructions.size(); i++) {
+  std::cout<<"Created "<<reconstructions.size()<<" sub-reconstructions.\n";
+  for (size_t i = 0; i < reconstructions.size(); i++) {
     const std::string output_file =
         theia::StringPrintf("%s-%d", FLAGS_output_reconstruction.c_str(), i);
     LOG(INFO) << "Writing reconstruction " << i << " to " << output_file;

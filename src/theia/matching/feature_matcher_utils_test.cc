@@ -34,10 +34,10 @@
 
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/matching/feature_matcher_options.h"
 #include "theia/matching/feature_matcher_utils.h"
 #include "theia/matching/indexed_feature_match.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 

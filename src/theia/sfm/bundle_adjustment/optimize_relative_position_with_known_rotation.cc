@@ -34,14 +34,14 @@
 
 #include "theia/sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <algorithm>
+#include <ceres/rotation.h>
+#include <glog/logging.h>
 #include <vector>
 
-#include "theia/math/util.h"
 #include "theia/matching/feature_correspondence.h"
+#include "theia/math/util.h"
 #include "theia/sfm/triangulation/triangulation.h"
 
 namespace theia {
@@ -99,9 +99,8 @@ bool MajorityOfPointsInFrontOfCameras(
   // Tests all points for cheirality.
   int num_points_in_front_of_cameras = 0;
   for (const FeatureCorrespondence& match : correspondences) {
-    if (IsTriangulatedPointInFrontOfCameras(match,
-                                            relative_rotation_matrix,
-                                            relative_position)) {
+    if (IsTriangulatedPointInFrontOfCameras(
+            match, relative_rotation_matrix, relative_position)) {
       ++num_points_in_front_of_cameras;
     }
   }
@@ -133,10 +132,8 @@ bool OptimizeRelativePositionWithKnownRotation(
 
   // Create the constraint matrix from the known correspondences and rotations.
   Eigen::MatrixXd constraint_matrix;
-  CreateConstraintMatrix(correspondences,
-                         rotation1,
-                         rotation2,
-                         &constraint_matrix);
+  CreateConstraintMatrix(
+      correspondences, rotation1, rotation2, &constraint_matrix);
 
   // Initialize the weighting terms for each correspondence.
   Eigen::VectorXd weights(correspondences.size());
@@ -186,10 +183,8 @@ bool OptimizeRelativePositionWithKnownRotation(
   // The position solver above does not consider the sign of the relative
   // position. We can determine the sign by choosing the sign that puts the most
   // points in front of the camera.
-  if (!MajorityOfPointsInFrontOfCameras(correspondences,
-                                        rotation1,
-                                        rotation2,
-                                        *relative_position)) {
+  if (!MajorityOfPointsInFrontOfCameras(
+          correspondences, rotation1, rotation2, *relative_position)) {
     *relative_position *= -1.0;
   }
 

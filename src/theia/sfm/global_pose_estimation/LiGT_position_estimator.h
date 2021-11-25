@@ -53,11 +53,20 @@ class Reconstruction;
 class TwoViewInfo;
 class View;
 
-// Estimates the camera position of views given global orientations and view
-// triplets. The constraints formed by each triplet are used to create a sparse
+// Estimates the camera position of views given global orientations and
+// normalized image correspondeces of the same scene point across image triplets.
+// The constraints formed by each triplet are used to create a sparse
 // linear system to solve for the positions.
+
+// Implements the paper:
+//@article{cai2021pose,
+//  title={A Pose-only Solution to Visual Reconstruction and Navigation},
+//  author={Cai, Qi and Zhang, Lilian and Wu, Yuanxin and Yu, Wenxian and Hu, Dewen},
+//  journal={arXiv preprint arXiv:2103.01530},
+//  year={2021}
+//}
 class LiGTPositionEstimator : public PositionEstimator {
-public:
+ public:
   struct Options {
     int num_threads = 1;
 
@@ -69,66 +78,68 @@ public:
     double eigensolver_threshold = 1e-8;
   };
 
-  LiGTPositionEstimator(const Options &options,
-                        const Reconstruction &reconstruction);
+  LiGTPositionEstimator(const Options& options,
+                        const Reconstruction& reconstruction);
 
   // Estimate the positions given view pairs and global orientation estimates.
   bool EstimatePositions(
-      const std::unordered_map<ViewIdPair, TwoViewInfo> &view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d> &orientation,
-      std::unordered_map<ViewId, Eigen::Vector3d> *positions);
+      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation,
+      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
-private:
-  // Returns the features as a unit-norm pixel ray after camera intrinsics
-  // (i.e. focal length an principal point) have been removed.
-  Feature GetNormalizedFeature(const View &view, const TrackId track_id);
+  // python
+  std::unordered_map<ViewId, Eigen::Vector3d> EstimatePositionsWrapper(
+      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
 
-  // Computes the relative baselines between three views in a triplet. The
-  // baseline is estimated from the depths of triangulated 3D points. The
-  // relative positions of the triplets are then scaled to account for the
-  // baseline ratios.
-  void ComputeBaselineRatioForTriplet(const ViewIdTriplet &triplet,
-                                      Eigen::Vector3d *baseline);
-
+ private:
   // Store the triplet.
-  void AddTripletConstraint(const ViewIdTriplet &view_triplet);
+  void AddTripletConstraint(const ViewIdTriplet& view_triplet);
 
   // Sets up the linear system with the constraints that each triplet adds.
-  void CreateLinearSystem(Eigen::SparseMatrix<double> *constraint_matrix);
+  void CreateLinearSystem(Eigen::SparseMatrix<double>* constraint_matrix);
 
-  void AddTripletConstraintToSparseMatrix(
-      const ViewId view_id1, const ViewId view_id2, const ViewId view_id3,
-      const Eigen::Vector3d &baseline,
-      std::unordered_map<std::pair<int, int>, double> *sparse_matrix_entries);
+  //void CreateLinearSystem(Eigen::MatrixXd& constraint_matrix);
+  void AddTripletConstraintToSparseMatrix(const ViewId view_id1,
+      const ViewId view_id2,
+      const ViewId view_id3,
+      const std::tuple<Matrix3d, Matrix3d, Matrix3d> &BCD,
+      std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries);
 
   void CalculateBCDForTrack(
-      const theia::View *view1, const theia::View * view2,
-      const theia::View *view3, const TrackId &track_id,
-      std::tuple<Eigen::Matrix3d, Eigen::Matrix3d, Eigen::Matrix3d> &BCD);
+      const theia::View* view1,
+      const theia::View* view2,
+      const theia::View* view3,
+      const TrackId& track_id,
+      std::tuple<Eigen::Matrix3d, Eigen::Matrix3d, Eigen::Matrix3d>& BCD);
 
   void FindTripletsForTracks();
 
   // A helper method to compute the relative rotations between translation
   // directions.
-  void ComputeRotatedRelativeTranslationRotations(
-      const ViewId view_id0, const ViewId view_id1, const ViewId view_id2,
-      Eigen::Matrix3d *r012, Eigen::Matrix3d *r201, Eigen::Matrix3d *r120);
+  void ComputeRotatedRelativeTranslationRotations(const ViewId view_id0,
+                                                  const ViewId view_id1,
+                                                  const ViewId view_id2,
+                                                  Eigen::Matrix3d* r012,
+                                                  Eigen::Matrix3d* r201,
+                                                  Eigen::Matrix3d* r120);
   // Positions are estimated from an eigenvector that is unit-norm with an
   // ambiguous sign. To ensure that the sign of the camera positions is correct,
   // we measure the relative translations from estimated camera positions and
   // compare that to the relative positions. If the sign is incorrect, we flip
   // the sign of all camera positions.
   void FlipSignOfPositionsIfNecessary(
-      std::unordered_map<ViewId, Eigen::Vector3d> *positions);
+      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
   const Options options_;
-  const Reconstruction &reconstruction_;
-  const std::unordered_map<ViewIdPair, TwoViewInfo> *view_pairs_;
-  const std::unordered_map<ViewId, Eigen::Vector3d> *orientations_;
+  const Reconstruction& reconstruction_;
+  const std::unordered_map<ViewIdPair, TwoViewInfo>* view_pairs_;
+  const std::unordered_map<ViewId, Eigen::Vector3d>* orientations_;
 
   // save a view triplet for each track, eq. 29
   std::unordered_map<TrackId, std::vector<ViewIdTriplet>> triplets_for_tracks_;
-  std::vector<Eigen::Vector3d> baselines_;
+  std::unordered_map<TrackId,
+                     std::vector<std::tuple<Matrix3d, Matrix3d, Matrix3d>>> BCDs_;
 
   // We keep one of the positions as constant to remove the ambiguity of the
   // origin of the linear system.
@@ -140,6 +151,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(LiGTPositionEstimator);
 };
 
-} // namespace theia
+}  // namespace theia
 
-#endif // THEIA_SFM_GLOBAL_POSE_ESTIMATION_LiGT_POSITION_ESTIMATOR_H_
+#endif  // THEIA_SFM_GLOBAL_POSE_ESTIMATION_LiGT_POSITION_ESTIMATOR_H_

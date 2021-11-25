@@ -32,13 +32,14 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <theia/theia.h>
 
 DEFINE_string(reconstruction, "", "Theia Reconstruction file.");
 DEFINE_string(ply_file, "", "Output PLY file.");
-DEFINE_int32(min_num_observations_per_point, 3,
+DEFINE_int32(min_num_observations_per_point,
+             3,
              "Minimum number of observations for a point to be written out to "
              "the PLY file. This helps reduce noise in the resulty PLY file.");
 
@@ -50,9 +51,8 @@ int main(int argc, char* argv[]) {
   CHECK(theia::ReadReconstruction(FLAGS_reconstruction, &reconstruction))
       << "Could not read Reconstruction files.";
 
-  CHECK(WritePlyFile(FLAGS_ply_file,
-                     reconstruction,
-                     FLAGS_min_num_observations_per_point))
+  CHECK(WritePlyFile(
+      FLAGS_ply_file, reconstruction, FLAGS_min_num_observations_per_point))
       << "Could not write out PLY file.";
   return 0;
 }

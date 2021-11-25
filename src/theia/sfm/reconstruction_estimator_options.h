@@ -38,9 +38,9 @@
 #include <memory>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
+#include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
-#include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
 #include "theia/util/random.h"
 
@@ -60,7 +60,9 @@ enum class ReconstructionEstimatorType {
 enum class GlobalRotationEstimatorType {
   ROBUST_L1L2 = 0,
   NONLINEAR = 1,
-  LINEAR = 2
+  LINEAR = 2,
+  LAGRANGE_DUAL = 3,
+  HYBRID = 4
 };
 
 // Global position estimation methods.
@@ -75,7 +77,7 @@ enum class GlobalPositionEstimatorType {
   NONLINEAR = 0,
   LINEAR_TRIPLET = 1,
   LEAST_UNSQUARED_DEVIATION = 2,
-  LiGT = 3
+  LIGT = 3
 };
 
 // Options for the reconstruction estimation.
@@ -235,7 +237,6 @@ struct ReconstructionEstimatorOptions {
   //
   // NOTE: This is only utilized in the Global SfM module.
   int num_retriangulation_iterations = 1;
-
 
   // For bundle adjustment, we may want to use a robust loss function to improve
   // robustness to outliers. The various types of robust loss functions used can

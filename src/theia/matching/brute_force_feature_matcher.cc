@@ -35,8 +35,8 @@
 #include "theia/matching/brute_force_feature_matcher.h"
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
 #include <vector>
 
 #include "theia/matching/distance.h"
@@ -45,12 +45,10 @@
 
 namespace theia {
 
-
 bool BruteForceFeatureMatcher::MatchImagePair(
     const KeypointsAndDescriptors& features1,
     const KeypointsAndDescriptors& features2,
     std::vector<IndexedFeatureMatch>* matches) {
-
   const std::vector<Eigen::VectorXf>& descriptors1 = features1.descriptors;
   const std::vector<Eigen::VectorXf>& descriptors2 = features2.descriptors;
   matches->reserve(descriptors1.size());

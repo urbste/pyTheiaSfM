@@ -235,7 +235,8 @@ void CascadeHasher::MatchImages(
       used_descriptor[candidate_id] = true;
       const uint8_t hamming_distance =
           (hashed_desc.hash_code ^
-           hashed_image2.hashed_desc[candidate_id].hash_code).count();
+           hashed_image2.hashed_desc[candidate_id].hash_code)
+              .count();
       candidate_hamming_distances(
           num_descriptors_with_hamming_distance(hamming_distance)++,
           hamming_distance) = candidate_id;

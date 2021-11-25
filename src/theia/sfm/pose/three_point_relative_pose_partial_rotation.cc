@@ -37,8 +37,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
-#include <Eigen/SVD>
 #include <Eigen/Geometry>
+#include <Eigen/SVD>
 #include <glog/logging.h>
 #include <math.h>
 
@@ -50,14 +50,16 @@ using Eigen::AngleAxisd;
 using Eigen::EigenSolver;
 using Eigen::JacobiSVD;
 using Eigen::Map;
-using Eigen::Matrix3d;
 using Eigen::Matrix;
+using Eigen::Matrix3d;
 using Eigen::Quaterniond;
 using Eigen::Vector3d;
 
 namespace {
 
-bool SolveQEP(const Matrix3d& M, const Matrix3d& C, const Matrix3d& K,
+bool SolveQEP(const Matrix3d& M,
+              const Matrix3d& C,
+              const Matrix3d& K,
               std::vector<double>* eigenvalues,
               std::vector<Vector3d>* eigenvectors) {
   // Solves the quadratic eigenvalue problem:

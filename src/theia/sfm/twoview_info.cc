@@ -51,10 +51,9 @@ void SwapCameras(TwoViewInfo* twoview_info) {
 
   // Invert the translation.
   Eigen::Vector3d neg_of_new_position;
-  ceres::AngleAxisRotatePoint(
-      twoview_info->rotation_2.data(),
-      twoview_info->position_2.data(),
-    neg_of_new_position.data());
+  ceres::AngleAxisRotatePoint(twoview_info->rotation_2.data(),
+                              twoview_info->position_2.data(),
+                              neg_of_new_position.data());
   twoview_info->position_2 = -neg_of_new_position;
 
   // Invert the rotation.

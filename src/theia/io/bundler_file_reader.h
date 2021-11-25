@@ -97,11 +97,11 @@ class BundlerFileReader {
   //     images.
   //   bundler_filepath  The filepath of the bundler output file.
   BundlerFileReader(const std::string& lists_filepath,
-                    const std::string& bundler_filepath) :
-      lists_filepath_(lists_filepath),
-      bundler_filepath_(bundler_filepath),
-      bundler_file_parsed_(false),
-      lists_file_parsed_(false) {}
+                    const std::string& bundler_filepath)
+      : lists_filepath_(lists_filepath),
+        bundler_filepath_(bundler_filepath),
+        bundler_file_parsed_(false),
+        lists_file_parsed_(false) {}
   virtual ~BundlerFileReader() {}
 
   // Parses the bundler output file: bundler_filepath_. Returns true upon
@@ -112,34 +112,26 @@ class BundlerFileReader {
   bool ParseListsFile();
 
   // Returns the number of cameras contained in the bundler output file.
-  int NumCameras() { return cameras_.size();}
-  int NumCameras() const { return cameras_.size();}
+  int NumCameras() { return cameras_.size(); }
+  int NumCameras() const { return cameras_.size(); }
 
   // Returns the number of reconstructed points in the bundler output file.
-  int NumPoints() { return points_.size();}
-  int NumPoints() const { return points_.size();}
+  int NumPoints() { return points_.size(); }
+  int NumPoints() const { return points_.size(); }
 
   // Returns the number of entries in the lists.txt file.
-  int NumListEntries() { return img_entries_.size();}
-  int NumListEntries() const { return img_entries_.size();}
+  int NumListEntries() { return img_entries_.size(); }
+  int NumListEntries() const { return img_entries_.size(); }
 
   // Getters and setters.
-  const std::vector<BundlerCamera>& cameras() const {
-    return cameras_;
-  }
+  const std::vector<BundlerCamera>& cameras() const { return cameras_; }
 
-  const std::vector<BundlerPoint>& points() const {
-    return points_;
-  }
+  const std::vector<BundlerPoint>& points() const { return points_; }
 
-  std::vector<BundlerPoint>* mutable_points()  {
-    return &points_;
-  }
+  std::vector<BundlerPoint>* mutable_points() { return &points_; }
 
-  const std::vector<ListImgEntry>& img_entries() const {
-    return img_entries_;
-  }
-  
+  const std::vector<ListImgEntry>& img_entries() const { return img_entries_; }
+
  private:
   // Lists filepath.
   const std::string lists_filepath_;

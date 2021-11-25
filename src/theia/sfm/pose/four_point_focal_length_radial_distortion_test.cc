@@ -36,10 +36,10 @@
 // company address (steffen.urban@zeiss.com)
 // December 2018
 
-#include <math.h>
-#include <Eigen/Core>
-#include <random>
 #include "gtest/gtest.h"
+#include <Eigen/Core>
+#include <math.h>
+#include <random>
 
 #include "theia/sfm/pose/four_point_focal_length_radial_distortion.h"
 #include "theia/sfm/pose/test_util.h"
@@ -63,7 +63,8 @@ using Eigen::Vector3d;
 
 RandomNumberGenerator rng(64);
 
-void DistortPoint(const Eigen::Vector2d& point2d, const double& distortion,
+void DistortPoint(const Eigen::Vector2d& point2d,
+                  const double& distortion,
                   Eigen::Vector2d* distorted_point) {
   const double r_u_sq = point2d[0] * point2d[0] + point2d[1] * point2d[1];
 
@@ -112,7 +113,8 @@ void P4pfrTestWithNoise(const Matrix3d& gt_rotation,
     Eigen::Vector3d point_in_cam =
         camera_matrix * (gt_rotation * world_points_vector[i] + gt_translation);
     Eigen::Vector2d undistorted_image_point = point_in_cam.hnormalized();
-    DistortPoint(undistorted_image_point, radial_distortion,
+    DistortPoint(undistorted_image_point,
+                 radial_distortion,
                  &distorted_image_points_vector[i]);
     if (noise) {
       AddNoiseToProjection(noise, &rng, &distorted_image_points_vector[i]);
@@ -125,10 +127,10 @@ void P4pfrTestWithNoise(const Matrix3d& gt_rotation,
   std::vector<double> soln_focal_lenghts;
   std::vector<double> soln_radial_distortions;
 
-//  CHECK(FourPointsPoseFocalLengthRadialDistortion(
-//      distorted_image_points_vector, world_points_vector, 2000.0, 0.0, -1e-5,
-//      -1e-10, &soln_rotations, &soln_translations, &soln_radial_distortions,
-//      &soln_focal_lenghts));
+  //  CHECK(FourPointsPoseFocalLengthRadialDistortion(
+  //      distorted_image_points_vector, world_points_vector, 2000.0, 0.0,
+  //      -1e-5, -1e-10, &soln_rotations, &soln_translations,
+  //      &soln_radial_distortions, &soln_focal_lenghts));
 
   double smallest_error = std::numeric_limits<double>::max();
   int solution_idx = -1;
@@ -144,12 +146,13 @@ void P4pfrTestWithNoise(const Matrix3d& gt_rotation,
       Eigen::Vector2d undistorted_image_point = point_in_cam.hnormalized();
       Eigen::Vector2d undistorted_point;
       Eigen::Vector2d distorted_point;
-      //UndistortPoint(distorted_image_points_vector[n],
+      // UndistortPoint(distorted_image_points_vector[n],
       //               soln_radial_distortions[i],&undistorted_point);
-      DistortPoint(undistorted_image_point, soln_radial_distortions[i],
+      DistortPoint(undistorted_image_point,
+                   soln_radial_distortions[i],
                    &distorted_point);
 
-      //double reproj_error =
+      // double reproj_error =
       //    (undistorted_point - undistorted_image_point).squaredNorm();
       double reproj_error =
           (distorted_point - distorted_image_points_vector[n]).squaredNorm();
@@ -166,16 +169,20 @@ void P4pfrTestWithNoise(const Matrix3d& gt_rotation,
     EXPECT_TRUE(test::ArraysEqualUpToScale(
         9, gt_rotation.data(), soln_rotations[solution_idx].data(), 1e-1));
     // The position is more noisy than the rotation usually.
-    EXPECT_TRUE(test::ArraysEqualUpToScale(
-        3, gt_translation.data(), soln_translations[solution_idx].data(),
-        1e-1));
+    EXPECT_TRUE(
+        test::ArraysEqualUpToScale(3,
+                                   gt_translation.data(),
+                                   soln_translations[solution_idx].data(),
+                                   1e-1));
 
     // Expect focal length is near.
     static const double kFocalLengthTolerance = 0.3;
-    EXPECT_NEAR(soln_focal_lenghts[solution_idx], focal_length,
+    EXPECT_NEAR(soln_focal_lenghts[solution_idx],
+                focal_length,
                 kFocalLengthTolerance * focal_length);
     // Expect radial distortion is near.
-    EXPECT_NEAR(soln_radial_distortions[solution_idx], radial_distortion,
+    EXPECT_NEAR(soln_radial_distortions[solution_idx],
+                radial_distortion,
                 std::abs(kFocalLengthTolerance * radial_distortion));
   } else {
     EXPECT_NEAR(1, 2, 0);
@@ -208,8 +215,12 @@ void BasicTest(const double noise) {
       world_points_vector[0].data());
   world_points << -0.42941, 0.000621211, -0.350949, -1.45205, 0.415794,
       -0.556605, -1.92898, -1.89976, 1.4949, 0.838307, 1.41972, 1.25756;
-  P4pfrTestWithNoise(gt_rotation, gt_translation, focal_length,
-                     radial_distortion, world_points_vector, noise);
+  P4pfrTestWithNoise(gt_rotation,
+                     gt_translation,
+                     focal_length,
+                     radial_distortion,
+                     world_points_vector,
+                     noise);
 }
 
 void PlanarTestWithNoise(const double noise) {
@@ -241,8 +252,12 @@ void PlanarTestWithNoise(const double noise) {
   world_points_vector[2] = Vector3d(size / 2, size / 2, depth + 1e-8);
   world_points_vector[3] = Vector3d(-size / 2, size / 2, depth - 1e-7);
 
-  P4pfrTestWithNoise(gt_rotation, gt_translation, focal_length,
-                     radial_distortion, world_points_vector, noise);
+  P4pfrTestWithNoise(gt_rotation,
+                     gt_translation,
+                     focal_length,
+                     radial_distortion,
+                     world_points_vector,
+                     noise);
 }
 
 TEST(P4Pfr, BasicTest) { BasicTest(0.0); }

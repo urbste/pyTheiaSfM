@@ -62,9 +62,8 @@ TEST(View, Estimated) {
 TEST(View, Features) {
   View view;
   const std::vector<TrackId> track_ids = {0, 1, 2};
-  const std::vector<Feature> features = {Feature(0, 0),
-                                         Feature(1, 1),
-                                         Feature(2, 2)};
+  const std::vector<Feature> features = {
+      Feature(0, 0), Feature(1, 1), Feature(2, 2)};
   // Test that no features exist.
   EXPECT_EQ(view.NumFeatures(), 0);
 
@@ -85,13 +84,11 @@ TEST(View, Features) {
   }
 }
 
-
 TEST(View, TrackIds) {
   View view;
   const std::vector<TrackId> track_ids = {0, 1, 2};
-  const std::vector<Feature> features = {Feature(0, 0),
-                                         Feature(1, 1),
-                                         Feature(2, 2)};
+  const std::vector<Feature> features = {
+      Feature(0, 0), Feature(1, 1), Feature(2, 2)};
   // Add features.
   for (int i = 0; i < track_ids.size(); i++) {
     view.AddFeature(track_ids[i], features[i]);

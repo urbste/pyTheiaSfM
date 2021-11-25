@@ -35,8 +35,8 @@
 #include <ceres/ceres.h>
 #include <glog/logging.h>
 
-#include "gtest/gtest.h"
 #include "theia/sfm/global_pose_estimation/pairwise_translation_error.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -63,9 +63,7 @@ void PairwiseTranslationErrorTest(const Vector3d& known_translation,
   // Initialize error function and compute rotation error.
   const PairwiseTranslationError translation_error(known_translation, weight);
   Vector3d error = Vector3d::Zero();
-  translation_error(position_1.data(),
-                    position_2.data(),
-                    error.data());
+  translation_error(position_1.data(), position_2.data(), error.data());
 
   EXPECT_DOUBLE_EQ(error(0), expected_error(0));
   EXPECT_DOUBLE_EQ(error(1), expected_error(1));
@@ -82,9 +80,8 @@ TEST(PairwiseTranslationError, NoTranslation) {
   // Initialize error function and compute rotation error.
   const PairwiseTranslationError translation_error(relative_translation, 1.0);
   Vector3d error = Vector3d::Zero();
-  EXPECT_TRUE(translation_error(position_1.data(),
-                                position_2.data(),
-                                error.data()));
+  EXPECT_TRUE(
+      translation_error(position_1.data(), position_2.data(), error.data()));
 }
 
 TEST(PairwiseTranslationError, TranslationNoNoise) {
@@ -92,10 +89,8 @@ TEST(PairwiseTranslationError, TranslationNoNoise) {
   const Vector3d position_2(1.0, 0.0, 0.0);
   const Vector3d relative_translation = (position_2 - position_1).normalized();
 
-  PairwiseTranslationErrorTest(relative_translation,
-                               kRelativeTranslationWeight,
-                               position_1,
-                               position_2);
+  PairwiseTranslationErrorTest(
+      relative_translation, kRelativeTranslationWeight, position_1, position_2);
 }
 
 TEST(PairwiseTranslationError, TranslationWithNoise) {
@@ -107,10 +102,8 @@ TEST(PairwiseTranslationError, TranslationWithNoise) {
   relative_translation =
       (relative_translation + Vector3d(0.01, 0.01, 0.01)).normalized();
 
-  PairwiseTranslationErrorTest(relative_translation,
-                               kRelativeTranslationWeight,
-                               position_1,
-                               position_2);
+  PairwiseTranslationErrorTest(
+      relative_translation, kRelativeTranslationWeight, position_1, position_2);
 }
 
 TEST(PairwiseTranslationError, NontrivialWeight) {
@@ -123,10 +116,8 @@ TEST(PairwiseTranslationError, NontrivialWeight) {
       (relative_translation + Vector3d(0.01, 0.01, 0.01)).normalized();
 
   static const double kNontrivialWeight = 1.1;
-  PairwiseTranslationErrorTest(relative_translation,
-                               kNontrivialWeight,
-                               position_1,
-                               position_2);
+  PairwiseTranslationErrorTest(
+      relative_translation, kNontrivialWeight, position_1, position_2);
 }
 
 }  // namespace theia

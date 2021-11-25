@@ -34,20 +34,20 @@
 
 #include <Eigen/Dense>
 
+#include "gtest/gtest.h"
 #include <ceres/rotation.h>
 #include <math.h>
-#include "gtest/gtest.h"
 
 #include "theia/alignment/alignment.h"
+#include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/test/test_utils.h"
 #include "theia/util/random.h"
-#include "theia/sfm/camera/extended_unified_camera_model.h"
 
 namespace theia {
 
 using Eigen::AngleAxisd;
-using Eigen::Matrix3d;
 using Eigen::Matrix;
+using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
@@ -68,14 +68,14 @@ TEST(ExtendedUnifiedCameraModel, InternalParameterGettersAndSetters) {
 
   // Set parameters to different values.
   camera.SetFocalLength(0.5 * 805);
-  camera.SetAspectRatio(805/800);
+  camera.SetAspectRatio(805 / 800);
   camera.SetSkew(0.00);
   camera.SetPrincipalPoint(505, 509);
   camera.SetAlphaBetaDistortion(0.1, 0.5);
 
   // Check that the values were updated.
   EXPECT_EQ(camera.FocalLength(), 0.5 * 805);
-  EXPECT_EQ(camera.AspectRatio(), 805/800);
+  EXPECT_EQ(camera.AspectRatio(), 805 / 800);
   EXPECT_EQ(camera.Skew(), 0.00);
   EXPECT_EQ(camera.PrincipalPointX(), 505);
   EXPECT_EQ(camera.PrincipalPointY(), 509);
@@ -176,8 +176,10 @@ TEST(ExtendedUnifiedCameraModel, GetSubsetFromOptimizeIntrinsicsType) {
       OptimizeIntrinsicsType::PRINCIPAL_POINTS);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters() - 2);
   for (int i = 0; i < constant_subset.size(); i++) {
-    EXPECT_NE(constant_subset[i], ExtendedUnifiedCameraModel::PRINCIPAL_POINT_X);
-    EXPECT_NE(constant_subset[i], ExtendedUnifiedCameraModel::PRINCIPAL_POINT_Y);
+    EXPECT_NE(constant_subset[i],
+              ExtendedUnifiedCameraModel::PRINCIPAL_POINT_X);
+    EXPECT_NE(constant_subset[i],
+              ExtendedUnifiedCameraModel::PRINCIPAL_POINT_Y);
   }
 
   // Test that optimizing for aspect ratio works correctly.
@@ -189,8 +191,8 @@ TEST(ExtendedUnifiedCameraModel, GetSubsetFromOptimizeIntrinsicsType) {
   }
 
   // Test that optimizing for skew works correctly.
-  constant_subset = camera.GetSubsetFromOptimizeIntrinsicsType(
-      OptimizeIntrinsicsType::SKEW);
+  constant_subset =
+      camera.GetSubsetFromOptimizeIntrinsicsType(OptimizeIntrinsicsType::SKEW);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters() - 1);
   for (int i = 0; i < constant_subset.size(); i++) {
     EXPECT_NE(constant_subset[i], ExtendedUnifiedCameraModel::SKEW);
@@ -231,17 +233,17 @@ void ReprojectionTest(const ExtendedUnifiedCameraModel& camera) {
         const Vector2d reprojected_pixel =
             camera.CameraToImageCoordinates(point);
 
-      // Expect the reprojection to be close.
-      EXPECT_LT((pixel - reprojected_pixel).norm(), kTolerance)
-          << "gt pixel: " << pixel.transpose()
-          << "\nreprojected pixel: " << reprojected_pixel.transpose();
+        // Expect the reprojection to be close.
+        EXPECT_LT((pixel - reprojected_pixel).norm(), kTolerance)
+            << "gt pixel: " << pixel.transpose()
+            << "\nreprojected pixel: " << reprojected_pixel.transpose();
       }
     }
   }
 
   // Ensure the camera -> image -> camera transformation works.
   for (double x = -0.8; x < 0.8; x += 0.1) {
-    for (double y = -0.8; y <  0.8; y += 0.1) {
+    for (double y = -0.8; y < 0.8; y += 0.1) {
       for (double depth = kMinDepth; depth < kMaxDepth; depth += 1.0) {
         const Eigen::Vector3d point(x, y, depth);
         const Vector2d pixel = camera.CameraToImageCoordinates(point);
@@ -262,7 +264,8 @@ void ReprojectionTest(const ExtendedUnifiedCameraModel& camera) {
 }
 
 TEST(ExtendedUnifiedCameraModel, ReprojectionDistortion) {
-  static const double kPrincipalPoint[2] = {620.8604896644665, 512.7395432585965};
+  static const double kPrincipalPoint[2] = {620.8604896644665,
+                                            512.7395432585965};
   ExtendedUnifiedCameraModel camera;
   camera.SetFocalLength(500.94519367444846);
   camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1]);
@@ -271,4 +274,3 @@ TEST(ExtendedUnifiedCameraModel, ReprojectionDistortion) {
 }
 
 }  // namespace theia
-

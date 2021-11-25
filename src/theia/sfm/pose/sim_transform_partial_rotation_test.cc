@@ -54,7 +54,6 @@ namespace {
 
 using Eigen::AngleAxisd;
 using Eigen::Matrix3d;
-using Eigen::Matrix3d;
 using Eigen::Quaterniond;
 using Eigen::Vector3d;
 
@@ -91,9 +90,9 @@ void TestSimTransformResultWithNoise(const Vector3d& axis,
     image_one_origins[i] = view_1_origins[i];
     image_one_rays[i] = (points_3d[i] - view_1_origins[i]).normalized();
 
-    image_two_origins[i] =
-        expected_rotation.inverse() *
-        (view_2_origins[i] - expected_translation) / expected_scale;
+    image_two_origins[i] = expected_rotation.inverse() *
+                           (view_2_origins[i] - expected_translation) /
+                           expected_scale;
     image_two_rays[i] = expected_rotation.inverse() *
                         (points_3d[i] - view_2_origins[i]).normalized();
   }
@@ -132,7 +131,6 @@ void TestSimTransformResultWithNoise(const Vector3d& axis,
         fabs(expected_scale - soln_scales[n]) / expected_scale;
     const bool matched_scale = (scale_difference < max_scale_difference);
 
-
     LOG(INFO) << "Rot diff = " << rotation_difference;
     LOG(INFO) << "Translation diff = " << translation_difference;
     LOG(INFO) << "Scale diff = " << scale_difference;
@@ -146,23 +144,23 @@ void TestSimTransformResultWithNoise(const Vector3d& axis,
 
 TEST(SimTransformPartialRotationTest, Basic) {
   // Sets up some points in the 3D scene
-  const Vector3d kPoints3D[5] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0),
-                                  Vector3d(4.0, 3.0, 5.0),
-                                  Vector3d(-2.0, 1.0, -1.0) };
+  const Vector3d kPoints3D[5] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0),
+                                 Vector3d(4.0, 3.0, 5.0),
+                                 Vector3d(-2.0, 1.0, -1.0)};
 
-  const Vector3d kImageOneOrigins[5] = { Vector3d(-1.0, 0.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(2.0, 0.0, 0.0),
-                                         Vector3d(3.0, 0.0, 0.0),
-                                         Vector3d(4.0, 0.0, 0.0) };
+  const Vector3d kImageOneOrigins[5] = {Vector3d(-1.0, 0.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(2.0, 0.0, 0.0),
+                                        Vector3d(3.0, 0.0, 0.0),
+                                        Vector3d(4.0, 0.0, 0.0)};
 
-  const Vector3d kImageTwoOrigins[5] = { Vector3d(0.0, 1.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(0.0, 2.0, 0.0),
-                                         Vector3d(0.0, 3.0, 0.0),
-                                         Vector3d(0.0, 4.0, 0.0) };
+  const Vector3d kImageTwoOrigins[5] = {Vector3d(0.0, 1.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(0.0, 2.0, 0.0),
+                                        Vector3d(0.0, 3.0, 0.0),
+                                        Vector3d(0.0, 4.0, 0.0)};
 
   const Vector3d axis = Vector3d(1.0, 1.0, 1.0).normalized();
   Quaterniond kExpectedRotation(AngleAxisd(DegToRad(51.0), axis));
@@ -188,22 +186,22 @@ TEST(SimTransformPartialRotationTest, Basic) {
 
 TEST(SimTransformPartialRotationTest, NoRotation) {
   // Sets up some points in the 3D scene
-  const Vector3d kPoints3D[5] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 2.0, 5.0),
-                                  Vector3d(4.0, 3.0, 5.0) };
+  const Vector3d kPoints3D[5] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 2.0, 5.0),
+                                 Vector3d(4.0, 3.0, 5.0)};
 
-  const Vector3d kImageOneOrigins[5] = { Vector3d(-1.0, 0.0, -1.5),
-                                         Vector3d(0.0, 0.0, -1.0),
-                                         Vector3d(2.0, 0.0, 0.0),
-                                         Vector3d(3.0, 0.0, 0.0),
-                                         Vector3d(0.0, 0.0, -2.0) };
+  const Vector3d kImageOneOrigins[5] = {Vector3d(-1.0, 0.0, -1.5),
+                                        Vector3d(0.0, 0.0, -1.0),
+                                        Vector3d(2.0, 0.0, 0.0),
+                                        Vector3d(3.0, 0.0, 0.0),
+                                        Vector3d(0.0, 0.0, -2.0)};
 
-  const Vector3d kImageTwoOrigins[5] = { Vector3d(0.0, 1.0, 2.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(0.0, 2.0, 1.0),
-                                         Vector3d(0.0, 3.0, 0.0),
-                                         Vector3d(0.0, 3.0, 1.0) };
+  const Vector3d kImageTwoOrigins[5] = {Vector3d(0.0, 1.0, 2.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(0.0, 2.0, 1.0),
+                                        Vector3d(0.0, 3.0, 0.0),
+                                        Vector3d(0.0, 3.0, 1.0)};
 
   const Vector3d axis = Vector3d(1.0, 1.0, 1.0).normalized();
   Quaterniond kExpectedRotation(AngleAxisd(DegToRad(0.0), axis));
@@ -229,22 +227,22 @@ TEST(SimTransformPartialRotationTest, NoRotation) {
 
 TEST(SimTransformPartialRotationTest, NoTranslation) {
   // Sets up some points in the 3D scene
-  const Vector3d kPoints3D[5] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 2.0, 5.0),
-                                  Vector3d(4.0, 3.0, 5.0) };
+  const Vector3d kPoints3D[5] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 2.0, 5.0),
+                                 Vector3d(4.0, 3.0, 5.0)};
 
-  const Vector3d kImageOneOrigins[5] = { Vector3d(-1.0, 0.0, -1.5),
-                                         Vector3d(0.0, 0.0, -1.0),
-                                         Vector3d(2.0, 0.0, 0.0),
-                                         Vector3d(3.0, 0.0, 0.0),
-                                         Vector3d(0.0, 0.0, -2.0) };
+  const Vector3d kImageOneOrigins[5] = {Vector3d(-1.0, 0.0, -1.5),
+                                        Vector3d(0.0, 0.0, -1.0),
+                                        Vector3d(2.0, 0.0, 0.0),
+                                        Vector3d(3.0, 0.0, 0.0),
+                                        Vector3d(0.0, 0.0, -2.0)};
 
-  const Vector3d kImageTwoOrigins[5] = { Vector3d(0.0, 1.0, 2.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(0.0, 2.0, 1.0),
-                                         Vector3d(0.0, 3.0, 0.0),
-                                         Vector3d(0.0, 3.0, 1.0) };
+  const Vector3d kImageTwoOrigins[5] = {Vector3d(0.0, 1.0, 2.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(0.0, 2.0, 1.0),
+                                        Vector3d(0.0, 3.0, 0.0),
+                                        Vector3d(0.0, 3.0, 1.0)};
 
   const Vector3d axis = Vector3d(1.0, 1.0, 1.0).normalized();
   Quaterniond kExpectedRotation(AngleAxisd(DegToRad(15.7), axis));
@@ -270,40 +268,40 @@ TEST(SimTransformPartialRotationTest, NoTranslation) {
 
 // Tests a variety of axes, angles and translations with added projection noise.
 TEST(SimTransformPartialRotationTest, NoiseTest) {
-  const Vector3d kPoints3D[5] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0),
-                                  Vector3d(4.0, 3.0, 5.0) };
+  const Vector3d kPoints3D[5] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0),
+                                 Vector3d(4.0, 3.0, 5.0)};
 
-  const Vector3d kImageOneOrigins[5] = { Vector3d(-1.0, 0.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(2.0, 0.0, 0.0),
-                                         Vector3d(3.0, 0.0, 0.0),
-                                         Vector3d(4.0, 0.0, 0.0) };
+  const Vector3d kImageOneOrigins[5] = {Vector3d(-1.0, 0.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(2.0, 0.0, 0.0),
+                                        Vector3d(3.0, 0.0, 0.0),
+                                        Vector3d(4.0, 0.0, 0.0)};
 
-  const Vector3d kImageTwoOrigins[5] = { Vector3d(0.0, 1.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(0.0, 2.0, 0.0),
-                                         Vector3d(0.0, 3.0, 0.0),
-                                         Vector3d(0.0, 4.0, 0.0) };
+  const Vector3d kImageTwoOrigins[5] = {Vector3d(0.0, 1.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(0.0, 2.0, 0.0),
+                                        Vector3d(0.0, 3.0, 0.0),
+                                        Vector3d(0.0, 4.0, 0.0)};
 
-  const Vector3d kAxes[5] = { Vector3d(0.0, 0.0, 1.0).normalized(),
-                              Vector3d(1.0, 0.0, 0.0).normalized(),
-                              Vector3d(1.0, 0.0, 1.0).normalized(),
-                              Vector3d(1.0, 1.0, 0.0).normalized(),
-                              Vector3d(1.0, 1.0, 1.0).normalized() };
+  const Vector3d kAxes[5] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                             Vector3d(1.0, 0.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 1.0).normalized(),
+                             Vector3d(1.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 1.0, 1.0).normalized()};
 
   const double kAngles[5] = {11.0, 5.0, 2.0, 13.0, 12.0};
 
-  const Vector3d kTranslations[5] = {
-    Vector3d(1.0, 1.0, 1.0), Vector3d(4.0, 5.0, 11.0), Vector3d(1.0, 2.0, 15.0),
-    Vector3d(6.0, 3.0, 2.0), Vector3d(13.0, 1.0, 15.0)
-  };
+  const Vector3d kTranslations[5] = {Vector3d(1.0, 1.0, 1.0),
+                                     Vector3d(4.0, 5.0, 11.0),
+                                     Vector3d(1.0, 2.0, 15.0),
+                                     Vector3d(6.0, 3.0, 2.0),
+                                     Vector3d(13.0, 1.0, 15.0)};
 
-  const double kScales[5] = { 1.2, 2.9, 10.3, 4.2, 5.3 };
+  const double kScales[5] = {1.2, 2.9, 10.3, 4.2, 5.3};
 
-  for (int transform_index = 0;
-       transform_index < THEIA_ARRAYSIZE(kAxes);
+  for (int transform_index = 0; transform_index < THEIA_ARRAYSIZE(kAxes);
        ++transform_index) {
     Quaterniond kExpectedRotation(
         AngleAxisd(DegToRad(kAngles[transform_index]), kAxes[transform_index]));
@@ -330,55 +328,49 @@ TEST(SimTransformPartialRotationTest, NoiseTest) {
 // Tests that the solver degrades gracefully when the passed axis is not exactly
 // correct.
 TEST(SimTransformPartialRotationTest, IncorrectAxisTest) {
-  const Vector3d kPoints3D[5] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0),
-                                  Vector3d(4.0, 3.0, 5.0) };
+  const Vector3d kPoints3D[5] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0),
+                                 Vector3d(4.0, 3.0, 5.0)};
 
-  const Vector3d kImageOneOrigins[5] = { Vector3d(-1.0, 0.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(2.0, 0.0, 0.0),
-                                         Vector3d(3.0, 0.0, 0.0),
-                                         Vector3d(4.0, 0.0, 0.0) };
+  const Vector3d kImageOneOrigins[5] = {Vector3d(-1.0, 0.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(2.0, 0.0, 0.0),
+                                        Vector3d(3.0, 0.0, 0.0),
+                                        Vector3d(4.0, 0.0, 0.0)};
 
-  const Vector3d kImageTwoOrigins[5] = { Vector3d(0.0, 1.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(0.0, 2.0, 0.0),
-                                         Vector3d(0.0, 3.0, 0.0),
-                                         Vector3d(0.0, 4.0, 0.0) };
+  const Vector3d kImageTwoOrigins[5] = {Vector3d(0.0, 1.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(0.0, 2.0, 0.0),
+                                        Vector3d(0.0, 3.0, 0.0),
+                                        Vector3d(0.0, 4.0, 0.0)};
 
-  const Vector3d kAxes[5] = {
-      Vector3d(0.0, 0.0, 1.0).normalized(),
-      Vector3d(1.0, 0.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized()
-  };
+  const Vector3d kAxes[5] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                             Vector3d(1.0, 0.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 1.0).normalized(),
+                             Vector3d(1.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 1.0, 1.0).normalized()};
 
   const double kAngles[5] = {11.0, 5.0, 2.0, 13.0, 12.0};
 
-  const Vector3d kTranslations[5] = {
-      Vector3d(1.0, 1.0, 1.0),
-      Vector3d(4.0, 5.0, 11.0),
-      Vector3d(1.0, 2.0, 15.0),
-      Vector3d(6.0, 3.0, 2.0),
-      Vector3d(13.0, 1.0, 15.0)
-  };
-  const double kScales[5] = { 1.2, 2.9, 10.3, 101.2, 54.3 };
+  const Vector3d kTranslations[5] = {Vector3d(1.0, 1.0, 1.0),
+                                     Vector3d(4.0, 5.0, 11.0),
+                                     Vector3d(1.0, 2.0, 15.0),
+                                     Vector3d(6.0, 3.0, 2.0),
+                                     Vector3d(13.0, 1.0, 15.0)};
+  const double kScales[5] = {1.2, 2.9, 10.3, 101.2, 54.3};
 
   // The axes are perturbed by these rotation to simulate the axis not being
   // perfectly known.
   const Quaterniond kAxisPerturbations[6] = {
-    Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(1.0, 0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(1.0, 0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 1.0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 1.0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 0.0, 1.0))),
-    Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 0.0, 1.0)))
-  };
+      Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(1.0, 0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(1.0, 0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 1.0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 1.0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 0.0, 1.0))),
+      Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 0.0, 1.0)))};
 
-  for (int transform_index = 0;
-       transform_index < THEIA_ARRAYSIZE(kAxes);
+  for (int transform_index = 0; transform_index < THEIA_ARRAYSIZE(kAxes);
        ++transform_index) {
     for (int axis_rotation_index = 0;
          axis_rotation_index < THEIA_ARRAYSIZE(kAxisPerturbations);

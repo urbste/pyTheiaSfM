@@ -71,7 +71,8 @@ void TestOptimizeView(const int kNumPoints, const double kPixelNoise) {
   reconstruction.MutableView(vid)->SetEstimated(true);
   // Set up random points.
   for (int i = 0; i < kNumPoints; i++) {
-    Eigen::Vector3d point(rng.RandDouble(-5.0, 5.0), rng.RandDouble(-5.0, 5.0),
+    Eigen::Vector3d point(rng.RandDouble(-5.0, 5.0),
+                          rng.RandDouble(-5.0, 5.0),
                           rng.RandDouble(4.0, 10.0));
     TrackId tid = reconstruction.AddTrack();
     reconstruction.MutableTrack(tid)->SetPoint(point.homogeneous());
@@ -81,7 +82,7 @@ void TestOptimizeView(const int kNumPoints, const double kPixelNoise) {
     double depth = reconstruction.View(vid)->Camera().ProjectPoint(
         point.homogeneous(), &pixel);
     if (kPixelNoise > 0.0) {
-        AddNoiseToProjection(kPixelNoise, &rng, &pixel);
+      AddNoiseToProjection(kPixelNoise, &rng, &pixel);
     }
     if (depth > 0.0) {
       reconstruction.AddObservation(vid, tid, Feature(pixel));
@@ -95,13 +96,15 @@ void TestOptimizeView(const int kNumPoints, const double kPixelNoise) {
   std::cout << "Final squared reprojection error: " << 2.0 * sum.final_cost
             << "\n";
   if (kPixelNoise == 0.0) {
-      EXPECT_TRUE(2.0 * sum.final_cost / reconstruction.View(vid)->NumFeatures() < 1e-15);
+    EXPECT_TRUE(2.0 * sum.final_cost / reconstruction.View(vid)->NumFeatures() <
+                1e-15);
   } else {
-    EXPECT_TRUE(2.0 * sum.final_cost / reconstruction.View(vid)->NumFeatures() < kPixelNoise);
+    EXPECT_TRUE(2.0 * sum.final_cost / reconstruction.View(vid)->NumFeatures() <
+                kPixelNoise);
   }
 }
 
-} // namespace
+}  // namespace
 
 TEST(OptimizeView, NoNoise) {
   static const double kPixelNoise = 0.0;
@@ -115,4 +118,4 @@ TEST(OptimizeView, Noise) {
   TestOptimizeView(kNumPoints, kPixelNoise);
 }
 
-} // namespace theia
+}  // namespace theia

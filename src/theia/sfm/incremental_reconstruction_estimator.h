@@ -35,8 +35,8 @@
 #ifndef THEIA_SFM_INCREMENTAL_RECONSTRUCTION_ESTIMATOR_H_
 #define THEIA_SFM_INCREMENTAL_RECONSTRUCTION_ESTIMATOR_H_
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/estimate_track.h"

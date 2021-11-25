@@ -65,7 +65,7 @@ class Upnp {
   using Matrix10d = Eigen::Matrix<double, 10, 10>;
   using Vector10d = Eigen::Matrix<double, 10, 1>;
   using RowMajorMatrixXd =
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+      Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
   // Dimensions for the minimal-sample template matrix.
   const int kMinimalSampleTemplateRows = 395;
@@ -77,8 +77,8 @@ class Upnp {
 
  public:
   // Constructors and destructors.
-  Upnp(const bool use_minimal_template) :
-      use_minimal_template_(use_minimal_template) {}
+  Upnp(const bool use_minimal_template)
+      : use_minimal_template_(use_minimal_template) {}
   Upnp() : Upnp(false) {}
   ~Upnp() = default;
 
@@ -129,14 +129,16 @@ class Upnp {
                     const std::vector<Eigen::Vector3d>& world_points,
                     std::vector<Eigen::Quaterniond>* solution_rotations,
                     std::vector<Eigen::Vector3d>* solution_translations) {
-    return EstimatePose(ray_origins, ray_directions, world_points,
-                        solution_rotations, solution_translations, nullptr);
+    return EstimatePose(ray_origins,
+                        ray_directions,
+                        world_points,
+                        solution_rotations,
+                        solution_translations,
+                        nullptr);
   }
 
   // Getters.
-  const CostParameters& cost_params() const {
-    return cost_params_;
-  }
+  const CostParameters& cost_params() const { return cost_params_; }
 
   // Evaluates the Upnp cost function given a rotation and the cost parameters.
   // The evaluated cost is the following:
@@ -157,7 +159,7 @@ class Upnp {
   // translation. The evaluated residual is the following:
   //
   // reprojected_point = (ray_direction + ray_origin - t).hnormalized()
-  // 
+  //
   // residual = || reprojected_point - (R * p).hnormalized() ||
   //
   // where R is the rotation, t is the translation, and p is the 3D point.
@@ -192,9 +194,9 @@ class Upnp {
 
   // Computes the entries of the cost parameters given 2D-3D correspondences.
   std::vector<Eigen::Matrix3d> ComputeCostParameters(
-    const std::vector<Eigen::Vector3d>& ray_origins,
-    const std::vector<Eigen::Vector3d>& ray_directions,
-    const std::vector<Eigen::Vector3d>& world_points);
+      const std::vector<Eigen::Vector3d>& ray_origins,
+      const std::vector<Eigen::Vector3d>& ray_directions,
+      const std::vector<Eigen::Vector3d>& world_points);
 
   // Compute rotations.
   std::vector<Eigen::Quaterniond> ComputeRotations(

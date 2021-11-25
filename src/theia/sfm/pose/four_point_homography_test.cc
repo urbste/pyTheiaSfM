@@ -32,15 +32,15 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <glog/logging.h>
-#include "gtest/gtest.h"
 
 #include "theia/math/util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/pose/four_point_homography.h"
 #include "theia/sfm/pose/test_util.h"
+#include "theia/util/random.h"
 
 namespace theia {
 namespace {
@@ -66,16 +66,17 @@ void GenerateImagePoints(const std::vector<Vector3d>& points_3d,
   image_2_points->reserve(points_3d.size());
   for (int i = 0; i < points_3d.size(); i++) {
     image_1_points->push_back(points_3d[i].hnormalized());
-    image_2_points->push_back((expected_rotation * points_3d[i] +
-                               expected_translation).hnormalized());
+    image_2_points->push_back(
+        (expected_rotation * points_3d[i] + expected_translation)
+            .hnormalized());
   }
 
   if (projection_noise_std_dev) {
     for (int i = 0; i < points_3d.size(); i++) {
-      AddNoiseToProjection(projection_noise_std_dev, &rng,
-                           &((*image_1_points)[i]));
-      AddNoiseToProjection(projection_noise_std_dev, &rng,
-                           &((*image_2_points)[i]));
+      AddNoiseToProjection(
+          projection_noise_std_dev, &rng, &((*image_1_points)[i]));
+      AddNoiseToProjection(
+          projection_noise_std_dev, &rng, &((*image_2_points)[i]));
     }
   }
 }
@@ -111,24 +112,27 @@ void FourPointHomographyWithNoiseTest(const std::vector<Vector3d>& points_3d,
                                       const double kMaxSymmetricError) {
   std::vector<Vector2d> image_1_points;
   std::vector<Vector2d> image_2_points;
-  GenerateImagePoints(points_3d, projection_noise_std_dev, expected_rotation,
-                      expected_translation, &image_1_points, &image_2_points);
+  GenerateImagePoints(points_3d,
+                      projection_noise_std_dev,
+                      expected_rotation,
+                      expected_translation,
+                      &image_1_points,
+                      &image_2_points);
   // Compute homography matrix.
   Matrix3d homography_matrix;
-  EXPECT_TRUE(FourPointHomography(image_1_points,
-                                  image_2_points,
-                                  &homography_matrix));
+  EXPECT_TRUE(
+      FourPointHomography(image_1_points, image_2_points, &homography_matrix));
 
-  CheckSymmetricError(image_1_points, image_2_points, homography_matrix,
-                         kMaxSymmetricError);
+  CheckSymmetricError(
+      image_1_points, image_2_points, homography_matrix, kMaxSymmetricError);
 }
 
 void BasicTest() {
   const std::vector<Vector3d> points_3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
+      Vector3d(-1.0, 3.0, 3.0),
+      Vector3d(1.0, -1.0, 2.0),
+      Vector3d(-1.0, 1.0, 2.0),
+      Vector3d(2.0, 1.0, 3.0),
   };
 
   const Quaterniond soln_rotation(
@@ -138,20 +142,17 @@ void BasicTest() {
   const double kMaxSymmetricError = 1e-12;
 
   FourPointHomographyWithNoiseTest(
-      points_3d, kNoise, soln_rotation, soln_translation,
-      kMaxSymmetricError);
+      points_3d, kNoise, soln_rotation, soln_translation, kMaxSymmetricError);
 }
 
-TEST(FourPointHomography, BasicTest) {
-  BasicTest();
-}
+TEST(FourPointHomography, BasicTest) { BasicTest(); }
 
 TEST(FourPointHomography, NoiseTest) {
   const std::vector<Vector3d> points_3d = {
-    Vector3d(-1.0, 3.0, 3.0),
-    Vector3d(1.0, -1.0, 2.0),
-    Vector3d(-1.0, 1.0, 2.0),
-    Vector3d(2.0, 1.0, 3.0),
+      Vector3d(-1.0, 3.0, 3.0),
+      Vector3d(1.0, -1.0, 2.0),
+      Vector3d(-1.0, 1.0, 2.0),
+      Vector3d(2.0, 1.0, 3.0),
   };
 
   const Quaterniond soln_rotation(
@@ -160,16 +161,16 @@ TEST(FourPointHomography, NoiseTest) {
   const double kNoise = 1.0 / 512.0;
   const double kMaxSymmetricError = 1e-4;
 
-  FourPointHomographyWithNoiseTest(points_3d, kNoise, soln_rotation,
-                                    soln_translation, kMaxSymmetricError);
+  FourPointHomographyWithNoiseTest(
+      points_3d, kNoise, soln_rotation, soln_translation, kMaxSymmetricError);
 }
 
 TEST(FourPointHomography, PlanarPoints) {
   const std::vector<Vector3d> points_3d = {
-    Vector3d(-1.0, 3.0, 5.0),
-    Vector3d(1.0, -1.0, 5.0),
-    Vector3d(-1.0, 1.0, 5.0),
-    Vector3d(2.0, 1.0, 5.0),
+      Vector3d(-1.0, 3.0, 5.0),
+      Vector3d(1.0, -1.0, 5.0),
+      Vector3d(-1.0, 1.0, 5.0),
+      Vector3d(2.0, 1.0, 5.0),
   };
 
   const Quaterniond soln_rotation(
@@ -178,8 +179,8 @@ TEST(FourPointHomography, PlanarPoints) {
   const double kNoise = 1.0 / 512.0;
   const double kMaxSymmetricError = 1e-4;
 
-  FourPointHomographyWithNoiseTest(points_3d, kNoise, soln_rotation,
-                                    soln_translation, kMaxSymmetricError);
+  FourPointHomographyWithNoiseTest(
+      points_3d, kNoise, soln_rotation, soln_translation, kMaxSymmetricError);
 }
 
 void ManyPointsTest() {
@@ -197,13 +198,11 @@ void ManyPointsTest() {
                             rng.RandDouble(1.0, 5.0));
   }
 
-  FourPointHomographyWithNoiseTest(points_3d, kNoise, soln_rotation,
-                                   soln_translation, kMaxSymmetricError);
+  FourPointHomographyWithNoiseTest(
+      points_3d, kNoise, soln_rotation, soln_translation, kMaxSymmetricError);
 }
 
-TEST(FourPointHomography, ManyPoints) {
-  ManyPointsTest();
-}
+TEST(FourPointHomography, ManyPoints) { ManyPointsTest(); }
 
 }  // namespace
 }  // namespace theia

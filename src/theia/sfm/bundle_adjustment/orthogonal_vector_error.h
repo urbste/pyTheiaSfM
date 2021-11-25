@@ -56,10 +56,9 @@ struct OrthogonalVectorError {
 
   static ceres::CostFunction* Create(const Eigen::Vector3d& orthogonal_vector) {
     static const int kParameterSize = 3;
-    return new ceres::AutoDiffCostFunction<OrthogonalVectorError,
-                                           1,
-                                           kParameterSize>(
-        new OrthogonalVectorError(orthogonal_vector));
+    return new ceres::
+        AutoDiffCostFunction<OrthogonalVectorError, 1, kParameterSize>(
+            new OrthogonalVectorError(orthogonal_vector));
   }
 
  private:

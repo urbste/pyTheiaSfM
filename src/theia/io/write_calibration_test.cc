@@ -32,17 +32,18 @@
 // Please contact the author of this library if you have any questions.
 // Author: Victor Fragoso (victor.fragoso@mail.wvu.edu)
 
+#include <glog/logging.h>
 #include <string>
 #include <unordered_map>
-#include <glog/logging.h>
 
-#include "gtest/gtest.h"
-#include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/io/read_calibration.h"
 #include "theia/io/write_calibration.h"
+#include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/util/map_util.h"
+#include "gtest/gtest.h"
 
-DEFINE_string(json_file, "io/write_calibration_test.json",
+DEFINE_string(json_file,
+              "io/write_calibration_test.json",
               "JSON writing testing file.");
 
 namespace theia {
@@ -99,8 +100,8 @@ static const char* kCameraIntrinsicsPriorsJson =
 TEST(WriteCalibrationTest, WriteAndParseIntrinsicPriors) {
   // Read the expected priors.
   std::unordered_map<std::string, CameraIntrinsicsPrior> expected_priors;
-  EXPECT_TRUE(ExtractCameraIntrinsicPriorsFromJson(
-      kCameraIntrinsicsPriorsJson, &expected_priors));
+  EXPECT_TRUE(ExtractCameraIntrinsicPriorsFromJson(kCameraIntrinsicsPriorsJson,
+                                                   &expected_priors));
 
   // Write JSON file.
   VLOG(1) << "Writing calibration priors to: " << json_filepath;
@@ -152,14 +153,10 @@ TEST(WriteCalibrationTest, WriteAndParseIntrinsicPriors) {
               prior.second.tangential_distortion.value[0]);
     EXPECT_EQ(camera_prior->tangential_distortion.value[1],
               prior.second.tangential_distortion.value[1]);
-    EXPECT_EQ(camera_prior->position.is_set,
-              prior.second.position.is_set);
-    EXPECT_EQ(camera_prior->position.value[0],
-              prior.second.position.value[0]);
-    EXPECT_EQ(camera_prior->position.value[1],
-              prior.second.position.value[1]);
-    EXPECT_EQ(camera_prior->position.value[2],
-              prior.second.position.value[2]);
+    EXPECT_EQ(camera_prior->position.is_set, prior.second.position.is_set);
+    EXPECT_EQ(camera_prior->position.value[0], prior.second.position.value[0]);
+    EXPECT_EQ(camera_prior->position.value[1], prior.second.position.value[1]);
+    EXPECT_EQ(camera_prior->position.value[2], prior.second.position.value[2]);
     EXPECT_EQ(camera_prior->orientation.is_set,
               prior.second.orientation.is_set);
     EXPECT_EQ(camera_prior->orientation.value[0],
@@ -168,18 +165,13 @@ TEST(WriteCalibrationTest, WriteAndParseIntrinsicPriors) {
               prior.second.orientation.value[1]);
     EXPECT_EQ(camera_prior->orientation.value[2],
               prior.second.orientation.value[2]);
-    EXPECT_EQ(camera_prior->latitude.is_set,
-              prior.second.latitude.is_set);
-    EXPECT_EQ(camera_prior->latitude.value[0],
-              prior.second.latitude.value[0]);
-    EXPECT_EQ(camera_prior->longitude.is_set,
-              prior.second.longitude.is_set);
+    EXPECT_EQ(camera_prior->latitude.is_set, prior.second.latitude.is_set);
+    EXPECT_EQ(camera_prior->latitude.value[0], prior.second.latitude.value[0]);
+    EXPECT_EQ(camera_prior->longitude.is_set, prior.second.longitude.is_set);
     EXPECT_EQ(camera_prior->longitude.value[0],
               prior.second.longitude.value[0]);
-    EXPECT_EQ(camera_prior->altitude.is_set,
-              prior.second.altitude.is_set);
-    EXPECT_EQ(camera_prior->altitude.value[0],
-              prior.second.altitude.value[0]);
+    EXPECT_EQ(camera_prior->altitude.is_set, prior.second.altitude.is_set);
+    EXPECT_EQ(camera_prior->altitude.value[0], prior.second.altitude.value[0]);
   }
 }
 

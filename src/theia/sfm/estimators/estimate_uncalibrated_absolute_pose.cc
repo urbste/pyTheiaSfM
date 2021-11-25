@@ -34,9 +34,9 @@
 
 #include "theia/sfm/estimators/estimate_uncalibrated_absolute_pose.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <memory>
 #include <vector>
 
@@ -70,12 +70,15 @@ class UncalibratedAbsolutePoseEstimator
   bool EstimateModel(
       const std::vector<FeatureCorrespondence2D3D>& correspondences,
       std::vector<Matrix3x4d>* absolute_poses) const {
-    const std::vector<Eigen::Vector2d> features = {
-        correspondences[0].feature, correspondences[1].feature,
-        correspondences[2].feature, correspondences[3].feature};
+    const std::vector<Eigen::Vector2d> features = {correspondences[0].feature,
+                                                   correspondences[1].feature,
+                                                   correspondences[2].feature,
+                                                   correspondences[3].feature};
     const std::vector<Eigen::Vector3d> world_points = {
-        correspondences[0].world_point, correspondences[1].world_point,
-        correspondences[2].world_point, correspondences[3].world_point};
+        correspondences[0].world_point,
+        correspondences[1].world_point,
+        correspondences[2].world_point,
+        correspondences[3].world_point};
 
     const int num_solutions =
         FourPointPoseAndFocalLength(features, world_points, absolute_poses);
@@ -109,14 +112,12 @@ bool EstimateUncalibratedAbsolutePose(
     RansacSummary* ransac_summary) {
   UncalibratedAbsolutePoseEstimator absolute_pose_estimator;
   std::unique_ptr<SampleConsensusEstimator<UncalibratedAbsolutePoseEstimator> >
-      ransac = CreateAndInitializeRansacVariant(ransac_type,
-                                                ransac_params,
-                                                absolute_pose_estimator);
+      ransac = CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, absolute_pose_estimator);
   // Estimate the absolute pose.
   Matrix3x4d projection_matrix;
-  const bool success = ransac->Estimate(normalized_correspondences,
-                                        &projection_matrix,
-                                        ransac_summary);
+  const bool success = ransac->Estimate(
+      normalized_correspondences, &projection_matrix, ransac_summary);
 
   // Recover the focal length and pose.
   Eigen::Matrix3d calibration_matrix;

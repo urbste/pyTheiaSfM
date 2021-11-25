@@ -34,14 +34,14 @@
 
 #include "theia/sfm/camera/extended_unified_camera_model.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <glog/logging.h>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
-#include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/camera/projection_matrix_utils.h"
+#include "theia/sfm/camera_intrinsics_prior.h"
 
 namespace theia {
 
@@ -63,7 +63,9 @@ ExtendedUnifiedCameraModel::ExtendedUnifiedCameraModel() {
   SetParameter(BETA, 1.0);
 }
 
-int ExtendedUnifiedCameraModel::NumParameters() const {return kIntrinsicsSize;}
+int ExtendedUnifiedCameraModel::NumParameters() const {
+  return kIntrinsicsSize;
+}
 
 // Returns the camera model type of the object.
 CameraIntrinsicsModelType ExtendedUnifiedCameraModel::Type() const {
@@ -77,8 +79,8 @@ void ExtendedUnifiedCameraModel::SetFromCameraIntrinsicsPriors(
   if (prior.focal_length.is_set) {
     SetFocalLength(prior.focal_length.value[0]);
   } else if (prior.image_width != 0.0 && prior.image_height != 0.0) {
-    SetFocalLength(1.2 * static_cast<double>(std::max(
-        prior.image_width, prior.image_height)));
+    SetFocalLength(1.2 * static_cast<double>(
+                             std::max(prior.image_width, prior.image_height)));
   }
 
   // Set the principal point.
@@ -106,8 +108,8 @@ void ExtendedUnifiedCameraModel::SetFromCameraIntrinsicsPriors(
   }
 }
 
-CameraIntrinsicsPrior ExtendedUnifiedCameraModel::CameraIntrinsicsPriorFromIntrinsics()
-    const {
+CameraIntrinsicsPrior
+ExtendedUnifiedCameraModel::CameraIntrinsicsPriorFromIntrinsics() const {
   CameraIntrinsicsPrior prior;
   prior.camera_intrinsics_model_type =
       CameraIntrinsicsModelTypeToString(Type());
@@ -129,15 +131,16 @@ CameraIntrinsicsPrior ExtendedUnifiedCameraModel::CameraIntrinsicsPriorFromIntri
 
 // Returns the indices of the parameters that will be optimized during bundle
 // adjustment.
-std::vector<int> ExtendedUnifiedCameraModel::GetSubsetFromOptimizeIntrinsicsType(
+std::vector<int>
+ExtendedUnifiedCameraModel::GetSubsetFromOptimizeIntrinsicsType(
     const OptimizeIntrinsicsType& intrinsics_to_optimize) const {
   std::vector<int> constant_intrinsics;
   if (intrinsics_to_optimize == OptimizeIntrinsicsType::ALL) {
     return constant_intrinsics;
   }
 
-  if ((intrinsics_to_optimize &
-      OptimizeIntrinsicsType::FOCAL_LENGTH) == OptimizeIntrinsicsType::NONE) {
+  if ((intrinsics_to_optimize & OptimizeIntrinsicsType::FOCAL_LENGTH) ==
+      OptimizeIntrinsicsType::NONE) {
     constant_intrinsics.emplace_back(FOCAL_LENGTH);
   }
   if ((intrinsics_to_optimize & OptimizeIntrinsicsType::ASPECT_RATIO) ==
@@ -177,8 +180,7 @@ void ExtendedUnifiedCameraModel::PrintIntrinsics() const {
             << "\nPrincipal Point (px, py) = (" << PrincipalPointX() << ", "
             << PrincipalPointY() << ")"
             << "\nSkew: " << Skew() << "\nAspect Ratio: " << AspectRatio()
-            << "\nAlpha and Beta: " << Alpha() << ", "
-            << Beta();
+            << "\nAlpha and Beta: " << Alpha() << ", " << Beta();
 }
 
 // ----------------------- Getter and Setter methods ---------------------- //
@@ -196,23 +198,16 @@ void ExtendedUnifiedCameraModel::SetSkew(const double skew) {
   parameters_[SKEW] = skew;
 }
 
-double ExtendedUnifiedCameraModel::Skew() const {
-  return parameters_[SKEW];
-}
+double ExtendedUnifiedCameraModel::Skew() const { return parameters_[SKEW]; }
 
-void ExtendedUnifiedCameraModel::SetAlphaBetaDistortion(
-        const double alpha,
-        const double beta) {
+void ExtendedUnifiedCameraModel::SetAlphaBetaDistortion(const double alpha,
+                                                        const double beta) {
   parameters_[ALPHA] = alpha;
   parameters_[BETA] = beta;
 }
 
-double ExtendedUnifiedCameraModel::Alpha() const {
-  return parameters_[ALPHA];
-}
+double ExtendedUnifiedCameraModel::Alpha() const { return parameters_[ALPHA]; }
 
-double ExtendedUnifiedCameraModel::Beta() const {
-  return parameters_[BETA];
-}
+double ExtendedUnifiedCameraModel::Beta() const { return parameters_[BETA]; }
 
 }  // namespace theia

@@ -48,40 +48,40 @@
 namespace theia {
 
 // Creates a camera model object based on the model type.
-std::shared_ptr<CameraIntrinsicsModel>
-CameraIntrinsicsModel::Create(const CameraIntrinsicsModelType &camera_type) {
+std::shared_ptr<CameraIntrinsicsModel> CameraIntrinsicsModel::Create(
+    const CameraIntrinsicsModelType& camera_type) {
   switch (camera_type) {
-  case CameraIntrinsicsModelType::PINHOLE:
-    return std::make_shared<PinholeCameraModel>();
-    break;
-  case CameraIntrinsicsModelType::PINHOLE_RADIAL_TANGENTIAL:
-    return std::make_shared<PinholeRadialTangentialCameraModel>();
-    break;
-  case CameraIntrinsicsModelType::FISHEYE:
-    return std::make_shared<FisheyeCameraModel>();
-    break;
-  case CameraIntrinsicsModelType::FOV:
-    return std::make_shared<FOVCameraModel>();
-    break;
-  case CameraIntrinsicsModelType::DIVISION_UNDISTORTION:
-    return std::make_shared<DivisionUndistortionCameraModel>();
-    break;
-  case CameraIntrinsicsModelType::DOUBLE_SPHERE:
-    return std::make_shared<DoubleSphereCameraModel>();
-    break;
-  case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
-    return std::make_shared<ExtendedUnifiedCameraModel>();
-    break;
-  default:
-    break;
+    case CameraIntrinsicsModelType::PINHOLE:
+      return std::make_shared<PinholeCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::PINHOLE_RADIAL_TANGENTIAL:
+      return std::make_shared<PinholeRadialTangentialCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::FISHEYE:
+      return std::make_shared<FisheyeCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::FOV:
+      return std::make_shared<FOVCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::DIVISION_UNDISTORTION:
+      return std::make_shared<DivisionUndistortionCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::DOUBLE_SPHERE:
+      return std::make_shared<DoubleSphereCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
+      return std::make_shared<ExtendedUnifiedCameraModel>();
+      break;
+    default:
+      break;
   }
 
   LOG(FATAL) << "Invalid Camera model chosen.";
   return NULL;
 }
 
-CameraIntrinsicsModel &CameraIntrinsicsModel::
-operator=(const CameraIntrinsicsModel &camera) {
+CameraIntrinsicsModel& CameraIntrinsicsModel::operator=(
+    const CameraIntrinsicsModel& camera) {
   CHECK(this->Type() == camera.Type())
       << "Cannot assign camera intrinsics model of type "
       << static_cast<int>(camera.Type()) << " to a camera model of type "
@@ -98,40 +98,41 @@ operator=(const CameraIntrinsicsModel &camera) {
 // of this macro requries that the macro CAMERA_MODEL_CASE_BODY is defined to be
 // the lines that are executed for all cases.
 #ifndef CAMERA_MODEL_SWITCH_STATEMENT
-#define CAMERA_MODEL_SWITCH_STATEMENT                                          \
-  switch (this->Type()) {                                                      \
-    CAMERA_MODEL_CASE(PINHOLE, PinholeCameraModel)                             \
-    CAMERA_MODEL_CASE(PINHOLE_RADIAL_TANGENTIAL,                               \
-                      PinholeRadialTangentialCameraModel)                      \
-    CAMERA_MODEL_CASE(FISHEYE, FisheyeCameraModel)                             \
-    CAMERA_MODEL_CASE(FOV, FOVCameraModel)                                     \
-    CAMERA_MODEL_CASE(DIVISION_UNDISTORTION, DivisionUndistortionCameraModel)  \
-    CAMERA_MODEL_CASE(DOUBLE_SPHERE, DoubleSphereCameraModel)                  \
-    CAMERA_MODEL_CASE(EXTENDED_UNIFIED, ExtendedUnifiedCameraModel)            \
-  default:                                                                     \
-    LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h " \
-                  "for a list of valid camera models.";                        \
-    break;                                                                     \
+#define CAMERA_MODEL_SWITCH_STATEMENT                                         \
+  switch (this->Type()) {                                                     \
+    CAMERA_MODEL_CASE(PINHOLE, PinholeCameraModel)                            \
+    CAMERA_MODEL_CASE(PINHOLE_RADIAL_TANGENTIAL,                              \
+                      PinholeRadialTangentialCameraModel)                     \
+    CAMERA_MODEL_CASE(FISHEYE, FisheyeCameraModel)                            \
+    CAMERA_MODEL_CASE(FOV, FOVCameraModel)                                    \
+    CAMERA_MODEL_CASE(DIVISION_UNDISTORTION, DivisionUndistortionCameraModel) \
+    CAMERA_MODEL_CASE(DOUBLE_SPHERE, DoubleSphereCameraModel)                 \
+    CAMERA_MODEL_CASE(EXTENDED_UNIFIED, ExtendedUnifiedCameraModel)           \
+    default:                                                                  \
+      LOG(FATAL)                                                              \
+          << "Invalid camera type. Please see camera_intrinsics_model.h "     \
+             "for a list of valid camera models.";                            \
+      break;                                                                  \
   }
-#endif // CAMERA_MODEL_SWITCH_STATEMENT
+#endif  // CAMERA_MODEL_SWITCH_STATEMENT
 
 #ifndef CAMERA_MODEL_CASE
-#define CAMERA_MODEL_CASE(CameraModelType, CameraModel)                        \
-  case CameraIntrinsicsModelType::CameraModelType:                             \
-    CAMERA_MODEL_CASE_BODY(CameraModel)                                        \
+#define CAMERA_MODEL_CASE(CameraModelType, CameraModel) \
+  case CameraIntrinsicsModelType::CameraModelType:      \
+    CAMERA_MODEL_CASE_BODY(CameraModel)                 \
     break;
-#endif // CAMERA_MODEL_CASE
+#endif  // CAMERA_MODEL_CASE
 
 Eigen::Vector2d CameraIntrinsicsModel::CameraToImageCoordinates(
-    const Eigen::Vector3d &point) const {
+    const Eigen::Vector3d& point) const {
   Eigen::Vector2d pixel;
 
 // Define the functions that we want to execute in every case of the switch
 // statement. CameraModel will be filled in with the appropriate derived
 // class.
-#define CAMERA_MODEL_CASE_BODY(CameraModel)                                    \
-  CameraModel::CameraToPixelCoordinates(parameters(), point.data(),            \
-                                        pixel.data());
+#define CAMERA_MODEL_CASE_BODY(CameraModel) \
+  CameraModel::CameraToPixelCoordinates(    \
+      parameters(), point.data(), pixel.data());
 
   // Execute the switch statement.
   CAMERA_MODEL_SWITCH_STATEMENT
@@ -142,15 +143,15 @@ Eigen::Vector2d CameraIntrinsicsModel::CameraToImageCoordinates(
 }
 
 Eigen::Vector3d CameraIntrinsicsModel::ImageToCameraCoordinates(
-    const Eigen::Vector2d &pixel) const {
+    const Eigen::Vector2d& pixel) const {
   Eigen::Vector3d point;
 
 // Define the functions that we want to execute in every case of the switch
 // statement. CameraModel will be filled in with the appropriate derived
 // class.
-#define CAMERA_MODEL_CASE_BODY(CameraModel)                                    \
-  CameraModel::PixelToCameraCoordinates(parameters(), pixel.data(),            \
-                                        point.data());
+#define CAMERA_MODEL_CASE_BODY(CameraModel) \
+  CameraModel::PixelToCameraCoordinates(    \
+      parameters(), pixel.data(), point.data());
 
   // Execute the switch statement.
   CAMERA_MODEL_SWITCH_STATEMENT
@@ -161,15 +162,15 @@ Eigen::Vector3d CameraIntrinsicsModel::ImageToCameraCoordinates(
 }
 
 Eigen::Vector2d CameraIntrinsicsModel::DistortPoint(
-    const Eigen::Vector2d &undistorted_point) const {
+    const Eigen::Vector2d& undistorted_point) const {
   Eigen::Vector2d distorted_point;
 
 // Define the functions that we want to execute in every case of the switch
 // statement. CameraModel will be filled in with the appropriate derived
 // class.
-#define CAMERA_MODEL_CASE_BODY(CameraModel)                                    \
-  CameraModel::DistortPoint(parameters(), undistorted_point.data(),            \
-                            distorted_point.data());
+#define CAMERA_MODEL_CASE_BODY(CameraModel) \
+  CameraModel::DistortPoint(                \
+      parameters(), undistorted_point.data(), distorted_point.data());
 
   // Execute the switch statement.
   CAMERA_MODEL_SWITCH_STATEMENT
@@ -180,15 +181,15 @@ Eigen::Vector2d CameraIntrinsicsModel::DistortPoint(
 }
 
 Eigen::Vector2d CameraIntrinsicsModel::UndistortPoint(
-    const Eigen::Vector2d &distorted_point) const {
+    const Eigen::Vector2d& distorted_point) const {
   Eigen::Vector2d undistorted_point;
 
 // Define the functions that we want to execute in every case of the switch
 // statement. CameraModel will be filled in with the appropriate derived
 // class.
-#define CAMERA_MODEL_CASE_BODY(CameraModel)                                    \
-  CameraModel::UndistortPoint(parameters(), distorted_point.data(),            \
-                              undistorted_point.data());
+#define CAMERA_MODEL_CASE_BODY(CameraModel) \
+  CameraModel::UndistortPoint(              \
+      parameters(), distorted_point.data(), undistorted_point.data());
 
   // Execute the switch statement.
   CAMERA_MODEL_SWITCH_STATEMENT
@@ -204,7 +205,7 @@ void CameraIntrinsicsModel::SetFocalLength(const double focal_length) {
   // class.
   CHECK_GT(focal_length, 0.0)
       << "Invalid focal length value. Focal length must be greater than 0.0.";
-#define CAMERA_MODEL_CASE_BODY(CameraModel)                                    \
+#define CAMERA_MODEL_CASE_BODY(CameraModel) \
   SetParameter(CameraModel::FOCAL_LENGTH, focal_length);
 
   // Execute the switch statement.
@@ -219,7 +220,7 @@ double CameraIntrinsicsModel::FocalLength() const {
 // Define the functions that we want to execute in every case of the switch
 // statement. CameraModel will be filled in with the appropriate derived
 // class.
-#define CAMERA_MODEL_CASE_BODY(CameraModel)                                    \
+#define CAMERA_MODEL_CASE_BODY(CameraModel) \
   focal_length = GetParameter(CameraModel::FOCAL_LENGTH);
 
   // Execute the switch statement.
@@ -235,8 +236,8 @@ void CameraIntrinsicsModel::SetPrincipalPoint(const double principal_point_x,
 // Define the functions that we want to execute in every case of the switch
 // statement. CameraModel will be filled in with the appropriate derived
 // class.
-#define CAMERA_MODEL_CASE_BODY(CameraModel)                                    \
-  SetParameter(CameraModel::PRINCIPAL_POINT_X, principal_point_x);             \
+#define CAMERA_MODEL_CASE_BODY(CameraModel)                        \
+  SetParameter(CameraModel::PRINCIPAL_POINT_X, principal_point_x); \
   SetParameter(CameraModel::PRINCIPAL_POINT_Y, principal_point_y);
 
   // Execute the switch statement.
@@ -251,7 +252,7 @@ double CameraIntrinsicsModel::PrincipalPointX() const {
 // Define the functions that we want to execute in every case of the switch
 // statement. CameraModel will be filled in with the appropriate derived
 // class.
-#define CAMERA_MODEL_CASE_BODY(CameraModel)                                    \
+#define CAMERA_MODEL_CASE_BODY(CameraModel) \
   principal_point_x = GetParameter(CameraModel::PRINCIPAL_POINT_X);
 
   // Execute the switch statement.
@@ -268,7 +269,7 @@ double CameraIntrinsicsModel::PrincipalPointY() const {
 // Define the functions that we want to execute in every case of the switch
 // statement. CameraModel will be filled in with the appropriate derived
 // class.
-#define CAMERA_MODEL_CASE_BODY(CameraModel)                                    \
+#define CAMERA_MODEL_CASE_BODY(CameraModel) \
   principal_point_y = GetParameter(CameraModel::PRINCIPAL_POINT_Y);
 
   // Execute the switch statement.
@@ -292,14 +293,14 @@ double CameraIntrinsicsModel::GetParameter(const int parameter_index) const {
   return parameters_[parameter_index];
 }
 
-const double *CameraIntrinsicsModel::parameters() const {
+const double* CameraIntrinsicsModel::parameters() const {
   return parameters_.data();
 }
 
-double *CameraIntrinsicsModel::mutable_parameters() {
+double* CameraIntrinsicsModel::mutable_parameters() {
   return parameters_.data();
 }
 
 #undef CAMERA_MODEL_SWITCH_STATEMENT
 
-} // namespace theia
+}  // namespace theia

@@ -7,9 +7,7 @@ namespace py = pybind11;
 namespace pytheia {
 namespace solvers {
 
-void pytheia_solvers(py::module &m);
+void pytheia_solvers(py::module& m);
 
 }
-}
-
-
+}  // namespace pytheia

@@ -36,9 +36,9 @@
 // company address (steffen.urban@zeiss.com)
 // May 2019
 
-#include <glog/logging.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <glog/logging.h>
 
 #include <algorithm>
 #include <vector>
@@ -86,14 +86,19 @@ void GeneratePoints(std::vector<Vector3d>* points) {
   }
 }
 
-void GenerateDistortedImagePoint(
-    const Vector3d& point_3d, const double projection_noise_std_dev,
-    const Matrix3d& expected_rotation, const Vector3d& expected_translation,
-    const double focal_length1, const double focal_length2,
-    const double radial_distortion1, const double radial_distortion2,
-    const bool outlier, Vector3d& image_1_point_normalized,
-    Vector3d& image_2_point_normalized, Vector2d& image_1_point,
-    Vector2d& image_2_point) {
+void GenerateDistortedImagePoint(const Vector3d& point_3d,
+                                 const double projection_noise_std_dev,
+                                 const Matrix3d& expected_rotation,
+                                 const Vector3d& expected_translation,
+                                 const double focal_length1,
+                                 const double focal_length2,
+                                 const double radial_distortion1,
+                                 const double radial_distortion2,
+                                 const bool outlier,
+                                 Vector3d& image_1_point_normalized,
+                                 Vector3d& image_2_point_normalized,
+                                 Vector2d& image_1_point,
+                                 Vector2d& image_2_point) {
   Vector3d point3_cam2 = expected_rotation * point_3d + expected_translation;
 
   DistortPoint(point_3d, focal_length1, radial_distortion1, image_1_point);
@@ -121,10 +126,14 @@ void GenerateDistortedImagePoint(
 // noise).
 void GenerateDistortedImagePoints(
     const std::vector<Vector3d>& points_3d,
-    const double projection_noise_std_dev, const Matrix3d& expected_rotation,
-    const Vector3d& expected_translation, const double focal_length1,
-    const double focal_length2, const double radial_distortion1,
-    const double radial_distortion2, const double inlier_ratio,
+    const double projection_noise_std_dev,
+    const Matrix3d& expected_rotation,
+    const Vector3d& expected_translation,
+    const double focal_length1,
+    const double focal_length2,
+    const double radial_distortion1,
+    const double radial_distortion2,
+    const double inlier_ratio,
     std::vector<Vector2d>* image_1_points_normalized,
     std::vector<Vector2d>* image_2_points_normalized,
     std::vector<Vector2d>* image_1_points,
@@ -136,11 +145,19 @@ void GenerateDistortedImagePoints(
     if (i > inlier_ratio * points_3d.size()) {
       outlier = true;
     }
-    GenerateDistortedImagePoint(
-        points_3d[i], projection_noise_std_dev, expected_rotation,
-        expected_translation, focal_length1, focal_length2, radial_distortion1,
-        radial_distortion2, outlier, normalized_points2d_1,
-        normalized_points2d_2, distorted_point1, distorted_point2);
+    GenerateDistortedImagePoint(points_3d[i],
+                                projection_noise_std_dev,
+                                expected_rotation,
+                                expected_translation,
+                                focal_length1,
+                                focal_length2,
+                                radial_distortion1,
+                                radial_distortion2,
+                                outlier,
+                                normalized_points2d_1,
+                                normalized_points2d_2,
+                                distorted_point1,
+                                distorted_point2);
 
     image_1_points->push_back(distorted_point1);
     image_2_points->push_back(distorted_point2);
@@ -151,11 +168,14 @@ void GenerateDistortedImagePoints(
 }
 
 void ExecuteRandomTest(const RansacParameters& options,
-                       const Matrix3d& rotation, const Vector3d& position,
+                       const Matrix3d& rotation,
+                       const Vector3d& position,
                        const double radial_distortion_1,
                        const double radial_distortion_2,
-                       const double focal_length_1, const double focal_length_2,
-                       const double inlier_ratio, const double noise) {
+                       const double focal_length_1,
+                       const double focal_length_2,
+                       const double inlier_ratio,
+                       const double noise) {
   // Create feature correspondences (inliers and outliers) and add noise if
   // appropriate.
   std::vector<Vector3d> points3d;
@@ -165,11 +185,19 @@ void ExecuteRandomTest(const RansacParameters& options,
   std::vector<Vector2d> image_1_points, image_2_points;
 
   // Generate distorted points
-  GenerateDistortedImagePoints(
-      points3d, noise, rotation, position, focal_length_1, focal_length_2,
-      radial_distortion_1, radial_distortion_2, inlier_ratio,
-      &image_1_points_normalized, &image_2_points_normalized, &image_1_points,
-      &image_2_points);
+  GenerateDistortedImagePoints(points3d,
+                               noise,
+                               rotation,
+                               position,
+                               focal_length_1,
+                               focal_length_2,
+                               radial_distortion_1,
+                               radial_distortion_2,
+                               inlier_ratio,
+                               &image_1_points_normalized,
+                               &image_2_points_normalized,
+                               &image_1_points,
+                               &image_2_points);
   // Get correspondences
   std::vector<RadialDistortionFeatureCorrespondence> correspondences;
   for (size_t i = 0; i < image_1_points.size(); ++i) {
@@ -185,9 +213,11 @@ void ExecuteRandomTest(const RansacParameters& options,
   // Estimate the radial distortion homography.
   RadialHomographyResult radial_homography_result;
   RansacSummary ransac_summary;
-  EXPECT_TRUE(EstimateRadialHomographyMatrix(
-      options, RansacType::RANSAC, correspondences, &radial_homography_result,
-      &ransac_summary));
+  EXPECT_TRUE(EstimateRadialHomographyMatrix(options,
+                                             RansacType::RANSAC,
+                                             correspondences,
+                                             &radial_homography_result,
+                                             &ransac_summary));
   // Expect that the radial distortion values are close to the ground truth
   EXPECT_NEAR(radial_homography_result.l1,
               radial_distortion_1 * (focal_length_1 * focal_length_1),
@@ -217,9 +247,15 @@ TEST(EstimateRadialHomographyMatrix, AllInliersNoNoise) {
                                            Vector3d(0, 1.3, 0.0)};
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
-      ExecuteRandomTest(options, rotations[i], positions[j], kRadialDistortion1,
-                        kRadialDistortion2, kFocalLength1, kFocalLength2,
-                        kInlierRatio, kNoise);
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kRadialDistortion1,
+                        kRadialDistortion2,
+                        kFocalLength1,
+                        kFocalLength2,
+                        kInlierRatio,
+                        kNoise);
     }
   }
 }
@@ -244,9 +280,15 @@ TEST(EstimateRadialHomographyMatrix, AllInliersNoise) {
                                            Vector3d(0, 1.3, 0.0)};
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
-      ExecuteRandomTest(options, rotations[i], positions[j], kRadialDistortion1,
-                        kRadialDistortion2, kFocalLength1, kFocalLength2,
-                        kInlierRatio, kNoise);
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kRadialDistortion1,
+                        kRadialDistortion2,
+                        kFocalLength1,
+                        kFocalLength2,
+                        kInlierRatio,
+                        kNoise);
     }
   }
 }
@@ -271,9 +313,15 @@ TEST(EstimateRadialHomographyMatrix, OutliersNoNoise) {
                                            Vector3d(0, 1.3, 0.0)};
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
-      ExecuteRandomTest(options, rotations[i], positions[j], kRadialDistortion1,
-                        kRadialDistortion2, kFocalLength1, kFocalLength2,
-                        kInlierRatio, kNoise);
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kRadialDistortion1,
+                        kRadialDistortion2,
+                        kFocalLength1,
+                        kFocalLength2,
+                        kInlierRatio,
+                        kNoise);
     }
   }
 }
@@ -298,11 +346,17 @@ TEST(EstimateRadialHomographyMatrix, OutliersNoise) {
                                            Vector3d(0, 1.3, 0.0)};
   for (int i = 0; i < rotations.size(); i++) {
     for (int j = 0; j < positions.size(); j++) {
-      ExecuteRandomTest(options, rotations[i], positions[j], kRadialDistortion1,
-                        kRadialDistortion2, kFocalLength1, kFocalLength2,
-                        kInlierRatio, kNoise);
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kRadialDistortion1,
+                        kRadialDistortion2,
+                        kFocalLength1,
+                        kFocalLength2,
+                        kInlierRatio,
+                        kNoise);
     }
   }
 }
 
-}  // theia
+}  // namespace theia

@@ -120,6 +120,7 @@ bool Input1DSFM::ReadListsFile(
   }
 
   const char space = static_cast<char>(' ');
+  int view_cnt = 0;
   while (!ifs.eof()) {
     // Read in the filename.
     std::string filename, truncated_filename;
@@ -129,7 +130,8 @@ bool Input1DSFM::ReadListsFile(
       break;
     }
     CHECK(theia::GetFilenameFromFilepath(filename, true, &truncated_filename));
-    const ViewId view_id = reconstruction_->AddView(truncated_filename);
+    const ViewId view_id =
+        reconstruction_->AddView(truncated_filename, ++view_cnt);
     CHECK_NE(view_id, kInvalidViewId);
 
     // Check to see if the exif focal length is given.

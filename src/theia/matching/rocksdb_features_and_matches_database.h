@@ -123,6 +123,5 @@ class RocksDbFeaturesAndMatchesDatabase : public FeaturesAndMatchesDatabase {
   std::unique_ptr<rocksdb::ColumnFamilyHandle> matches_handle_;
 };
 
-#endif //PYTHON_BUILD
+#endif  // PYTHON_BUILD
 }  // namespace theia
-

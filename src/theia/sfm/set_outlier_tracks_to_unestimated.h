@@ -35,8 +35,8 @@
 #ifndef THEIA_SFM_SET_OUTLIER_TRACKS_TO_UNESTIMATED_H_
 #define THEIA_SFM_SET_OUTLIER_TRACKS_TO_UNESTIMATED_H_
 
-#include <unordered_set>
 #include "theia/sfm/types.h"
+#include <unordered_set>
 
 namespace theia {
 class Reconstruction;

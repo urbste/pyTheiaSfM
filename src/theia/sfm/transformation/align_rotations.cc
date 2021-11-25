@@ -34,9 +34,9 @@
 
 #include "theia/sfm/transformation/align_rotations.h"
 
+#include <Eigen/Core>
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
-#include <Eigen/Core>
 #include <glog/logging.h>
 #include <vector>
 
@@ -138,10 +138,10 @@ void AlignRotations(const std::vector<Eigen::Vector3d>& gt_rotation,
   // Set up the nonlinear system and adds all residuals.
   ceres::Problem problem;
   for (int i = 0; i < gt_rotation.size(); i++) {
-    problem.AddResidualBlock(RotationAlignmentError::Create(gt_rotation[i],
-                                                            rotation->at(i)),
-                             NULL,
-                             rotation_alignment.data());
+    problem.AddResidualBlock(
+        RotationAlignmentError::Create(gt_rotation[i], rotation->at(i)),
+        NULL,
+        rotation_alignment.data());
   }
 
   ceres::Solver::Options options;

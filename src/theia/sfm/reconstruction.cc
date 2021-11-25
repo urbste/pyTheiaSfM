@@ -96,7 +96,8 @@ ViewId Reconstruction::ViewIdFromTimestamp(const double& timestamp_s) const {
 
 ViewId Reconstruction::AddView(const std::string& view_name,
                                const double timestamp) {
-  const ViewId view_id = AddView(view_name, next_camera_intrinsics_group_id_, timestamp);
+  const ViewId view_id =
+      AddView(view_name, next_camera_intrinsics_group_id_, timestamp);
   ++next_camera_intrinsics_group_id_;
   return view_id;
 }
@@ -111,8 +112,9 @@ ViewId Reconstruction::AddView(const std::string& view_name,
   }
 
   if (ContainsKey(view_timestamp_to_id_, timestamp)) {
-    LOG(WARNING) << "Could not add view with the timestamp " << timestamp
-                 << " because that timestamp already exists in the reconstruction.";
+    LOG(WARNING)
+        << "Could not add view with the timestamp " << timestamp
+        << " because that timestamp already exists in the reconstruction.";
     return kInvalidViewId;
   }
 
@@ -264,8 +266,7 @@ TrackId Reconstruction::AddTrack() {
 
 void Reconstruction::AddTrack(const theia::TrackId& track_id) {
   CHECK(!ContainsKey(tracks_, track_id))
-      << "The reconstruction already contains a track with id: "
-      << track_id;
+      << "The reconstruction already contains a track with id: " << track_id;
 
   class Track new_track;
   tracks_.emplace(track_id, new_track);

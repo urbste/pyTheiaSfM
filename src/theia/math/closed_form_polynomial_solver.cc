@@ -36,14 +36,15 @@
 
 #include <glog/logging.h>
 
-#include <complex>
 #include <cmath>
+#include <complex>
 
 namespace theia {
 namespace {
 
 // Solve depressed cubic using Cardano's method.
-int SolveDepressedCubic(const double p, const double q,
+int SolveDepressedCubic(const double p,
+                        const double q,
                         std::complex<double>* roots) {
   if (p == 0.0) {
     roots[0] = std::pow(-1.0 * q, 1.0 / 3.0);
@@ -65,7 +66,9 @@ int SolveDepressedCubic(const double p, const double q,
 }  // namespace
 
 // Provides solutions to the equation a*x^2 + b*x + c = 0.
-int SolveQuadraticReals(const double a, const double b, const double c,
+int SolveQuadraticReals(const double a,
+                        const double b,
+                        const double c,
                         double* roots) {
   std::complex<double> complex_roots[2];
   int num_complex_solutions = SolveQuadratic(a, b, c, complex_roots);
@@ -76,8 +79,11 @@ int SolveQuadraticReals(const double a, const double b, const double c,
   return num_real_solutions;
 }
 
-int SolveQuadraticReals(const double a, const double b, const double c,
-                        const double tolerance, double* roots) {
+int SolveQuadraticReals(const double a,
+                        const double b,
+                        const double c,
+                        const double tolerance,
+                        double* roots) {
   std::complex<double> complex_roots[2];
   int num_complex_solutions = SolveQuadratic(a, b, c, complex_roots);
   int num_real_solutions = 0;
@@ -89,7 +95,9 @@ int SolveQuadraticReals(const double a, const double b, const double c,
   return num_real_solutions;
 }
 
-int SolveQuadratic(const double a, const double b, const double c,
+int SolveQuadratic(const double a,
+                   const double b,
+                   const double c,
                    std::complex<double>* roots) {
   // If the equation is actually linear.
   if (a == 0.0) {
@@ -102,7 +110,7 @@ int SolveQuadratic(const double a, const double b, const double c,
 
   // Real roots.
   if (D >= 0) {
-      // Stable quadratic roots according to BKP Horn.
+    // Stable quadratic roots according to BKP Horn.
     // http://people.csail.mit.edu/bkph/articles/Quadratics.pdf
     if (b >= 0) {
       roots[0] = (-b - sqrt_D) / (2.0 * a);
@@ -124,8 +132,11 @@ int SolveQuadratic(const double a, const double b, const double c,
 
 // Provides solutions to the equation a*x^3 + b*x^2 + c*x + d = 0 using Cardan's
 // method.
-int SolveCubicReals(const double a, const double b, const double c,
-                    const double d, double* roots) {
+int SolveCubicReals(const double a,
+                    const double b,
+                    const double c,
+                    const double d,
+                    double* roots) {
   std::complex<double> complex_roots[3];
   int num_complex_solutions = SolveCubic(a, b, c, d, complex_roots);
   int num_real_solutions = 0;
@@ -135,8 +146,12 @@ int SolveCubicReals(const double a, const double b, const double c,
   return num_real_solutions;
 }
 
-int SolveCubicReals(const double a, const double b, const double c,
-                    const double d, const double tolerance, double* roots) {
+int SolveCubicReals(const double a,
+                    const double b,
+                    const double c,
+                    const double d,
+                    const double tolerance,
+                    double* roots) {
   std::complex<double> complex_roots[3];
   int num_complex_solutions = SolveCubic(a, b, c, d, complex_roots);
   int num_real_solutions = 0;
@@ -148,7 +163,10 @@ int SolveCubicReals(const double a, const double b, const double c,
   return num_real_solutions;
 }
 
-int SolveCubic(const double a, const double b, const double c, const double d,
+int SolveCubic(const double a,
+               const double b,
+               const double c,
+               const double d,
                std::complex<double>* roots) {
   if (a == 0.0) {
     return SolveQuadratic(b, c, d, roots);
@@ -168,9 +186,12 @@ int SolveCubic(const double a, const double b, const double c, const double d,
 
 // Provides solutions to the equation a*x^4 + b*x^3 + c*x^2 + d*x + e = 0 using
 // Ferrari's method to reduce to problem to a depressed cubic.
-int SolveQuarticReals(const long double a, const long double b,
-                      const long double c, const long double d,
-                      const long double e, long double* roots) {
+int SolveQuarticReals(const long double a,
+                      const long double b,
+                      const long double c,
+                      const long double d,
+                      const long double e,
+                      long double* roots) {
   std::complex<long double> complex_roots[4];
   int num_complex_solutions = SolveQuartic(a, b, c, d, e, complex_roots);
   int num_real_solutions = 0;
@@ -180,9 +201,12 @@ int SolveQuarticReals(const long double a, const long double b,
   return num_real_solutions;
 }
 
-int SolveQuarticReals(const long double a, const long double b,
-                      const long double c, const long double d,
-                      const long double e, const long double tolerance,
+int SolveQuarticReals(const long double a,
+                      const long double b,
+                      const long double c,
+                      const long double d,
+                      const long double e,
+                      const long double tolerance,
                       long double* roots) {
   std::complex<long double> complex_roots[4];
   int num_complex_solutions = SolveQuartic(a, b, c, d, e, complex_roots);
@@ -195,8 +219,11 @@ int SolveQuarticReals(const long double a, const long double b,
   return num_real_solutions;
 }
 
-int SolveQuartic(const long double a, const long double b, const long double c,
-                 const long double d, const long double e,
+int SolveQuartic(const long double a,
+                 const long double b,
+                 const long double c,
+                 const long double d,
+                 const long double e,
                  std::complex<long double>* roots) {
   const long double a_pw2 = a * a;
   const long double b_pw2 = b * b;
@@ -208,9 +235,9 @@ int SolveQuartic(const long double a, const long double b, const long double c,
   const long double alpha = -3.0l * b_pw2 / (8.0l * a_pw2) + c / a;
   const long double beta =
       b_pw3 / (8.0l * a_pw3) - b * c / (2.0l * a_pw2) + d / a;
-  const long double gamma =
-      -3.0l * b_pw4 / (256.0l * a_pw4) + b_pw2 * c / (16.0l * a_pw3) -
-      b * d / (4.0l * a_pw2) + e / a;
+  const long double gamma = -3.0l * b_pw4 / (256.0l * a_pw4) +
+                            b_pw2 * c / (16.0l * a_pw3) -
+                            b * d / (4.0l * a_pw2) + e / a;
 
   const long double alpha_pw2 = alpha * alpha;
   const long double alpha_pw3 = alpha_pw2 * alpha;

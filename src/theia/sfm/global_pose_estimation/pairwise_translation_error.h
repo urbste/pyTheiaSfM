@@ -39,7 +39,7 @@
 
 namespace ceres {
 class CostFunction;
-} // namespace ceres
+}  // namespace ceres
 
 namespace theia {
 
@@ -61,9 +61,9 @@ struct PairwiseTranslationError {
 };
 
 template <typename T>
-bool PairwiseTranslationError::operator() (const T* position1,
-                                           const T* position2,
-                                           T* residuals) const {
+bool PairwiseTranslationError::operator()(const T* position1,
+                                          const T* position2,
+                                          T* residuals) const {
   const T kNormTolerance = T(1e-12);
 
   T translation[3];

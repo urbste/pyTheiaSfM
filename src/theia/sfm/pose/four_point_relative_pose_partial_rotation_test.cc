@@ -41,19 +41,18 @@
 #include <limits>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/math/util.h"
-#include "theia/test/test_utils.h"
-#include "theia/util/util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/pose/four_point_relative_pose_partial_rotation.h"
 #include "theia/sfm/pose/test_util.h"
+#include "theia/test/test_utils.h"
+#include "theia/util/random.h"
+#include "theia/util/util.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 namespace {
 
 using Eigen::AngleAxisd;
-using Eigen::Matrix3d;
 using Eigen::Matrix3d;
 using Eigen::Quaterniond;
 using Eigen::Vector3d;
@@ -87,7 +86,7 @@ void TestFourPointResultWithNoise(const Vector3d& axis,
     image_one_rays[i] = (points_3d[i] - view_1_origins[i]).normalized();
     const Vector3d transformed_point =
         expected_rotation * points_3d[i] + expected_translation;
-    image_two_rays[i]= (transformed_point - view_2_origins[i]).normalized();
+    image_two_rays[i] = (transformed_point - view_2_origins[i]).normalized();
   }
   if (projection_noise_std_dev) {
     for (int i = 0; i < 4; ++i) {
@@ -129,20 +128,20 @@ void TestFourPointResultWithNoise(const Vector3d& axis,
 
 void BasicTest() {
   // Sets up some points in the 3D scene
-  const Vector3d kPoints3D[4] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0),
-                                  Vector3d(4.0, 3.0, 5.0) };
+  const Vector3d kPoints3D[4] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0),
+                                 Vector3d(4.0, 3.0, 5.0)};
 
-  const Vector3d kImageOneOrigins[4] = { Vector3d(-1.0, 0.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(2.0, 0.0, 0.0),
-                                         Vector3d(3.0, 0.0, 0.0) };
+  const Vector3d kImageOneOrigins[4] = {Vector3d(-1.0, 0.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(2.0, 0.0, 0.0),
+                                        Vector3d(3.0, 0.0, 0.0)};
 
-  const Vector3d kImageTwoOrigins[4] = { Vector3d(0.0, 1.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(0.0, 2.0, 0.0),
-                                         Vector3d(0.0, 3.0, 0.0) };
+  const Vector3d kImageTwoOrigins[4] = {Vector3d(0.0, 1.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(0.0, 2.0, 0.0),
+                                        Vector3d(0.0, 3.0, 0.0)};
 
   const Vector3d axis = Vector3d(1.0, 1.0, 1.0).normalized();
   Quaterniond kExpectedRotation(AngleAxisd(DegToRad(51.0), axis));
@@ -162,26 +161,24 @@ void BasicTest() {
                                kMaxAllowedTranslationDifference);
 }
 
-TEST(FourPointEssentialMatrixTest, Basic) {
-  BasicTest();
-}
+TEST(FourPointEssentialMatrixTest, Basic) { BasicTest(); }
 
 TEST(FourPointEssentialMatrixTest, NoRotation) {
   // Sets up some points in the 3D scene
-  const Vector3d kPoints3D[4] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 2.0, 5.0),
-                                  Vector3d(4.0, 3.0, 5.0) };
+  const Vector3d kPoints3D[4] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 2.0, 5.0),
+                                 Vector3d(4.0, 3.0, 5.0)};
 
-  const Vector3d kImageOneOrigins[4] = { Vector3d(-1.0, 0.0, -1.5),
-                                         Vector3d(0.0, 0.0, -1.0),
-                                         Vector3d(2.0, 0.0, 0.0),
-                                         Vector3d(3.0, 0.0, 0.0) };
+  const Vector3d kImageOneOrigins[4] = {Vector3d(-1.0, 0.0, -1.5),
+                                        Vector3d(0.0, 0.0, -1.0),
+                                        Vector3d(2.0, 0.0, 0.0),
+                                        Vector3d(3.0, 0.0, 0.0)};
 
-  const Vector3d kImageTwoOrigins[4] = { Vector3d(0.0, 1.0, 2.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(0.0, 2.0, 1.0),
-                                         Vector3d(0.0, 3.0, 0.0) };
+  const Vector3d kImageTwoOrigins[4] = {Vector3d(0.0, 1.0, 2.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(0.0, 2.0, 1.0),
+                                        Vector3d(0.0, 3.0, 0.0)};
 
   const Vector3d axis = Vector3d(1.0, 1.0, 1.0).normalized();
   Quaterniond kExpectedRotation(AngleAxisd(DegToRad(0.0), axis));
@@ -203,36 +200,36 @@ TEST(FourPointEssentialMatrixTest, NoRotation) {
 
 // Tests a variety of axes, angles and translations with added projection noise.
 TEST(FourPointEssentialMatrixTest, NoiseTest) {
-  const Vector3d kPoints3D[4] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0),
-                                  Vector3d(4.0, 3.0, 5.0) };
+  const Vector3d kPoints3D[4] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0),
+                                 Vector3d(4.0, 3.0, 5.0)};
 
-  const Vector3d kImageOneOrigins[4] = { Vector3d(-1.0, 0.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(2.0, 0.0, 0.0),
-                                         Vector3d(3.0, 0.0, 0.0) };
+  const Vector3d kImageOneOrigins[4] = {Vector3d(-1.0, 0.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(2.0, 0.0, 0.0),
+                                        Vector3d(3.0, 0.0, 0.0)};
 
-  const Vector3d kImageTwoOrigins[4] = { Vector3d(0.0, 1.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(0.0, 2.0, 0.0),
-                                         Vector3d(0.0, 3.0, 0.0) };
+  const Vector3d kImageTwoOrigins[4] = {Vector3d(0.0, 1.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(0.0, 2.0, 0.0),
+                                        Vector3d(0.0, 3.0, 0.0)};
 
-  const Vector3d kAxes[5] = { Vector3d(0.0, 0.0, 1.0).normalized(),
-                              Vector3d(1.0, 0.0, 0.0).normalized(),
-                              Vector3d(1.0, 0.0, 1.0).normalized(),
-                              Vector3d(1.0, 1.0, 0.0).normalized(),
-                              Vector3d(1.0, 1.0, 1.0).normalized() };
+  const Vector3d kAxes[5] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                             Vector3d(1.0, 0.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 1.0).normalized(),
+                             Vector3d(1.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 1.0, 1.0).normalized()};
 
   const double kAngles[5] = {11.0, 5.0, 2.0, 13.0, 12.0};
 
-  const Vector3d kTranslations[5] = {
-    Vector3d(1.0, 1.0, 1.0), Vector3d(4.0, 5.0, 11.0), Vector3d(1.0, 2.0, 15.0),
-    Vector3d(6.0, 3.0, 2.0), Vector3d(13.0, 1.0, 15.0)
-  };
+  const Vector3d kTranslations[5] = {Vector3d(1.0, 1.0, 1.0),
+                                     Vector3d(4.0, 5.0, 11.0),
+                                     Vector3d(1.0, 2.0, 15.0),
+                                     Vector3d(6.0, 3.0, 2.0),
+                                     Vector3d(13.0, 1.0, 15.0)};
 
-  for (int transform_index = 0;
-       transform_index < THEIA_ARRAYSIZE(kAxes);
+  for (int transform_index = 0; transform_index < THEIA_ARRAYSIZE(kAxes);
        ++transform_index) {
     Quaterniond kExpectedRotation(
         AngleAxisd(DegToRad(kAngles[transform_index]), kAxes[transform_index]));
@@ -256,52 +253,46 @@ TEST(FourPointEssentialMatrixTest, NoiseTest) {
 // Tests that the solver degrades gracefully when the passed axis is not exactly
 // correct.
 TEST(FourPointEssentialMatrixTest, IncorrectAxisTest) {
-  const Vector3d kPoints3D[4] = { Vector3d(-1.0, 3.0, 3.0),
-                                  Vector3d(1.0, -1.0, 2.0),
-                                  Vector3d(2.0, 1.0, 3.0),
-                                  Vector3d(4.0, 3.0, 5.0) };
+  const Vector3d kPoints3D[4] = {Vector3d(-1.0, 3.0, 3.0),
+                                 Vector3d(1.0, -1.0, 2.0),
+                                 Vector3d(2.0, 1.0, 3.0),
+                                 Vector3d(4.0, 3.0, 5.0)};
 
-  const Vector3d kImageOneOrigins[4] = { Vector3d(-1.0, 0.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(2.0, 0.0, 0.0),
-                                         Vector3d(3.0, 0.0, 0.0) };
+  const Vector3d kImageOneOrigins[4] = {Vector3d(-1.0, 0.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(2.0, 0.0, 0.0),
+                                        Vector3d(3.0, 0.0, 0.0)};
 
-  const Vector3d kImageTwoOrigins[4] = { Vector3d(0.0, 1.0, 0.0),
-                                         Vector3d(0.0, 0.0, 0.0),
-                                         Vector3d(0.0, 2.0, 0.0),
-                                         Vector3d(0.0, 3.0, 0.0) };
+  const Vector3d kImageTwoOrigins[4] = {Vector3d(0.0, 1.0, 0.0),
+                                        Vector3d(0.0, 0.0, 0.0),
+                                        Vector3d(0.0, 2.0, 0.0),
+                                        Vector3d(0.0, 3.0, 0.0)};
 
-  const Vector3d kAxes[5] = {
-      Vector3d(0.0, 0.0, 1.0).normalized(),
-      Vector3d(1.0, 0.0, 0.0).normalized(),
-      Vector3d(1.0, 0.0, 1.0).normalized(),
-      Vector3d(1.0, 1.0, 0.0).normalized(),
-      Vector3d(1.0, 1.0, 1.0).normalized()
-  };
+  const Vector3d kAxes[5] = {Vector3d(0.0, 0.0, 1.0).normalized(),
+                             Vector3d(1.0, 0.0, 0.0).normalized(),
+                             Vector3d(1.0, 0.0, 1.0).normalized(),
+                             Vector3d(1.0, 1.0, 0.0).normalized(),
+                             Vector3d(1.0, 1.0, 1.0).normalized()};
 
   const double kAngles[5] = {11.0, 5.0, 2.0, 13.0, 12.0};
 
-  const Vector3d kTranslations[5] = {
-      Vector3d(1.0, 1.0, 1.0),
-      Vector3d(4.0, 5.0, 11.0),
-      Vector3d(1.0, 2.0, 15.0),
-      Vector3d(6.0, 3.0, 2.0),
-      Vector3d(13.0, 1.0, 15.0)
-  };
+  const Vector3d kTranslations[5] = {Vector3d(1.0, 1.0, 1.0),
+                                     Vector3d(4.0, 5.0, 11.0),
+                                     Vector3d(1.0, 2.0, 15.0),
+                                     Vector3d(6.0, 3.0, 2.0),
+                                     Vector3d(13.0, 1.0, 15.0)};
 
   // The axes are perturbed by these rotation to simulate the axis not being
   // perfectly known.
   const Quaterniond kAxisPerturbations[6] = {
-    Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(1.0, 0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(1.0, 0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 1.0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 1.0, 0))),
-    Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 0.0, 1.0))),
-    Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 0.0, 1.0)))
-  };
+      Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(1.0, 0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(1.0, 0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 1.0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 1.0, 0))),
+      Quaterniond(AngleAxisd(DegToRad(1.0), Vector3d(0.0, 0.0, 1.0))),
+      Quaterniond(AngleAxisd(DegToRad(-1.0), Vector3d(0.0, 0.0, 1.0)))};
 
-  for (int transform_index = 0;
-       transform_index < THEIA_ARRAYSIZE(kAxes);
+  for (int transform_index = 0; transform_index < THEIA_ARRAYSIZE(kAxes);
        ++transform_index) {
     for (int axis_rotation_index = 0;
          axis_rotation_index < THEIA_ARRAYSIZE(kAxisPerturbations);

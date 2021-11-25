@@ -32,20 +32,20 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <glog/logging.h>
 #include <Eigen/Core>
+#include <glog/logging.h>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/image/keypoint_detector/keypoint.h"
-#include "theia/matching/indexed_feature_match.h"
 #include "theia/matching/guided_epipolar_matcher.h"
+#include "theia/matching/indexed_feature_match.h"
 #include "theia/matching/keypoints_and_descriptors.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/pose/util.h"
 #include "theia/util/hash.h"
 #include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -81,12 +81,8 @@ void TestGuidedEpipolarMatcher(const int num_valid_matches,
     CHECK_GT(camera2.ProjectPoint(point, &point2), 0);
 
     // Set the keypoints to correspond to the same 3D point.
-    features1.keypoints.emplace_back(point1.x(),
-                                     point1.y(),
-                                     Keypoint::OTHER);
-    features2.keypoints.emplace_back(point2.x(),
-                                     point2.y(),
-                                     Keypoint::OTHER);
+    features1.keypoints.emplace_back(point1.x(), point1.y(), Keypoint::OTHER);
+    features2.keypoints.emplace_back(point2.x(), point2.y(), Keypoint::OTHER);
 
     // Make the descriptors the same for each feature so that they will be
     // guaranteed to match.
@@ -127,8 +123,8 @@ void TestGuidedEpipolarMatcher(const int num_valid_matches,
   // Run guided matching.
   GuidedEpipolarMatcher::Options options;
   options.rng = rng;
-  GuidedEpipolarMatcher matcher(options, camera1, camera2, features1,
-                                features2);
+  GuidedEpipolarMatcher matcher(
+      options, camera1, camera2, features1, features2);
 
   // Ensure that the guided matching returns true.
   EXPECT_TRUE(matcher.GetMatches(&matches));

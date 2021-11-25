@@ -38,7 +38,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <fstream>  // NOLINT
+#include <fstream>   // NOLINT
 #include <iostream>  // NOLINT
 #include <sstream>
 #include <string>
@@ -60,8 +60,7 @@ void RemoveLeadingTrailingSpaces(std::string* str) {
   str->erase(0, p);
 
   p = str->find_last_not_of(" \t");
-  if (std::string::npos != p)
-    str->erase(p + 1);
+  if (std::string::npos != p) str->erase(p + 1);
 }
 
 std::string ToLowercase(const std::string& str) {
@@ -81,19 +80,17 @@ bool IsValidFocalLength(const double focal_length) {
 
 }  // namespace
 
-std::vector<std::string> SplitString(const std::string &s, const char delim) {
-    std::vector<std::string> tokens;
-    std::stringstream ss(s);
-    std::string token;
-    while (std::getline(ss, token, delim)) {
-        tokens.push_back(token);
-    }
-    return tokens;
+std::vector<std::string> SplitString(const std::string& s, const char delim) {
+  std::vector<std::string> tokens;
+  std::stringstream ss(s);
+  std::string token;
+  while (std::getline(ss, token, delim)) {
+    tokens.push_back(token);
+  }
+  return tokens;
 }
 
-ExifReader::ExifReader() {
-  LoadSensorWidthDatabase();
-}
+ExifReader::ExifReader() { LoadSensorWidthDatabase(); }
 
 void ExifReader::LoadSensorWidthDatabase() {
   std::stringstream ifs(camera_sensor_database_txt, std::ios::in);
@@ -141,7 +138,7 @@ bool ExifReader::ExtractEXIFMetadata(
   // sensor width database if that fails.
   if (!SetFocalLengthFromExif(image_spec, camera_intrinsics_prior) &&
       !SetFocalLengthFromSensorDatabase(image_spec, camera_intrinsics_prior)) {
-      return true;
+    return true;
   }
 
   // If we passed the if statement above, then we know that the focal length
@@ -187,7 +184,6 @@ bool ExifReader::ExtractEXIFMetadata(
     }
   }
 
-
   // Set GSP altitude.
   const oiio::ImageIOParameter* altitude =
       image_spec.find_attribute("GPS:Altitude");
@@ -206,7 +202,7 @@ bool ExifReader::SetFocalLengthFromExif(
   static const float kMinFocalLength = 1e-2;
 
   const float exif_focal_length =
-    image_spec.get_float_attribute("Exif:FocalLength", kMinFocalLength);
+      image_spec.get_float_attribute("Exif:FocalLength", kMinFocalLength);
   const float focal_plane_x_resolution =
       image_spec.get_float_attribute("Exif:FocalPlaneXResolution");
   const float focal_plane_y_resolution =

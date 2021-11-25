@@ -87,7 +87,8 @@ TEST(EssentialMatrixFromTwoProjectionMatrices, BasicTest) {
 
   for (int i = 0; i < 100; i++) {
     const Eigen::Matrix3d in_rotation1 = RandomRotation(10.0, &rng);
-    const Eigen::Vector3d in_position1 = Eigen::Vector3d::Zero(); //rng.RandVector3d().normalized();
+    const Eigen::Vector3d in_position1 =
+        Eigen::Vector3d::Zero();  // rng.RandVector3d().normalized();
     const Eigen::Vector3d in_translation1 = -in_rotation1 * in_position1;
     const Eigen::Matrix3d in_rotation2 = RandomRotation(10.0, &rng);
     const Eigen::Vector3d in_position2 = rng.RandVector3d().normalized();

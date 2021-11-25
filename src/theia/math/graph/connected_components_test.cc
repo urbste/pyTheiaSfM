@@ -38,8 +38,8 @@
 #include <utility>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/math/graph/connected_components.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -125,6 +125,5 @@ TEST(ConnectedComponents, RandomOrder) {
     EXPECT_EQ(disjoint_sets.size(), 1);
   }
 }
-
 
 }  // namespace theia

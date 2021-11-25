@@ -32,14 +32,14 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <glog/logging.h>
 #include <algorithm>
+#include <glog/logging.h>
 #include <memory>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/solvers/random_sampler.h"
 #include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -57,7 +57,7 @@ TEST(RandomSampler, UniqueMinimalSample) {
   std::shared_ptr<RandomNumberGenerator> rng =
       std::make_shared<RandomNumberGenerator>(55);
   static const int kMinNumSamples = 3;
-  const std::vector<int> data_points = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+  const std::vector<int> data_points = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   RandomSampler sampler(rng, kMinNumSamples);
   CHECK(sampler.Initialize(data_points.size()));
   for (int i = 0; i < 100; i++) {

@@ -38,11 +38,11 @@
 #include <utility>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/math/graph/connected_components.h"
 #include "theia/math/graph/minimum_spanning_tree.h"
 #include "theia/util/map_util.h"
 #include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 

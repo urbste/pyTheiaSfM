@@ -55,7 +55,8 @@ inline void HashCombine(const T& v, std::size_t* seed) {
 }  // namespace
 
 // STL does not implement hashing for pairs, so a simple pair hash is done here.
-template <typename T1, typename T2> struct hash<std::pair<T1, T2> > {
+template <typename T1, typename T2>
+struct hash<std::pair<T1, T2> > {
  public:
   size_t operator()(const std::pair<T1, T2>& e) const {
     size_t seed = 0;

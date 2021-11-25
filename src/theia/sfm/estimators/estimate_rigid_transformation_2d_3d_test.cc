@@ -46,10 +46,10 @@
 #include "theia/sfm/estimators/camera_and_feature_correspondence_2d_3d.h"
 #include "theia/sfm/estimators/estimate_rigid_transformation_2d_3d.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
-#include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/pose/util.h"
 #include "theia/sfm/rigid_transformation.h"
+#include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/test/test_utils.h"
 #include "theia/util/random.h"
 #include "theia/util/timer.h"
@@ -79,12 +79,13 @@ inline Camera RandomCamera(RandomNumberGenerator* rng) {
   return camera;
 }
 
-void ExecuteRandomCentralCameraTest(const RansacParameters& options,
-                                    const RigidTransformation& rigid_transformation,
-                                    const double inlier_ratio,
-                                    const double noise,
-                                    const double tolerance,
-                                    RandomNumberGenerator* rng) {
+void ExecuteRandomCentralCameraTest(
+    const RansacParameters& options,
+    const RigidTransformation& rigid_transformation,
+    const double inlier_ratio,
+    const double noise,
+    const double tolerance,
+    RandomNumberGenerator* rng) {
   // Create feature correspondences (inliers and outliers) and add noise if
   // appropriate.
   std::vector<FeatureCorrespondence2D3D> correspondences;
@@ -99,7 +100,8 @@ void ExecuteRandomCentralCameraTest(const RansacParameters& options,
       // Make sure the point is in front of the camera.
       correspondence.feature =
           (rigid_transformation.rotation * correspondence.world_point +
-           rigid_transformation.translation).hnormalized();
+           rigid_transformation.translation)
+              .hnormalized();
     } else {
       correspondence.feature = rng->RandVector2d();
     }
@@ -109,8 +111,8 @@ void ExecuteRandomCentralCameraTest(const RansacParameters& options,
   // Add noise to the projections.
   if (noise) {
     for (int i = 0; i < kNumPoints; i++) {
-      AddNoiseToProjection(noise / kFocalLength, rng,
-                           &correspondences[i].feature);
+      AddNoiseToProjection(
+          noise / kFocalLength, rng, &correspondences[i].feature);
     }
   }
 
@@ -129,11 +131,9 @@ void ExecuteRandomCentralCameraTest(const RansacParameters& options,
     const double elapsed_time = timer.ElapsedTimeInSeconds();
 
     VLOG(3) << "Ransac summary: \n Number of inliers: "
-            << ransac_summary.inliers.size()
-            << "\n Num. input data points: "
+            << ransac_summary.inliers.size() << "\n Num. input data points: "
             << ransac_summary.num_input_data_points
-            << "\n Num. iterations: "
-            << ransac_summary.num_iterations
+            << "\n Num. iterations: " << ransac_summary.num_iterations
             << "\n Confidence: " << ransac_summary.confidence
             << "\n Time [sec]: " << elapsed_time;
 
@@ -150,20 +150,20 @@ void ExecuteRandomCentralCameraTest(const RansacParameters& options,
     const bool good_rotation = rotation_error < kAngularErrorThresh;
     const double translation_error =
         (estimated_rigid_transformation.translation -
-         rigid_transformation.translation).norm();
+         rigid_transformation.translation)
+            .norm();
     const bool good_translation = translation_error < tolerance;
     const bool good_run = good_translation && good_rotation;
-    VLOG_IF(3, !good_run) << ">>> Trial: " << i
-                          << "\nExpected rotation: \n"
-                          << rigid_transformation.rotation
-                          << "\n Estimated rotation: \n"
-                          << estimated_rigid_transformation.rotation
-                          << "\n Rotation error [deg]: " << rotation_error
-                          << "\n Expected translation: "
-                          << rigid_transformation.translation.transpose()
-                          << "\n Estimated translation: "
-                          << estimated_rigid_transformation.translation.transpose()
-                          << "\n Translation error: " << translation_error;
+    VLOG_IF(3, !good_run)
+        << ">>> Trial: " << i << "\nExpected rotation: \n"
+        << rigid_transformation.rotation << "\n Estimated rotation: \n"
+        << estimated_rigid_transformation.rotation
+        << "\n Rotation error [deg]: " << rotation_error
+        << "\n Expected translation: "
+        << rigid_transformation.translation.transpose()
+        << "\n Estimated translation: "
+        << estimated_rigid_transformation.translation.transpose()
+        << "\n Translation error: " << translation_error;
 
     if (good_run) {
       ++num_trials_passed;
@@ -174,7 +174,7 @@ void ExecuteRandomCentralCameraTest(const RansacParameters& options,
   VLOG(3) << ">>> Success ratio: " << success_ratio
           << " good trials: " << num_trials_passed
           << " num. trials:  " << kNumTrials;
-  EXPECT_TRUE(success_ratio > 0.60f); 
+  EXPECT_TRUE(success_ratio > 0.60f);
 }
 
 void ExecuteRandomTest(const RansacParameters& options,
@@ -189,7 +189,7 @@ void ExecuteRandomTest(const RansacParameters& options,
   for (int i = 0; i < cameras.size(); ++i) {
     cameras[i] = RandomCamera(rng);
   }
-  
+
   // Create feature correspondences (inliers and outliers) and add noise if
   // appropriate.
   std::vector<CameraAndFeatureCorrespondence2D3D> correspondences;
@@ -211,8 +211,8 @@ void ExecuteRandomTest(const RansacParameters& options,
                                                rng->RandDouble(10, 20),
                                                1.0);
 
-      depth = correspondence.camera.ProjectPoint(correspondence.point3d,
-                                                 &correspondence.observation.point_);
+      depth = correspondence.camera.ProjectPoint(
+          correspondence.point3d, &correspondence.observation.point_);
     } while (depth < 0);
     correspondences.emplace_back(std::move(correspondence));
   }
@@ -227,7 +227,8 @@ void ExecuteRandomTest(const RansacParameters& options,
   // Add outliers.
   for (int i = 0; i < kNumPoints; ++i) {
     if (i > inlier_ratio * kNumPoints) {
-      correspondences[i].observation.point_ = kFocalLength * rng->RandVector2d();
+      correspondences[i].observation.point_ =
+          kFocalLength * rng->RandVector2d();
     }
   }
 
@@ -257,11 +258,9 @@ void ExecuteRandomTest(const RansacParameters& options,
     const double elapsed_time = timer.ElapsedTimeInSeconds();
 
     VLOG(3) << "Ransac summary: \n Number of inliers: "
-            << ransac_summary.inliers.size()
-            << "\n Num. input data points: "
+            << ransac_summary.inliers.size() << "\n Num. input data points: "
             << ransac_summary.num_input_data_points
-            << "\n Num. iterations: "
-            << ransac_summary.num_iterations
+            << "\n Num. iterations: " << ransac_summary.num_iterations
             << "\n Confidence: " << ransac_summary.confidence
             << "\n Time [sec]: " << elapsed_time;
 
@@ -278,20 +277,20 @@ void ExecuteRandomTest(const RansacParameters& options,
     const bool good_rotation = rotation_error < kAngularErrorThresh;
     const double translation_error =
         (estimated_rigid_transformation.translation -
-         rigid_transformation.translation).norm();
+         rigid_transformation.translation)
+            .norm();
     const bool good_translation = translation_error < tolerance;
     const bool good_run = good_translation && good_rotation;
-    VLOG_IF(3, !good_run) << ">>> Trial: " << i
-                          << "\nExpected rotation: \n"
-                          << rigid_transformation.rotation
-                          << "\n Estimated rotation: \n"
-                          << estimated_rigid_transformation.rotation
-                          << "\n Rotation error [deg]: " << rotation_error
-                          << "\n Expected translation: "
-                          << rigid_transformation.translation.transpose()
-                          << "\n Estimated translation: "
-                          << estimated_rigid_transformation.translation.transpose()
-                          << "\n Translation error: " << translation_error;
+    VLOG_IF(3, !good_run)
+        << ">>> Trial: " << i << "\nExpected rotation: \n"
+        << rigid_transformation.rotation << "\n Estimated rotation: \n"
+        << estimated_rigid_transformation.rotation
+        << "\n Rotation error [deg]: " << rotation_error
+        << "\n Expected translation: "
+        << rigid_transformation.translation.transpose()
+        << "\n Estimated translation: "
+        << estimated_rigid_transformation.translation.transpose()
+        << "\n Translation error: " << translation_error;
 
     if (good_run) {
       ++num_trials_passed;
@@ -302,7 +301,7 @@ void ExecuteRandomTest(const RansacParameters& options,
   VLOG(3) << ">>> Success ratio: " << success_ratio
           << " good trials: " << num_trials_passed
           << " num. trials:  " << kNumTrials;
-  EXPECT_TRUE(success_ratio > 0.60f); 
+  EXPECT_TRUE(success_ratio > 0.60f);
 }
 
 }  // namespace
@@ -314,9 +313,7 @@ class EstimateRigidTransformation : public ::testing::Test {
     rng = new RandomNumberGenerator(kSeed);
   }
 
-  static void TearDownTestCase() {
-    delete rng;
-  }
+  static void TearDownTestCase() { delete rng; }
 
   // TODO(vfragoso): Generate the cameras and points once.
   static RandomNumberGenerator* rng;
@@ -337,8 +334,9 @@ TEST_F(EstimateRigidTransformation, AllInliersNoNoiseNonCentralCamera) {
 
   RigidTransformation rigid_transformation;
   rigid_transformation.rotation =
-      Eigen::AngleAxisd(DegToRad(12.0), Eigen::Vector3d(1.0, 0.2, -0.8)
-                        .normalized()).toRotationMatrix();
+      Eigen::AngleAxisd(DegToRad(12.0),
+                        Eigen::Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix();
   rigid_transformation.translation = Eigen::Vector3d(-1.3, 2.1, 0.5);
   ExecuteRandomTest(options,
                     rigid_transformation,
@@ -348,7 +346,6 @@ TEST_F(EstimateRigidTransformation, AllInliersNoNoiseNonCentralCamera) {
                     kNumCameras,
                     rng);
 }
-
 
 TEST_F(EstimateRigidTransformation, AllInliersWithNoiseNonCentralCamera) {
   RansacParameters options;
@@ -363,8 +360,9 @@ TEST_F(EstimateRigidTransformation, AllInliersWithNoiseNonCentralCamera) {
 
   RigidTransformation rigid_transformation;
   rigid_transformation.rotation =
-      Eigen::AngleAxisd(DegToRad(12.0), Eigen::Vector3d(1.0, 0.2, -0.8)
-                        .normalized()).toRotationMatrix();
+      Eigen::AngleAxisd(DegToRad(12.0),
+                        Eigen::Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix();
   rigid_transformation.translation = Eigen::Vector3d(-1.3, 2.1, 0.5);
   ExecuteRandomTest(options,
                     rigid_transformation,
@@ -374,7 +372,6 @@ TEST_F(EstimateRigidTransformation, AllInliersWithNoiseNonCentralCamera) {
                     kNumCameras,
                     rng);
 }
-
 
 TEST_F(EstimateRigidTransformation, OutliersWithNoiseNonCentralCamera) {
   RansacParameters options;
@@ -388,9 +385,10 @@ TEST_F(EstimateRigidTransformation, OutliersWithNoiseNonCentralCamera) {
   const double kPoseTolerance = 1.5;
 
   RigidTransformation rigid_transformation;
-    rigid_transformation.rotation =
-      Eigen::AngleAxisd(DegToRad(12.0), Eigen::Vector3d(1.0, 0.2, -0.8)
-                        .normalized()).toRotationMatrix();
+  rigid_transformation.rotation =
+      Eigen::AngleAxisd(DegToRad(12.0),
+                        Eigen::Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix();
   rigid_transformation.translation = Eigen::Vector3d(-1.3, 2.1, 0.5);
   ExecuteRandomTest(options,
                     rigid_transformation,
@@ -400,7 +398,6 @@ TEST_F(EstimateRigidTransformation, OutliersWithNoiseNonCentralCamera) {
                     kNumCameras,
                     rng);
 }
-
 
 TEST_F(EstimateRigidTransformation, AllInliersNoNoiseCentralCamera) {
   RansacParameters options;
@@ -415,15 +412,12 @@ TEST_F(EstimateRigidTransformation, AllInliersNoNoiseCentralCamera) {
 
   RigidTransformation rigid_transformation;
   rigid_transformation.rotation =
-      Eigen::AngleAxisd(DegToRad(12.0), Eigen::Vector3d(1.0, 0.2, -0.8)
-                        .normalized()).toRotationMatrix();
+      Eigen::AngleAxisd(DegToRad(12.0),
+                        Eigen::Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix();
   rigid_transformation.translation = Eigen::Vector3d(-1.3, 2.1, 0.5);
-  ExecuteRandomCentralCameraTest(options,
-                                 rigid_transformation,
-                                 kInlierRatio,
-                                 kNoise,
-                                 kPoseTolerance,
-                                 rng);
+  ExecuteRandomCentralCameraTest(
+      options, rigid_transformation, kInlierRatio, kNoise, kPoseTolerance, rng);
 }
 
 TEST_F(EstimateRigidTransformation, AllInliersWithNoiseCentralCamera) {
@@ -439,15 +433,12 @@ TEST_F(EstimateRigidTransformation, AllInliersWithNoiseCentralCamera) {
 
   RigidTransformation rigid_transformation;
   rigid_transformation.rotation =
-      Eigen::AngleAxisd(DegToRad(12.0), Eigen::Vector3d(1.0, 0.2, -0.8)
-                        .normalized()).toRotationMatrix();
+      Eigen::AngleAxisd(DegToRad(12.0),
+                        Eigen::Vector3d(1.0, 0.2, -0.8).normalized())
+          .toRotationMatrix();
   rigid_transformation.translation = Eigen::Vector3d(-1.3, 2.1, 0.5);
-  ExecuteRandomCentralCameraTest(options,
-                                 rigid_transformation,
-                                 kInlierRatio,
-                                 kNoise,
-                                 kPoseTolerance,
-                                 rng);
+  ExecuteRandomCentralCameraTest(
+      options, rigid_transformation, kInlierRatio, kNoise, kPoseTolerance, rng);
 }
 
 }  // namespace theia

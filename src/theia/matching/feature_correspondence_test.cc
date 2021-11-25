@@ -32,8 +32,8 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <glog/logging.h>
 #include "gtest/gtest.h"
+#include <glog/logging.h>
 
 #include "theia/matching/feature_correspondence.h"
 

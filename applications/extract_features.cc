@@ -32,32 +32,37 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <glog/logging.h>
 #include <gflags/gflags.h>
-#include <theia/theia.h>
+#include <glog/logging.h>
 #include <string>
+#include <theia/theia.h>
 #include <vector>
 
 #include "applications/command_line_helpers.h"
 
 DEFINE_string(
-    input_images, "",
+    input_images,
+    "",
     "Filepath of the images you want to extract features and compute matches "
     "for. The filepath should be a wildcard to extract features from multiple "
     "images.");
-DEFINE_string(features_output_directory, ".",
+DEFINE_string(features_output_directory,
+              ".",
               "Name of output directory to write the features files.");
-DEFINE_int32(num_threads, 1,
+DEFINE_int32(num_threads,
+             1,
              "Number of threads to use for feature extraction and matching.");
 DEFINE_string(
-    descriptor, "SIFT",
+    descriptor,
+    "SIFT",
     "Type of feature descriptor to use. Must be one of the following: "
     "SIFT");
-DEFINE_string(feature_density, "NORMAL",
+DEFINE_string(feature_density,
+              "NORMAL",
               "Set to SPARSE, NORMAL, or DENSE to extract fewer or more "
               "features from each image.");
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 

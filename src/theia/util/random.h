@@ -94,7 +94,6 @@ class RandomNumberGenerator {
       }
     }
   }
-
 };
 
 }  // namespace theia

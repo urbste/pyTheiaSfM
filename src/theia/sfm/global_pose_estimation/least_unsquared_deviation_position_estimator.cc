@@ -207,13 +207,15 @@ void LeastUnsquaredDeviationPositionEstimator::SetupConstraintMatrix(
 
   constraint_matrix_.setFromTriplets(triplet_list.begin(), triplet_list.end());
 
-  VLOG(2) << view_pairs.size() << " camera to camera constraints were added "
-                                  "to the position estimation problem.";
+  VLOG(2) << view_pairs.size()
+          << " camera to camera constraints were added "
+             "to the position estimation problem.";
 }
 
-std::unordered_map<ViewId, Eigen::Vector3d> LeastUnsquaredDeviationPositionEstimator::EstimatePositionsWrapper(
-      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation) {
+std::unordered_map<ViewId, Eigen::Vector3d>
+LeastUnsquaredDeviationPositionEstimator::EstimatePositionsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    const std::unordered_map<ViewId, Eigen::Vector3d>& orientation) {
   std::unordered_map<ViewId, Eigen::Vector3d> positions;
   EstimatePositions(view_pairs, orientation, &positions);
   return positions;

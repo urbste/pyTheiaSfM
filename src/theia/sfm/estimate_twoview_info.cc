@@ -89,11 +89,13 @@ void NormalizeFeatures(
     FeatureCorrespondence normalized_correspondence;
     const Eigen::Vector3d normalized_feature1 =
         camera1.PixelToNormalizedCoordinates(correspondence.feature1.point_);
-    normalized_correspondence.feature1 = Feature(normalized_feature1.hnormalized());
+    normalized_correspondence.feature1 =
+        Feature(normalized_feature1.hnormalized());
 
     const Eigen::Vector3d normalized_feature2 =
         camera2.PixelToNormalizedCoordinates(correspondence.feature2.point_);
-    normalized_correspondence.feature2 = Feature(normalized_feature2.hnormalized());
+    normalized_correspondence.feature2 =
+        Feature(normalized_feature2.hnormalized());
 
     normalized_correspondences->emplace_back(normalized_correspondence);
   }

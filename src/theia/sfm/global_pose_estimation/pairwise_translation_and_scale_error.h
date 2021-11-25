@@ -53,9 +53,8 @@ namespace theia {
 // from the global coordinate system to the local coordinate system, and s is
 // the unknown scale of the local coordinate system.
 struct PairwiseTranslationAndScaleError {
-  PairwiseTranslationAndScaleError(
-      const Eigen::Vector3d& orientation1,
-      const Eigen::Vector3d& relative_translation);
+  PairwiseTranslationAndScaleError(const Eigen::Vector3d& orientation1,
+                                   const Eigen::Vector3d& relative_translation);
 
   // The error is given by the position error described above.
   template <typename T>
@@ -73,10 +72,10 @@ struct PairwiseTranslationAndScaleError {
 };
 
 template <typename T>
-bool PairwiseTranslationAndScaleError::operator() (const T* position1,
-                                                   const T* position2,
-                                                   const T* scale,
-                                                   T* residuals) const {
+bool PairwiseTranslationAndScaleError::operator()(const T* position1,
+                                                  const T* position2,
+                                                  const T* scale,
+                                                  T* residuals) const {
   residuals[0] =
       position2[0] - position1[0] - scale[0] * relative_translation_[0];
   residuals[1] =

@@ -34,21 +34,21 @@
 
 #include "theia/sfm/global_pose_estimation/nonlinear_rotation_estimator.h"
 
-#include <ceres/ceres.h>
 #include <Eigen/Core>
+#include <ceres/ceres.h>
 #include <memory>
 #include <unordered_map>
 
-#include "theia/util/hash.h"
-#include "theia/util/map_util.h"
 #include "theia/sfm/global_pose_estimation/pairwise_rotation_error.h"
 #include "theia/sfm/types.h"
+#include "theia/util/hash.h"
+#include "theia/util/map_util.h"
 
 namespace theia {
 
 bool NonlinearRotationEstimator::EstimateRotations(
-      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations) {
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations) {
   CHECK_NOTNULL(global_orientations);
   if (global_orientations->size() == 0) {
     LOG(INFO) << "Skipping nonlinear rotation optimization because no "
@@ -81,10 +81,8 @@ bool NonlinearRotationEstimator::EstimateRotations(
 
     ceres::CostFunction* cost_function =
         PairwiseRotationError::Create(view_pair.second.rotation_2, 1.0);
-    problem->AddResidualBlock(cost_function,
-                              loss_function,
-                              rotation1->data(),
-                              rotation2->data());
+    problem->AddResidualBlock(
+        cost_function, loss_function, rotation1->data(), rotation2->data());
   }
 
   // The problem should be relatively sparse so sparse cholesky is a good

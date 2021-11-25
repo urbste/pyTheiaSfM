@@ -150,7 +150,7 @@ class FeatureExtractorAndMatcher {
   // Exif reader for loading exif information. This object is created once so
   // that the EXIF focal length database does not have to be loaded multiple
   // times.
-  //ExifReader exif_reader_;
+  // ExifReader exif_reader_;
 
   // The global image feature descriptor extractor. This is used to extract a
   // compact representation for each image and select a subset of kNN images to

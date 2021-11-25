@@ -47,8 +47,8 @@
 namespace theia {
 
 class Feature {
-public:
-EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+ public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   //! 2D point
   Eigen::Vector2d point_ = Eigen::Vector2d::Zero();
   //! 2D standard deviation
@@ -62,10 +62,15 @@ EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
   Feature() {}
   Feature(const double x, const double y) { point_ << x, y; }
+<<<<<<< HEAD
   Feature(const double x, const double y, const double depth_prior) { point_ << x, y; depth_prior_ = depth_prior; }
   Feature(const Eigen::Vector2d &point) : point_(point) {}
   Feature(const Eigen::Vector2d &point, double depth_prior) : point_(point), depth_prior_(depth_prior) {}
   Feature(const Eigen::Vector2d &point, const Eigen::Matrix2d &covariance_)
+=======
+  Feature(const Eigen::Vector2d& point) : point_(point) {}
+  Feature(const Eigen::Vector2d& point, const Eigen::Matrix2d& covariance_)
+>>>>>>> feature/more_global_rot_solvers
       : point_(point), covariance_(covariance_) {}
   Feature(const Eigen::Vector2d &point, const Eigen::Matrix2d &covariance_, const double depth_prior, const double depth_prior_variance)
       : point_(point), covariance_(covariance_), depth_prior_(depth_prior), depth_prior_variance_(depth_prior_variance) {}
@@ -77,16 +82,16 @@ EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   double depth_prior_variance() const { return depth_prior_variance_; }
 
   // make it hashable
-  bool operator==(const Feature &o) const {
-      return point_.x() == o.point_.x() && point_.y() == o.point_.y();
+  bool operator==(const Feature& o) const {
+    return point_.x() == o.point_.x() && point_.y() == o.point_.y();
   }
 
-  bool operator<(const Feature &o) const {
-      return point_.x() < o.point_.x() ||
-             (point_.x() == o.point_.x() && point_.y() < o.point_.y());
+  bool operator<(const Feature& o) const {
+    return point_.x() < o.point_.x() ||
+           (point_.x() == o.point_.x() && point_.y() < o.point_.y());
   }
 
-private:
+ private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
@@ -96,21 +101,21 @@ private:
   }
 };
 
-} // namespace theia
+}  // namespace theia
 
 CEREAL_CLASS_VERSION(theia::Feature, 0);
 
-namespace std
-{
-    template <>
-    struct hash<theia::Feature>
-    {
-        size_t operator()(const theia::Feature& k) const
-        {
-            // Compute individual hash values for two data members and combine them using XOR and bit shifting
-            return ((hash<double>()(k.point_.x()) ^ (hash<double>()(k.point_.y()) << 1)) >> 1);
-        }
-    };
-}
+namespace std {
+template <>
+struct hash<theia::Feature> {
+  size_t operator()(const theia::Feature& k) const {
+    // Compute individual hash values for two data members and combine them
+    // using XOR and bit shifting
+    return (
+        (hash<double>()(k.point_.x()) ^ (hash<double>()(k.point_.y()) << 1)) >>
+        1);
+  }
+};
+}  // namespace std
 
-#endif // THEIA_SFM_FEATURE_H_
+#endif  // THEIA_SFM_FEATURE_H_

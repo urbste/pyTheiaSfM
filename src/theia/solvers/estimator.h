@@ -51,7 +51,8 @@ namespace theia {
 // NOTE: RANSAC, ARRSAC, and other solvers work best if Datum and Model are
 // lightweight classes or structs.
 
-template <typename DatumType, typename ModelType> class Estimator {
+template <typename DatumType, typename ModelType>
+class Estimator {
  public:
   typedef DatumType Datum;
   typedef ModelType Model;

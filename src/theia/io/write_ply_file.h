@@ -35,8 +35,8 @@
 #ifndef THEIA_IO_WRITE_PLY_FILE_H_
 #define THEIA_IO_WRITE_PLY_FILE_H_
 
-#include <string>
 #include <Eigen/Core>
+#include <string>
 
 namespace theia {
 

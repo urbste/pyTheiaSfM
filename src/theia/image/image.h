@@ -88,15 +88,10 @@ class FloatImage {
   int Channels() const;
 
   // Set the pixel color value at (x, y) in channel c.
-  void SetXY(const int x,
-             const int y,
-             const int c,
-             const float value);
+  void SetXY(const int x, const int y, const int c, const float value);
   // Set the rgb color values at the pixel (x, y). This assumes (with no
   // checks!) that the image is an rgb image.
-  void SetXY(const int x,
-             const int y,
-             const Eigen::Vector3f& rgb);
+  void SetXY(const int x, const int y, const Eigen::Vector3f& rgb);
 
   // Get the pixel value at the given (x, y) position and channel.
   float GetXY(const int x, const int y, const int channel) const;
@@ -111,9 +106,7 @@ class FloatImage {
                  const float value);
   // Set the rgb color values at the given row and column. This assumes (with no
   // checks!) that the image is an rgb image.
-  void SetRowCol(const int row,
-                 const int col,
-                 const Eigen::Vector3f& rgb);
+  void SetRowCol(const int row, const int col, const Eigen::Vector3f& rgb);
   // Get the pixel value at the given location and channel.
   float GetRowCol(const int row, const int col, const int channel) const;
 

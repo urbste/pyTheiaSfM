@@ -35,9 +35,9 @@
 #ifndef THEIA_TEST_TEST_UTILS_H_
 #define THEIA_TEST_TEST_UTILS_H_
 
+#include "gtest/gtest.h"
 #include <Eigen/Dense>
 #include <glog/logging.h>
-#include "gtest/gtest.h"
 
 namespace theia {
 namespace test {
@@ -73,7 +73,9 @@ void ExpectArraysNear(int n,
 //
 // where max_norm_p and max_norm_q are the max norms of the arrays p
 // and q respectively.
-bool ArraysEqualUpToScale(int n, const double* p, const double* q,
+bool ArraysEqualUpToScale(int n,
+                          const double* p,
+                          const double* q,
                           double tolerance) {
   Eigen::Map<const Eigen::VectorXd> p_vec(p, n);
   Eigen::Map<const Eigen::VectorXd> q_vec(q, n);

@@ -32,16 +32,17 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <string>
-#include "gtest/gtest.h"
 
-#include "theia/image/image.h"
 #include "theia/image/descriptor/akaze_descriptor.h"
+#include "theia/image/image.h"
 #include "theia/image/keypoint_detector/keypoint.h"
 
-DEFINE_string(test_img, "image/descriptor/img1.png",
+DEFINE_string(test_img,
+              "image/descriptor/img1.png",
               "Name of test image file.");
 
 namespace theia {
@@ -58,8 +59,8 @@ TEST(AkazeDescriptor, Sanity) {
 
   std::vector<Keypoint> keypoints;
   std::vector<Eigen::VectorXf> descriptors;
-  EXPECT_TRUE(akaze_extractor.DetectAndExtractDescriptors(input_img, &keypoints,
-                                                          &descriptors));
+  EXPECT_TRUE(akaze_extractor.DetectAndExtractDescriptors(
+      input_img, &keypoints, &descriptors));
 }
 
 }  // namespace theia

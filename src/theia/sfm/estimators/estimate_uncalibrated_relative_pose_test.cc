@@ -41,14 +41,14 @@
 
 #include "gtest/gtest.h"
 
+#include "theia/matching/feature_correspondence.h"
 #include "theia/math/util.h"
-#include "theia/solvers/sample_consensus_estimator.h"
-#include "theia/test/test_utils.h"
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_relative_pose.h"
-#include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/pose/util.h"
+#include "theia/solvers/sample_consensus_estimator.h"
+#include "theia/test/test_utils.h"
 
 namespace theia {
 
@@ -145,8 +145,8 @@ TEST(EstimateUncalibratedRelativePose, AllInliersWithNoise) {
   const double kNoise = 1.0;
 
   for (int k = 0; k < kNumTrials; k++) {
-const Matrix3d rotation = RandomRotation(10.0, &rng);
-const Vector3d position = rng.RandVector3d();
+    const Matrix3d rotation = RandomRotation(10.0, &rng);
+    const Vector3d position = rng.RandVector3d();
     const double focal_length1 = rng.RandDouble(800, 1600);
     const double focal_length2 = rng.RandDouble(800, 1600);
     ExecuteRandomTest(options,

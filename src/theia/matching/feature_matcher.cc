@@ -205,13 +205,13 @@ bool FeatureMatcher::GeometricVerification(
   // Load camera intrinsics if they are available.
   if (feature_and_matches_db_->ContainsCameraIntrinsicsPrior(
           features1.image_name)) {
-    intrinsics1 = feature_and_matches_db_->GetCameraIntrinsicsPrior(
-        features1.image_name);
+    intrinsics1 =
+        feature_and_matches_db_->GetCameraIntrinsicsPrior(features1.image_name);
   }
   if (feature_and_matches_db_->ContainsCameraIntrinsicsPrior(
           features2.image_name)) {
-    intrinsics2 = feature_and_matches_db_->GetCameraIntrinsicsPrior(
-        features2.image_name);
+    intrinsics2 =
+        feature_and_matches_db_->GetCameraIntrinsicsPrior(features2.image_name);
   }
 
   TwoViewMatchGeometricVerification geometric_verification(

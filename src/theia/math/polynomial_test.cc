@@ -67,10 +67,10 @@
 // Author: moll.markus@arcor.de (Markus Moll)
 //         sameeragarwal@google.com (Sameer Agarwal)
 
-#include <glog/logging.h>
-#include <algorithm>
-#include <vector>
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <glog/logging.h>
+#include <vector>
 
 #include "theia/math/polynomial.h"
 #include "theia/test/test_utils.h"
@@ -94,15 +94,20 @@ TEST(Polynomial, FindRootIterativeLaguerreTest) {
   const double kEpsilon = 1e-8;
   const int kMaxIter = 10;
   EXPECT_NEAR(FindRootIterativeLaguerre(polynomial, 3.1, kEpsilon, kMaxIter),
-              3.0, kTolerance);
+              3.0,
+              kTolerance);
   EXPECT_NEAR(FindRootIterativeLaguerre(polynomial, -4.1, kEpsilon, kMaxIter),
-              -4.0, kTolerance);
+              -4.0,
+              kTolerance);
   EXPECT_NEAR(FindRootIterativeLaguerre(polynomial, -5.1, kEpsilon, kMaxIter),
-              -5.0, kTolerance);
+              -5.0,
+              kTolerance);
   EXPECT_NEAR(FindRootIterativeLaguerre(polynomial, 6.1, kEpsilon, kMaxIter),
-              6.0, kTolerance);
+              6.0,
+              kTolerance);
   EXPECT_NEAR(FindRootIterativeLaguerre(polynomial, -7.1, kEpsilon, kMaxIter),
-              -7.0, kTolerance);
+              -7.0,
+              kTolerance);
 }
 
 TEST(Polynomial, FindRootIterativeNewtonTest) {
@@ -118,16 +123,21 @@ TEST(Polynomial, FindRootIterativeNewtonTest) {
   const double kTolerance = 1e-10;
   const double kEpsilon = 1e-8;
   const int kMaxIter = 20;
-  EXPECT_NEAR(FindRootIterativeNewton(polynomial, 3.1, kEpsilon, kMaxIter), 3.0,
+  EXPECT_NEAR(FindRootIterativeNewton(polynomial, 3.1, kEpsilon, kMaxIter),
+              3.0,
               kTolerance);
   EXPECT_NEAR(FindRootIterativeNewton(polynomial, -4.1, kEpsilon, kMaxIter),
-              -4.0, kTolerance);
+              -4.0,
+              kTolerance);
   EXPECT_NEAR(FindRootIterativeNewton(polynomial, -5.1, kEpsilon, kMaxIter),
-              -5.0, kTolerance);
-  EXPECT_NEAR(FindRootIterativeNewton(polynomial, 6.1, kEpsilon, kMaxIter), 6.0,
+              -5.0,
+              kTolerance);
+  EXPECT_NEAR(FindRootIterativeNewton(polynomial, 6.1, kEpsilon, kMaxIter),
+              6.0,
               kTolerance);
   EXPECT_NEAR(FindRootIterativeNewton(polynomial, -7.1, kEpsilon, kMaxIter),
-              -7.0, kTolerance);
+              -7.0,
+              kTolerance);
 }
 
 TEST(Polynomial, DifferentiateConstantPolynomial) {
@@ -183,8 +193,7 @@ TEST(Polynomial, DividePolynomialSameDegree) {
 
   VectorXd quotient, remainder;
   DividePolynomial(poly1, poly2, &quotient, &remainder);
-  VectorXd reconstructed_poly =
-      MultiplyPolynomials(quotient, poly2);
+  VectorXd reconstructed_poly = MultiplyPolynomials(quotient, poly2);
   reconstructed_poly.tail(remainder.size()) += remainder;
 
   const double kTolerance = 1e-12;
@@ -202,8 +211,7 @@ TEST(Polynomial, DividePolynomialLowerDegree) {
 
   VectorXd quotient, remainder;
   DividePolynomial(poly1, poly2, &quotient, &remainder);
-  VectorXd reconstructed_poly =
-      MultiplyPolynomials(quotient, poly2);
+  VectorXd reconstructed_poly = MultiplyPolynomials(quotient, poly2);
   reconstructed_poly.tail(remainder.size()) += remainder;
 
   const double kTolerance = 1e-12;
@@ -221,8 +229,7 @@ TEST(Polynomial, DividePolynomialHigherDegree) {
 
   VectorXd quotient, remainder;
   DividePolynomial(poly1, poly2, &quotient, &remainder);
-  VectorXd reconstructed_poly =
-      MultiplyPolynomials(quotient, poly2);
+  VectorXd reconstructed_poly = MultiplyPolynomials(quotient, poly2);
   reconstructed_poly.tail(remainder.size()) += remainder;
 
   const double kTolerance = 1e-12;
@@ -240,8 +247,7 @@ TEST(Polynomial, DividePolynomial) {
 
   VectorXd quotient, remainder;
   DividePolynomial(poly1, poly2, &quotient, &remainder);
-  VectorXd reconstructed_poly =
-      MultiplyPolynomials(quotient, poly2);
+  VectorXd reconstructed_poly = MultiplyPolynomials(quotient, poly2);
   reconstructed_poly.tail(remainder.size()) += remainder;
 
   const double kTolerance = 1e-12;

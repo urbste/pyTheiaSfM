@@ -41,8 +41,8 @@
 
 namespace theia {
 
-// std::string exif_img_filename = THEIA_DATA_DIR + std::string("/image/exif.jpg");
-// std::string gps_exif_img_filename =
+// std::string exif_img_filename = THEIA_DATA_DIR +
+// std::string("/image/exif.jpg"); std::string gps_exif_img_filename =
 //     THEIA_DATA_DIR + std::string("/image/gps_exif.jpg");
 
 // TEST(ExtractEXIFMetadata, FocalLengthEXIF) {

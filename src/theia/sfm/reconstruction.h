@@ -71,15 +71,15 @@ class Reconstruction {
   // Returns the unique ViewId of the view name, or kInvalidViewId if the view
   // does not
   // exist.
-  ViewId ViewIdFromName(const std::string &view_name) const;
+  ViewId ViewIdFromName(const std::string& view_name) const;
 
   // Returns the unique ViewId of the view name, or kInvalidViewId if the view
   // does not
   // exist.
-  ViewId ViewIdFromTimestamp(const double &timestamp_s) const;
+  ViewId ViewIdFromTimestamp(const double& timestamp_s) const;
 
   // Creates a new view and returns the view id.
-  ViewId AddView(const std::string& view_name, const double timestamp = -1.0);
+  ViewId AddView(const std::string& view_name, const double timestamp);
   // Creates a new view and assigns it to the specified camera intrinsics group.
   ViewId AddView(const std::string& view_name,
                  const CameraIntrinsicsGroupId group_id,
@@ -122,10 +122,10 @@ class Reconstruction {
   // observation. If the track already contains an observation to this view then
   // false is returned. If the view/track does not exist, or another failure is
   // encountered then a failure is thrown.
-  // sigma squared is the approximated measurement accuracy of the image observation
-  // We set it to 1.0 pixel in the standard case. However, if you know, that
-  // you can measure the image points more accurately (e.g. aruco markers) you can
-  // set this value here
+  // sigma squared is the approximated measurement accuracy of the image
+  // observation We set it to 1.0 pixel in the standard case. However, if you
+  // know, that you can measure the image points more accurately (e.g. aruco
+  // markers) you can set this value here
   bool AddObservation(const ViewId view_id,
                       const TrackId track_id,
                       const Feature& feature);
@@ -162,7 +162,8 @@ class Reconstruction {
   // the same IDs as the original reconstruction.
   void GetSubReconstruction(const std::unordered_set<ViewId>& views_in_subset,
                             Reconstruction* subreconstruction) const;
-  Reconstruction GetSubReconstructionWrapper(const std::unordered_set<ViewId>& views_in_subset);
+  Reconstruction GetSubReconstructionWrapper(
+      const std::unordered_set<ViewId>& views_in_subset);
 
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which

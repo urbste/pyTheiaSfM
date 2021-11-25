@@ -32,20 +32,20 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <unordered_map>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "theia/math/util.h"
-#include "theia/util/hash.h"
-#include "theia/util/map_util.h"
-#include "theia/util/random.h"
 #include "theia/sfm/extract_maximally_parallel_rigid_subgraph.h"
 #include "theia/sfm/types.h"
 #include "theia/sfm/view_graph/view_graph.h"
+#include "theia/util/hash.h"
+#include "theia/util/map_util.h"
+#include "theia/util/random.h"
+#include "gtest/gtest.h"
 
 namespace theia {
 
@@ -84,9 +84,9 @@ TwoViewInfo CreateTwoViewInfo(
   ceres::RotationMatrixToAngleAxis(relative_rotation_mat.data(),
                                    info.rotation_2.data());
 
-  const Vector3d position =
-      (FindOrDie(positions, view_id_pair.second) -
-       FindOrDie(positions, view_id_pair.first)).normalized();
+  const Vector3d position = (FindOrDie(positions, view_id_pair.second) -
+                             FindOrDie(positions, view_id_pair.first))
+                                .normalized();
   info.position_2 = orientation1 * position;
 
   return info;
@@ -102,9 +102,8 @@ void CreateValidViewPairs(
   view_ids.push_back(0);
   for (int i = 1; i < orientations.size(); i++) {
     const ViewIdPair view_id_pair(i - 1, i);
-    const TwoViewInfo info = CreateTwoViewInfo(orientations,
-                                               positions,
-                                               view_id_pair);
+    const TwoViewInfo info =
+        CreateTwoViewInfo(orientations, positions, view_id_pair);
     view_graph->AddEdge(i - 1, i, info);
     view_ids.push_back(i);
   }
@@ -140,8 +139,7 @@ void CreateInvalidViewPairs(
     }
 
     // Create a valid view pair.
-    TwoViewInfo info =
-        CreateTwoViewInfo(orientations, positions, view_id_pair);
+    TwoViewInfo info = CreateTwoViewInfo(orientations, positions, view_id_pair);
     // Add a lot of noise to it.
     info.rotation_2 += Vector3d::Ones();
     info.position_2 = rng.RandVector3d().normalized();
@@ -157,14 +155,10 @@ void TestExtractMaximallyParallelRigidSubgraph(
   std::unordered_map<ViewId, Vector3d> positions;
   CreateViewsWithRandomPoses(num_views, &orientations, &positions);
   ViewGraph view_graph;
-  CreateValidViewPairs(num_valid_view_pairs,
-                       orientations,
-                       positions,
-                       &view_graph);
-  CreateInvalidViewPairs(num_invalid_view_pairs,
-                         orientations,
-                         positions,
-                         &view_graph);
+  CreateValidViewPairs(
+      num_valid_view_pairs, orientations, positions, &view_graph);
+  CreateInvalidViewPairs(
+      num_invalid_view_pairs, orientations, positions, &view_graph);
   ExtractMaximallyParallelRigidSubgraph(orientations, &view_graph);
   EXPECT_GE(view_graph.NumEdges(), num_valid_view_pairs);
   EXPECT_EQ(view_graph.NumViews(), num_views);

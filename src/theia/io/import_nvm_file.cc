@@ -61,20 +61,23 @@ struct VSFMReconstruction {
   std::vector<string> view_names;
   std::vector<int> point_colors;
 };
-} // namespace
+}  // namespace
 
-bool ImportNVMFile(const std::string &nvm_filepath,
-                   Reconstruction *reconstruction) {
+bool ImportNVMFile(const std::string& nvm_filepath,
+                   Reconstruction* reconstruction) {
   CHECK_GT(nvm_filepath.length(), 0);
   CHECK_NOTNULL(reconstruction);
 
   // Read VSFM file.
   VSFMReconstruction vsfm_reconstruction;
-  CHECK(LoadModelFile(
-      nvm_filepath.c_str(), vsfm_reconstruction.camera_data,
-      vsfm_reconstruction.point_data, vsfm_reconstruction.measurements,
-      vsfm_reconstruction.point_index, vsfm_reconstruction.camera_index,
-      vsfm_reconstruction.view_names, vsfm_reconstruction.point_colors));
+  CHECK(LoadModelFile(nvm_filepath.c_str(),
+                      vsfm_reconstruction.camera_data,
+                      vsfm_reconstruction.point_data,
+                      vsfm_reconstruction.measurements,
+                      vsfm_reconstruction.point_index,
+                      vsfm_reconstruction.camera_index,
+                      vsfm_reconstruction.view_names,
+                      vsfm_reconstruction.point_colors));
 
   // Check the NVM reconstruction for sanity.
   CHECK_EQ(vsfm_reconstruction.view_names.size(),
@@ -87,18 +90,18 @@ bool ImportNVMFile(const std::string &nvm_filepath,
   // Add all cameras to the reconstruction.
   for (int i = 0; i < vsfm_reconstruction.camera_data.size(); i++) {
     std::string view_name;
-    GetFilenameFromFilepath(vsfm_reconstruction.view_names[i], true,
-                            &view_name);
+    GetFilenameFromFilepath(
+        vsfm_reconstruction.view_names[i], true, &view_name);
     // Add the view to the reconstruction.
     LOG(INFO) << "Adding view " << view_name << " to the reconstruction.";
-    const ViewId view_id = reconstruction->AddView(view_name);
+    const ViewId view_id = reconstruction->AddView(view_name, i);
     CHECK_NE(view_id, kInvalidViewId);
-    View *view = reconstruction->MutableView(view_id);
+    View* view = reconstruction->MutableView(view_id);
     view->SetEstimated(true);
 
     // Set the camera intrinsic parameters.
-    const CameraT &vsfm_camera = vsfm_reconstruction.camera_data[i];
-    Camera *camera = view->MutableCamera();
+    const CameraT& vsfm_camera = vsfm_reconstruction.camera_data[i];
+    Camera* camera = view->MutableCamera();
     camera->SetCameraIntrinsicsModelType(CameraIntrinsicsModelType::PINHOLE);
     camera->SetFocalLength(vsfm_camera.GetFocalLength());
 
@@ -127,14 +130,15 @@ bool ImportNVMFile(const std::string &nvm_filepath,
   for (int i = 0; i < vsfm_reconstruction.point_data.size(); i++) {
     Eigen::Vector4f point(vsfm_reconstruction.point_data[i].xyz[0],
                           vsfm_reconstruction.point_data[i].xyz[1],
-                          vsfm_reconstruction.point_data[i].xyz[2], 1.0);
+                          vsfm_reconstruction.point_data[i].xyz[2],
+                          1.0);
     Eigen::Vector3i color(vsfm_reconstruction.point_colors[3 * i],
                           vsfm_reconstruction.point_colors[3 * i + 1],
                           vsfm_reconstruction.point_colors[3 * i + 2]);
-    const auto &features = FindOrDie(tracks, i);
+    const auto& features = FindOrDie(tracks, i);
     const TrackId track_id = reconstruction->AddTrack(features);
     CHECK_NE(track_id, kInvalidTrackId);
-    Track *track = reconstruction->MutableTrack(track_id);
+    Track* track = reconstruction->MutableTrack(track_id);
     track->SetEstimated(true);
     *track->MutablePoint() = point.cast<double>();
     *track->MutableColor() = color.cast<uint8_t>();
@@ -143,4 +147,4 @@ bool ImportNVMFile(const std::string &nvm_filepath,
   return true;
 }
 
-} // namespace theia
+}  // namespace theia

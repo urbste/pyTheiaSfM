@@ -34,21 +34,21 @@
 
 #include "theia/sfm/filter_view_pairs_from_relative_translation.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <memory>
 #include <mutex>  // NOLINT
 #include <unordered_map>
 
 #include "theia/math/util.h"
+#include "theia/sfm/twoview_info.h"
+#include "theia/sfm/types.h"
+#include "theia/sfm/view_graph/view_graph.h"
 #include "theia/util/hash.h"
 #include "theia/util/map_util.h"
 #include "theia/util/random.h"
 #include "theia/util/threadpool.h"
-#include "theia/sfm/twoview_info.h"
-#include "theia/sfm/types.h"
-#include "theia/sfm/view_graph/view_graph.h"
 
 namespace theia {
 using Eigen::Vector3d;
@@ -66,9 +66,9 @@ struct MFASNode {
 // Rotate the translation direction based on the known orientation such that the
 // translation is in the global reference frame.
 std::unordered_map<ViewIdPair, Vector3d>
-      RotateRelativeTranslationsToGlobalFrame(
-          const std::unordered_map<ViewId, Vector3d>& orientations,
-          const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs) {
+RotateRelativeTranslationsToGlobalFrame(
+    const std::unordered_map<ViewId, Vector3d>& orientations,
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs) {
   std::unordered_map<ViewIdPair, Vector3d> rotated_translations;
   rotated_translations.reserve(orientations.size());
 
@@ -272,9 +272,8 @@ void FilterViewPairsFromRelativeTranslation(
       RotateRelativeTranslationsToGlobalFrame(orientations, view_pairs);
 
   Vector3d translation_mean, translation_variance;
-  ComputeMeanVariance(rotated_translations,
-                      &translation_mean,
-                      &translation_variance);
+  ComputeMeanVariance(
+      rotated_translations, &translation_mean, &translation_variance);
 
   std::unique_ptr<ThreadPool> pool(new ThreadPool(options.num_threads));
   std::mutex mutex;

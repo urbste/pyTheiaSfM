@@ -212,8 +212,8 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
   static const int kMinNumObservationsForTriangulation = 2;
 
   Track* track = reconstruction_->MutableTrack(track_id);
-  CHECK(!track->IsEstimated()) << "Track " << track_id
-                               << " is already estimated.";
+  CHECK(!track->IsEstimated())
+      << "Track " << track_id << " is already estimated.";
 
   // Gather projection matrices and features.
   std::vector<ViewId> view_ids;
@@ -238,10 +238,11 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
   }
 
   // Triangulate the track.
-//  if (!TriangulateNViewSVD(proj_matrices, normalized_features, track->MutablePoint())) {
-//    ++num_failed_triangulations_;
-//    return false;
-//  }
+  //  if (!TriangulateNViewSVD(proj_matrices, normalized_features,
+  //  track->MutablePoint())) {
+  //    ++num_failed_triangulations_;
+  //    return false;
+  //  }
   if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
     ++num_failed_triangulations_;
     return false;

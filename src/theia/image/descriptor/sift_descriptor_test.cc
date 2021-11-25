@@ -32,16 +32,17 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <string>
-#include "gtest/gtest.h"
 
+#include "theia/image/descriptor/sift_descriptor.h"
 #include "theia/image/image.h"
 #include "theia/image/keypoint_detector/sift_detector.h"
-#include "theia/image/descriptor/sift_descriptor.h"
 
-DEFINE_string(test_img, "image/descriptor/img1.png",
+DEFINE_string(test_img,
+              "image/descriptor/img1.png",
               "Name of test image file.");
 
 namespace theia {
@@ -62,14 +63,12 @@ TEST(SiftDescriptor, Sanity) {
   SiftDescriptorExtractor sift_extractor;
 
   Eigen::VectorXf descriptor;
-  EXPECT_TRUE(sift_extractor.ComputeDescriptor(input_img,
-                                               sift_keypoints[0],
-                                               &descriptor));
+  EXPECT_TRUE(sift_extractor.ComputeDescriptor(
+      input_img, sift_keypoints[0], &descriptor));
 
   std::vector<Eigen::VectorXf> sift_descriptors;
-  EXPECT_TRUE(sift_extractor.ComputeDescriptors(input_img,
-                                                &sift_keypoints,
-                                                &sift_descriptors));
+  EXPECT_TRUE(sift_extractor.ComputeDescriptors(
+      input_img, &sift_keypoints, &sift_descriptors));
 }
 
 TEST(SiftDescriptor, ZeroDescriptorRootSiftTest) {
@@ -88,9 +87,8 @@ TEST(SiftDescriptor, DifferentImageSizes) {
 
   std::vector<Keypoint> keypoints;
   std::vector<Eigen::VectorXf> descriptors;
-  EXPECT_TRUE(sift_extractor.DetectAndExtractDescriptors(input_img,
-                                                         &keypoints,
-                                                         &descriptors));
+  EXPECT_TRUE(sift_extractor.DetectAndExtractDescriptors(
+      input_img, &keypoints, &descriptors));
 
   // Get the second image, which is a different size!
   const std::string img2_filename =
@@ -98,9 +96,8 @@ TEST(SiftDescriptor, DifferentImageSizes) {
   FloatImage input_img2(img2_filename);
   keypoints.clear();
   descriptors.clear();
-  EXPECT_TRUE(sift_extractor.DetectAndExtractDescriptors(input_img2,
-                                                         &keypoints,
-                                                         &descriptors));
+  EXPECT_TRUE(sift_extractor.DetectAndExtractDescriptors(
+      input_img2, &keypoints, &descriptors));
 }
 
 }  // namespace theia

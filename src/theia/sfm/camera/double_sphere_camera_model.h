@@ -57,7 +57,7 @@ namespace theia {
 // V.Usenko et al.
 
 class DoubleSphereCameraModel : public CameraIntrinsicsModel {
-public:
+ public:
   DoubleSphereCameraModel();
   ~DoubleSphereCameraModel() {}
 
@@ -69,8 +69,8 @@ public:
     SKEW = 2,
     PRINCIPAL_POINT_X = 3,
     PRINCIPAL_POINT_Y = 4,
-    XI = 5,   // value range -1, 1
-    ALPHA = 6 // value range 0, 1
+    XI = 5,    // value range -1, 1
+    ALPHA = 6  // value range 0, 1
   };
 
   int NumParameters() const override;
@@ -79,8 +79,8 @@ public:
   CameraIntrinsicsModelType Type() const override;
 
   // Set the intrinsic camera parameters from the priors.
-  void
-  SetFromCameraIntrinsicsPriors(const CameraIntrinsicsPrior &prior) override;
+  void SetFromCameraIntrinsicsPriors(
+      const CameraIntrinsicsPrior& prior) override;
 
   // Return a CameraIntrinsicsPrior that can be used to initialize a camera with
   // the same parameters with the SetFromCameraIntrinsicsPriors method.
@@ -89,10 +89,10 @@ public:
   // Returns the indices of the parameters that will be optimized during bundle
   // adjustment.
   std::vector<int> GetSubsetFromOptimizeIntrinsicsType(
-      const OptimizeIntrinsicsType &intrinsics_to_optimize) const override;
+      const OptimizeIntrinsicsType& intrinsics_to_optimize) const override;
 
   // Returns the calibration matrix in the form specified above.
-  void GetCalibrationMatrix(Eigen::Matrix3d *kmatrix) const override;
+  void GetCalibrationMatrix(Eigen::Matrix3d* kmatrix) const override;
 
   // Prints the camera intrinsics in a human-readable format.
   void PrintIntrinsics() const override;
@@ -101,30 +101,34 @@ public:
   // (e.g., focal length, principal point, distortion) to transform the point
   // into pixel coordinates.
   template <typename T>
-  static bool CameraToPixelCoordinates(const T *intrinsic_parameters,
-                                       const T *point, T *pixel);
+  static bool CameraToPixelCoordinates(const T* intrinsic_parameters,
+                                       const T* point,
+                                       T* pixel);
 
   // Given a pixel in the image coordinates, remove the effects of camera
   // intrinsics parameters and lens distortion to produce a point in the camera
   // coordinate system. The point output by this method is effectively a ray in
   // the direction of the pixel in the camera coordinate system.
   template <typename T>
-  static bool PixelToCameraCoordinates(const T *intrinsic_parameters,
-                                       const T *pixel, T *point);
+  static bool PixelToCameraCoordinates(const T* intrinsic_parameters,
+                                       const T* pixel,
+                                       T* point);
 
   // Given an undistorted point, apply lens distortion to the point to get a
   // distorted point. The type of distortion (i.e. radial, tangential, fisheye,
   // etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static bool DistortPoint(const T *intrinsic_parameters,
-                           const T *undistorted_point, T *distorted_point);
+  static bool DistortPoint(const T* intrinsic_parameters,
+                           const T* undistorted_point,
+                           T* distorted_point);
 
   // Given a distorted point, apply lens undistortion to the point to get an
   // undistorted point. The type of distortion (i.e. radial, tangential,
   // fisheye, etc.) will depend on the camera intrinsics model.
   template <typename T>
-  static bool UndistortPoint(const T *intrinsic_parameters,
-                             const T *distorted_point, T *undistorted_point);
+  static bool UndistortPoint(const T* intrinsic_parameters,
+                             const T* distorted_point,
+                             T* undistorted_point);
 
   // ----------------------- Getter and Setter methods ---------------------- //
   void SetAspectRatio(const double aspect_ratio);
@@ -137,12 +141,12 @@ public:
   double Alpha() const;
   double Xi() const;
 
-private:
+ private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
   template <class Archive>
-  void serialize(Archive &ar, const std::uint32_t version) { // NOLINT
+  void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
     if (version > 0) {
       ar(cereal::base_class<CameraIntrinsicsModel>(this));
     } else {
@@ -155,23 +159,23 @@ private:
 
 template <typename T>
 bool DoubleSphereCameraModel::CameraToPixelCoordinates(
-    const T *intrinsic_parameters, const T *point, T *pixel) {
+    const T* intrinsic_parameters, const T* point, T* pixel) {
   // Get normalized pixel projection at image plane depth = 1.
 
   // Apply radial distortion.
   T distorted_pixel[2];
-  bool result = DoubleSphereCameraModel::DistortPoint(intrinsic_parameters,
-                                                      point, distorted_pixel);
+  bool result = DoubleSphereCameraModel::DistortPoint(
+      intrinsic_parameters, point, distorted_pixel);
 
   // Apply calibration parameters to transform normalized units into pixels.
-  const T &focal_length =
+  const T& focal_length =
       intrinsic_parameters[DoubleSphereCameraModel::FOCAL_LENGTH];
-  const T &skew = intrinsic_parameters[DoubleSphereCameraModel::SKEW];
-  const T &aspect_ratio =
+  const T& skew = intrinsic_parameters[DoubleSphereCameraModel::SKEW];
+  const T& aspect_ratio =
       intrinsic_parameters[DoubleSphereCameraModel::ASPECT_RATIO];
-  const T &principal_point_x =
+  const T& principal_point_x =
       intrinsic_parameters[DoubleSphereCameraModel::PRINCIPAL_POINT_X];
-  const T &principal_point_y =
+  const T& principal_point_y =
       intrinsic_parameters[DoubleSphereCameraModel::PRINCIPAL_POINT_Y];
 
   pixel[0] = focal_length * distorted_pixel[0] + skew * distorted_pixel[1] +
@@ -184,16 +188,16 @@ bool DoubleSphereCameraModel::CameraToPixelCoordinates(
 
 template <typename T>
 bool DoubleSphereCameraModel::PixelToCameraCoordinates(
-    const T *intrinsic_parameters, const T *pixel, T *point) {
-  const T &focal_length =
+    const T* intrinsic_parameters, const T* pixel, T* point) {
+  const T& focal_length =
       intrinsic_parameters[DoubleSphereCameraModel::FOCAL_LENGTH];
-  const T &aspect_ratio =
+  const T& aspect_ratio =
       intrinsic_parameters[DoubleSphereCameraModel::ASPECT_RATIO];
-  const T &focal_length_y = focal_length * aspect_ratio;
-  const T &skew = intrinsic_parameters[DoubleSphereCameraModel::SKEW];
-  const T &principal_point_x =
+  const T& focal_length_y = focal_length * aspect_ratio;
+  const T& skew = intrinsic_parameters[DoubleSphereCameraModel::SKEW];
+  const T& principal_point_x =
       intrinsic_parameters[DoubleSphereCameraModel::PRINCIPAL_POINT_X];
-  const T &principal_point_y =
+  const T& principal_point_y =
       intrinsic_parameters[DoubleSphereCameraModel::PRINCIPAL_POINT_Y];
 
   // Normalize the y coordinate first.
@@ -203,16 +207,16 @@ bool DoubleSphereCameraModel::PixelToCameraCoordinates(
       (pixel[0] - principal_point_x - distorted_point[1] * skew) / focal_length;
 
   // Undo the distortion.
-  return DoubleSphereCameraModel::UndistortPoint(intrinsic_parameters,
-                                                 distorted_point, point);
+  return DoubleSphereCameraModel::UndistortPoint(
+      intrinsic_parameters, distorted_point, point);
 }
 
 template <typename T>
-bool DoubleSphereCameraModel::DistortPoint(const T *intrinsic_parameters,
-                                           const T *undistorted_point,
-                                           T *distorted_point) {
-  const T &alpha = intrinsic_parameters[DoubleSphereCameraModel::ALPHA];
-  const T &xi = intrinsic_parameters[DoubleSphereCameraModel::XI];
+bool DoubleSphereCameraModel::DistortPoint(const T* intrinsic_parameters,
+                                           const T* undistorted_point,
+                                           T* distorted_point) {
+  const T& alpha = intrinsic_parameters[DoubleSphereCameraModel::ALPHA];
+  const T& xi = intrinsic_parameters[DoubleSphereCameraModel::XI];
 
   const T xx = undistorted_point[0] * undistorted_point[0];
   const T yy = undistorted_point[1] * undistorted_point[1];
@@ -245,11 +249,11 @@ bool DoubleSphereCameraModel::DistortPoint(const T *intrinsic_parameters,
 }
 
 template <typename T>
-bool DoubleSphereCameraModel::UndistortPoint(const T *intrinsic_parameters,
-                                             const T *distorted_point,
-                                             T *undistorted_point) {
-  const T &alpha = intrinsic_parameters[DoubleSphereCameraModel::ALPHA];
-  const T &xi = intrinsic_parameters[DoubleSphereCameraModel::XI];
+bool DoubleSphereCameraModel::UndistortPoint(const T* intrinsic_parameters,
+                                             const T* distorted_point,
+                                             T* undistorted_point) {
+  const T& alpha = intrinsic_parameters[DoubleSphereCameraModel::ALPHA];
+  const T& xi = intrinsic_parameters[DoubleSphereCameraModel::XI];
 
   const T r2 = distorted_point[0] * distorted_point[0] +
                distorted_point[1] * distorted_point[1];
@@ -281,7 +285,7 @@ bool DoubleSphereCameraModel::UndistortPoint(const T *intrinsic_parameters,
   return true;
 }
 
-} // namespace theia
+}  // namespace theia
 
 #include <cereal/archives/portable_binary.hpp>
 
@@ -291,4 +295,4 @@ CEREAL_REGISTER_TYPE(theia::DoubleSphereCameraModel)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(theia::CameraIntrinsicsModel,
                                      theia::DoubleSphereCameraModel)
 
-#endif // THEIA_SFM_CAMERA_DOUBLE_SPHERE_MODEL_H_
+#endif  // THEIA_SFM_CAMERA_DOUBLE_SPHERE_MODEL_H_

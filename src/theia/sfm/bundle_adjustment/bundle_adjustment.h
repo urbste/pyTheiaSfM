@@ -36,8 +36,8 @@
 #define THEIA_SFM_BUNDLE_ADJUSTMENT_BUNDLE_ADJUSTMENT_H_
 
 #include <ceres/types.h>
-#include <unordered_set>
 #include <map>
+#include <unordered_set>
 #include <vector>
 
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
@@ -152,16 +152,15 @@ struct BundleAdjustmentSummary {
 };
 
 // Bundle adjust all views and tracks in the reconstruction.
-BundleAdjustmentSummary
-BundleAdjustReconstruction(const BundleAdjustmentOptions &options,
-                           Reconstruction *reconstruction);
+BundleAdjustmentSummary BundleAdjustReconstruction(
+    const BundleAdjustmentOptions& options, Reconstruction* reconstruction);
 
 // Bundle adjust the specified views and all tracks observed by those views.
 BundleAdjustmentSummary BundleAdjustPartialReconstruction(
-    const BundleAdjustmentOptions &options,
-    const std::unordered_set<ViewId> &views_to_optimize,
-    const std::unordered_set<TrackId> &tracks_to_optimize,
-    Reconstruction *reconstruction);
+    const BundleAdjustmentOptions& options,
+    const std::unordered_set<ViewId>& views_to_optimize,
+    const std::unordered_set<TrackId>& tracks_to_optimize,
+    Reconstruction* reconstruction);
 
 BundleAdjustmentSummary
 BundleAdjustPartialViewsConstant(
@@ -171,58 +170,58 @@ BundleAdjustPartialViewsConstant(
     Reconstruction *reconstruction);
 
 // Bundle adjust a single view.
-BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions &options,
+BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
                                          const ViewId view_id,
-                                         Reconstruction *reconstruction);
+                                         Reconstruction* reconstruction);
 
 // Bundle adjust a single view.
-BundleAdjustmentSummary
-BundleAdjustViews(const BundleAdjustmentOptions &options,
-                  const std::vector<ViewId> &view_ids_to_optimize,
-                  Reconstruction *reconstruction);
+BundleAdjustmentSummary BundleAdjustViews(
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& view_ids_to_optimize,
+    Reconstruction* reconstruction);
 
 // Bundle adjust a single track.
-BundleAdjustmentSummary
-BundleAdjustTrack(const BundleAdjustmentOptions &options,
-                  const TrackId track_id, Reconstruction *reconstruction);
+BundleAdjustmentSummary BundleAdjustTrack(
+    const BundleAdjustmentOptions& options,
+    const TrackId track_id,
+    Reconstruction* reconstruction);
 
 // Bundle adjust tracks.
 BundleAdjustmentSummary BundleAdjustTracks(
-    const BundleAdjustmentOptions &options,
-    const std::vector<TrackId> &tracks_to_optimize,
-    Reconstruction *reconstruction);
+    const BundleAdjustmentOptions& options,
+    const std::vector<TrackId>& tracks_to_optimize,
+    Reconstruction* reconstruction);
 
 ///////// With covariance estimation
 // Bundle adjust a single track.
-BundleAdjustmentSummary
-BundleAdjustTrack(
-  const BundleAdjustmentOptions &options,
-  const TrackId track_id, Reconstruction *reconstruction,
-  Matrix3d *empirical_covariance_matrix,
-  double *empirical_variance_factor);
+BundleAdjustmentSummary BundleAdjustTrack(
+    const BundleAdjustmentOptions& options,
+    const TrackId track_id,
+    Reconstruction* reconstruction,
+    Matrix3d* empirical_covariance_matrix,
+    double* empirical_variance_factor);
 
 // Bundle adjust tracks.
 BundleAdjustmentSummary BundleAdjustTracks(
-  const BundleAdjustmentOptions &options,
-  const std::vector<TrackId> &tracks_to_optimize,
-  Reconstruction *reconstruction,
-  std::map<TrackId, Eigen::Matrix3d>* empirical_covariance_matrices,
-  double* emprical_variance_factor);
+    const BundleAdjustmentOptions& options,
+    const std::vector<TrackId>& tracks_to_optimize,
+    Reconstruction* reconstruction,
+    std::map<TrackId, Eigen::Matrix3d>* empirical_covariance_matrices,
+    double* emprical_variance_factor);
 
 // Bundle adjust a single track.
-BundleAdjustmentSummary BundleAdjustView(
-  const BundleAdjustmentOptions &options,
-  const ViewId view_id,
-  Reconstruction *reconstruction,
-  Matrix6d *empirical_covariance_matrix,
-  double *empirical_variance_factor);
+BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
+                                         const ViewId view_id,
+                                         Reconstruction* reconstruction,
+                                         Matrix6d* empirical_covariance_matrix,
+                                         double* empirical_variance_factor);
 
 BundleAdjustmentSummary BundleAdjustViews(
-  const BundleAdjustmentOptions &options,
-  const std::vector<ViewId>& view_ids,
-  Reconstruction *reconstruction,
-  std::map<ViewId, Matrix6d> *empirical_covariance_matrix,
-  double *empirical_variance_factor);
-} // namespace theia
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& view_ids,
+    Reconstruction* reconstruction,
+    std::map<ViewId, Matrix6d>* empirical_covariance_matrix,
+    double* empirical_variance_factor);
+}  // namespace theia
 
-#endif // THEIA_SFM_BUNDLE_ADJUSTMENT_BUNDLE_ADJUSTMENT_H_
+#endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_BUNDLE_ADJUSTMENT_H_

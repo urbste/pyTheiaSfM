@@ -32,9 +32,9 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <Eigen/LU>
-#include "gtest/gtest.h"
 
 #include "theia/math/l1_solver.h"
 #include "theia/util/random.h"
@@ -59,7 +59,7 @@ TEST(L1Solver, SmallProblem) {
       lhs(i, j) = i * 4 + j;
     }
   }
-  lhs(1,2) = 5;
+  lhs(1, 2) = 5;
 
   Eigen::VectorXd rhs(4);
   for (int i = 0; i < 4; i++) {
@@ -129,7 +129,6 @@ TEST(L1Solver, Decoding) {
   for (int i = 0; i < residual.size(); i++) {
     EXPECT_NEAR(residual(i), 0.0, kTolerance);
   }
-
 }
 
 }  // namespace theia

@@ -34,9 +34,9 @@
 
 #include "theia/sfm/global_pose_estimation/compute_triplet_baseline_ratios.h"
 
-#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <ceres/rotation.h>
 #include <glog/logging.h>
 #include <vector>
 
@@ -107,13 +107,17 @@ bool ComputeTripletBaselineRatios(const ViewTriplet& triplet,
   baseline2.reserve(feature2.size());
   baseline3.reserve(feature3.size());
   for (int i = 0; i < feature1.size(); i++) {
-    const Vector3d normalized_feature1 = feature1[i].point_.homogeneous().normalized();
-    const Vector3d normalized_feature2 = feature2[i].point_.homogeneous().normalized();
-    const Vector3d normalized_feature3 = feature3[i].point_.homogeneous().normalized();
+    const Vector3d normalized_feature1 =
+        feature1[i].point_.homogeneous().normalized();
+    const Vector3d normalized_feature2 =
+        feature2[i].point_.homogeneous().normalized();
+    const Vector3d normalized_feature3 =
+        feature3[i].point_.homogeneous().normalized();
     if (!GetTriangulatedPointDepths(triplet.info_one_two,
                                     normalized_feature1,
                                     normalized_feature2,
-                                    &depth1_12, &depth2_12)) {
+                                    &depth1_12,
+                                    &depth2_12)) {
       continue;
     }
 
@@ -121,7 +125,8 @@ bool ComputeTripletBaselineRatios(const ViewTriplet& triplet,
     if (!GetTriangulatedPointDepths(triplet.info_one_three,
                                     normalized_feature1,
                                     normalized_feature3,
-                                    &depth1_13, &depth3_13)) {
+                                    &depth1_13,
+                                    &depth3_13)) {
       continue;
     }
 
@@ -129,7 +134,8 @@ bool ComputeTripletBaselineRatios(const ViewTriplet& triplet,
     if (!GetTriangulatedPointDepths(triplet.info_two_three,
                                     normalized_feature2,
                                     normalized_feature3,
-                                    &depth2_23, &depth3_23)) {
+                                    &depth2_23,
+                                    &depth3_23)) {
       continue;
     }
 
@@ -145,12 +151,10 @@ bool ComputeTripletBaselineRatios(const ViewTriplet& triplet,
 
   // Take the median as the baseline ratios.
   const int mid_index = baseline2.size() / 2;
-  std::nth_element(baseline2.begin(),
-                   baseline2.begin() + mid_index,
-                   baseline2.end());
-  std::nth_element(baseline3.begin(),
-                   baseline3.begin() + mid_index,
-                   baseline3.end());
+  std::nth_element(
+      baseline2.begin(), baseline2.begin() + mid_index, baseline2.end());
+  std::nth_element(
+      baseline3.begin(), baseline3.begin() + mid_index, baseline3.end());
   *baseline = Vector3d(1.0, baseline2[mid_index], baseline3[mid_index]);
   return true;
 }

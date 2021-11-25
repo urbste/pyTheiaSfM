@@ -34,20 +34,20 @@
 
 #include <Eigen/Dense>
 
+#include "gtest/gtest.h"
 #include <ceres/rotation.h>
 #include <math.h>
-#include "gtest/gtest.h"
 
 #include "theia/alignment/alignment.h"
+#include "theia/sfm/camera/double_sphere_camera_model.h"
 #include "theia/test/test_utils.h"
 #include "theia/util/random.h"
-#include "theia/sfm/camera/double_sphere_camera_model.h"
 
 namespace theia {
 
 using Eigen::AngleAxisd;
-using Eigen::Matrix3d;
 using Eigen::Matrix;
+using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
@@ -68,14 +68,14 @@ TEST(DoubleSphereCameraModel, InternalParameterGettersAndSetters) {
 
   // Set parameters to different values.
   camera.SetFocalLength(0.5 * 805);
-  camera.SetAspectRatio(805/800);
+  camera.SetAspectRatio(805 / 800);
   camera.SetSkew(0.00);
   camera.SetPrincipalPoint(505, 509);
   camera.SetAlphaXiDistortion(0.5 * -0.150694, 0.5 * 1.48785);
 
   // Check that the values were updated.
   EXPECT_EQ(camera.FocalLength(), 0.5 * 805);
-  EXPECT_EQ(camera.AspectRatio(), 805/800);
+  EXPECT_EQ(camera.AspectRatio(), 805 / 800);
   EXPECT_EQ(camera.Skew(), 0.00);
   EXPECT_EQ(camera.PrincipalPointX(), 505);
   EXPECT_EQ(camera.PrincipalPointY(), 509);
@@ -189,8 +189,8 @@ TEST(DoubleSphereCameraModel, GetSubsetFromOptimizeIntrinsicsType) {
   }
 
   // Test that optimizing for skew works correctly.
-  constant_subset = camera.GetSubsetFromOptimizeIntrinsicsType(
-      OptimizeIntrinsicsType::SKEW);
+  constant_subset =
+      camera.GetSubsetFromOptimizeIntrinsicsType(OptimizeIntrinsicsType::SKEW);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters() - 1);
   for (int i = 0; i < constant_subset.size(); i++) {
     EXPECT_NE(constant_subset[i], DoubleSphereCameraModel::SKEW);
@@ -231,17 +231,17 @@ void ReprojectionTest(const DoubleSphereCameraModel& camera) {
         const Vector2d reprojected_pixel =
             camera.CameraToImageCoordinates(point);
 
-      // Expect the reprojection to be close.
-      EXPECT_LT((pixel - reprojected_pixel).norm(), kTolerance)
-          << "gt pixel: " << pixel.transpose()
-          << "\nreprojected pixel: " << reprojected_pixel.transpose();
+        // Expect the reprojection to be close.
+        EXPECT_LT((pixel - reprojected_pixel).norm(), kTolerance)
+            << "gt pixel: " << pixel.transpose()
+            << "\nreprojected pixel: " << reprojected_pixel.transpose();
       }
     }
   }
 
   // Ensure the camera -> image -> camera transformation works.
   for (double x = -0.8; x < 0.8; x += 0.1) {
-    for (double y = -0.8; y <  0.8; y += 0.1) {
+    for (double y = -0.8; y < 0.8; y += 0.1) {
       for (double depth = kMinDepth; depth < kMaxDepth; depth += 1.0) {
         const Eigen::Vector3d point(x, y, depth);
         const Vector2d pixel = camera.CameraToImageCoordinates(point);
@@ -262,7 +262,8 @@ void ReprojectionTest(const DoubleSphereCameraModel& camera) {
 }
 
 TEST(DoubleSphereCameraModel, ReprojectionDistortion) {
-  static const double kPrincipalPoint[2] = {620.8633446632857, 512.7479213012696};
+  static const double kPrincipalPoint[2] = {620.8633446632857,
+                                            512.7479213012696};
   DoubleSphereCameraModel camera;
   camera.SetFocalLength(364.4687315519798);
   camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1]);
@@ -271,4 +272,3 @@ TEST(DoubleSphereCameraModel, ReprojectionDistortion) {
 }
 
 }  // namespace theia
-

@@ -126,8 +126,8 @@ class TwoViewMatchGeometricVerification {
   int CountHomographyInliers();
 
   const Options options_;
-  const CameraIntrinsicsPrior& intrinsics1_, intrinsics2_;
-  const KeypointsAndDescriptors& features1_, features2_;
+  const CameraIntrinsicsPrior &intrinsics1_, intrinsics2_;
+  const KeypointsAndDescriptors &features1_, features2_;
 
   Camera camera1_, camera2_;
   // We keep a local copy of the matches so that we may add and remove matches

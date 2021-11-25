@@ -35,8 +35,8 @@
 #include "theia/io/write_bundler_files.h"
 
 #include <Eigen/Core>
-#include <glog/logging.h>
 #include <fstream>  // NOLINT
+#include <glog/logging.h>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -46,10 +46,10 @@
 #include "theia/sfm/camera/camera_intrinsics_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera_intrinsics_prior.h"
-#include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/reconstruction.h"
-#include "theia/sfm/types.h"
+#include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/track.h"
+#include "theia/sfm/types.h"
 #include "theia/sfm/view.h"
 #include "theia/util/map_util.h"
 
@@ -78,7 +78,7 @@ bool WriteBundleFile(const Reconstruction& reconstruction,
 
   ofs_bundle << "# Bundle file v0.3" << std::endl;
   ofs_bundle << reconstruction.NumViews() << " " << reconstruction.NumTracks()
-      << std::endl;
+             << std::endl;
 
   const Eigen::IOFormat unaligned(Eigen::FullPrecision, Eigen::DontAlignCols);
   // Output all cameras first.
@@ -149,7 +149,7 @@ bool WriteBundleFile(const Reconstruction& reconstruction,
       // Note we give the keypoint index as 0 because we do not store SIFT
       // keyfiles.
       ofs_bundle << " " << index << " 0 "
-          << adjusted_feature.transpose().format(unaligned);
+                 << adjusted_feature.transpose().format(unaligned);
     }
     ofs_bundle << std::endl;
   }

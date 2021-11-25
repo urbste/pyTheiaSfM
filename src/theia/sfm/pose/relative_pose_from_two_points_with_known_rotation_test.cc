@@ -35,8 +35,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <glog/logging.h>
 #include <cmath>
+#include <glog/logging.h>
 
 #include "gtest/gtest.h"
 
@@ -97,16 +97,14 @@ void TestRelativePositionFromTwoRaysWithNoise(
 void ManyPointsTest(const double model_noise,
                     const double projection_noise,
                     const double max_difference_between_position) {
-  static const Vector3d kPositions[8] = {
-      Vector3d(1.0, 1.0, 1.0),
-      Vector3d(3.0, 2.0, 13.0),
-      Vector3d(4.0, 5.0, 11.0),
-      Vector3d(1.0, 2.0, 15.0),
-      Vector3d(3.0, 1.5, 91.0),
-      Vector3d(1.0, 7.0, 11.0),
-      Vector3d(1.0, 0.0, 0.0),
-      Vector3d(0.0, 0.0, 1.0)
-  };
+  static const Vector3d kPositions[8] = {Vector3d(1.0, 1.0, 1.0),
+                                         Vector3d(3.0, 2.0, 13.0),
+                                         Vector3d(4.0, 5.0, 11.0),
+                                         Vector3d(1.0, 2.0, 15.0),
+                                         Vector3d(3.0, 1.5, 91.0),
+                                         Vector3d(1.0, 7.0, 11.0),
+                                         Vector3d(1.0, 0.0, 0.0),
+                                         Vector3d(0.0, 0.0, 1.0)};
 
   // Sets up some test points.
   static const double kTestPoints[][6] = {
@@ -127,12 +125,11 @@ void ManyPointsTest(const double model_noise,
 
   for (int i = 0; i < THEIA_ARRAYSIZE(kTestPoints); ++i) {
     const Vector3d points_3d[2] = {
-      Vector3d(kTestPoints[i][0], kTestPoints[i][1], kTestPoints[i][2]),
-      Vector3d(kTestPoints[i][3], kTestPoints[i][4], kTestPoints[i][5]),
+        Vector3d(kTestPoints[i][0], kTestPoints[i][1], kTestPoints[i][2]),
+        Vector3d(kTestPoints[i][3], kTestPoints[i][4], kTestPoints[i][5]),
     };
 
-    for (int transform_index = 0;
-         transform_index < THEIA_ARRAYSIZE(kPositions);
+    for (int transform_index = 0; transform_index < THEIA_ARRAYSIZE(kPositions);
          ++transform_index) {
       TestRelativePositionFromTwoRaysWithNoise(points_3d,
                                                model_noise,
@@ -147,8 +144,8 @@ void ManyPointsTest(const double model_noise,
 // transformation consisting of a position and a rotation around kAxis.
 void BasicTest() {
   // Sets up some points in the 3D scene
-  const Vector3d points_3d[2] = { Vector3d(5.0, 20.0, 23.0),
-                                  Vector3d(-6.0, 16.0, 33.0) };
+  const Vector3d points_3d[2] = {Vector3d(5.0, 20.0, 23.0),
+                                 Vector3d(-6.0, 16.0, 33.0)};
 
   const Vector3d kAxis(0.0, 1.0, 0.0);
   const Vector3d kExpectedPosition(-3.0, 1.5, 11.0);
@@ -163,29 +160,23 @@ void BasicTest() {
                                            kMaxAllowedPositionDifference);
 }
 
-TEST(PositionFromTwoRaysTest, BasicTest) {
-  BasicTest();
-}
+TEST(PositionFromTwoRaysTest, BasicTest) { BasicTest(); }
 
 // Tests a single set of model to image correspondences and multiple
 // transformations consisting of position and rotations around different
 // axes.
 TEST(PositionFromTwoRaysTest, DifferentAxesTest) {
-  const Vector3d points_3d[2] = {
-      Vector3d(5.0, 20.0, 23.0),
-      Vector3d(-6.0, 16.0, 33.0)
-  };
+  const Vector3d points_3d[2] = {Vector3d(5.0, 20.0, 23.0),
+                                 Vector3d(-6.0, 16.0, 33.0)};
 
-  static const Vector3d kPositions[8] = {
-      Vector3d(1.0, 1.0, 1.0),
-      Vector3d(3.0, 2.0, 13.0),
-      Vector3d(4.0, 5.0, 11.0),
-      Vector3d(1.0, 2.0, 15.0),
-      Vector3d(3.0, 1.5, 21.0),
-      Vector3d(1.0, 7.0, 11.0),
-      Vector3d(1.0, 0.0, 0.0),
-      Vector3d(0.0, 0.0, 1.0)
-  };
+  static const Vector3d kPositions[8] = {Vector3d(1.0, 1.0, 1.0),
+                                         Vector3d(3.0, 2.0, 13.0),
+                                         Vector3d(4.0, 5.0, 11.0),
+                                         Vector3d(1.0, 2.0, 15.0),
+                                         Vector3d(3.0, 1.5, 21.0),
+                                         Vector3d(1.0, 7.0, 11.0),
+                                         Vector3d(1.0, 0.0, 0.0),
+                                         Vector3d(0.0, 0.0, 1.0)};
 
   for (int i = 0; i < THEIA_ARRAYSIZE(kPositions); ++i) {
     static const double kModelNoise = 0.0;

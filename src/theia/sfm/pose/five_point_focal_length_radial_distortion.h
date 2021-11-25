@@ -71,7 +71,6 @@ bool FivePointFocalLengthRadialDistortion(
     std::vector<Eigen::Matrix<double, 3, 4> >* projection_matrices,
     std::vector<std::vector<double> >* radial_distortions);
 
-
 }  // namespace theia
 
 #endif  // THEIA_SFM_POSE_FIVE_POINT_FOCAL_LENGTH_RADIAL_DISTORTION_H_

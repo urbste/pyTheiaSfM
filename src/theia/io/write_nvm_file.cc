@@ -34,13 +34,13 @@
 
 #include "theia/io/write_nvm_file.h"
 
-#include <glog/logging.h>
 #include <fstream>
+#include <glog/logging.h>
 #include <string>
 #include <unordered_map>
 
-#include "theia/sfm/reconstruction.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
+#include "theia/sfm/reconstruction.h"
 #include "theia/sfm/track.h"
 #include "theia/sfm/view.h"
 #include "theia/util/map_util.h"
@@ -131,8 +131,8 @@ bool WriteNVMFile(const std::string& nvm_filepath,
       const int track_index =
           FindOrDie(FindOrDie(feature_index_mapping, view_id), track_id);
       const int view_index = FindOrDie(view_id_to_index, view_id);
-      nvm_file << view_index << " " << track_index << " " << feature.point_.x() << " "
-               << feature.point_.y() << " ";
+      nvm_file << view_index << " " << track_index << " " << feature.point_.x()
+               << " " << feature.point_.y() << " ";
     }
     nvm_file << std::endl;
   }

@@ -32,12 +32,12 @@
 // Please contact the author of this file if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-#include <math.h>
-#include <glog/logging.h>
+#include "gtest/gtest.h"
 #include <Eigen/Core>
 #include <ctime>
+#include <glog/logging.h>
+#include <math.h>
 #include <random>
-#include "gtest/gtest.h"
 
 #include "theia/sfm/pose/four_point_focal_length.h"
 #include "theia/sfm/pose/test_util.h"
@@ -71,8 +71,9 @@ void P4pfTestWithNoise(const Matrix3d& gt_rotation,
   // Reproject 3D points to get undistorted image points.
   std::vector<Eigen::Vector2d> image_points_vector(5);
   Map<Matrix<double, 2, 4> > image_point(image_points_vector[0].data());
-  image_point = (gt_projection * world_points.colwise().homogeneous()).colwise()
-      .hnormalized();
+  image_point = (gt_projection * world_points.colwise().homogeneous())
+                    .colwise()
+                    .hnormalized();
 
   // Add noise to distorted image points.
   if (noise) {
@@ -121,27 +122,25 @@ void BasicTest(const double noise, const double reproj_tolerance) {
 
   // Create a ground truth pose.
   Matrix3d Rz, Ry, Rx;
-  Rz << cos(z), sin(z), 0,
-        -sin(z), cos(z), 0,
-        0, 0, 1;
-  Ry << cos(y), 0, -sin(y),
-        0, 1, 0,
-        sin(y), 0, cos(y);
-  Rx << 1, 0, 0,
-        0, cos(x), sin(x),
-        0, -sin(x), cos(x);
+  Rz << cos(z), sin(z), 0, -sin(z), cos(z), 0, 0, 0, 1;
+  Ry << cos(y), 0, -sin(y), 0, 1, 0, sin(y), 0, cos(y);
+  Rx << 1, 0, 0, 0, cos(x), sin(x), 0, -sin(x), cos(x);
   const Matrix3d gt_rotation = Rz * Ry * Rx;
   const Vector3d gt_translation = Vector3d(-0.00950692, 0.0171496, 0.0508743);
 
   // Create 3D world points that are viable based on the camera intrinsics and
   // extrinsics.
-  std::vector<Vector3d> world_points_vector = { Vector3d(-1.0, 0.5, 1.2),
-                                                Vector3d(-0.79, -0.68, 1.9),
-                                                Vector3d(1.42, 1.01, 2.19),
-                                                Vector3d(0.87, -0.49, 0.89) };
+  std::vector<Vector3d> world_points_vector = {Vector3d(-1.0, 0.5, 1.2),
+                                               Vector3d(-0.79, -0.68, 1.9),
+                                               Vector3d(1.42, 1.01, 2.19),
+                                               Vector3d(0.87, -0.49, 0.89)};
 
-  P4pfTestWithNoise(gt_rotation, gt_translation, focal_length,
-                    world_points_vector, noise, reproj_tolerance);
+  P4pfTestWithNoise(gt_rotation,
+                    gt_translation,
+                    focal_length,
+                    world_points_vector,
+                    noise,
+                    reproj_tolerance);
 }
 
 void RandomTestWithNoise(const double noise, const double reproj_tolerance) {
@@ -159,15 +158,9 @@ void RandomTestWithNoise(const double noise, const double reproj_tolerance) {
 
   // Create a ground truth pose.
   Matrix3d Rz, Ry, Rx;
-  Rz << cos(z), sin(z), 0,
-        -sin(z), cos(z), 0,
-        0, 0, 1;
-  Ry << cos(y), 0, -sin(y),
-        0, 1, 0,
-        sin(y), 0, cos(y);
-  Rx << 1, 0, 0,
-        0, cos(x), sin(x),
-        0, -sin(x), cos(x);
+  Rz << cos(z), sin(z), 0, -sin(z), cos(z), 0, 0, 0, 1;
+  Ry << cos(y), 0, -sin(y), 0, 1, 0, sin(y), 0, cos(y);
+  Rx << 1, 0, 0, 0, cos(x), sin(x), 0, -sin(x), cos(x);
   const Matrix3d gt_rotation = Rz * Ry * Rx;
   const Vector3d gt_translation = rng.RandVector3d() * kBaseline;
 
@@ -179,20 +172,18 @@ void RandomTestWithNoise(const double noise, const double reproj_tolerance) {
   world_points.row(1) = 2.0 * rng.RandVector4d().transpose();
   world_points.row(0) = 2.0 * rng.RandVector4d().transpose();
 
-  P4pfTestWithNoise(gt_rotation, gt_translation, focal_length,
-                    world_points_vector, noise, reproj_tolerance);
+  P4pfTestWithNoise(gt_rotation,
+                    gt_translation,
+                    focal_length,
+                    world_points_vector,
+                    noise,
+                    reproj_tolerance);
 }
 
-TEST(P4pf, BasicTest) {
-  BasicTest(0.0, 1e-4);
-}
+TEST(P4pf, BasicTest) { BasicTest(0.0, 1e-4); }
 
-TEST(P4pf, BasicNoiseTest) {
-  BasicTest(0.5, 10.0);
-}
+TEST(P4pf, BasicNoiseTest) { BasicTest(0.5, 10.0); }
 
-TEST(P4pf, RandomTest) {
-  RandomTestWithNoise(0.0, 0.1);
-}
+TEST(P4pf, RandomTest) { RandomTestWithNoise(0.0, 0.1); }
 
 }  // namespace

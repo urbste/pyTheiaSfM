@@ -178,7 +178,7 @@ bool LinearPositionEstimator::EstimatePositions(
   // second, and third view pair in the triplet.
   std::unique_ptr<ThreadPool> pool(new ThreadPool(options_.num_threads));
   baselines_.resize(triplets_.size());
-  for (int i = 0; i < triplets_.size(); i++) {
+  for (size_t i = 0; i < triplets_.size(); i++) {
     AddTripletConstraint(triplets_[i]);
     pool->Add(&LinearPositionEstimator::ComputeBaselineRatioForTriplet,
               this,
@@ -424,8 +424,7 @@ Feature LinearPositionEstimator::GetNormalizedFeature(const View& view,
                                                       const TrackId track_id) {
   Feature feature = *view.GetFeature(track_id);
   const Camera& camera = view.Camera();
-  Eigen::Vector3d ray =
-      camera.PixelToNormalizedCoordinates(feature.point_);
+  Eigen::Vector3d ray = camera.PixelToNormalizedCoordinates(feature.point_);
   Feature normalized_Feature(ray.hnormalized());
   // todo normalized covariance?
   return normalized_Feature;
@@ -471,9 +470,10 @@ void LinearPositionEstimator::FlipSignOfPositionsIfNecessary(
   }
 }
 
-std::unordered_map<ViewId, Eigen::Vector3d> LinearPositionEstimator::EstimatePositionsWrapper(
-      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation) {
+std::unordered_map<ViewId, Eigen::Vector3d>
+LinearPositionEstimator::EstimatePositionsWrapper(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    const std::unordered_map<ViewId, Eigen::Vector3d>& orientation) {
   std::unordered_map<ViewId, Eigen::Vector3d> positions;
   EstimatePositions(view_pairs, orientation, &positions);
   return positions;

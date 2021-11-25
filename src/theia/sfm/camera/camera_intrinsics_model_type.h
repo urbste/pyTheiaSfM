@@ -68,9 +68,9 @@ inline CameraIntrinsicsModelType StringToCameraIntrinsicsModelType(
   } else if (camera_model_type_string == "DIVISION_UNDISTORTION") {
     return CameraIntrinsicsModelType::DIVISION_UNDISTORTION;
   } else if (camera_model_type_string == "DOUBLE_SPHERE") {
-      return CameraIntrinsicsModelType::DOUBLE_SPHERE;
+    return CameraIntrinsicsModelType::DOUBLE_SPHERE;
   } else if (camera_model_type_string == "EXTENDED_UNIFIED") {
-      return CameraIntrinsicsModelType::EXTENDED_UNIFIED;
+    return CameraIntrinsicsModelType::EXTENDED_UNIFIED;
   } else {
     LOG(FATAL) << "Invalid camera model type supplied: "
                << camera_model_type_string;

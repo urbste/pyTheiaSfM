@@ -38,13 +38,9 @@
 
 namespace theia {
 
-Timer::Timer() {
-  start_ = std::chrono::high_resolution_clock::now();
-}
+Timer::Timer() { start_ = std::chrono::high_resolution_clock::now(); }
 
-void Timer::Reset() {
-  start_ = std::chrono::high_resolution_clock::now();
-}
+void Timer::Reset() { start_ = std::chrono::high_resolution_clock::now(); }
 
 double Timer::ElapsedTimeInSeconds() {
   const auto end = std::chrono::high_resolution_clock::now();

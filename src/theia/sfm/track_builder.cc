@@ -126,8 +126,9 @@ void TrackBuilder::BuildTracks(Reconstruction* reconstruction) {
       << reconstruction->NumTracks() << " tracks were created. "
       << num_inconsistent_features
       << " features were dropped because they formed inconsistent tracks, and "
-      << num_small_tracks << " features were dropped because they did not have "
-                             "enough observations.";
+      << num_small_tracks
+      << " features were dropped because they did not have "
+         "enough observations.";
 }
 
 uint64_t TrackBuilder::FindOrInsert(

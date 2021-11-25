@@ -48,8 +48,8 @@
 namespace theia {
 
 using Eigen::AngleAxisd;
-using Eigen::Matrix3d;
 using Eigen::Matrix;
+using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 using Eigen::Vector4d;
@@ -425,7 +425,7 @@ TEST(DivisionUndistortionCameraModel, Triangulation) {
   camera1.mutable_intrinsics()
       [DivisionUndistortionCameraModel::RADIAL_DISTORTION_1] = kUndistortion;
   Camera camera2 = camera1;
-  camera2.SetOrientationFromAngleAxis(Eigen::Vector3d(-0.1,-0.4, 0.3));
+  camera2.SetOrientationFromAngleAxis(Eigen::Vector3d(-0.1, -0.4, 0.3));
   camera2.SetPosition(Eigen::Vector3d(0.8, 0.2, 0.1));
 
   Eigen::Vector2d feature1, feature2;
@@ -458,11 +458,11 @@ TEST(DivisionUndistortionCameraModel, NoDistortion) {
   Camera camera1(CameraIntrinsicsModelType::DIVISION_UNDISTORTION);
   camera1.SetFocalLength(kFocalLength);
   camera1.SetPrincipalPoint(kPrincipalPoint.x(), kPrincipalPoint.y());
-  camera1.SetOrientationFromAngleAxis(Eigen::Vector3d(-0.1,-0.4, 0.3));
+  camera1.SetOrientationFromAngleAxis(Eigen::Vector3d(-0.1, -0.4, 0.3));
   camera1.SetPosition(Eigen::Vector3d(0.8, 0.2, 0.1));
 
   Camera camera2(CameraIntrinsicsModelType::PINHOLE);
-  camera2.SetOrientationFromAngleAxis(Eigen::Vector3d(-0.1,-0.4, 0.3));
+  camera2.SetOrientationFromAngleAxis(Eigen::Vector3d(-0.1, -0.4, 0.3));
   camera2.SetPosition(Eigen::Vector3d(0.8, 0.2, 0.1));
   camera2.SetFocalLength(kFocalLength);
   camera2.SetPrincipalPoint(kPrincipalPoint.x(), kPrincipalPoint.y());
@@ -479,7 +479,6 @@ TEST(DivisionUndistortionCameraModel, NoDistortion) {
       camera1.intrinsics(), feature1.data(), undistorted_pixel.data());
   EXPECT_DOUBLE_EQ(feature1.x(), undistorted_pixel.x());
   EXPECT_DOUBLE_EQ(feature1.y(), undistorted_pixel.y());
-
 }
 
 }  // namespace theia

@@ -43,8 +43,8 @@
 
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
-#include "theia/sfm/feature.h"
 #include "theia/sfm/estimators/camera_and_feature_correspondence_2d_3d.h"
+#include "theia/sfm/feature.h"
 #include "theia/sfm/similarity_transformation.h"
 #include "theia/sfm/transformation/gdls_similarity_transform.h"
 #include "theia/solvers/estimator.h"
@@ -58,8 +58,8 @@ inline void TransformCamera(const SimilarityTransformation& sim_transform,
                             Camera* camera) {
   const Eigen::Vector3d old_position = camera->GetPosition();
   const Eigen::Vector3d new_position =
-      sim_transform.scale * sim_transform.rotation *
-      old_position + sim_transform.translation;
+      sim_transform.scale * sim_transform.rotation * old_position +
+      sim_transform.translation;
   camera->SetPosition(new_position);
 
   const Eigen::Matrix3d old_orientation =
@@ -89,8 +89,10 @@ class GdlsSimilarityTransformationEstimator
         world_points(4);
     for (int i = 0; i < 4; i++) {
       ray_origins[i] = correspondences[i].camera.GetPosition();
-      ray_directions[i] = correspondences[i].camera.PixelToUnitDepthRay(
-          correspondences[i].observation.point_).normalized();
+      ray_directions[i] =
+          correspondences[i]
+              .camera.PixelToUnitDepthRay(correspondences[i].observation.point_)
+              .normalized();
       world_points[i] = correspondences[i].point3d.hnormalized();
     }
 
@@ -132,9 +134,8 @@ class GdlsSimilarityTransformationEstimator
 
   // The error for a correspondences given an absolute pose. This is the squared
   // reprojection error.
-  double Error(
-      const CameraAndFeatureCorrespondence2D3D& correspondence,
-      const SimilarityTransformation& similarity_transformation)
+  double Error(const CameraAndFeatureCorrespondence2D3D& correspondence,
+               const SimilarityTransformation& similarity_transformation)
       const override {
     // Apply the similarity transformation to the camera.
     Camera transformed_camera = correspondence.camera;
@@ -165,15 +166,13 @@ bool EstimateSimilarityTransformation2D3D(
     SimilarityTransformation* similarity_transformation,
     RansacSummary* ransac_summary) {
   GdlsSimilarityTransformationEstimator similarity_transformation_estimator;
-  std::unique_ptr <
-      SampleConsensusEstimator<GdlsSimilarityTransformationEstimator> > ransac =
-      CreateAndInitializeRansacVariant(ransac_type,
-                                       ransac_params,
-                                       similarity_transformation_estimator);
+  std::unique_ptr<
+      SampleConsensusEstimator<GdlsSimilarityTransformationEstimator> >
+      ransac = CreateAndInitializeRansacVariant(
+          ransac_type, ransac_params, similarity_transformation_estimator);
   // Estimate the absolute pose.
-  return ransac->Estimate(correspondences,
-                          similarity_transformation,
-                          ransac_summary);
+  return ransac->Estimate(
+      correspondences, similarity_transformation, ransac_summary);
 }
 
 }  // namespace theia

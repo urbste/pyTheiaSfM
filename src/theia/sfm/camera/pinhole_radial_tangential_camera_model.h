@@ -88,7 +88,7 @@ class PinholeRadialTangentialCameraModel : public CameraIntrinsicsModel {
 
   static const int kIntrinsicsSize = 10;
 
-  enum InternalParametersIndex{
+  enum InternalParametersIndex {
     FOCAL_LENGTH = 0,
     ASPECT_RATIO = 1,
     SKEW = 2,
@@ -192,8 +192,7 @@ bool PinholeRadialTangentialCameraModel::CameraToPixelCoordinates(
     const T* intrinsic_parameters, const T* point, T* pixel) {
   // Get normalized pixel projection at image plane depth = 1.
   const T& depth = point[2];
-  const T normalized_pixel[2] = { point[0] / depth,
-                                  point[1] / depth };
+  const T normalized_pixel[2] = {point[0] / depth, point[1] / depth};
 
   // Apply lens distortion.
   T distorted_pixel[2];
@@ -214,8 +213,8 @@ bool PinholeRadialTangentialCameraModel::CameraToPixelCoordinates(
 
   pixel[0] = focal_length * distorted_pixel[0] + skew * distorted_pixel[1] +
              principal_point_x;
-  pixel[1] = focal_length * aspect_ratio * distorted_pixel[1] +
-             principal_point_y;
+  pixel[1] =
+      focal_length * aspect_ratio * distorted_pixel[1] + principal_point_y;
 
   return true;
 }
@@ -244,8 +243,8 @@ bool PinholeRadialTangentialCameraModel::PixelToCameraCoordinates(
 
   // Undo the lens distortion.
   T undistorted_point[2];
-  PinholeRadialTangentialCameraModel::UndistortPoint(intrinsic_parameters,
-                                                     distorted_point, point);
+  PinholeRadialTangentialCameraModel::UndistortPoint(
+      intrinsic_parameters, distorted_point, point);
   point[2] = T(1.0);
 
   return true;
