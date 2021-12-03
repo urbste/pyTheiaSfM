@@ -71,11 +71,16 @@ class TrackBuilder {
   // Generates all tracks and adds them to the reconstruction.
   void BuildTracks(Reconstruction* reconstruction);
 
+  // This function can be called incrementally for sequential reconstructions
+  // It checks if connected components already exist
+  void BuildTracksIncremental(Reconstruction* reconstruction);
  private:
   uint64_t FindOrInsert(const std::pair<ViewId, Feature>& image_feature);
 
   std::unordered_map<std::pair<ViewId, Feature>, uint64_t> features_;
   std::unique_ptr<ConnectedComponents<uint64_t> > connected_components_;
+  // for incremental mapping
+  std::unordered_map<uint64_t, TrackId> connected_component_to_track_id_;
   uint64_t num_features_;
   const int min_track_length_;
 };

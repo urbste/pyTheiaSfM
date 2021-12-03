@@ -878,7 +878,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def(py::init<int, int>())
       .def("AddFeatureCorrespondence",
            &theia::TrackBuilder::AddFeatureCorrespondence)
-      .def("BuildTracks", &theia::TrackBuilder::BuildTracks);
+      .def("BuildTracks", 
+           &theia::TrackBuilder::BuildTracks)
+      .def("BuildTracksIncremental", 
+           &theia::TrackBuilder::BuildTracksIncremental);
 
   py::class_<theia::BundleAdjustmentOptions>(m, "BundleAdjustmentOptions")
       .def(py::init<>())

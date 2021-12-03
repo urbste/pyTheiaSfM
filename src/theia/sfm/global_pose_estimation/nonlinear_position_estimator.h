@@ -95,7 +95,19 @@ class NonlinearPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
 
+  // Returns true if the optimization was a success, false if there was a
+  // failure.
+  bool EstimateRemainingPositionsInRecon(
+     const std::set<ViewId>& fixed_views,
+     const std::unordered_set<ViewId>& views_in_subrecon,
+     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs_sub_recon,
+     std::unordered_map<ViewId, Eigen::Vector3d>* positions);
+
+  // Set view ids fixed
+  void SetViewsFixed(const std::vector<ViewId>& fixed_views);
+
  private:
+
   // Initialize all cameras to be random.
   void InitializeRandomPositions(
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
@@ -116,13 +128,13 @@ class NonlinearPositionEstimator : public PositionEstimator {
   // that all cameras have at least k point to camera constraints.
   int FindTracksForProblem(
       const std::unordered_map<ViewId, Eigen::Vector3d>& global_poses,
-      std::unordered_set<TrackId>* tracks_to_add);
+      std::unordered_map<TrackId, bool>* tracks_to_add);
 
   // Sort the tracks by the number of views that observe them.
   std::vector<TrackId> GetTracksSortedByNumViews(
       const Reconstruction& reconstruction,
       const View& view,
-      const std::unordered_set<TrackId>& existing_tracks);
+      const std::unordered_map<TrackId, bool>& existing_tracks);
 
   // Adds all point to camera constraints for a given track.
   void AddTrackToProblem(
@@ -142,6 +154,7 @@ class NonlinearPositionEstimator : public PositionEstimator {
   const NonlinearPositionEstimator::Options options_;
   const Reconstruction& reconstruction_;
   const std::unordered_map<ViewIdPair, TwoViewInfo>* view_pairs_;
+  std::set<ViewId> fixed_views_;
 
   std::shared_ptr<RandomNumberGenerator> rng_;
   std::unordered_map<TrackId, Eigen::Vector3d> triangulated_points_;

@@ -73,6 +73,17 @@ Camera RandomCamera() {
   return camera;
 }
 
+Camera SequentialCamera(const Eigen::Vector3d dir, const double step_size) {
+  Camera camera;
+  const Eigen::Vector3d pos = dir * step_size + rng.RandVector3d(-0.01,0.01);
+  camera.SetPosition(pos);
+  camera.SetOrientationFromAngleAxis(0.01* rng.RandVector3d());
+  camera.SetImageSize(1000, 1000);
+  camera.SetFocalLength(800);
+  camera.SetPrincipalPoint(500.0, 500.0);
+  return camera;
+}
+
 Vector3d RelativeRotationFromTwoRotations(const Vector3d& rotation1,
                                           const Vector3d& rotation2,
                                           const double noise) {
@@ -133,19 +144,35 @@ class EstimatePositionsNonlinearTest : public ::testing::Test {
                                       const int num_tracks,
                                       const int num_view_pairs,
                                       const double pose_noise,
-                                      const double position_tolerance) {
+                                      const double position_tolerance,
+                                      std::set<ViewId> fixed_views,
+                                      const bool sequential_camera_trajectory=false,
+                                      const int min_nr_pts_per_view = 0) {
     // Set up the camera.
-    SetupReconstruction(num_views, num_tracks);
+    SetupReconstruction(num_views, num_tracks, sequential_camera_trajectory);
     GetTwoViewInfos(num_view_pairs, pose_noise);
 
     // Estimate the positions.
     options_.rng = std::make_shared<RandomNumberGenerator>(rng);
+    options_.min_num_points_per_view = min_nr_pts_per_view;
     NonlinearPositionEstimator position_estimator(options_, reconstruction_);
     std::unordered_map<ViewId, Vector3d> estimated_positions;
-    EXPECT_TRUE(position_estimator.EstimatePositions(
-        view_pairs_, orientations_, &estimated_positions));
-    EXPECT_EQ(estimated_positions.size(), positions_.size());
 
+    if (!fixed_views.size()) {
+        EXPECT_TRUE(position_estimator.EstimatePositions(
+            view_pairs_, orientations_, &estimated_positions));
+        EXPECT_EQ(estimated_positions.size(), positions_.size());
+    } else {
+        // use all view ids
+        const auto v_ids = reconstruction_.ViewIds();
+        std::unordered_set<ViewId> ids_in_subrecon(v_ids.begin(),v_ids.end());
+        // set positions of fixed views
+        for (auto& v_id : fixed_views) {
+            estimated_positions[v_id] = reconstruction_.View(v_id)->Camera().GetPosition();
+        }
+        position_estimator.EstimateRemainingPositionsInRecon(
+            fixed_views, ids_in_subrecon, view_pairs_, &estimated_positions);
+    }
     // Align the positions and measure the error.
     AlignPositions(positions_, &estimated_positions);
     for (const auto& position : positions_) {
@@ -153,7 +180,9 @@ class EstimatePositionsNonlinearTest : public ::testing::Test {
           FindOrDie(estimated_positions, position.first);
       const double position_error =
           (position.second - estimated_position).squaredNorm();
+
       EXPECT_LT(position_error, position_tolerance)
+          << "\nview id = " << position.first
           << "\ng.t. position = " << position.second.transpose()
           << "\nestimated position = " << estimated_position.transpose();
     }
@@ -162,7 +191,7 @@ class EstimatePositionsNonlinearTest : public ::testing::Test {
  protected:
   void SetUp() {}
 
-  void SetupReconstruction(const int num_views, const int num_tracks) {
+  void SetupReconstruction(const int num_views, const int num_tracks, bool sequential_cam=false) {
     // Create random views.
     std::vector<ViewId> view_ids;
     for (int i = 0; i < num_views; i++) {
@@ -170,7 +199,11 @@ class EstimatePositionsNonlinearTest : public ::testing::Test {
       view_ids.push_back(view_id);
 
       // Create a random pose.
-      *reconstruction_.MutableView(view_id)->MutableCamera() = RandomCamera();
+      if (sequential_cam) {
+          *reconstruction_.MutableView(view_id)->MutableCamera() = SequentialCamera(Eigen::Vector3d(0,i,0), 1.0);
+      } else {
+          *reconstruction_.MutableView(view_id)->MutableCamera() = RandomCamera();
+      }
       orientations_[view_id] =
           reconstruction_.View(view_id)->Camera().GetOrientationAsAngleAxis();
       positions_[view_id] =
@@ -195,6 +228,7 @@ class EstimatePositionsNonlinearTest : public ::testing::Test {
       }
       Track* track =
           reconstruction_.MutableTrack(reconstruction_.AddTrack(features));
+      track->SetEstimated(true);
       *track->MutablePoint() = point;
     }
   }
@@ -260,8 +294,10 @@ TEST_F(EstimatePositionsNonlinearTest, SmallTestNoNoise) {
   static const int kNumViews = 4;
   static const int kNumTracksPerView = 10;
   static const int kNumViewPairs = 6;
+  std::set<ViewId> fixed_views;
   TestNonlinearPositionEstimator(
-      kNumViews, kNumTracksPerView, kNumViewPairs, 0.0, kTolerance);
+      kNumViews, kNumTracksPerView, kNumViewPairs,
+      0.0, kTolerance, fixed_views);
 }
 
 TEST_F(EstimatePositionsNonlinearTest, SmallTestWithNoise) {
@@ -270,11 +306,63 @@ TEST_F(EstimatePositionsNonlinearTest, SmallTestWithNoise) {
   static const int kNumTracksPerView = 10;
   static const int kNumViewPairs = 6;
   static const double kPoseNoiseDegrees = 1.0;
+  std::set<ViewId> fixed_views;
   TestNonlinearPositionEstimator(kNumViews,
                                  kNumTracksPerView,
                                  kNumViewPairs,
                                  kPoseNoiseDegrees,
-                                 kTolerance);
+                                 kTolerance,
+                                 fixed_views);
+}
+
+TEST_F(EstimatePositionsNonlinearTest, SmallTestNoNoiseFixedCamsSequential) {
+  static const double kTolerance = 0.1;
+  static const int kNumViews = 4;
+  static const int kNumTracksPerView = 10;
+  static const int kNumViewPairs = 6;
+  static const double kPoseNoiseDegrees = 0.0;
+  std::set<ViewId> fixed_views = {0};
+  TestNonlinearPositionEstimator(kNumViews,
+                                 kNumTracksPerView,
+                                 kNumViewPairs,
+                                 kPoseNoiseDegrees,
+                                 kTolerance,
+                                 fixed_views,
+                                 true);
+}
+
+TEST_F(EstimatePositionsNonlinearTest, SmallTestNoiseFixedCamsSequential) {
+  static const double kTolerance = 0.1;
+  static const int kNumViews = 4;
+  static const int kNumTracksPerView = 10;
+  static const int kNumViewPairs = 6;
+  static const double kPoseNoiseDegrees = 1.0;
+  std::set<ViewId> fixed_views = {0,1};
+  TestNonlinearPositionEstimator(kNumViews,
+                                 kNumTracksPerView,
+                                 kNumViewPairs,
+                                 kPoseNoiseDegrees,
+                                 kTolerance,
+                                 fixed_views,
+                                 true);
+}
+
+TEST_F(EstimatePositionsNonlinearTest, LargeTestNoiseFixedCamsSequential) {
+  static const double kTolerance = 0.1;
+  static const int kNumViews = 20;
+  static const int kNumTracksPerView = 10;
+  static const int kNumViewPairs = 50;
+  static const double kPoseNoiseDegrees = 0.5;
+  std::set<ViewId> fixed_views = {0,1,2,3,4,5};
+  static const int kNrPointsPerView = 10;
+  TestNonlinearPositionEstimator(kNumViews,
+                                 kNumTracksPerView,
+                                 kNumViewPairs,
+                                 kPoseNoiseDegrees,
+                                 kTolerance,
+                                 fixed_views,
+                                 true,
+                                 kNrPointsPerView);
 }
 
 }  // namespace theia

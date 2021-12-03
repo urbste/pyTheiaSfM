@@ -99,6 +99,35 @@ NonlinearPositionEstimator::NonlinearPositionEstimator(
   }
 }
 
+bool NonlinearPositionEstimator::EstimateRemainingPositionsInRecon(
+    const std::set<ViewId>& fixed_views,
+    const std::unordered_set<ViewId>& views_in_subrecon,
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs_sub_recon,
+    std::unordered_map<ViewId, Eigen::Vector3d>* positions) {
+  triangulated_points_.clear();
+
+  // first grab a subreconstruction
+  Reconstruction sub_reconstruction;
+  reconstruction_.GetSubReconstruction(views_in_subrecon, &sub_reconstruction);
+
+  const auto view_ids = sub_reconstruction.ViewIds();
+  std::unordered_map<ViewId, Vector3d> orientations;
+  // get last view id as we assume sequential processing
+  for (auto& v_id : view_ids) {
+      orientations[v_id] = sub_reconstruction.View(v_id)->Camera().GetOrientationAsAngleAxis();
+      if (fixed_views.find(v_id) != fixed_views.end()) {
+          (*positions)[v_id] = sub_reconstruction.View(v_id)->Camera().GetPosition();
+      } else {
+          (*positions)[v_id] = sub_reconstruction.View(v_id)->Camera().GetPosition();sub_reconstruction.View(*fixed_views.end())->Camera().GetPosition();
+      }
+  }
+
+  // assigning fixed views
+  fixed_views_ = fixed_views;
+
+  return EstimatePositions(view_pairs_sub_recon, orientations, positions);
+}
+
 bool NonlinearPositionEstimator::EstimatePositions(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     const std::unordered_map<ViewId, Vector3d>& orientations,
@@ -118,7 +147,9 @@ bool NonlinearPositionEstimator::EstimatePositions(
   static const int kMinNumCamerasForIterativeSolve = 1000;
 
   // Initialize positions to be random.
-  InitializeRandomPositions(orientations, positions);
+  if (fixed_views_.size() == 0) {
+    InitializeRandomPositions(orientations, positions);
+  }
 
   // Add the constraints to the problem.
   AddCameraToCameraConstraints(orientations, positions);
@@ -127,9 +158,17 @@ bool NonlinearPositionEstimator::EstimatePositions(
     AddCamerasAndPointsToParameterGroups(positions);
   }
 
-  // Set one camera to be at the origin to remove the ambiguity of the origin.
-  positions->begin()->second.setZero();
-  problem_->SetParameterBlockConstant(positions->begin()->second.data());
+  // If the user did not specify fixed cams set one camera to be at the
+  // origin to remove the ambiguity of the origin.
+  if (fixed_views_.size() == 0) {
+    positions->begin()->second.setZero();
+    fixed_views_.insert(positions->begin()->first);
+  } else {
+    for (const auto& v_id : fixed_views_) {
+      problem_->SetParameterBlockConstant(
+          FindOrDie(*positions, v_id).data());
+    }
+  }
 
   // Set the solver options.
   ceres::Solver::Summary summary;
@@ -217,7 +256,7 @@ void NonlinearPositionEstimator::AddPointToCameraConstraints(
     const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
     std::unordered_map<ViewId, Eigen::Vector3d>* positions) {
   const int num_camera_to_camera_constraints = problem_->NumResidualBlocks();
-  std::unordered_set<TrackId> tracks_to_add;
+  std::unordered_map<TrackId, bool> tracks_to_add;
   const int num_point_to_camera_constraints =
       FindTracksForProblem(*positions, &tracks_to_add);
   if (num_point_to_camera_constraints == 0) {
@@ -230,11 +269,16 @@ void NonlinearPositionEstimator::AddPointToCameraConstraints(
       static_cast<double>(num_point_to_camera_constraints);
 
   triangulated_points_.reserve(tracks_to_add.size());
-  for (const TrackId track_id : tracks_to_add) {
-    triangulated_points_[track_id] = 100.0 * rng_->RandVector3d();
+  for (const auto track : tracks_to_add) {
+    // if track is estimated
+    if (track.second) {
+        triangulated_points_[track.first] = reconstruction_.Track(track.first)->Point().hnormalized();
+    } else {
+        triangulated_points_[track.first] = 100.0 * rng_->RandVector3d();
+    }
 
     AddTrackToProblem(
-        track_id, orientations, point_to_camera_weight, positions);
+        track.first, orientations, point_to_camera_weight, positions);
   }
 
   VLOG(2) << num_point_to_camera_constraints
@@ -245,7 +289,7 @@ void NonlinearPositionEstimator::AddPointToCameraConstraints(
 
 int NonlinearPositionEstimator::FindTracksForProblem(
     const std::unordered_map<ViewId, Eigen::Vector3d>& positions,
-    std::unordered_set<TrackId>* tracks_to_add) {
+    std::unordered_map<TrackId, bool>* tracks_to_add) {
   CHECK_NOTNULL(tracks_to_add)->clear();
 
   std::unordered_map<ViewId, int> tracks_per_camera;
@@ -267,12 +311,12 @@ int NonlinearPositionEstimator::FindTracksForProblem(
     const std::vector<TrackId>& sorted_tracks =
         GetTracksSortedByNumViews(reconstruction_, *view, *tracks_to_add);
 
-    for (int i = 0;
+    for (size_t i = 0;
          i < sorted_tracks.size() &&
          tracks_per_camera[position.first] < options_.min_num_points_per_view;
          i++) {
       // Update the number of point to camera constraints for each camera.
-      tracks_to_add->insert(sorted_tracks[i]);
+      (*tracks_to_add)[sorted_tracks[i]] = reconstruction_.Track(sorted_tracks[i])->IsEstimated();
       for (const ViewId view_id :
            reconstruction_.Track(sorted_tracks[i])->ViewIds()) {
         if (!ContainsKey(positions, view_id)) {
@@ -293,7 +337,7 @@ int NonlinearPositionEstimator::FindTracksForProblem(
 std::vector<TrackId> NonlinearPositionEstimator::GetTracksSortedByNumViews(
     const Reconstruction& reconstruction,
     const View& view,
-    const std::unordered_set<TrackId>& existing_tracks) {
+    const std::unordered_map<TrackId, bool>& existing_tracks) {
   std::vector<std::pair<TrackId, int> > views_per_track;
   views_per_track.reserve(view.NumFeatures());
   const auto& track_ids = view.TrackIds();

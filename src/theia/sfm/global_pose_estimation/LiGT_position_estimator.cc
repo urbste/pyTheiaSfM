@@ -330,7 +330,7 @@ void LiGTPositionEstimator::FindTripletsForTracks() {
       if (cur_id == base_views.first || cur_id == base_views.second) {
           continue;
       }
-      std::cout<<"Track: "<<t_id<<" triplet: (base l, central, base r) ("<<base_views.first<<", "<<cur_id<<", "<<base_views.second<<")\n";
+      //std::cout<<"Track: "<<t_id<<" triplet: (base l, central, base r) ("<<base_views.first<<", "<<cur_id<<", "<<base_views.second<<")\n";
 
       ViewIdTriplet triplet = std::make_tuple(base_views.first, cur_id, base_views.second);
       AddTripletConstraint(triplet);
