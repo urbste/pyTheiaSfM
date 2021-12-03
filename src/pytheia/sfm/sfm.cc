@@ -1466,7 +1466,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def(py::init<theia::NonlinearPositionEstimator::Options,
                     theia::Reconstruction>())
       .def("EstimatePositions",
-           &theia::NonlinearPositionEstimator::EstimatePositionsWrapper);
+           &theia::NonlinearPositionEstimator::EstimatePositionsWrapper)
+      .def("EstimateRemainingPositionsInRecon",
+           &theia::NonlinearPositionEstimator::EstimateRemainingPositionsInRecon);
 
   py::class_<theia::LeastUnsquaredDeviationPositionEstimator::Options>(
       m, "LeastUnsquaredDeviationPositionEstimatorOptions")
