@@ -338,13 +338,15 @@ TEST_F(EstimatePositionsNonlinearTest, SmallTestNoiseFixedCamsSequential) {
   static const int kNumViewPairs = 6;
   static const double kPoseNoiseDegrees = 1.0;
   std::set<ViewId> fixed_views = {0,1};
+  static const int kNrPointsPerView = 5;
   TestNonlinearPositionEstimator(kNumViews,
                                  kNumTracksPerView,
                                  kNumViewPairs,
                                  kPoseNoiseDegrees,
                                  kTolerance,
                                  fixed_views,
-                                 true);
+                                 true,
+                                 kNrPointsPerView);
 }
 
 TEST_F(EstimatePositionsNonlinearTest, LargeTestNoiseFixedCamsSequential) {
