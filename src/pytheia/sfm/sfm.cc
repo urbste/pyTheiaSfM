@@ -1461,6 +1461,20 @@ void pytheia_sfm_classes(py::module& m) {
       .def("EstimatePositions",
            &theia::LinearPositionEstimator::EstimatePositionsWrapper);
 
+  py::class_<theia::NonlinearPositionEstimator::Options>(
+      m, "NonlinearPositionEstimatorOptions")
+    .def(py::init<>())
+    .def_readwrite("num_threads", 
+          &theia::NonlinearPositionEstimator::Options::num_threads)
+    .def_readwrite("max_power_iterations", 
+          &theia::NonlinearPositionEstimator::Options::max_num_iterations)
+    .def_readwrite("eigensolver_threshold", 
+          &theia::NonlinearPositionEstimator::Options::robust_loss_width)
+    .def_readwrite("min_num_points_per_view", 
+          &theia::NonlinearPositionEstimator::Options::num_threads)
+    .def_readwrite("point_to_camera_weight", 
+          &theia::NonlinearPositionEstimator::Options::max_num_iterations);
+
   py::class_<theia::NonlinearPositionEstimator, theia::PositionEstimator>(
       m, "NonlinearPositionEstimator")
       .def(py::init<theia::NonlinearPositionEstimator::Options,
@@ -1487,6 +1501,16 @@ void pytheia_sfm_classes(py::module& m) {
       .def("EstimatePositions",
            &theia::LeastUnsquaredDeviationPositionEstimator::
                EstimatePositionsWrapper);
+
+  py::class_<theia::LiGTPositionEstimator::Options>(
+      m, "LiGTPositionEstimatorOptions")
+    .def(py::init<>())
+    .def_readwrite("num_threads", 
+          &theia::LiGTPositionEstimator::Options::num_threads)
+    .def_readwrite("max_power_iterations", 
+          &theia::LiGTPositionEstimator::Options::max_power_iterations)
+    .def_readwrite("eigensolver_threshold", 
+          &theia::LiGTPositionEstimator::Options::eigensolver_threshold);
 
   py::class_<theia::LiGTPositionEstimator, theia::PositionEstimator>(
       m, "LiGTPositionEstimator")
