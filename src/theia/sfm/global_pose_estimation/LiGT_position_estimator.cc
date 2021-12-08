@@ -317,7 +317,10 @@ void LiGTPositionEstimator::FindTripletsForTracks() {
   uint32_t total_nr_triplets = 0;
   for (size_t t = 0; t < track_ids.size(); ++t) {
     auto t_id = track_ids[t];
+    std::cout<<"searching triplet for "<<t_id<<"\n";
+
     auto view_ids_for_track = reconstruction_.Track(t_id)->ViewIds();
+    std::cout<<"view_ids_for_track size: "<<view_ids_for_track.size()<<"\n";
     if (view_ids_for_track.size() < 3) {
       continue;
     }
@@ -330,7 +333,7 @@ void LiGTPositionEstimator::FindTripletsForTracks() {
       if (cur_id == base_views.first || cur_id == base_views.second) {
           continue;
       }
-      //std::cout<<"Track: "<<t_id<<" triplet: (base l, central, base r) ("<<base_views.first<<", "<<cur_id<<", "<<base_views.second<<")\n";
+      std::cout<<"Track: "<<t_id<<" triplet: (base l, central, base r) ("<<base_views.first<<", "<<cur_id<<", "<<base_views.second<<")\n";
 
       ViewIdTriplet triplet = std::make_tuple(base_views.first, cur_id, base_views.second);
       AddTripletConstraint(triplet);

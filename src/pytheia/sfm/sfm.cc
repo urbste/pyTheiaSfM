@@ -917,8 +917,16 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("use_position_priors",
                      &theia::BundleAdjustmentOptions::use_position_priors);
 
+  // Reconstruction Options
+  py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
+      .value("MIDPOINT", theia::TriangulationMethodType::MIDPOINT)
+      .value("SVD", theia::TriangulationMethodType::SVD)
+      .value("L2_MINIMIZATION", theia::TriangulationMethodType::L2_MINIMIZATION)
+      .export_values();
+
   // Track Estimator Options
   py::class_<theia::TrackEstimator::Options>(m, "TrackEstimatorOptions")
+      .def(py::init<>())
       .def_readwrite("num_threads",
                      &theia::TrackEstimator::Options::num_threads)
       .def_readwrite("max_acceptable_reprojection_error_pixels",
@@ -929,25 +937,25 @@ void pytheia_sfm_classes(py::module& m) {
           &theia::TrackEstimator::Options::min_triangulation_angle_degrees)
       .def_readwrite("bundle_adjustment",
                      &theia::TrackEstimator::Options::bundle_adjustment)
-      //.def_readwrite("BundleAdjustmentOptions",
-      //&theia::BundleAdjustmentOptions)
       .def_readwrite("multithreaded_step_size",
-                     &theia::TrackEstimator::Options::multithreaded_step_size);
+                     &theia::TrackEstimator::Options::multithreaded_step_size)
+      .def_readwrite("triangulation_method",
+        &theia::TrackEstimator::Options::triangulation_method);
 
   // Track Estimator Summary
   py::class_<theia::TrackEstimator::Summary>(m, "TrackEstimatorSummary")
       .def_readwrite(
           "input_num_estimated_tracks",
-          &theia::TrackEstimator::Summary::input_num_estimated_tracks)
+        &theia::TrackEstimator::Summary::input_num_estimated_tracks)
       .def_readwrite(
           "num_triangulation_attempts",
-          &theia::TrackEstimator::Summary::num_triangulation_attempts)
+        &theia::TrackEstimator::Summary::num_triangulation_attempts)
       .def_readwrite("estimated_tracks",
-                     &theia::TrackEstimator::Summary::estimated_tracks);
+        &theia::TrackEstimator::Summary::estimated_tracks);
 
   // Track Estimator class
   py::class_<theia::TrackEstimator>(m, "TrackEstimator")
-      //.def(py::init<theia::TrackEstimator::Options, theia::Reconstruction>())
+      .def(py::init<const theia::TrackEstimator::Options&, theia::Reconstruction*>())
       .def("EstimateAllTracks", &theia::TrackEstimator::EstimateAllTracks)
       .def("EstimateTracks", &theia::TrackEstimator::EstimateTracks);
 

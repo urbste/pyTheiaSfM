@@ -111,7 +111,7 @@ void TrackBuilder::BuildTracksIncremental(Reconstruction* reconstruction) {
             const ViewId v_id = feature_to_add.first;
             // if this feature already is an observation of a track
             if (view_ids.find(v_id) == view_ids.end()) {
-                std::cout<<"Adding an observation to an already existing track "<<track_component->second<<" vid: "<<v_id<<"\n";
+                //std::cout<<"Adding an observation to an already existing track "<<track_component->second<<" vid: "<<v_id<<"\n";
                 reconstruction->AddObservation(v_id, track_component->second, feature_to_add.second);
             }
         }

@@ -102,7 +102,7 @@ bool AcceptableReprojectionError(
   const Track& track = *reconstruction.Track(track_id);
   int num_projections = 0;
   double mean_sq_reprojection_error = 0;
-  for (int i = 0; i < view_ids.size(); i++) {
+  for (size_t i = 0; i < view_ids.size(); i++) {
     // We do not need to check if the view is present or estimated, since this
     // was done prior to the input.
     const View* view = reconstruction.View(view_ids[i]);
@@ -237,15 +237,28 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
     return false;
   }
 
-  // Triangulate the track.
-  //  if (!TriangulateNViewSVD(proj_matrices, normalized_features,
-  //  track->MutablePoint())) {
-  //    ++num_failed_triangulations_;
-  //    return false;
-  //  }
-  if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
-    ++num_failed_triangulations_;
-    return false;
+  // Triangulate the track
+  if (options_.triangulation_method == TriangulationMethodType::SVD) {
+    if (!TriangulateNViewSVD(proj_matrices, normalized_features,
+    track->MutablePoint())) {
+      ++num_failed_triangulations_;
+      return false;
+    }
+  } else if (options_.triangulation_method == TriangulationMethodType::MIDPOINT) {
+      if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
+        ++num_failed_triangulations_;
+        return false;
+      }
+  } else if (options_.triangulation_method == TriangulationMethodType::L2_MINIMIZATION) {
+      if (!TriangulateNView(proj_matrices, normalized_features, track->MutablePoint())) {
+        ++num_failed_triangulations_;
+        return false;
+      }
+  } else {
+      if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
+        ++num_failed_triangulations_;
+        return false;
+      }
   }
   // Bundle adjust the track.
   if (options_.bundle_adjustment) {
