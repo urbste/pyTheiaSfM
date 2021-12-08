@@ -2,12 +2,13 @@ import pytheia as pt
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation as R
-from random_recon_gen import RandomReconGenerator
-from random_recon_gen import CameraPrior
+from Projects.TheiaSfM.pytest.sfm.random_recon_gen import RandomReconGenerator
+from Projects.TheiaSfM.pytest.sfm.random_recon_gen import CameraPrior
+
 
 class GroundTruthRelPose:
     def __init__(self, cam0, cam1):
-        
+
         self.cam0 = cam0
         self.cam1 = cam1
 
@@ -17,6 +18,7 @@ class GroundTruthRelPose:
         self.t_rel_gt = R0 @ (cam0.Position - cam1.Position)
         self.t_rel_gt /= np.linalg.norm(self.t_rel_gt)
         self.p_rel_gt = -R0.T @ self.t_rel_gt
+
 
 def test_8ptFundamentalMatrix(pts0, pts1):
 
@@ -34,7 +36,7 @@ def test_8ptFundamentalMatrix(pts0, pts1):
 # def test_7ptFundamentalMatrix(pts0, pts1, gt_pose):
 
 #     success, Fs = pt.sfm.SevenPointFundamentalMatrix(pts0[:7], pts1[:7])
-#     # do some 
+#     # do some
 #     min_f_dist = 10000000.
 #     F = None
 #     for i in range(len(Fs)):
@@ -59,22 +61,24 @@ def test_5ptEssentialMatrix(img_pts0, img_pts1, normalized_corrs, gt_pose, max_e
 
     success, Es = pt.sfm.FivePointRelativePose(img_pts0[:5], img_pts1[:5])
 
-    norm_t_gt = gt_pose.p_rel_gt/np.linalg.norm(gt_pose.p_rel_gt)
+    norm_t_gt = gt_pose.p_rel_gt / np.linalg.norm(gt_pose.p_rel_gt)
     # find closest to GT
     min_t_dist = 100000
     sol_idx = 0
     for sol in range(len(Es)):
-        pose_res = pt.sfm.GetBestPoseFromEssentialMatrix(Es[sol],normalized_corrs)
+        pose_res = pt.sfm.GetBestPoseFromEssentialMatrix(
+            Es[sol], normalized_corrs)
         t_dist = np.arccos(np.dot(pose_res[2], norm_t_gt))
-        if t_dist < min_t_dist: 
+        if t_dist < min_t_dist:
             min_t_dist = t_dist
             sol_idx = sol
-    pose_res = pt.sfm.GetBestPoseFromEssentialMatrix(Es[sol_idx],normalized_corrs)
-    t_angle = np.arccos(np.dot(pose_res[2], norm_t_gt)) * 180./np.pi
+    pose_res = pt.sfm.GetBestPoseFromEssentialMatrix(
+        Es[sol_idx], normalized_corrs)
+    t_angle = np.arccos(np.dot(pose_res[2], norm_t_gt)) * 180. / np.pi
     assert success
     assert t_angle < max_error_deg
-    
-#def test_PositionFromTwoRays():
+
+# def test_PositionFromTwoRays():
 
 
 def test_RelativePoseFromTwoPointsWithKnownRotation(R0, R1, pts0, pts1, gt_pose):
@@ -82,11 +86,12 @@ def test_RelativePoseFromTwoPointsWithKnownRotation(R0, R1, pts0, pts1, gt_pose)
     unrotated_norm_img_pts0 = []
     unrotated_norm_img_pts1 = []
     for p0, p1 in zip(img_pts0, img_pts1):
-        unrotated_norm_img_pts0.append(R0.T @ np.extend(p0,1))
-        unrotated_norm_img_pts1.append(R1.T @ np.extend(p1,1))
-    
+        unrotated_norm_img_pts0.append(R0.T @ np.extend(p0, 1))
+        unrotated_norm_img_pts1.append(R1.T @ np.extend(p1, 1))
+
     success, position2 = pt.sfm.RelativePoseFromTwoPointsWithKnownRotation(
         unrotated_norm_img_pts0, unrotated_norm_img_pts1)
+
 
 def test_EstimateRelativeOrientation(normalized_corrs, gt_pose, max_error_deg):
     params = pt.solvers.RansacParameters()
@@ -94,12 +99,13 @@ def test_EstimateRelativeOrientation(normalized_corrs, gt_pose, max_error_deg):
     params.max_iterations = 20
     params.min_iterations = 1
 
-    norm_p_gt = gt_pose.p_rel_gt/np.linalg.norm(gt_pose.p_rel_gt)
+    norm_p_gt = gt_pose.p_rel_gt / np.linalg.norm(gt_pose.p_rel_gt)
 
-    success, rel_ori, ransac_sum = pt.sfm.EstimateRelativePose(params, pt.sfm.RansacType(0), normalized_corrs)
+    success, rel_ori, ransac_sum = pt.sfm.EstimateRelativePose(
+        params, pt.sfm.RansacType(0), normalized_corrs)
 
     #r_dist = np.linalg.norm(cv2.Rodrigues(rel_ori.rotation.T @ gt_pose.R_rel_gt)[0])
-    t_angle = np.arccos(np.dot(rel_ori.position, norm_p_gt)) * 180./np.pi
+    t_angle = np.arccos(np.dot(rel_ori.position, norm_p_gt)) * 180. / np.pi
     assert success
     assert t_angle < max_error_deg
 
@@ -114,8 +120,8 @@ def test_EstimateRelativeOrientation(normalized_corrs, gt_pose, max_error_deg):
 
 
 if __name__ == "__main__":
-    pinhole_cam = CameraPrior(300., 1.0, (1000,1000))
-    gen = RandomReconGenerator(verbose=False,cam_prior=pinhole_cam)
+    pinhole_cam = CameraPrior(300., 1.0, (1000, 1000))
+    gen = RandomReconGenerator(verbose=False, cam_prior=pinhole_cam)
 
     # generate a random scene
     gen.generate_random_recon(nr_views=2, nr_tracks=10, cam_rot_max_angle=1e-3)
@@ -140,7 +146,7 @@ if __name__ == "__main__":
         if not feat1 or not feat2:
             continue
         # remove pp to recover focal lenghts
-        img_pts0.append(feat1.point - principal_point0) 
+        img_pts0.append(feat1.point - principal_point0)
         img_pts1.append(feat2.point - principal_point1)
         img_pt0_norm = cam0.PixelToNormalizedCoordinates(feat1.point)[:2]
         img_pt1_norm = cam1.PixelToNormalizedCoordinates(feat2.point)[:2]
@@ -149,18 +155,21 @@ if __name__ == "__main__":
         normalized_corr.append(
             pt.matching.FeatureCorrespondence(
                 pt.sfm.Feature(img_pt0_norm), pt.sfm.Feature(img_pt1_norm)))
-    
+
     gt_pose = GroundTruthRelPose(cam0, cam1)
 
     test_8ptFundamentalMatrix(img_pts0_norm, img_pts1_norm)
-    test_5ptEssentialMatrix(img_pts0_norm, img_pts1_norm, normalized_corr, gt_pose, max_error_deg=0.1)
-    test_EstimateRelativeOrientation(normalized_corr, gt_pose, max_error_deg=0.1)
+    test_5ptEssentialMatrix(img_pts0_norm, img_pts1_norm,
+                            normalized_corr, gt_pose, max_error_deg=0.1)
+    test_EstimateRelativeOrientation(
+        normalized_corr, gt_pose, max_error_deg=0.1)
 
     # add noise and test again
     test_8ptFundamentalMatrix(img_pts0_norm, img_pts1_norm)
-    test_5ptEssentialMatrix(img_pts0_norm, img_pts1_norm, normalized_corr, gt_pose, max_error_deg=0.1)
-    test_EstimateRelativeOrientation(normalized_corr, gt_pose, max_error_deg=0.1)
-
+    test_5ptEssentialMatrix(img_pts0_norm, img_pts1_norm,
+                            normalized_corr, gt_pose, max_error_deg=0.1)
+    test_EstimateRelativeOrientation(
+        normalized_corr, gt_pose, max_error_deg=0.1)
 
     #
     # RelativePoseFromTwoPointsWithKnownRotation
@@ -170,8 +179,7 @@ if __name__ == "__main__":
     # ThreePointRelativePosePartialRotation
     # TwoPointPosePartialRotation
 
-
-    distorted_cam = CameraPrior(500.,1.0, (1000,1000))
+    distorted_cam = CameraPrior(500., 1.0, (1000, 1000))
     distorted_cam.set_to_division_undistortion(distortion=1e-6)
     gen = RandomReconGenerator(cam_prior=distorted_cam)
 
