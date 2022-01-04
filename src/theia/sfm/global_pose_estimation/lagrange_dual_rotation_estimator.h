@@ -43,9 +43,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include <eigen3/Eigen/Core>
-#include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/SparseCore>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/SparseCore>
 #include <glog/logging.h>
 
 #include "theia/math/sdp_solver.h"
