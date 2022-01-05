@@ -116,7 +116,8 @@ class RobustRotationEstimator : public RotationEstimator {
   bool EstimateRotations(
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations); 
 
-  // With this function multiple views can be set to constant during estimation (e.g. keyframes in incremental estimation)
+  // With this function multiple views can be set to constant during estimation 
+  // (e.g. keyframes in incremental estimation)
   void SetFixedGlobalRotations(const std::set<ViewId>& fixed_views);
 
  protected:
