@@ -53,8 +53,8 @@ namespace theia {
 //   solution_rotations: the rotation matrix of the candidate solutions
 //   solution_translation: the translation of the candidate solutions
 // Return: the number of poses computed.
-bool PoseFromThreePoints(const Eigen::Vector2d feature_point[3],
-                         const Eigen::Vector3d world_point[3],
+bool PoseFromThreePoints(const std::vector<Eigen::Vector2d>& feature_point,
+                         const std::vector<Eigen::Vector3d>& world_point,
                          std::vector<Eigen::Matrix3d>* solution_rotations,
                          std::vector<Eigen::Vector3d>* solution_translations);
 

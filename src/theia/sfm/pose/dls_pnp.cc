@@ -64,7 +64,7 @@ using Eigen::Vector3d;
 // system of equations from the jacobian of the cost function, and solve these
 // equations via a Macaulay matrix to obtain the roots (i.e., the 3 parameters
 // of rotation). The translation can then be obtained through back-substitution.
-void DlsPnp(const std::vector<Vector2d>& feature_position,
+bool DlsPnp(const std::vector<Vector2d>& feature_position,
             const std::vector<Vector3d>& world_point,
             std::vector<Quaterniond>* solution_rotation,
             std::vector<Vector3d>* solution_translation) {
@@ -196,6 +196,7 @@ void DlsPnp(const std::vector<Vector2d>& feature_position,
       }
     }
   }
+  return solution_translation->size() > 0;
 }
 
 }  // namespace theia

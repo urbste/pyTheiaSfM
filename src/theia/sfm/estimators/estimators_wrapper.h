@@ -36,6 +36,7 @@ std::tuple<bool, CalibratedAbsolutePose, RansacSummary>
 EstimateCalibratedAbsolutePoseWrapper(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
+    const PnPType& pnp_type,
     const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences);
 
 std::tuple<bool, Plane, RansacSummary> EstimateDominantPlaneFromPointsWrapper(

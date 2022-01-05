@@ -41,12 +41,14 @@ std::tuple<bool, CalibratedAbsolutePose, RansacSummary>
 EstimateCalibratedAbsolutePoseWrapper(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
+    const PnPType& pnp_type,
     const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences) {
   CalibratedAbsolutePose absolute_pose;
   RansacSummary ransac_summary;
   const bool success =
       EstimateCalibratedAbsolutePose(ransac_params,
                                      ransac_type,
+                                     pnp_type,
                                      normalized_correspondences,
                                      &absolute_pose,
                                      &ransac_summary);

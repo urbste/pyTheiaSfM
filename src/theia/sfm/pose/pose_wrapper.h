@@ -11,6 +11,11 @@ std::tuple<std::vector<Eigen::Matrix<double, 4, 1>>,
 DlsPnpWrapper(const std::vector<Eigen::Vector2d>& feature_positions,
               const std::vector<Eigen::Vector3d>& world_point);
 
+std::tuple<std::vector<Eigen::Matrix<double, 4, 1>>,
+           std::vector<Eigen::Vector3d>>
+SQPnPWrapper(const std::vector<Eigen::Vector2d>& feature_positions,
+              const std::vector<Eigen::Vector3d>& world_point);
+
 std::tuple<bool, Eigen::Matrix3d> NormalizedEightPointFundamentalMatrixWrapper(
     const std::vector<Eigen::Vector2d>& image_1_points,
     const std::vector<Eigen::Vector2d>& image_2_points);

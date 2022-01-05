@@ -51,14 +51,15 @@ struct CalibratedAbsolutePose {
   Eigen::Vector3d position;
 };
 
+enum class PnPType {KNEIP, SQPnP, DLS};
+
 // Estimates the calibrated absolute pose using the ransac variant of choice
 // (e.g. Ransac, Prosac, etc.). Correspondences must be normalized by the camera
 // intrinsics. Returns true if a pose could be succesfully estimated, and false
 // otherwise. The quality of the result depends on the quality of the input
 // data.
-bool EstimateCalibratedAbsolutePose(
-    const RansacParameters& ransac_params,
-    const RansacType& ransac_type,
+bool EstimateCalibratedAbsolutePose(const RansacParameters& ransac_params,
+    const RansacType& ransac_type, const theia::PnPType &pnp_type,
     const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences,
     CalibratedAbsolutePose* absolute_pose,
     RansacSummary* ransac_summary);

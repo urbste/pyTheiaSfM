@@ -6,10 +6,13 @@
 //
 // Implementation of SQPnP as described in the paper:
 //
-// "A Consistently Fast and Globally Optimal Solution to the Perspective-n-Point Problem" by G. Terzakis and M. Lourakis
-//  	 a) Paper: 	   http://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460.pdf 
-//       b) Supplementary: https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460.pdf
-  
+// "A Consistently Fast and Globally Optimal Solution to the Perspective-n-Point
+// Problem" by G. Terzakis and M. Lourakis
+//  	 a) Paper:
+//  http://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460.pdf
+//       b) Supplementary:
+//       https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460.pdf
+
 // Copyright (C) 2022 Steffen Urban.
 // All rights reserved.
 //
@@ -47,15 +50,14 @@
 #ifndef THEIA_SFM_POSE_SQPNP_H_
 #define THEIA_SFM_POSE_SQPNP_H_
 
-#include "types.h"
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <vector>
-#include <assert.h>
-#include <iostream>
 
-namespace theia
-{
-// Computes the camera pose using the Perspective N-point method from "A Consistently Fast and Globally Optimal Solution 
-// to the Perspective-n-Point Problem" by G. Terzakis and M. Lourakis
+namespace theia {
+// Computes the camera pose using the Perspective N-point method from "A
+// Consistently Fast and Globally Optimal Solution to the Perspective-n-Point
+// Problem" by G. Terzakis and M. Lourakis
 //
 // Params:
 //   feature_position: Feature positions corresponding to model points. Must
@@ -65,11 +67,11 @@ namespace theia
 //     and at least 3.
 //   solution_rotation: the rotation quaternion of the candidate solutions
 //   solution_translation: the translation of the candidate solutions
-  bool SQPnP(const std::vector<Eigen::Vector2d>& feature_positions,
-             const std::vector<Eigen::Vector3d>& world_point,
-             std::vector<Eigen::Quaterniond>* solution_rotation,
-             std::vector<Eigen::Vector3d>* solution_translation);
+bool SQPnP(const std::vector<Eigen::Vector2d>& feature_positions,
+           const std::vector<Eigen::Vector3d>& world_points,
+           std::vector<Eigen::Quaterniond>* solution_rotation,
+           std::vector<Eigen::Vector3d>* solution_translation);
 
-} 
+}  // namespace theia
 
-#endif // THEIA_SFM_POSE_SQPNP_H_
+#endif  // THEIA_SFM_POSE_SQPNP_H_

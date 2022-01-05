@@ -13,6 +13,7 @@
 #include "theia/sfm/pose/two_point_pose_partial_rotation.h"
 
 #include "theia/sfm/pose/dls_pnp.h"
+#include "theia/sfm/pose/sqpnp.h"
 #include "theia/sfm/pose/essential_matrix_utils.h"
 #include "theia/sfm/pose/fundamental_matrix_util.h"
 #include "theia/sfm/pose/position_from_two_rays.h"
@@ -50,6 +51,29 @@ DlsPnpWrapper(const std::vector<Vector2d>& feature_positions,
     solution_rotation.push_back(tmp);
   }
   return std::make_tuple(solution_rotation, solution_translation);
+}
+
+std::tuple<std::vector<Eigen::Matrix<double, 4, 1>>,
+           std::vector<Eigen::Vector3d>>
+SQPnPWrapper(const std::vector<Eigen::Vector2d>& feature_positions,
+              const std::vector<Eigen::Vector3d>& world_point) {
+  std::vector<Quaterniond> solution_rotation_q;
+  std::vector<Vector3d> solution_translation;
+  SQPnP(feature_positions,
+         world_point,
+         &solution_rotation_q,
+         &solution_translation);
+
+  std::vector<Eigen::Matrix<double, 4, 1>> solution_rotation;
+  for (int i = 0; i < solution_rotation_q.size(); ++i) {
+    Eigen::Matrix<double, 4, 1> tmp;
+    tmp(0, 0) = solution_rotation_q[i].w();
+    tmp(1, 0) = solution_rotation_q[i].x();
+    tmp(2, 0) = solution_rotation_q[i].y();
+    tmp(3, 0) = solution_rotation_q[i].z();
+    solution_rotation.push_back(tmp);
+  }
+  return std::make_tuple(solution_rotation, solution_translation);            
 }
 
 std::tuple<bool, Eigen::Matrix3d> NormalizedEightPointFundamentalMatrixWrapper(
@@ -259,15 +283,10 @@ ProjectionMatricesFromFundamentalMatrixWrapper(const Eigen::Matrix3d fmatrix) {
 std::tuple<bool, std::vector<Matrix3d>, std::vector<Vector3d>>
 PoseFromThreePointsWrapper(const std::vector<Vector2d>& feature_points_in,
                            const std::vector<Vector3d>& points_3d_in) {
-  const Vector2d feature_point[3] = {
-      feature_points_in[0], feature_points_in[1], feature_points_in[2]};
-  const Vector3d points_3d[3] = {
-      points_3d_in[0], points_3d_in[1], points_3d_in[2]};
-
   std::vector<Matrix3d> solution_rotations;
   std::vector<Vector3d> solution_translations;
   const bool success = PoseFromThreePoints(
-      feature_point, points_3d, &solution_rotations, &solution_translations);
+      feature_points_in, points_3d_in, &solution_rotations, &solution_translations);
   return std::make_tuple(success, solution_rotations, solution_translations);
 }
 

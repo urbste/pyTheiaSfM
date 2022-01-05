@@ -39,6 +39,7 @@
 #include <map>
 #include <unordered_set>
 #include <vector>
+#include <thread>
 
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
 #include "theia/sfm/types.h"
@@ -117,7 +118,7 @@ struct BundleAdjustmentOptions {
       OptimizeIntrinsicsType::FOCAL_LENGTH |
       OptimizeIntrinsicsType::RADIAL_DISTORTION;
 
-  int num_threads = 1;
+  int num_threads = std::thread::hardware_concurrency();
   int max_num_iterations = 100;
 
   // Max BA time is 1 hour.

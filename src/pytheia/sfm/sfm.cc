@@ -489,6 +489,7 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("TwoPointPosePartialRotation",
         theia::TwoPointPosePartialRotationWrapper);
   m.def("DlsPnp", theia::DlsPnpWrapper);
+  m.def("SQPnP", theia::SQPnPWrapper);
   m.def("PositionFromTwoRays", theia::PositionFromTwoRaysWrapper);
   m.def("RelativePoseFromTwoPointsWithKnownRotation",
         theia::RelativePoseFromTwoPointsWithKnownRotationWrapper);
@@ -637,6 +638,12 @@ void pytheia_sfm_classes(py::module& m) {
       .value("PROSAC", theia::RansacType::PROSAC)
       .value("LMED", theia::RansacType::LMED)
       .value("EXHAUSTIVE", theia::RansacType::EXHAUSTIVE)
+      .export_values();
+ 
+   py::enum_<theia::PnPType>(m, "PnPType")
+      .value("KNEIP", theia::PnPType::KNEIP)
+      .value("DLS", theia::PnPType::DLS)
+      .value("SQPnP", theia::PnPType::SQPnP)
       .export_values();
 
   m.def("EstimateAbsolutePoseWithKnownOrientation",

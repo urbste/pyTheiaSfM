@@ -179,8 +179,8 @@ void Backsubstitute(const Matrix3d& intermediate_world_frame,
 
 }  // namespace
 
-bool PoseFromThreePoints(const Vector2d feature_point[3],
-                         const Vector3d points_3d[3],
+bool PoseFromThreePoints(const std::vector<Vector2d>& feature_point,
+                         const std::vector<Vector3d>& points_3d,
                          std::vector<Matrix3d>* solution_rotations,
                          std::vector<Vector3d>* solution_translations) {
   Vector3d normalized_image_points[3];
