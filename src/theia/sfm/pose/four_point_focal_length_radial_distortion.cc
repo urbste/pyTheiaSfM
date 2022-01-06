@@ -69,8 +69,8 @@ using Eigen::Vector3d;
 using Eigen::Vector4d;
 
 bool FourPointsPoseFocalLengthRadialDistortion(
-    const Eigen::Vector2d feature_vectors[4],
-    const Eigen::Vector3d world_points[4],
+    const std::vector<Eigen::Vector2d> feature_vectors,
+    const std::vector<Eigen::Vector3d> world_points,
     const double max_focal_length,
     const double min_focal_length,
     const double max_distortion,
@@ -80,7 +80,7 @@ bool FourPointsPoseFocalLengthRadialDistortion(
     std::vector<double>* radial_distortions,
     std::vector<double>* focal_lengths) {
   // check that input size of features and world points is 4
-  // CHECK_EQ(feature_vectors.size(), world_points.size());
+  CHECK_EQ(feature_vectors.size(), world_points.size());
 
   CHECK_GE(min_focal_length, 0.0);
   CHECK_GE(max_focal_length, 0.0);
@@ -219,7 +219,7 @@ bool FourPointsPoseFocalLengthRadialDistortion(
   std::vector<Vector5d> valid_solutions;
   FourPointsPoseFocalLengthRadialDistortionSolver(data, &valid_solutions);
 
-  for (int i = 0; i < valid_solutions.size(); ++i) {
+  for (size_t i = 0; i < valid_solutions.size(); ++i) {
     const double k = valid_solutions[i][3];
     const double P33 = valid_solutions[i][4];
     Eigen::Vector4d alpha(valid_solutions[i][0],

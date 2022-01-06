@@ -632,6 +632,22 @@ void pytheia_sfm_classes(py::module& m) {
           "max_radial_distortion",
           &theia::RadialDistortionFeatureCorrespondence::max_radial_distortion);
 
+  py::class_<theia::RadialDistUncalibratedAbsolutePoseMetaData>(
+      m, "RadialDistUncalibratedAbsolutePoseMetaData")
+      .def(py::init<>())
+      .def_readwrite(
+        "min_focal_length",
+        &theia::RadialDistUncalibratedAbsolutePoseMetaData::min_focal_length)
+      .def_readwrite(
+        "max_focal_length",
+        &theia::RadialDistUncalibratedAbsolutePoseMetaData::max_focal_length)
+      .def_readwrite(
+        "min_radial_distortion",
+        &theia::RadialDistUncalibratedAbsolutePoseMetaData::min_radial_distortion)
+      .def_readwrite(
+        "max_radial_distortion",
+        &theia::RadialDistUncalibratedAbsolutePoseMetaData::max_radial_distortion);
+
   // estimator ransac
   py::enum_<theia::RansacType>(m, "RansacType")
       .value("RANSAC", theia::RansacType::RANSAC)
@@ -1429,6 +1445,7 @@ void pytheia_sfm_classes(py::module& m) {
   // m.def("OptimizeRelativePositionWithKnownRotation",
   // theia::OptimizeRelativePositionWithKnownRotationWrapper);
 
+  m.def("OptimizeAbsolutePoseOnNormFeatures",theia::OptimizeAbsolutePoseOnNormFeatures);
   // Bundle Adjuster
   py::class_<theia::BundleAdjuster>(m, "BundleAdjuster")
       // constructor uses pointer of an object as input

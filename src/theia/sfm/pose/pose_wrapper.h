@@ -1,4 +1,7 @@
 #include "theia/matching/feature_correspondence.h"
+#include "theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h"
+#include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
+#include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
 #include "theia/sfm/types.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -6,6 +9,12 @@
 #include <vector>
 
 namespace theia {
+
+std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d> OptimizeAbsolutePoseOnNormFeatures(
+    const std::vector<FeatureCorrespondence2D3D>& correspondences_2d_3d,
+    const Eigen::Matrix3d rotation_init, const Eigen::Vector3d position_init,
+    const BundleAdjustmentOptions& ba_options);
+
 std::tuple<std::vector<Eigen::Matrix<double, 4, 1>>,
            std::vector<Eigen::Vector3d>>
 DlsPnpWrapper(const std::vector<Eigen::Vector2d>& feature_positions,
@@ -55,7 +64,8 @@ std::tuple<bool,
            std::vector<double>>
 FourPointsPoseFocalLengthRadialDistortionWrapper(
     const std::vector<Eigen::Vector2d>& feature_vectors,
-    const std::vector<Eigen::Vector3d>& world_points);
+    const std::vector<Eigen::Vector3d>& world_points,
+    const theia::RadialDistUncalibratedAbsolutePoseMetaData& settings);
 
 std::tuple<bool, Eigen::Matrix3d> FourPointHomographyWrapper(
     const std::vector<Eigen::Vector2d>& image_1_points,
