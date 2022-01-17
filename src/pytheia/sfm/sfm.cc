@@ -769,6 +769,7 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::View::GetFeature,
            py::return_value_policy::reference)
       .def("GetTrack", &theia::View::GetTrack)
+      .def("GetTimestamp", &theia::View::GetTimestamp)
       .def("Camera", &theia::View::Camera, "Camera class object")
       .def("CameraIntrinsicsPrior", &theia::View::CameraIntrinsicsPrior)
       .def("SetCameraIntrinsicsPrior", &theia::View::SetCameraIntrinsicsPrior)
