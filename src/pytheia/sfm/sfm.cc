@@ -489,6 +489,7 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("TwoPointPosePartialRotation",
         theia::TwoPointPosePartialRotationWrapper);
   m.def("DlsPnp", theia::DlsPnpWrapper);
+  m.def("SQPnP", theia::SQPnPWrapper);
   m.def("PositionFromTwoRays", theia::PositionFromTwoRaysWrapper);
   m.def("RelativePoseFromTwoPointsWithKnownRotation",
         theia::RelativePoseFromTwoPointsWithKnownRotationWrapper);
@@ -631,12 +632,34 @@ void pytheia_sfm_classes(py::module& m) {
           "max_radial_distortion",
           &theia::RadialDistortionFeatureCorrespondence::max_radial_distortion);
 
+  py::class_<theia::RadialDistUncalibratedAbsolutePoseMetaData>(
+      m, "RadialDistUncalibratedAbsolutePoseMetaData")
+      .def(py::init<>())
+      .def_readwrite(
+        "min_focal_length",
+        &theia::RadialDistUncalibratedAbsolutePoseMetaData::min_focal_length)
+      .def_readwrite(
+        "max_focal_length",
+        &theia::RadialDistUncalibratedAbsolutePoseMetaData::max_focal_length)
+      .def_readwrite(
+        "min_radial_distortion",
+        &theia::RadialDistUncalibratedAbsolutePoseMetaData::min_radial_distortion)
+      .def_readwrite(
+        "max_radial_distortion",
+        &theia::RadialDistUncalibratedAbsolutePoseMetaData::max_radial_distortion);
+
   // estimator ransac
   py::enum_<theia::RansacType>(m, "RansacType")
       .value("RANSAC", theia::RansacType::RANSAC)
       .value("PROSAC", theia::RansacType::PROSAC)
       .value("LMED", theia::RansacType::LMED)
       .value("EXHAUSTIVE", theia::RansacType::EXHAUSTIVE)
+      .export_values();
+ 
+   py::enum_<theia::PnPType>(m, "PnPType")
+      .value("KNEIP", theia::PnPType::KNEIP)
+      .value("DLS", theia::PnPType::DLS)
+      .value("SQPnP", theia::PnPType::SQPnP)
       .export_values();
 
   m.def("EstimateAbsolutePoseWithKnownOrientation",
@@ -1423,6 +1446,7 @@ void pytheia_sfm_classes(py::module& m) {
   // m.def("OptimizeRelativePositionWithKnownRotation",
   // theia::OptimizeRelativePositionWithKnownRotationWrapper);
 
+  m.def("OptimizeAbsolutePoseOnNormFeatures",theia::OptimizeAbsolutePoseOnNormFeatures);
   // Bundle Adjuster
   py::class_<theia::BundleAdjuster>(m, "BundleAdjuster")
       // constructor uses pointer of an object as input

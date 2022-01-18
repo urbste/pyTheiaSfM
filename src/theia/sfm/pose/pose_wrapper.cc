@@ -13,6 +13,7 @@
 #include "theia/sfm/pose/two_point_pose_partial_rotation.h"
 
 #include "theia/sfm/pose/dls_pnp.h"
+#include "theia/sfm/pose/sqpnp.h"
 #include "theia/sfm/pose/essential_matrix_utils.h"
 #include "theia/sfm/pose/fundamental_matrix_util.h"
 #include "theia/sfm/pose/position_from_two_rays.h"
@@ -20,6 +21,9 @@
 #include "theia/sfm/pose/seven_point_fundamental_matrix.h"
 #include "theia/sfm/pose/sim_transform_partial_rotation.h"
 #include "theia/sfm/types.h"
+
+#include "theia/sfm/bundle_adjustment/bundle_adjuster.h"
+#include "theia/sfm/reconstruction.h"
 
 using Eigen::Map;
 using Eigen::Matrix;
@@ -29,6 +33,34 @@ using Eigen::Vector2d;
 using Eigen::Vector3d;
 
 namespace theia {
+
+std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d> OptimizeAbsolutePoseOnNormFeatures(
+    const std::vector<FeatureCorrespondence2D3D>& correspondences_2d_3d,
+    const Matrix3d rotation_init, const Vector3d position_init,
+    const BundleAdjustmentOptions& ba_options) {
+
+  Reconstruction recon;
+  ViewId v_id = recon.AddView("0", 0, 0);
+  const auto view = recon.MutableView(v_id);
+  view->MutableCamera()->SetPosition(position_init);
+  view->MutableCamera()->SetOrientationFromRotationMatrix(rotation_init);
+  view->SetEstimated(true);
+  for (size_t i = 0; i < correspondences_2d_3d.size(); ++i) {
+    const auto t_id = recon.AddTrack();
+    const auto track = recon.MutableTrack(t_id);
+    track->SetEstimated(true);
+    track->SetPoint(correspondences_2d_3d[i].world_point.homogeneous());
+    Feature f(correspondences_2d_3d[i].feature);
+    view->AddFeature(t_id, f);
+  }
+
+  const auto summary = theia::BundleAdjustView(ba_options, v_id, &recon);
+
+  const auto cam_res = recon.View(v_id)->Camera();
+  return std::make_tuple(summary.success, 
+    cam_res.GetOrientationAsRotationMatrix(),
+    cam_res.GetPosition());
+}
 
 std::tuple<std::vector<Eigen::Matrix<double, 4, 1>>, std::vector<Vector3d>>
 DlsPnpWrapper(const std::vector<Vector2d>& feature_positions,
@@ -50,6 +82,29 @@ DlsPnpWrapper(const std::vector<Vector2d>& feature_positions,
     solution_rotation.push_back(tmp);
   }
   return std::make_tuple(solution_rotation, solution_translation);
+}
+
+std::tuple<std::vector<Eigen::Matrix<double, 4, 1>>,
+           std::vector<Eigen::Vector3d>>
+SQPnPWrapper(const std::vector<Eigen::Vector2d>& feature_positions,
+              const std::vector<Eigen::Vector3d>& world_point) {
+  std::vector<Quaterniond> solution_rotation_q;
+  std::vector<Vector3d> solution_translation;
+  SQPnP(feature_positions,
+         world_point,
+         &solution_rotation_q,
+         &solution_translation);
+
+  std::vector<Eigen::Matrix<double, 4, 1>> solution_rotation;
+  for (int i = 0; i < solution_rotation_q.size(); ++i) {
+    Eigen::Matrix<double, 4, 1> tmp;
+    tmp(0, 0) = solution_rotation_q[i].w();
+    tmp(1, 0) = solution_rotation_q[i].x();
+    tmp(2, 0) = solution_rotation_q[i].y();
+    tmp(3, 0) = solution_rotation_q[i].z();
+    solution_rotation.push_back(tmp);
+  }
+  return std::make_tuple(solution_rotation, solution_translation);            
 }
 
 std::tuple<bool, Eigen::Matrix3d> NormalizedEightPointFundamentalMatrixWrapper(
@@ -131,16 +186,23 @@ std::tuple<bool,
            std::vector<double>>
 FourPointsPoseFocalLengthRadialDistortionWrapper(
     const std::vector<Vector2d>& feature_vectors,
-    const std::vector<Vector3d>& world_points) {
+    const std::vector<Vector3d>& world_points,
+    const theia::RadialDistUncalibratedAbsolutePoseMetaData& settings) {
   std::vector<Matrix3d> rotations;
   std::vector<Vector3d> translations;
   std::vector<double> radial_distortions;
   std::vector<double> focal_lengths;
-  //    const bool success =
-  //    FourPointsPoseFocalLengthRadialDistortion(feature_vectors, world_points,
-  //    &rotations, &translations, &radial_distortions, &focal_lengths); return
-  //    std::make_tuple(success, rotations, translations, radial_distortions,
-  //    focal_lengths);
+
+  const bool success = FourPointsPoseFocalLengthRadialDistortion(
+     feature_vectors, world_points,
+     settings.max_focal_length, settings.min_focal_length,
+     settings.max_radial_distortion, settings.min_radial_distortion,
+     &rotations, &translations, 
+     &radial_distortions, &focal_lengths); 
+
+  return std::make_tuple(
+    success, rotations, translations, 
+    radial_distortions, focal_lengths);
 }
 
 std::tuple<bool, Matrix3d> FourPointHomographyWrapper(
@@ -259,15 +321,10 @@ ProjectionMatricesFromFundamentalMatrixWrapper(const Eigen::Matrix3d fmatrix) {
 std::tuple<bool, std::vector<Matrix3d>, std::vector<Vector3d>>
 PoseFromThreePointsWrapper(const std::vector<Vector2d>& feature_points_in,
                            const std::vector<Vector3d>& points_3d_in) {
-  const Vector2d feature_point[3] = {
-      feature_points_in[0], feature_points_in[1], feature_points_in[2]};
-  const Vector3d points_3d[3] = {
-      points_3d_in[0], points_3d_in[1], points_3d_in[2]};
-
   std::vector<Matrix3d> solution_rotations;
   std::vector<Vector3d> solution_translations;
   const bool success = PoseFromThreePoints(
-      feature_point, points_3d, &solution_rotations, &solution_translations);
+      feature_points_in, points_3d_in, &solution_rotations, &solution_translations);
   return std::make_tuple(success, solution_rotations, solution_translations);
 }
 

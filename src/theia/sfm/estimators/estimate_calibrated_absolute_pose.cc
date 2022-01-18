@@ -42,6 +42,8 @@
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
 #include "theia/sfm/pose/perspective_three_point.h"
+#include "theia/sfm/pose/sqpnp.h"
+#include "theia/sfm/pose/dls_pnp.h"
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
@@ -58,8 +60,9 @@ using Eigen::Vector3d;
 class CalibratedAbsolutePoseEstimator
     : public Estimator<FeatureCorrespondence2D3D, CalibratedAbsolutePose> {
  public:
-  CalibratedAbsolutePoseEstimator() {}
+  CalibratedAbsolutePoseEstimator() : pnp_type_(PnPType::KNEIP) {}
 
+  CalibratedAbsolutePoseEstimator(const PnPType& pnp_type) : pnp_type_(pnp_type) {}
   // 3 correspondences are needed to determine the absolute pose.
   double SampleSize() const { return 3; }
 
@@ -67,21 +70,39 @@ class CalibratedAbsolutePoseEstimator
   bool EstimateModel(
       const std::vector<FeatureCorrespondence2D3D>& correspondences,
       std::vector<CalibratedAbsolutePose>* absolute_poses) const {
-    const Eigen::Vector2d features[3] = {correspondences[0].feature,
-                                         correspondences[1].feature,
-                                         correspondences[2].feature};
-    const Eigen::Vector3d world_points[3] = {correspondences[0].world_point,
-                                             correspondences[1].world_point,
-                                             correspondences[2].world_point};
+    std::vector<Eigen::Vector2d> features(3);
+    std::vector<Eigen::Vector3d> world_points(3);
+    for (int i = 0; i < 3; ++i) {
+        features[i] = correspondences[i].feature;
+        world_points[i] = correspondences[i].world_point;
+    }
 
     std::vector<Eigen::Matrix3d> rotations;
     std::vector<Eigen::Vector3d> translations;
-    if (!PoseFromThreePoints(
-            features, world_points, &rotations, &translations)) {
-      return false;
+    std::vector<Eigen::Quaterniond> quats;
+
+    if (pnp_type_ == PnPType::KNEIP) {
+        if (!PoseFromThreePoints(
+                features, world_points, &rotations, &translations)) {
+          return false;
+        }
+    } else if (pnp_type_ == PnPType::DLS) {
+        if (!DlsPnp(features, world_points, &quats, &translations)) {
+            return false;
+        }
+        for (const auto& q : quats) {
+            rotations.push_back(q.matrix());
+        }
+    } else if (pnp_type_ == PnPType::SQPnP) {
+      if (!SQPnP(features, world_points, &quats, &translations)) {
+          return false;
+      }
+      for (const auto& q : quats) {
+          rotations.push_back(q.matrix());
+      }
     }
 
-    for (int i = 0; i < rotations.size(); i++) {
+    for (size_t i = 0; i < rotations.size(); i++) {
       CalibratedAbsolutePose pose;
       pose.rotation = rotations[i];
       pose.position = -pose.rotation.transpose() * translations[i];
@@ -105,6 +126,7 @@ class CalibratedAbsolutePoseEstimator
   }
 
  private:
+  PnPType pnp_type_;
   DISALLOW_COPY_AND_ASSIGN(CalibratedAbsolutePoseEstimator);
 };
 
@@ -113,10 +135,11 @@ class CalibratedAbsolutePoseEstimator
 bool EstimateCalibratedAbsolutePose(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
+    const PnPType& pnp_type,
     const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences,
     CalibratedAbsolutePose* absolute_pose,
     RansacSummary* ransac_summary) {
-  CalibratedAbsolutePoseEstimator absolute_pose_estimator;
+  CalibratedAbsolutePoseEstimator absolute_pose_estimator(pnp_type);
   std::unique_ptr<SampleConsensusEstimator<CalibratedAbsolutePoseEstimator> >
       ransac = CreateAndInitializeRansacVariant(
           ransac_type, ransac_params, absolute_pose_estimator);

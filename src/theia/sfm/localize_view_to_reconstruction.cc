@@ -191,7 +191,7 @@ bool EstimateCameraPose(const bool known_intrinsics,
         (camera->FocalLength() * camera->FocalLength());
     CalibratedAbsolutePose pose;
     if (EstimateCalibratedAbsolutePose(
-            ransac_parameters, RansacType::RANSAC, matches, &pose, summary)) {
+            ransac_parameters, RansacType::RANSAC, PnPType::KNEIP, matches, &pose, summary)) {
       camera->SetOrientationFromRotationMatrix(pose.rotation);
       camera->SetPosition(pose.position);
       return true;

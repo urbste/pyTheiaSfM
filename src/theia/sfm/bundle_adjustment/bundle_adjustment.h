@@ -39,6 +39,7 @@
 #include <map>
 #include <unordered_set>
 #include <vector>
+#include <thread>
 
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
 #include "theia/sfm/types.h"
@@ -111,13 +112,10 @@ struct BundleAdjustmentOptions {
   bool use_homogeneous_local_point_parametrization = true;
 
   // Indicates which intrinsics should be optimized as part of bundle
-  // adjustment. By default, we do not optimize skew and aspect ratio since
-  // these are almost universally constant.
-  OptimizeIntrinsicsType intrinsics_to_optimize =
-      OptimizeIntrinsicsType::FOCAL_LENGTH |
-      OptimizeIntrinsicsType::RADIAL_DISTORTION;
+  // adjustment. Default to NONE!
+  OptimizeIntrinsicsType intrinsics_to_optimize = OptimizeIntrinsicsType::NONE;
 
-  int num_threads = 1;
+  int num_threads = std::thread::hardware_concurrency();
   int max_num_iterations = 100;
 
   // Max BA time is 1 hour.

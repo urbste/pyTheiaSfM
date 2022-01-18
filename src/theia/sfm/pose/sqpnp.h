@@ -1,4 +1,19 @@
-// Copyright (C) 2013 The Regents of the University of California (Regents).
+//
+// sqpnp.h
+//
+// George Terzakis (terzakig-at-hotmail-dot-com), September 2020
+// Nearest orthogonal approximation code (C) 2019 Manolis Lourakis
+//
+// Implementation of SQPnP as described in the paper:
+//
+// "A Consistently Fast and Globally Optimal Solution to the Perspective-n-Point
+// Problem" by G. Terzakis and M. Lourakis
+//  	 a) Paper:
+//  http://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460.pdf
+//       b) Supplementary:
+//       https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460.pdf
+
+// Copyright (C) 2022 Steffen Urban.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,34 +45,33 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 // Please contact the author of this library if you have any questions.
-// Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
+// Author: Steffen Urban (urbste@googlemail.com)
 
-#ifndef THEIA_SFM_POSE_PERSPECTIVE_THREE_POINT_H_
-#define THEIA_SFM_POSE_PERSPECTIVE_THREE_POINT_H_
+#ifndef THEIA_SFM_POSE_SQPNP_H_
+#define THEIA_SFM_POSE_SQPNP_H_
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <vector>
 
 namespace theia {
-// Computes camera pose using the three point algorithm and returns all possible
-// solutions (up to 4). Follows steps from the paper "A Novel Parameterization
-// of the Perspective-Three-Point Problem for a direct computation of Absolute
-// Camera position and Orientation" by Kneip et. al.
+// Computes the camera pose using the Perspective N-point method from "A
+// Consistently Fast and Globally Optimal Solution to the Perspective-n-Point
+// Problem" by G. Terzakis and M. Lourakis
 //
 // Params:
-//   feature_point: Feature points corresponding to model points. NOTE: these
-//     points should be calibrated with the camera intrinsics as opposed to raw
-//     pixel coordinates.
+//   feature_position: Feature positions corresponding to model points. Must
+//     contain at least 3 points.
 //   points_3d: 3D location of features. Must correspond to the image_ray
-//     of the same index.
-//   solution_rotations: the rotation matrix of the candidate solutions
+//     of the same index. Must contain the same number of points as image_ray,
+//     and at least 3.
+//   solution_rotation: the rotation quaternion of the candidate solutions
 //   solution_translation: the translation of the candidate solutions
-// Return: the number of poses computed.
-bool PoseFromThreePoints(const std::vector<Eigen::Vector2d>& feature_point,
-                         const std::vector<Eigen::Vector3d>& world_point,
-                         std::vector<Eigen::Matrix3d>* solution_rotations,
-                         std::vector<Eigen::Vector3d>* solution_translations);
+bool SQPnP(const std::vector<Eigen::Vector2d>& feature_positions,
+           const std::vector<Eigen::Vector3d>& world_points,
+           std::vector<Eigen::Quaterniond>* solution_rotation,
+           std::vector<Eigen::Vector3d>* solution_translation);
 
 }  // namespace theia
 
-#endif  // THEIA_SFM_POSE_PERSPECTIVE_THREE_POINT_H_
+#endif  // THEIA_SFM_POSE_SQPNP_H_

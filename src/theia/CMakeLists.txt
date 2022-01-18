@@ -189,6 +189,8 @@ set(THEIA_SRC
   sfm/pose/seven_point_fundamental_matrix.cc
   sfm/pose/sim_transform_partial_rotation.cc
   sfm/pose/six_point_radial_distortion_homography.cc
+  sfm/pose/sqpnp.cc
+  sfm/pose/sqpnp_helper.cc
   sfm/pose/test_util.cc
   sfm/pose/three_point_relative_pose_partial_rotation.cc
   sfm/pose/two_point_pose_partial_rotation.cc
@@ -342,7 +344,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/camera/pinhole_radial_tangential_camera_model)
 #  gtest(sfm/camera/projection_matrix_utils)
 #  gtest(sfm/estimators/estimate_absolute_pose_with_known_orientation)
-#  gtest(sfm/estimators/estimate_calibrated_absolute_pose)
+  gtest(sfm/estimators/estimate_calibrated_absolute_pose)
 #  gtest(sfm/estimators/estimate_dominant_plane_from_points)
 #  gtest(sfm/estimators/estimate_essential_matrix)
 #  gtest(sfm/estimators/estimate_fundamental_matrix)
@@ -396,6 +398,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/seven_point_fundamental_matrix)
 #  gtest(sfm/pose/sim_transform_partial_rotation)
 #  gtest(sfm/pose/six_point_radial_distortion_homography)
+  gtest(sfm/pose/sqpnp)
 #  gtest(sfm/pose/three_point_relative_pose_partial_rotation)
 #  gtest(sfm/pose/two_point_pose_partial_rotation)
 #  gtest(sfm/pose/upnp)
