@@ -293,10 +293,12 @@ double RobustRotationEstimator::ComputeAverageStepSize() {
   return delta_V / numVertices;
 }
 
-bool RobustRotationEstimator::EstimateRotationsWrapper(
+std::unordered_map<ViewId, Eigen::Vector3d> RobustRotationEstimator::EstimateRotationsWrapper(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     std::unordered_map<ViewId, Eigen::Vector3d>& init_global_orientations) {
-    return EstimateRotations(view_pairs, &init_global_orientations);
+    
+    EstimateRotations(view_pairs, &init_global_orientations);
+    return init_global_orientations;
 }
 
 void RobustRotationEstimator::SetFixedGlobalRotations(const std::set<ViewId>& fixed_views) {

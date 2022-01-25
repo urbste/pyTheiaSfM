@@ -1489,8 +1489,8 @@ void pytheia_sfm_classes(py::module& m) {
   // Global Position Estimators
   py::class_<theia::LinearPositionEstimator, theia::PositionEstimator>(
       m, "LinearPositionEstimator")
-      .def(py::init<theia::LinearPositionEstimator::Options,
-                    theia::Reconstruction>())
+      .def(py::init<const theia::LinearPositionEstimator::Options&,
+                    const theia::Reconstruction&>())
       .def("EstimatePositions",
            &theia::LinearPositionEstimator::EstimatePositionsWrapper);
 
@@ -1510,8 +1510,8 @@ void pytheia_sfm_classes(py::module& m) {
 
   py::class_<theia::NonlinearPositionEstimator, theia::PositionEstimator>(
       m, "NonlinearPositionEstimator")
-      .def(py::init<theia::NonlinearPositionEstimator::Options,
-                    theia::Reconstruction>())
+      .def(py::init<const theia::NonlinearPositionEstimator::Options&,
+                    const theia::Reconstruction&>())
       .def("EstimatePositions",
            &theia::NonlinearPositionEstimator::EstimatePositionsWrapper)
       .def("EstimateRemainingPositionsInRecon",
@@ -1547,8 +1547,8 @@ void pytheia_sfm_classes(py::module& m) {
 
   py::class_<theia::LiGTPositionEstimator, theia::PositionEstimator>(
       m, "LiGTPositionEstimator")
-      .def(py::init<theia::LiGTPositionEstimator::Options,
-                    theia::Reconstruction>())
+      .def(py::init<const theia::LiGTPositionEstimator::Options&,
+                    const theia::Reconstruction&>())
       .def("EstimatePositions",
            &theia::LiGTPositionEstimator::EstimatePositionsWrapper);
 
@@ -1571,7 +1571,7 @@ void pytheia_sfm_classes(py::module& m) {
   // Global Rotation Estimators
   py::class_<theia::RobustRotationEstimator, theia::RotationEstimator>(
       m, "RobustRotationEstimator")
-      .def(py::init<theia::RobustRotationEstimator::Options>())
+      .def(py::init<const theia::RobustRotationEstimator::Options&>())
       .def("EstimateRotations",
            &theia::RobustRotationEstimator::EstimateRotationsWrapper)
       .def("AddRelativeRotationConstraint",

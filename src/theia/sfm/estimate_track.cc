@@ -212,8 +212,10 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
   static const int kMinNumObservationsForTriangulation = 2;
 
   Track* track = reconstruction_->MutableTrack(track_id);
-  CHECK(!track->IsEstimated())
-      << "Track " << track_id << " is already estimated.";
+  if (track->IsEstimated()) {
+    std::cout<<"Track "<<track_id<<" is already estimated.\n";
+    return true;
+  }      
 
   // Gather projection matrices and features.
   std::vector<ViewId> view_ids;

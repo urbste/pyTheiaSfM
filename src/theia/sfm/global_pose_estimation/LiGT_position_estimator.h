@@ -47,9 +47,9 @@
 #include "theia/sfm/types.h"
 #include "theia/sfm/view_triplet.h"
 #include "theia/util/util.h"
+#include "theia/sfm/reconstruction.h"
 
 namespace theia {
-class Reconstruction;
 class TwoViewInfo;
 class View;
 
@@ -132,7 +132,7 @@ class LiGTPositionEstimator : public PositionEstimator {
       std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
   const Options options_;
-  const Reconstruction& reconstruction_;
+  const theia::Reconstruction& reconstruction_;
   const std::unordered_map<ViewIdPair, TwoViewInfo>* view_pairs_;
   const std::unordered_map<ViewId, Eigen::Vector3d>* orientations_;
 
