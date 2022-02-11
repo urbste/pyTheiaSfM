@@ -173,7 +173,6 @@ bool EstimateTwoViewInfoCalibrated(
                             &summary)) {
     return false;
   }
-
   AngleAxisd rotation(relative_pose.rotation);
 
   // Set the twoview info.

@@ -103,6 +103,11 @@ class NonlinearPositionEstimator : public PositionEstimator {
      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs_sub_recon,
      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
+  std::pair<bool, std::unordered_map<ViewId, Eigen::Vector3d>> EstimateRemainingPositionsInReconWrapper(
+    const std::set<ViewId>& fixed_views,
+    const std::unordered_set<ViewId>& views_in_subrecon,
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs_sub_recon);
+
   // Set view ids fixed
   void SetViewsFixed(const std::vector<ViewId>& fixed_views);
 

@@ -115,17 +115,22 @@ bool NonlinearPositionEstimator::EstimateRemainingPositionsInRecon(
   // get last view id as we assume sequential processing
   for (auto& v_id : view_ids) {
       orientations[v_id] = sub_reconstruction.View(v_id)->Camera().GetOrientationAsAngleAxis();
-      if (fixed_views.find(v_id) != fixed_views.end()) {
-          (*positions)[v_id] = sub_reconstruction.View(v_id)->Camera().GetPosition();
-      } else {
-          (*positions)[v_id] = sub_reconstruction.View(v_id)->Camera().GetPosition();sub_reconstruction.View(*fixed_views.end())->Camera().GetPosition();
-      }
+      (*positions)[v_id] = sub_reconstruction.View(v_id)->Camera().GetPosition();
   }
 
   // assigning fixed views
   fixed_views_ = fixed_views;
 
   return EstimatePositions(view_pairs_sub_recon, orientations, positions);
+}
+
+std::pair<bool, std::unordered_map<ViewId, Eigen::Vector3d>> NonlinearPositionEstimator::EstimateRemainingPositionsInReconWrapper(
+    const std::set<ViewId>& fixed_views,
+    const std::unordered_set<ViewId>& views_in_subrecon,
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs_sub_recon) {
+  std::unordered_map<ViewId, Eigen::Vector3d> positions;
+  bool success = EstimateRemainingPositionsInRecon(fixed_views, views_in_subrecon, view_pairs_sub_recon, &positions);
+  return std::make_pair(success, positions);
 }
 
 bool NonlinearPositionEstimator::EstimatePositions(
@@ -273,12 +278,13 @@ void NonlinearPositionEstimator::AddPointToCameraConstraints(
     // if track is estimated
     if (track.second) {
         triangulated_points_[track.first] = reconstruction_.Track(track.first)->Point().hnormalized();
+
+        AddTrackToProblem(
+          track.first, orientations, point_to_camera_weight, positions);
     } else {
         triangulated_points_[track.first] = 100.0 * rng_->RandVector3d();
     }
 
-    AddTrackToProblem(
-        track.first, orientations, point_to_camera_weight, positions);
   }
 
   VLOG(2) << num_point_to_camera_constraints

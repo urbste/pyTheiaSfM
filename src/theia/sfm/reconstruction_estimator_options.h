@@ -42,6 +42,7 @@
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
+#include "theia/sfm/estimate_track.h"
 #include "theia/util/random.h"
 
 namespace theia {
@@ -224,6 +225,9 @@ struct ReconstructionEstimatorOptions {
 
   // Bundle adjust a track immediately after estimating it.
   bool bundle_adjust_tracks = true;
+
+  // Bundle adjust a track immediately after estimating it.
+  TriangulationMethodType triangulation_method = TriangulationMethodType::MIDPOINT;
 
   // --------------- Bundle Adjustment Options --------------- //
 

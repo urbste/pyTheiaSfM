@@ -63,6 +63,7 @@ void GatherCameras(const Reconstruction& reconstruction,
   for (const ViewId view_id : reconstruction.ViewIds()) {
     const View& view = *reconstruction.View(view_id);
     if (!view.IsEstimated()) {
+      std::cout<<"View not estimated?"<<"\n";
       continue;
     }
     points_to_write->emplace_back(view.Camera().GetPosition());

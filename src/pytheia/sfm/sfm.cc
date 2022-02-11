@@ -1233,6 +1233,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite(
           "bundle_adjust_tracks",
           &theia::ReconstructionEstimatorOptions::bundle_adjust_tracks)
+      .def_readwrite(
+          "triangulation_method",
+          &theia::ReconstructionEstimatorOptions::triangulation_method)
       .def_readwrite("num_retriangulation_iterations",
                      &theia::ReconstructionEstimatorOptions::
                          num_retriangulation_iterations)
@@ -1515,7 +1518,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("EstimatePositions",
            &theia::NonlinearPositionEstimator::EstimatePositionsWrapper)
       .def("EstimateRemainingPositionsInRecon",
-           &theia::NonlinearPositionEstimator::EstimateRemainingPositionsInRecon);
+           &theia::NonlinearPositionEstimator::EstimateRemainingPositionsInReconWrapper);
 
   py::class_<theia::LeastUnsquaredDeviationPositionEstimator::Options>(
       m, "LeastUnsquaredDeviationPositionEstimatorOptions")

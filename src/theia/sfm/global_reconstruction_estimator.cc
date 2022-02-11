@@ -67,6 +67,7 @@
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/random.h"
 #include "theia/util/timer.h"
+#include "theia/io/write_ply_file.h"
 
 namespace theia {
 
@@ -223,7 +224,8 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
   // Set the poses in the reconstruction object.
   SetReconstructionFromEstimatedPoses(
       orientations_, positions_, reconstruction_);
-
+  Eigen::Vector3i col(255,0,0);
+  WritePlyFile("test.ply", *reconstruction_, col, 1);
   // Always triangulate once, then retriangulate and remove outliers depending
   // on the reconstruciton estimator options.
   for (int i = 0; i < options_.num_retriangulation_iterations + 1; i++) {
@@ -453,6 +455,7 @@ void GlobalReconstructionEstimator::EstimateStructure() {
   TrackEstimator::Options triangulation_options;
   triangulation_options.max_acceptable_reprojection_error_pixels =
       options_.triangulation_max_reprojection_error_in_pixels;
+  std::cout<<"options_.triangulation_max_reprojection_error_in_pixels: "<<options_.triangulation_max_reprojection_error_in_pixels<<"\n";
   triangulation_options.min_triangulation_angle_degrees =
       options_.min_triangulation_angle_degrees;
   triangulation_options.bundle_adjustment = options_.bundle_adjust_tracks;
@@ -460,6 +463,7 @@ void GlobalReconstructionEstimator::EstimateStructure() {
   triangulation_options.ba_options.num_threads = 1;
   triangulation_options.ba_options.verbose = false;
   triangulation_options.num_threads = options_.num_threads;
+  triangulation_options.triangulation_method = options_.triangulation_method;
   TrackEstimator track_estimator(triangulation_options, reconstruction_);
   const TrackEstimator::Summary summary = track_estimator.EstimateAllTracks();
 }
