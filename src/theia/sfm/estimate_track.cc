@@ -62,7 +62,6 @@ void GetObservationsFromTrackViews(
     std::vector<Eigen::Vector2d>* features,
     std::vector<Eigen::Vector3d>* origins,
     std::vector<Matrix3x4d>* proj_matrices,
-    std::vector<Eigen::Vector2d>* normalized_features,
     std::vector<Eigen::Vector3d>* ray_directions) {
   const Track* track = reconstruction.Track(track_id);
   for (const ViewId view_id : track->ViewIds()) {
@@ -83,9 +82,7 @@ void GetObservationsFromTrackViews(
     view_ids->emplace_back(view_id);
     origins->emplace_back(view->Camera().GetPosition());
     Matrix3x4d proj_mat;
-    proj_mat.block<3,3>(0,0) = view->Camera().GetOrientationAsRotationMatrix();
-    proj_mat.block<3,1>(0,3) = -proj_mat.block<3,3>(0,0) * view->Camera().GetPosition();
-    normalized_features->emplace_back(image_ray.hnormalized());
+    view->Camera().GetProjectionMatrix(&proj_mat);
     proj_matrices->emplace_back(proj_mat);
     ray_directions->emplace_back(image_ray);
   }
@@ -219,7 +216,7 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
 
   // Gather projection matrices and features.
   std::vector<ViewId> view_ids;
-  std::vector<Eigen::Vector2d> features, normalized_features;
+  std::vector<Eigen::Vector2d> features;
   std::vector<Eigen::Vector3d> origins, ray_directions;
   std::vector<Matrix3x4d> norm_proj_matrices;
   GetObservationsFromTrackViews(track_id,
@@ -228,7 +225,6 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
                                 &features,
                                 &origins,
                                 &norm_proj_matrices,
-                                &normalized_features,
                                 &ray_directions);
 
   // Check the angle between views.
@@ -241,7 +237,7 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
 
   // Triangulate the track
   if (options_.triangulation_method == TriangulationMethodType::SVD) {
-    if (!TriangulateNViewSVD(norm_proj_matrices, normalized_features,
+    if (!TriangulateNViewSVD(norm_proj_matrices, features,
     track->MutablePoint())) {
       ++num_failed_triangulations_;
       return false;
@@ -252,7 +248,7 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
         return false;
       }
   } else if (options_.triangulation_method == TriangulationMethodType::L2_MINIMIZATION) {
-      if (!TriangulateNView(norm_proj_matrices, normalized_features, track->MutablePoint())) {
+      if (!TriangulateNView(norm_proj_matrices, features, track->MutablePoint())) {
         ++num_failed_triangulations_;
         return false;
       }

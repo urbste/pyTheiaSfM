@@ -51,7 +51,7 @@ enum class CameraIntrinsicsModelType {
   FOV = 3,
   DIVISION_UNDISTORTION = 4,
   DOUBLE_SPHERE = 5,
-  EXTENDED_UNIFIED
+  EXTENDED_UNIFIED = 6
 };
 
 // Converts an input string to the corresponding camera intrinsics model type.

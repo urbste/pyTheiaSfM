@@ -1,14 +1,13 @@
 
-pyTheia - A Python Structure-from-Motion and Geometric Vision Library
+pyTheia - A Python Structure-from-Motion and Geometric Vision Swiss Knife
 ---------------------
 
 pyTheia is based on [TheiaSfM](http://www.theia-sfm.org).
-It contains Python bindings for most of the functionalities of TheiaSfM.
+It contains Python bindings for most of the functionalities of TheiaSfM and more.
 
 **The library is still in active development and the interfaces are not yet all fixed**
 
 With pyTheia you have access to a variety of different camera models, structure-from-motion pipelines and geometric vision algorithms.
-
 
 # Differences to the original library TheiaSfM
 pyTheia does not aim at being an end-to-end SfM library. For example, building robust feature detection and matching pipelines is usually application and data specific (e.g. image resolution, runtime, pose priors, invariances, ...). This includes image pre- and postprocessing. 
@@ -23,45 +22,165 @@ Hence, we removed some libaries from the original TheiaSfM:
 * RapidJSON: Camera intrinsic in and output. Is part of cereal headers anyways
 * RocksDB: Used for saving and loading extracted features efficiently
 
-## What was added
+## Changes to the original TheiaSfM library
+
+* Absolute Pose solvers
+  * SQPnP
+  * 
+* Global SfM algorithms:
+  * LiGT position solver
+  * Lagrange Dual rotation estimator
+  * Hybrid rotation estimator
+  * Possibility to fix multiple views in Robust_L1L2 solver
+  * Nonlinear translation solver can fix multiple view or estimate all remaining views in reconstruction
+* Camera models
+  * Double Sphere
+  * Extended Unified
+* Bundle adjustment
+  * Using a homogeneous representation for scene points
+  * Extracting covariance information
+  * Possibility to add a depth prior to 3D points
+  * Position prior for camera poses (e.g. for GPS or known positions)
+* General
+  * Added timestamp variable to View class
+  * 
 
 ## Examples
 
-### Create a camera
+
+
+### Creating a camera
+The following example show you how to create a camera in pyTheia.
+You can construct it from a pt.sfm.CameraIntrinsicsPrior() or set all parameters using respective functions from pt.sfm.Camera() class.
 ``` Python
 import pytheia as pt
 prior = pt.sfm.CameraIntrinsicsPrior()
-prior.focal_length.value = [focal_length]
-prior.aspect_ratio.value = [aspect_ratio]
-prior.principal_point.value = [cx, cy]
-prior.radial_distortion.value = [k1, k2, k3, 0]
-prior.tangential_distortion.value = [p1, p2]
+prior.focal_length.value = [1000.]
+prior.aspect_ratio.value = [1.]
+prior.principal_point.value = [500., 500.]
+prior.radial_distortion.value = [0., 0., 0., 0]
+prior.tangential_distortion.value = [0., 0.]
 prior.skew.value = [0]
-prior.camera_intrinsics_model_type = 'PINHOLE_RADIAL_TANGENTIAL' 
+prior.camera_intrinsics_model_type = 'PINHOLE' 
 #'PINHOLE', 'DOUBLE_SPHERE', 'EXTENDED_UNIFIED', 'FISHEYE', 'FOV', 'DIVISION_UNDISTORTION'
-camera = pt.sfm.Camera(pt.sfm.CameraIntrinsicsModelType(1))
+camera = pt.sfm.Camera()
 camera.SetFromCameraIntrinsicsPriors(prior)
+
+# the camera object also carries extrinsics information
+camera.Position = [0,0,-2]
+camera.SetOrientationFromAngleAxis([0,0,0.1])
+
+# project with intrinsics image to camera coordinates
+camera_intrinsics = camera.CameraIntrinsics()
+pt2 = [100.,100.]
+pt3 = camera_intrinsics.ImageToCameraCoordinates(pt2)
+pt2 = camera_intrinsics.CameraToImageCoordinates(pt3)
+
+# project with camera extrinsics
+pt3_h = [1,1,2,1] # homogeneous 3d point
+depth, pt2 = camera.ProjectPoint(pt3_h)
+# get a ray from camera to 3d point in the world frame
+ray = camera.PixelToUnitDepthRay(pt2)
+pt3_h_ = ray*depth + camera.Position # == pt3_h[:3]
 ```
 
 ### Solve for absolute or relative camera pose
+pyTheia integrates a lot of perfomant geometric vision algorithms. 
+Have a look at the [tests](pytest/sfm)
 ``` Python
 import pytheia as pt
 
 # absolute pose
-pose = pt.sfm.PoseFromThreePoints(pts2D, pts3D)
+pose = pt.sfm.PoseFromThreePoints(pts2D, pts3D) # Kneip
 pose = pt.sfm.FourPointsPoseFocalLengthRadialDistortion(pts2D, pts3D)
 pose = pt.sfm.FourPointPoseAndFocalLength(pts2D, pts3D)
 pose = pt.sfm.DlsPnp(pts2D, pts3D)
+... and more
 
 # relative pose
 pose = pt.sfm.NormalizedEightPointFundamentalMatrix(pts2D, pts2D)
 pose = pt.sfm.FourPointHomography(pts2D, pts2D)
 pose = pt.sfm.FivePointRelativePose(pts2D, pts2D)
 pose = pt.sfm.SevenPointFundamentalMatrix(pts2D, pts2D)
+... and more
+
+# ransac estimation
+params = pt.solvers.RansacParameters()
+params.error_thresh = 0.1
+params.max_iterations = 100
+params.failure_probability = 0.01
+
+# absolute pose ransac
+correspondences2D3D = pt.matching.FeatureCorrespondence2D3D(
+  pt.sfm.Feature(point1), pt.sfm.Feature(point2))
+
+pnp_type =  pt.sfm.PnPType.DLS #  pt.sfm.PnPType.SQPnP,  pt.sfm.PnPType.KNEIP
+success, abs_ori, summary = pt.sfm.EstimateCalibratedAbsolutePose(
+  params, pt.sfm.RansacType(0), pnp_type, correspondences2D3D)
+
+success, abs_ori, summary = pt.sfm.EstimateAbsolutePoseWithKnownOrientation(
+  params, pt.sfm.RansacType(0), correspondences2D3D)
+
+success, abs_ori, summary = pt.sfm.EstimateAbsolutePoseWithKnownOrientation(
+  params, pt.sfm.RansacType(0), correspondences2D3D)
+... and more
+# relative pose ransac
+correspondences2D2D = pt.matching.FeatureCorrespondence(
+            pt.sfm.Feature(point1), pt.sfm.Feature(point2))
+
+success, rel_ori, summary = pt.sfm.EstimateRelativePose(
+        params, pt.sfm.RansacType(0), correspondences2D2D)
+
+success, rad_homog, summary = pt.sfm.EstimateRadialHomographyMatrix(
+        params, pt.sfm.RansacType(0), correspondences2D2D)  
+
+success, rad_homog, summary = pt.sfm.EstimateFundamentalMatrix(
+        params, pt.sfm.RansacType(0), correspondences2D2D)  
+... and more
 ```
 
-### Create a reconstruction
-Have a look at the example: sfm_pipeline.py
+### Bundle Adjustment of views or points
+``` Python
+import pytheia as pt
+recon = pt.sfm.Reconstruction()
+# add some views and points
+veiw_id = recon.AddView() 
+...
+track_id = recon.AddTrack()
+...
+covariance = np.eye(2) * 0.5**2
+point = [200,200]
+recon.AddObservation(track_id, view_id, pt.sfm.Feature(point, covariance))
+
+# robust BA
+opts = pt.sfm.BundleAdjustmentOptions()
+opts.robust_loss_width = 1.345
+opts.loss_function_type = pt.sfm.LossFunctionType.HUBER
+
+res = BundleAdjustReconstruction(opts, recon)
+res = BundleAdjustPartialReconstruction(opts, {view_ids}, {track_ids}, recon)
+res = BundleAdjustPartialViewConstant(opts, {var_view_ids}, {const_view_ids}, recon)
+
+# optimize absolute pose on normalized 2D 3D correspondences
+res = pt.sfm.OptimizeAbsolutePoseOnNormFeatures(
+  [pt.sfm.FeatureCorrespondence2D3D], R_init, p_init, opts)
+
+# bundle camera adjust pose only
+res = BundleAdjustView(recon, opts, view_id)
+res = BundleAdjustViewWithCov(recon, view_id)
+res = BundleAdjustViewsWithCov(recon, opts, [view_id1,view_id2])
+
+# optimize structure only
+res = BundleAdjustTrack(recon, opts, trackid)
+res = BundleAdjustTrackWithCov(recon, opts, [view_id1,view_id2])
+res = BundleAdjustTracksWithCov(recon, opts, [view_id1,trackid])
+
+# two view optimization
+res = BundleAdjustTwoViewsAngular(recon, [pt.sfm.FeatureCorrespondence], pt.sfm.TwoViewInfo())
+```
+
+### Reconstruction example: Global, Hybrid or Incremental SfM using OpenCV feature detection and matching
+Have a look at the short example: [sfm_pipeline.py](src/pytheia/sfm_pipeline.py)
 ``` Python
 import pytheia as pt
 # use your favourite Feature extractor matcher 
@@ -75,11 +194,6 @@ success, twoview_info, inlier_indices = pt.sfm.EstimateTwoViewInfo(options, prio
 # ... get filtered feature correspondences and add them to the reconstruction
 correspondences = pt.matching.FeatureCorrespondence(
             pt.sfm.Feature(point1), pt.sfm.Feature(point2))
-imagepair_match = pt.matching.ImagePairMatch()
-imagepair_match.image1 = img1_name
-imagepair_match.image2 = img2_name
-imagepair_match.twoview_info = twoview_info
-imagepair_match.correspondences = correspondences
 for i in range(len(verified_matches)):
   track_builder.AddFeatureCorrespondence(view_id1, correspondences[i].feature1, 
                                          view_id2, correspondences[i].feature2)
@@ -88,7 +202,7 @@ for i in range(len(verified_matches)):
 track_builder.BuildTracks(recon)
 
 ptions = pt.sfm.ReconstructionEstimatorOptions()
-options.num_threads = 7
+options.num_threads = 4
 options.rotation_filtering_max_difference_degrees = 10.0
 options.bundle_adjustment_robust_loss_width = 3.0
 options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
@@ -144,12 +258,13 @@ make -j && make install
 ## How to build Python wheels
 
 ### Local build
+Tested on Ubuntu.
 ```bash
 python setup.py bdist_wheel
 ```
 
-### With docker
-The docker build will actually build manylinux wheels. (Python 3.5-3.9)
+### With Docker
+The docker build will actually build manylinux wheels for Linux (Python 3.5-3.9)
 ```bash
 docker build -t pytheia:0.1 .
 docker run -it pytheia:0.1

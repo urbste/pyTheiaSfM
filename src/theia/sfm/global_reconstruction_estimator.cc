@@ -224,8 +224,7 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
   // Set the poses in the reconstruction object.
   SetReconstructionFromEstimatedPoses(
       orientations_, positions_, reconstruction_);
-  Eigen::Vector3i col(255,0,0);
-  WritePlyFile("test.ply", *reconstruction_, col, 1);
+
   // Always triangulate once, then retriangulate and remove outliers depending
   // on the reconstruciton estimator options.
   for (int i = 0; i < options_.num_retriangulation_iterations + 1; i++) {
@@ -455,7 +454,6 @@ void GlobalReconstructionEstimator::EstimateStructure() {
   TrackEstimator::Options triangulation_options;
   triangulation_options.max_acceptable_reprojection_error_pixels =
       options_.triangulation_max_reprojection_error_in_pixels;
-  std::cout<<"options_.triangulation_max_reprojection_error_in_pixels: "<<options_.triangulation_max_reprojection_error_in_pixels<<"\n";
   triangulation_options.min_triangulation_angle_degrees =
       options_.min_triangulation_angle_degrees;
   triangulation_options.bundle_adjustment = options_.bundle_adjust_tracks;
