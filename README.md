@@ -18,15 +18,13 @@ For example SOTA feature detection & matching, place recognition algorithms are 
 ## What was removed
 Hence, we removed some libaries from the original TheiaSfM:
 * SuiteSparse: Optional for ceres, however all GPL related code was removed from src/math/matrix/sparse_cholesky_llt.cc (cholmod -> Eigen::SimplicialLDLT). This will probably be slower on large problems and potentially numerically a bit more unstable.
-* OpenImageIO: was used for image in and output and for recitification
-* RapidJSON: Camera intrinsic in and output. Is part of cereal headers anyways
-* RocksDB: Used for saving and loading extracted features efficiently
+* OpenImageIO: was used for image in and output and for recitification.
+* RapidJSON: Camera intrinsic in and output. Is part of cereal headers anyways.
+* RocksDB: Used for saving and loading extracted features efficiently.
 
 ## Changes to the original TheiaSfM library
 
-* Absolute Pose solvers
-  * SQPnP
-  * 
+
 * Global SfM algorithms:
   * LiGT position solver
   * Lagrange Dual rotation estimator
@@ -42,12 +40,14 @@ Hence, we removed some libaries from the original TheiaSfM:
   * Possibility to add a depth prior to 3D points
   * Position prior for camera poses (e.g. for GPS or known positions)
 * General
-  * Added timestamp variable to View class
-  * 
+  * Added timestamp, position_prior_, position_prior_sqrt_information_ variables to **View** class
+  Eigen::Matrix3d position_prior_sqrt_information_;
+  * Added inverse_depth_, reference_descriptor, reference_bearing_ variables to **Track** class
+  * Added covariance_, depth_prior_, depth_prior_variance_ to **Feature** class
+* Absolute Pose solvers
+  * SQPnP
 
-## Examples
-
-
+## Usage Examples
 
 ### Creating a camera
 The following example show you how to create a camera in pyTheia.
@@ -85,7 +85,7 @@ pt3_h_ = ray*depth + camera.Position # == pt3_h[:3]
 ```
 
 ### Solve for absolute or relative camera pose
-pyTheia integrates a lot of perfomant geometric vision algorithms. 
+pyTheia integrates a lot of performant geometric vision algorithms. 
 Have a look at the [tests](pytest/sfm)
 ``` Python
 import pytheia as pt
@@ -117,9 +117,6 @@ correspondences2D3D = pt.matching.FeatureCorrespondence2D3D(
 pnp_type =  pt.sfm.PnPType.DLS #  pt.sfm.PnPType.SQPnP,  pt.sfm.PnPType.KNEIP
 success, abs_ori, summary = pt.sfm.EstimateCalibratedAbsolutePose(
   params, pt.sfm.RansacType(0), pnp_type, correspondences2D3D)
-
-success, abs_ori, summary = pt.sfm.EstimateAbsolutePoseWithKnownOrientation(
-  params, pt.sfm.RansacType(0), correspondences2D3D)
 
 success, abs_ori, summary = pt.sfm.EstimateAbsolutePoseWithKnownOrientation(
   params, pt.sfm.RansacType(0), correspondences2D3D)
@@ -220,7 +217,6 @@ recon_sum = reconstruction_estimator.Estimate(view_graph, recon)
 pt.io.WritePlyFile("test.ply", recon, [255,0,0],2)
 pt.io.WriteReconstruction(recon, "reconstruction_file")
 ```
-
 
 ## Building
 This section describes how to build on Ubuntu locally or on WSL2 both with sudo rights.
