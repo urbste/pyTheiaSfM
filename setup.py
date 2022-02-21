@@ -61,16 +61,16 @@ create_package()
 
 setuptools.setup(
     name='pytheia',
-    version='0.1.0',
-    description='A Structure from Motion library',
+    version='0.1.1',
+    description='A performant Structure from Motion library for Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/urbste/TheiaSfM.git',
     project_urls={
         "Documentation": "http://theia-sfm.org/",
     },
-    author='Shengyu Yin',
-    author_email = "shengyu952014@outlook.com",
+    author='Steffen Urban, Shengyu Yin',
+    author_email = "urbste@googlemail.com, shengyu952014@outlook.com",
     license='BSD',
     packages=setuptools.find_packages(where='src'),
     include_package_data=True,
