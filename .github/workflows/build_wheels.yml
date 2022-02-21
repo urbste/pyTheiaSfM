@@ -28,11 +28,12 @@ jobs:
         sudo docker run --rm -e PYTHON_VERSION=${{ matrix.pyversion }} -v `pwd`:/home urbste/pytheia_base:1.0.1 /home/pypackage/build-wheel-linux.sh
         # cleanup for custom runner
         sudo chown -R $(whoami):$(whoami) .
-    - name: Publish distribution 📦 to Test PyPI
+    - name: Publish distribution to Test PyPI
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
         repository_url: https://test.pypi.org/legacy/
+        packages_dir: wheelhouse/
     # - name: Archive wheels
     #   uses: actions/upload-artifact@v2
     #   with:
