@@ -6,6 +6,10 @@ desktop_build/
 *.ply
 nose/
 nose-*
+auditwheel/
+auditwheel-*
+pyelf*
+elftools*
 
 *.ply
 *.json

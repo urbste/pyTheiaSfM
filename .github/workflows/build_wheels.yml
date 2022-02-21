@@ -25,14 +25,14 @@ jobs:
         submodules: recursive
     - name: Build the Linux wheels
       run: |
-        sudo docker run --rm -v `pwd`:/home urbste/pytheia_base:1.0.1 /home/pypackage/build-wheels-linux.sh
+        sudo docker run --rm -e PYTHON_VERSION=${{ matrix.pyversion }} -v `pwd`:/home urbste/pytheia_base:1.0.1 /home/pypackage/build-wheel-linux.sh
         # cleanup for custom runner
         sudo chown -R $(whoami):$(whoami) .
     - name: Archive wheels
       uses: actions/upload-artifact@v2
       with:
-        name: pytheia-${{ matrix.pyversion }}-manylinux_2_17_x86_64.manylinux2014_x86_64
-        path: wheelhouse/pytheia-*-${{ matrix.pyversion }}-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+        name: pytheia-${{ matrix.pyversion }}-manylinux2014_x86_64
+        path: wheelhouse/pytheia-*-${{ matrix.pyversion }}-manylinux2014_x86_64.whl
 
 
 
