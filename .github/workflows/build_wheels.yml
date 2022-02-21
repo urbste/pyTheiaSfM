@@ -28,32 +28,14 @@ jobs:
         sudo docker run --rm -e PYTHON_VERSION=${{ matrix.pyversion }} -v `pwd`:/home urbste/pytheia_base:1.0.1 /home/pypackage/build-wheel-linux.sh
         # cleanup for custom runner
         sudo chown -R $(whoami):$(whoami) .
-    - name: Archive wheels
-      uses: actions/upload-artifact@v2
+    - name: Publish distribution 📦 to Test PyPI
+      uses: pypa/gh-action-pypi-publish@master
       with:
-        name: pytheia-${{ matrix.pyversion }}-manylinux2014_x86_64
-        path: wheelhouse/pytheia-*-${{ matrix.pyversion }}-manylinux2014_x86_64.whl
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/
+    # - name: Archive wheels
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: pytheia-${{ matrix.pyversion }}-manylinux2014_x86_64
+    #     path: wheelhouse/pytheia-*-${{ matrix.pyversion }}-manylinux2014_x86_64.whl
 
-
-
-  # pypi-publish:
-  #   name: Publish wheels to PyPI
-  #   needs: [linux-build]
-  #   runs-on: ubuntu-latest
-  #   # We publish the wheel to pypi when a new tag is pushed,
-  #   # either by creating a new GitHub release or explictly with `git tag`
-  #   if: ${{ github.event_name == 'release' || startsWith(github.ref, 'refs/tags') }}
-  #   steps:
-  #   - name: Download wheels
-  #     uses: actions/download-artifact@v2
-  #     with:
-  #       path: ./artifacts/
-  #   - name: Move wheels
-  #     run: mkdir ./wheelhouse && mv ./artifacts/**/*.whl ./wheelhouse/
-  #   - name: Publish package
-  #     uses: pypa/gh-action-pypi-publish@release/v1
-  #     with:
-  #       skip_existing: true
-  #       user: __token__
-  #       password: ${{ secrets.PYPI_API_TOKEN }}
-  #       packages_dir: ./wheelhouse/
