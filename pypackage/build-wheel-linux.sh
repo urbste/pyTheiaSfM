@@ -35,10 +35,7 @@ ${PYBIN}/pip install auditwheel
 PLAT=manylinux2014_x86_64
 "${PYBIN}/python" setup.py bdist_wheel --plat-name=$PLAT
 
-cp /home/dist/*.whl /home/wheelhouse
 # Bundle external shared libraries into the wheels
-for whl in /home/wheelhouse/*.whl; do
+for whl in /home/dist/*.whl; do
     repair_wheel "$whl"
 done
-
-ls -ltrh /home/wheelhouse/
