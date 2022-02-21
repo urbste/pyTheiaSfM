@@ -1,4 +1,4 @@
-FROM quay.io/pypa/manylinux2014_x86_64
+FROM urbste/pytheia_base:1.0.1
 
 COPY . ./home
 

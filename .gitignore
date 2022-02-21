@@ -4,6 +4,8 @@ build/*
 wheelhouse
 desktop_build/
 *.ply
+nose/
+nose-*
 
 *.ply
 *.json
