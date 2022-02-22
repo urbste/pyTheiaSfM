@@ -1,6 +1,16 @@
 cmake_build/*
 wheelhouse
 *.user
+build/*
+*.user.*
+desktop_build/
+*.ply
+nose/
+nose-*
+auditwheel/
+auditwheel-*
+pyelf*
+elftools*
 
 ### Cpp template
 # Compiled Object files

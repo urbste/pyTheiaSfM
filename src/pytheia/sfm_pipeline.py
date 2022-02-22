@@ -1,3 +1,37 @@
+# // Copyright (C) 2015 The Regents of the University of California (Regents).
+# // All rights reserved.
+# //
+# // Redistribution and use in source and binary forms, with or without
+# // modification, are permitted provided that the following conditions are
+# // met:
+# //
+# //     * Redistributions of source code must retain the above copyright
+# //       notice, this list of conditions and the following disclaimer.
+# //
+# //     * Redistributions in binary form must reproduce the above
+# //       copyright notice, this list of conditions and the following
+# //       disclaimer in the documentation and/or other materials provided
+# //       with the distribution.
+# //
+# //     * Neither the name of The Regents or University of California nor the
+# //       names of its contributors may be used to endorse or promote products
+# //       derived from this software without specific prior written permission.
+# //
+# // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# // ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+# // LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# // CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# // SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# // POSSIBILITY OF SUCH DAMAGE.
+# //
+# // Please contact the author of this library if you have any questions.
+# // Author: Steffen Urban (urbse@googlemail.com)
+
 import os
 import numpy as np
 import cv2 
@@ -128,11 +162,12 @@ if __name__ == "__main__":
                     help='ransac type for estimator: ransac, prosac or lmed')
     parser.add_argument('--reconstruction', type=str, default='global',
                     help='reconstruction type: global, incremental or hybrid')
-    parser.add_argument('--image_path', type=str, default="/media/Data/external_projects/instant-ngp/data/nerf/microscope/images_resized_fwe")
+    parser.add_argument('--image_path', type=str, default="")
     parser.add_argument('--output_path', type=str, default="")
     parser.add_argument('--debug', type=int, default=1)
     parser.add_argument("--fcxcy", nargs=3, default=["5287.877","698.1492", "523.5119"],
                         help="pinhole camera params: focal length, printipcal point cx, cy", type=float)
+                    
     args = parser.parse_args()
     print(float(args.fcxcy[0]))
     ransactype = args.ransac

@@ -10,6 +10,7 @@ auditwheel/
 auditwheel-*
 pyelf*
 elftools*
+debug_out*
 
 *.ply
 *.json

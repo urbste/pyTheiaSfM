@@ -254,9 +254,9 @@ make -j && make install
 ## How to build Python wheels
 
 ### Local build
-Tested on Ubuntu.
+Tested on Ubuntu. In your Python >= 3.5 environment of choice run:
 ```bash
-python setup.py bdist_wheel
+sh build_and_install.sh
 ```
 
 ### With Docker

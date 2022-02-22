@@ -32,6 +32,9 @@ def configure_c_extension():
     print("Configuring for python {}.{}...".format(sys.version_info.major,
                                                    sys.version_info.minor))
     os.makedirs('cmake_build', exist_ok=True)
+
+    build_march_native = int(os.environ.get("BUILD_MARCH_NATIVE", 0))
+
     cmake_command = [
         'cmake',
         '../',
@@ -40,7 +43,8 @@ def configure_c_extension():
         '-DCMAKE_BUILD_TYPE=Release',
         '-DPYTHON_EXECUTABLE=' + sys.executable,
 	    '-DPYTHON_LIBRARY=' + python_lib_location,
-	    '-DPYTHON_INCLUDE_DIR=' +  python_include_dir
+	    '-DPYTHON_INCLUDE_DIR=' +  python_include_dir,
+        '-DBUILD_WITH_MARCH_NATIVE={}'.format("ON" if build_march_native else "OFF")
     ]
     subprocess.check_call(cmake_command, cwd='cmake_build')
 
@@ -61,24 +65,22 @@ create_package()
 
 setuptools.setup(
     name='pytheia',
-    version='0.1.2',
+    version='0.1.3',
     description='A performant Structure from Motion library for Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/urbste/TheiaSfM.git',
-    project_urls={
-        "Documentation": "http://theia-sfm.org/",
-    },
+    url='https://github.com/urbste/pyTheiaSfM.git',
+    # project_urls={
+    #     "Documentation": "http://theia-sfm.org/",
+    # },
     author='Steffen Urban, Shengyu Yin',
     author_email = "urbste@googlemail.com, shengyu952014@outlook.com",
     license='BSD',
     packages=setuptools.find_packages(where='src'),
     include_package_data=True,
-
     package_dir={
         'pytheia': 'src/pytheia',
     },
-
     package_data={
         'pytheia': [
             'pytheia.*',
@@ -91,6 +93,5 @@ setuptools.setup(
             #'stubs/pytheia/pytheia/solvers/__init__.pyi',
         ]
     },
-
     cmdclass={'bdist_wheel': platform_bdist_wheel},
 )
