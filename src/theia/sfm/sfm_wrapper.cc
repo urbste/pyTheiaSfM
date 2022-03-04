@@ -107,10 +107,8 @@ SelectGoodTracksForBundleAdjustmentWrapper(
   return std::make_tuple(success, tracks_to_optimize);
 }
 
-Reconstruction SetCameraIntrinsicsFromPriorsWrapper() {
-  Reconstruction reconstruction;
+void SetCameraIntrinsicsFromPriorsWrapper(Reconstruction& reconstruction) {
   SetCameraIntrinsicsFromPriors(&reconstruction);
-  return reconstruction;
 }
 
 std::tuple<int, Reconstruction> SetOutlierTracksToUnestimatedWrapper(
