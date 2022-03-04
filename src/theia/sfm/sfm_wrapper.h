@@ -64,7 +64,7 @@ SelectGoodTracksForBundleAdjustmentWrapper(
     const int image_grid_cell_size_pixels,
     const int min_num_optimized_tracks_per_view);
 
-Reconstruction SetCameraIntrinsicsFromPriorsWrapper();
+void SetCameraIntrinsicsFromPriorsWrapper(Reconstruction& reconstruction);
 
 std::tuple<int, Reconstruction> SetOutlierTracksToUnestimatedWrapper(
     const std::unordered_set<TrackId>& tracks,
