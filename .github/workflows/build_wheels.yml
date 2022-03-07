@@ -32,7 +32,7 @@ jobs:
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        repository_url: https://test.pypi.org/legacy/
+        # repository_url: https://test.pypi.org/legacy/
         packages_dir: wheelhouse/
     # - name: Archive wheels
     #   uses: actions/upload-artifact@v2
