@@ -7,7 +7,6 @@ def test_BundleAdjustView(gen, ba_options):
 
     for vid in gen.recon.ViewIds:
         orig_pos = gen.recon.View(vid).Camera().Position
-        orig_axangle = gen.recon.View(vid).Camera().GetOrientationAsAngleAxis()
         gen.add_noise_to_views(noise_pos=1e-3, noise_angle=1e-1)
         result = pt.sfm.BundleAdjustView(gen.recon, ba_options, vid)
         dist_pos = np.linalg.norm(
@@ -15,6 +14,12 @@ def test_BundleAdjustView(gen, ba_options):
         assert dist_pos < 1e-4
         assert result.success
 
+def test_BundleAdjustTrack(gen, ba_options):
+
+    gen.add_noise_to_tracks(noise_track=1e-3)
+    for t_id in gen.recon.TrackIds:
+        result = pt.sfm.BundleAdjustTrack(gen.recon, ba_options, t_id)
+        assert result.success
 
 def test_BundleAdjustWithPositionPrior(gen, ba_options):
     ba_options.use_position_priors = True
@@ -92,3 +97,9 @@ if __name__ == "__main__":
     gen = RandomReconGenerator()
     gen.generate_random_recon(nr_views=1, nr_tracks=20, pixel_noise=1.0)
     test_BundleAdjustWithPositionPriorAndInformation(gen, ba_options)
+
+    gen = RandomReconGenerator()
+    ba_options.constant_camera_orientation = True
+    ba_options.constant_camera_position = True
+    gen.generate_random_recon(nr_views=5, nr_tracks=20, pixel_noise=0.5)
+    test_BundleAdjustTrack(gen, ba_options)
