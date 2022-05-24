@@ -51,7 +51,8 @@ enum class CameraIntrinsicsModelType {
   FOV = 3,
   DIVISION_UNDISTORTION = 4,
   DOUBLE_SPHERE = 5,
-  EXTENDED_UNIFIED = 6
+  EXTENDED_UNIFIED = 6,
+  ORTHOGRAPHIC = 7
 };
 
 // Converts an input string to the corresponding camera intrinsics model type.
@@ -71,6 +72,8 @@ inline CameraIntrinsicsModelType StringToCameraIntrinsicsModelType(
     return CameraIntrinsicsModelType::DOUBLE_SPHERE;
   } else if (camera_model_type_string == "EXTENDED_UNIFIED") {
     return CameraIntrinsicsModelType::EXTENDED_UNIFIED;
+  } else if (camera_model_type_string == "ORTHOGRAPHIC") {
+    return CameraIntrinsicsModelType::ORTHOGRAPHIC;
   } else {
     LOG(FATAL) << "Invalid camera model type supplied: "
                << camera_model_type_string;
@@ -94,6 +97,8 @@ inline std::string CameraIntrinsicsModelTypeToString(
       return "DOUBLE_SPHERE";
     case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
       return "EXTENDED_UNIFIED";
+    case CameraIntrinsicsModelType::ORTHOGRAPHIC:
+      return "ORTHOGRAPHIC";
     default:
       LOG(FATAL) << "Invalid Camera model chosen.";
       break;

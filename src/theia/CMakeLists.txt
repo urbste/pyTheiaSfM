@@ -118,6 +118,7 @@ set(THEIA_SRC
   sfm/camera/double_sphere_camera_model.cc
   sfm/camera/fisheye_camera_model.cc
   sfm/camera/fov_camera_model.cc
+  sfm/camera/orthographic_camera_model.cc
   sfm/camera/pinhole_camera_model.cc
   sfm/camera/pinhole_radial_tangential_camera_model.cc
   sfm/camera/projection_matrix_utils.cc
@@ -183,6 +184,7 @@ set(THEIA_SRC
   sfm/pose/four_point_homography.cc
   sfm/pose/four_point_relative_pose_partial_rotation.cc
   sfm/pose/fundamental_matrix_util.cc
+  sfm/pose/orthographic_four_point.cc
   sfm/pose/perspective_three_point.cc
   sfm/pose/position_from_two_rays.cc
   sfm/pose/relative_pose_from_two_points_with_known_rotation.cc
@@ -340,6 +342,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/camera/extended_unified_camera_model)
 #  gtest(sfm/camera/fisheye_camera_model)
 #  gtest(sfm/camera/fov_camera_model)
+gtest(sfm/camera/orthographic_camera_model)
 #  gtest(sfm/camera/pinhole_camera_model)
 #  gtest(sfm/camera/pinhole_radial_tangential_camera_model)
 #  gtest(sfm/camera/projection_matrix_utils)
@@ -365,18 +368,18 @@ if (BUILD_TESTING)
 #  gtest(sfm/filter_view_pairs_from_relative_translation)
 #  gtest(sfm/find_common_tracks_in_views)
 #  gtest(sfm/find_common_views_by_name)
-  gtest(sfm/global_pose_estimation/compute_triplet_baseline_ratios)
-  gtest(sfm/global_pose_estimation/hybrid_rotation_estimator)
-  gtest(sfm/global_pose_estimation/lagrange_dual_rotation_estimator)
-  gtest(sfm/global_pose_estimation/least_unsquared_deviation_position_estimator)
-  gtest(sfm/global_pose_estimation/LiGT_position_estimator)
-  gtest(sfm/global_pose_estimation/linear_position_estimator)
-  gtest(sfm/global_pose_estimation/linear_rotation_estimator)
-  gtest(sfm/global_pose_estimation/nonlinear_position_estimator)
-  gtest(sfm/global_pose_estimation/pairwise_rotation_error)
-  gtest(sfm/global_pose_estimation/pairwise_translation_and_scale_error)
-  gtest(sfm/global_pose_estimation/pairwise_translation_error)
-  gtest(sfm/global_pose_estimation/robust_rotation_estimator)
+#  gtest(sfm/global_pose_estimation/compute_triplet_baseline_ratios)
+#  gtest(sfm/global_pose_estimation/hybrid_rotation_estimator)
+#  gtest(sfm/global_pose_estimation/lagrange_dual_rotation_estimator)
+#  gtest(sfm/global_pose_estimation/least_unsquared_deviation_position_estimator)
+#  gtest(sfm/global_pose_estimation/LiGT_position_estimator)
+#  gtest(sfm/global_pose_estimation/linear_position_estimator)
+#  gtest(sfm/global_pose_estimation/linear_rotation_estimator)
+#  gtest(sfm/global_pose_estimation/nonlinear_position_estimator)
+#  gtest(sfm/global_pose_estimation/pairwise_rotation_error)
+#  gtest(sfm/global_pose_estimation/pairwise_translation_and_scale_error)
+#  gtest(sfm/global_pose_estimation/pairwise_translation_error)
+#  gtest(sfm/global_pose_estimation/robust_rotation_estimator)
 #  gtest(sfm/gps_converter)
 #  gtest(sfm/hybrid_reconstruction_estimator)
 #  gtest(sfm/incremental_reconstruction_estimator)
@@ -392,6 +395,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/four_point_homography)
 #  gtest(sfm/pose/four_point_relative_pose_partial_rotation)
 #  gtest(sfm/pose/fundamental_matrix_util)
+gtest(sfm/pose/orthographic_four_point)
 #  gtest(sfm/pose/perspective_three_point)
 #  gtest(sfm/pose/position_from_two_rays)
 #  gtest(sfm/pose/relative_pose_from_two_points_with_known_rotation)
