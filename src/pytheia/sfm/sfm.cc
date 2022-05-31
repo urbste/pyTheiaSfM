@@ -67,6 +67,7 @@
 #include "theia/sfm/camera/fov_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
+#include "theia/sfm/camera/orthographic_camera_model.h"
 
 #include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
 #include "theia/sfm/bundle_adjustment/bundle_adjuster.h"
@@ -382,6 +383,38 @@ void pytheia_sfm_classes(py::module& m) {
                              &theia::PinholeCameraModel::RadialDistortion2)
       .def("SetRadialDistortion",
            &theia::PinholeCameraModel::SetRadialDistortion);
+
+  // OrthographicCameraModel
+  py::class_<theia::OrthographicCameraModel,
+             std::shared_ptr<theia::OrthographicCameraModel>>(
+      m, "OrthographicCameraModel", camera_intrinsics_model)
+      .def(py::init<>())
+      .def("Type", &theia::OrthographicCameraModel::Type)
+      .def("NumParameters", &theia::OrthographicCameraModel::NumParameters)
+      .def("SetFromCameraIntrinsicsPriors",
+           &theia::OrthographicCameraModel::SetFromCameraIntrinsicsPriors)
+      .def("CameraIntrinsicsPriorFromIntrinsics",
+           &theia::OrthographicCameraModel::CameraIntrinsicsPriorFromIntrinsics)
+      // OptimizeIntrinsicsType not defined
+      .def("GetSubsetFromOptimizeIntrinsicsType",
+           &theia::OrthographicCameraModel::GetSubsetFromOptimizeIntrinsicsType)
+      .def("GetCalibrationMatrix",
+           &theia::OrthographicCameraModel::GetCalibrationMatrix)
+      .def("PrintIntrinsics", &theia::OrthographicCameraModel::PrintIntrinsics)
+      .def_property_readonly("kIntrinsicsSize",
+                             &theia::OrthographicCameraModel::NumParameters)
+      .def_property("AspectRatio",
+                    &theia::OrthographicCameraModel::AspectRatio,
+                    &theia::OrthographicCameraModel::SetAspectRatio)
+      .def_property("Skew",
+                    &theia::OrthographicCameraModel::Skew,
+                    &theia::OrthographicCameraModel::SetSkew)
+      .def_property_readonly("RadialDistortion1",
+                             &theia::OrthographicCameraModel::RadialDistortion1)
+      .def_property_readonly("RadialDistortion2",
+                             &theia::OrthographicCameraModel::RadialDistortion2)
+      .def("SetRadialDistortion",
+           &theia::OrthographicCameraModel::SetRadialDistortion);
 
   // FOVCameraModel
   py::class_<theia::FOVCameraModel, std::shared_ptr<theia::FOVCameraModel>>(

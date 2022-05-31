@@ -41,6 +41,7 @@
 #include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/sfm/camera/fisheye_camera_model.h"
 #include "theia/sfm/camera/fov_camera_model.h"
+#include "theia/sfm/camera/orthographic_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
 #include "theia/sfm/camera/reprojection_error.h"
@@ -116,6 +117,15 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
           ExtendedUnifiedCameraModel::kIntrinsicsSize,
           kPointSize>(
           new ReprojectionError<ExtendedUnifiedCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::ORTHOGRAPHIC:
+      return new ceres::AutoDiffCostFunction<
+          OrthoReprojectionError<OrthographicCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize-1,
+          OrthographicCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new OrthoReprojectionError<OrthographicCameraModel>(feature));
       break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "

@@ -22,29 +22,38 @@
 namespace theia {
 
 // This class contains the camera pose information pertaining to intrinsics
-// camera parameters.  This includes focal length, aspect ratio, skew, principal
+// camera parameters. For an orthographic camera this includes magnification (m), pixel pitches s_x and s_y (in meter), principal
 // points, and (up to 2-parameter) radial distortion. Methods are provided for
 // common transformations and projections.
 //
 // Intrinsics of the camera are modeled such that:
+// Given a point in camera coordinats point p_c = [x_c,y_c,z_c]^T the undistorted point in the camera is:
 //
-//  K = [f     s     px]
-//      [0   f * a   py]
-//      [0     0      1]
+// x_u = m * x_c 
+// y_u = m * y_c 
 //
-// where f = focal length, px and py is the principal point, s = skew, and
-// a = aspect ratio.
-//
-// Extrinsic and intrinsic parameters transform the homogeneous 3D point X to
-// the image point p such that:
-//
-//   p = R * (X[0..2] / X[3] - C);
-//   p = p[0,1] / p[2];
-//   r = p[0] * p[0] + p[1] * p[1];
-//   d = 1 + k1 * r + k2 * r * r;
-//   p *= d;
-//   p = K * p;
-//
+// For an orthographic camera the projection is independent of the translation in z direction, i.e we
+// can always set z_c to an arbitrary value, e.g. 0.
+// In addition, we can model a distortion. Here a simple 2 parameter radial distortion is used.
+// The undistorted point x_u, y_u is given by:
+// r = x_u * x_u + x_u * x_u
+// d = 1 + k1 * r + k2 * r^2
+// x_d = x_u * d
+// y_d = y_u * d
+
+// Finally, we need to transform the point to pixel coordinates using the pixel pitches s_x and s_y
+// x_i = 1/s_x * x_d + c_x
+// y_i = 1/s_y * x_d + c_y
+
+// So given the extrinsics (R and C) and intrinsics, an object p_o = [x_o, y_o, z_o]^T transforms 
+// to pixel coordinates like this:
+
+// x_c = R * (p_o - C)
+// x_u = m * x_c
+// x_d = d * x_u
+// x_i = [1/s_x, 1/s_y] * x_d + [c_x,c_y]
+// Putting it all together:
+// x_i = [1/s_x, 1/s_y,1] * d*m*(R*(p_o -C)) + [c_x,c_y,1]
 //  where R = orientation, C = camera position, and k1 k2 are the radial
 //  distortion parameters.
 class OrthographicCameraModel : public CameraIntrinsicsModel {
@@ -153,30 +162,25 @@ template <typename T>
 bool OrthographicCameraModel::CameraToPixelCoordinates(const T* intrinsic_parameters,
                                                   const T* point,
                                                   T* pixel) {
-  // Get normalized pixel projection at image plane depth = 1.
-  const T& depth = point[2];
-  const T normalized_pixel[2] = {point[0] / depth, point[1] / depth};
-
   // Apply radial distortion.
   T distorted_pixel[2];
   OrthographicCameraModel::DistortPoint(
-      intrinsic_parameters, normalized_pixel, distorted_pixel);
+      intrinsic_parameters, point, distorted_pixel);
 
   // Apply calibration parameters to transform normalized units into pixels.
-  const T& focal_length =
+  const T& fx =
       intrinsic_parameters[OrthographicCameraModel::FOCAL_LENGTH];
-  const T& skew = intrinsic_parameters[OrthographicCameraModel::SKEW];
   const T& aspect_ratio =
       intrinsic_parameters[OrthographicCameraModel::ASPECT_RATIO];
+  const T& skew = intrinsic_parameters[OrthographicCameraModel::SKEW];
   const T& principal_point_x =
       intrinsic_parameters[OrthographicCameraModel::PRINCIPAL_POINT_X];
   const T& principal_point_y =
       intrinsic_parameters[OrthographicCameraModel::PRINCIPAL_POINT_Y];
 
-  pixel[0] = focal_length * distorted_pixel[0] + skew * distorted_pixel[1] +
-             principal_point_x;
-  pixel[1] =
-      focal_length * aspect_ratio * distorted_pixel[1] + principal_point_y;
+  const T fy = fx*aspect_ratio;
+  pixel[0] = fx * distorted_pixel[0] + skew * distorted_pixel[1] + principal_point_x;
+  pixel[1] = fy * distorted_pixel[1] + principal_point_y;
 
   return true;
 }
@@ -185,29 +189,28 @@ template <typename T>
 bool OrthographicCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
                                                   const T* pixel,
                                                   T* point) {
-  const T& focal_length =
+  const T& fx =
       intrinsic_parameters[OrthographicCameraModel::FOCAL_LENGTH];
   const T& aspect_ratio =
       intrinsic_parameters[OrthographicCameraModel::ASPECT_RATIO];
-  const T& focal_length_y = focal_length * aspect_ratio;
   const T& skew = intrinsic_parameters[OrthographicCameraModel::SKEW];
   const T& principal_point_x =
       intrinsic_parameters[OrthographicCameraModel::PRINCIPAL_POINT_X];
   const T& principal_point_y =
       intrinsic_parameters[OrthographicCameraModel::PRINCIPAL_POINT_Y];
+  const T fy = fx*aspect_ratio;
 
   // Normalize the y coordinate first.
   T distorted_point[2];
-  distorted_point[1] = (pixel[1] - principal_point_y) / focal_length_y;
-  distorted_point[0] =
-      (pixel[0] - principal_point_x - distorted_point[1] * skew) / focal_length;
+  distorted_point[1] = pixel[1] - principal_point_y;
+  distorted_point[0] = pixel[0] - principal_point_x - distorted_point[1]*skew;
 
+  distorted_point[0] /= fx;
+  distorted_point[1] /= fy;
   // Undo the radial distortion.
-  T undistorted_point[2];
   OrthographicCameraModel::UndistortPoint(
       intrinsic_parameters, distorted_point, point);
   point[2] = T(1.0);
-
   return true;
 }
 
@@ -235,7 +238,7 @@ bool OrthographicCameraModel::UndistortPoint(const T* intrinsic_parameters,
                                         const T* distorted_point,
                                         T* undistorted_point) {
   const int kNumUndistortionIterations = 100;
-  const T kUndistortionEpsilon = T(1e-10);
+  const T kUndistortionEpsilon = T(1e-16);
 
   T prev_undistorted_point[2];
   undistorted_point[0] = distorted_point[0];

@@ -42,6 +42,7 @@
 #include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/sfm/camera/fisheye_camera_model.h"
 #include "theia/sfm/camera/fov_camera_model.h"
+#include "theia/sfm/camera/orthographic_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
 
@@ -72,6 +73,9 @@ std::shared_ptr<CameraIntrinsicsModel> CameraIntrinsicsModel::Create(
     case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
       return std::make_shared<ExtendedUnifiedCameraModel>();
       break;
+  case CameraIntrinsicsModelType::ORTHOGRAPHIC:
+    return std::make_shared<OrthographicCameraModel>();
+    break;
     default:
       break;
   }
@@ -108,6 +112,7 @@ CameraIntrinsicsModel& CameraIntrinsicsModel::operator=(
     CAMERA_MODEL_CASE(DIVISION_UNDISTORTION, DivisionUndistortionCameraModel) \
     CAMERA_MODEL_CASE(DOUBLE_SPHERE, DoubleSphereCameraModel)                 \
     CAMERA_MODEL_CASE(EXTENDED_UNIFIED, ExtendedUnifiedCameraModel)           \
+    CAMERA_MODEL_CASE(ORTHOGRAPHIC, OrthographicCameraModel)                  \
     default:                                                                  \
       LOG(FATAL)                                                              \
           << "Invalid camera type. Please see camera_intrinsics_model.h "     \

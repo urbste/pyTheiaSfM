@@ -20,4 +20,6 @@ using Eigen::Vector3d;
 
 namespace {
 
+}
+
 }  // namespace theia

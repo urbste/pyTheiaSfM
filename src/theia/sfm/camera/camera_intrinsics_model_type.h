@@ -125,6 +125,8 @@ inline bool IsCameraIntrinsicsModelTypeValid(
     return true;
   } else if (camera_model_type_string == "EXTENDED_UNIFIED") {
     return true;
+  } else if (camera_model_type_string == "ORTHOGRAPHIC") {
+    return true;
   }
   return false;
 }
