@@ -868,7 +868,7 @@ void pytheia_sfm_classes(py::module& m) {
            py::return_value_policy::reference)
       .def("MutableCamera",
            &theia::View::MutableCamera,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("GetPositionPrior", &theia::View::GetPositionPrior)
       .def("GetPositionPriorSqrtInformation",
            &theia::View::GetPositionPriorSqrtInformation)
@@ -950,6 +950,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def_property_readonly("ViewIds", &theia::Track::ViewIds)
       .def_property_readonly("Point", &theia::Track::Point)
       .def("SetPoint", &theia::Track::SetPoint)
+      .def_property("Point", &theia::Track::Point, &theia::Track::SetPoint)
       .def_property_readonly("Color", &theia::Track::Color)
       .def("SetColor", &theia::Track::SetColor)
       .def("ReferenceViewId", &theia::Track::ReferenceViewId)
@@ -1332,14 +1333,8 @@ void pytheia_sfm_classes(py::module& m) {
   // Reconstruction class
   py::class_<theia::Reconstruction>(m, "Reconstruction")
       .def(py::init<>())
-      //.def_property("IsEstimated", &theia::Reconstruction::IsEstimated,
-      //&theia::Track::SetEstimated)
       .def("NumViews", &theia::Reconstruction::NumViews)
       .def("ViewIdFromName", &theia::Reconstruction::ViewIdFromName)
-      //.def("set", static_cast<void (Pet::*)(int)>(&Pet::set), "Set the pet's
-      //age") .def("AddView", static_cast<theia::ViewId
-      //(theia::Reconstruction*)(const
-      //std::string&)>(&theia::Reconstruction::AddView))
       .def("AddView",
            (theia::ViewId(theia::Reconstruction::*)(const std::string&,
                                                     const double)) &
@@ -1388,16 +1383,16 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::Reconstruction::CameraIntrinsicsGroupIds)
       .def("View",
            &theia::Reconstruction::View,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("MutableView",
            &theia::Reconstruction::MutableView,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("Track",
-           &theia::Reconstruction::Track,
-           py::return_value_policy::reference)
+           &theia::Reconstruction::Track, 
+           py::return_value_policy::reference_internal)
       .def("MutableTrack",
            &theia::Reconstruction::MutableTrack,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("GetViewsInCameraIntrinsicGroup",
            &theia::Reconstruction::GetViewsInCameraIntrinsicGroup)
       //.def("GetSubReconstruction",
