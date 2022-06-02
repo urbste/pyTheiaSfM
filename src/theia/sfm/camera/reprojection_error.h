@@ -127,7 +127,9 @@ struct OrthoReprojectionError {
     Matrix3T R;
     ceres::AngleAxisToRotationMatrix(extrinsic_parameters + Camera::ORIENTATION, R.data());
     const Vector3T t = ConstMap3T(extrinsic_parameters + Camera::POSITION);
-    Vector3T pt_w(point[0],point[1],T(1.0));
+    // make the point euclidean
+    Vector3T pt_w(point[0]/point[3],point[1]/point[3],T(1.0));
+
     Matrix3T T_w_c;
     T_w_c <<
         R(0,0), R(0,1), t(0),

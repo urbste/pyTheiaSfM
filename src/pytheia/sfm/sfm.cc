@@ -579,6 +579,7 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("EssentialMatrixFromFundamentalMatrix",
         theia::EssentialMatrixFromFundamentalMatrixWrapper);
   m.def("ComposeFundamentalMatrix", theia::ComposeFundamentalMatrixWrapper);
+  m.def("PlanarUncalibratedOrthographicPose", theia::PlanarUncalibratedOrthographicPoseWrapper);
 
   // transformation
   m.def("AlignPointCloudsUmeyama", theia::AlignPointCloudsUmeyamaWrapper);
@@ -941,27 +942,23 @@ void pytheia_sfm_classes(py::module& m) {
   // Track class
   py::class_<theia::Track>(m, "Track")
       .def(py::init<>())
-      .def_property("IsEstimated",
-                    &theia::Track::IsEstimated,
-                    &theia::Track::SetEstimated)
+      .def("SetIsEstimated", &theia::Track::SetEstimated)
+      .def_property_readonly("IsEstimated", &theia::Track::IsEstimated)
       .def("NumViews", &theia::Track::NumViews)
       .def("AddView", &theia::Track::AddView)
       .def("RemoveView", &theia::Track::RemoveView)
       .def_property_readonly("ViewIds", &theia::Track::ViewIds)
-      .def("Point", &theia::Track::Point)
-      .def_property("Point", &theia::Track::Point, &theia::Track::SetPoint)
-      .def("Color", &theia::Track::Color)
-      .def_property("Color", &theia::Track::Color, &theia::Track::SetColor)
+      .def_property_readonly("Point", &theia::Track::Point)
+      .def("SetPoint", &theia::Track::SetPoint)
+      .def_property_readonly("Color", &theia::Track::Color)
+      .def("SetColor", &theia::Track::SetColor)
       .def("ReferenceViewId", &theia::Track::ReferenceViewId)
-      .def("InverseDepth", &theia::Track::InverseDepth)
-      .def_property("InverseDepth",
-                    &theia::Track::InverseDepth,
-                    &theia::Track::SetInverseDepth)
-      .def("SetReferenceBearingVector",
-           &theia::Track::SetReferenceBearingVector)
-      .def("ReferenceBearingVector", &theia::Track::ReferenceBearingVector)
+      .def_property_readonly("InverseDepth", &theia::Track::InverseDepth)
+      .def("SetInverseDepth", &theia::Track::SetInverseDepth)
+      .def("SetReferenceBearingVector", &theia::Track::SetReferenceBearingVector)
+      .def_property_readonly("ReferenceBearingVector", &theia::Track::ReferenceBearingVector)
       .def("SetReferenceDescriptor", &theia::Track::SetReferenceDescriptor)
-      .def("ReferenceDescriptor", &theia::Track::ReferenceDescriptor);
+      .def_property_readonly("ReferenceDescriptor", &theia::Track::ReferenceDescriptor);
 
   // Track builder class
   py::class_<theia::TrackBuilder>(m, "TrackBuilder")
@@ -1005,7 +1002,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("max_trust_region_radius",
                      &theia::BundleAdjustmentOptions::max_trust_region_radius)
       .def_readwrite("use_position_priors",
-                     &theia::BundleAdjustmentOptions::use_position_priors);
+                     &theia::BundleAdjustmentOptions::use_position_priors)
+      .def_readwrite("orthographic_camera",
+                     &theia::BundleAdjustmentOptions::orthographic_camera);
 
   // Reconstruction Options
   py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
@@ -1356,15 +1355,27 @@ void pytheia_sfm_classes(py::module& m) {
       .def("RemoveView", &theia::Reconstruction::RemoveView)
       .def_property_readonly("ViewIds", &theia::Reconstruction::ViewIds)
       .def_property_readonly("NumTracks", &theia::Reconstruction::NumTracks)
-      .def("AddTrack",
-           (theia::TrackId(theia::Reconstruction::*)()) &
-               theia::Reconstruction::AddTrack,
-           py::return_value_policy::reference_internal)
-      .def("AddTrack",
-           (theia::TrackId(theia::Reconstruction::*)(
-               const std::vector<std::pair<theia::ViewId, theia::Feature>>&)) &
-               theia::Reconstruction::AddTrack,
-           py::return_value_policy::reference_internal)
+    //   .def("AddTrack",
+    //        (theia::TrackId(theia::Reconstruction::*)()) &
+    //            theia::Reconstruction::AddTrack,
+    //        py::return_value_policy::reference_internal)
+    //   .def("AddTrack",
+    //        ((theia::Reconstruction::*)(const theia::TrackId&)) &
+    //            theia::Reconstruction::AddTrack,
+    //        py::return_value_policy::reference_internal)
+        //   .def("AddTrack",
+    //        (theia::TrackId(theia::Reconstruction::*)()) &
+    //            theia::Reconstruction::AddTrack,
+    //        py::return_value_policy::reference_internal)
+    //   .def("AddTrack",
+    //        ((theia::Reconstruction::*)(const theia::TrackId&)) &
+    //            theia::Reconstruction::AddTrack,
+    //        py::return_value_policy::reference_internal)
+      .def("AddTrack", static_cast<theia::TrackId (theia::Reconstruction::*)()>(&theia::Reconstruction::AddTrack))
+      .def("AddTrack", static_cast<void (theia::Reconstruction::*)(
+          const theia::TrackId &)>(&theia::Reconstruction::AddTrack))
+      .def("AddTrack", static_cast<theia::TrackId (theia::Reconstruction::*)(
+          const std::vector<std::pair<theia::ViewId, theia::Feature>>&)>(&theia::Reconstruction::AddTrack))
       .def("RemoveTrack", &theia::Reconstruction::RemoveTrack)
       .def_property_readonly("TrackIds", &theia::Reconstruction::TrackIds)
       .def("AddObservation", &theia::Reconstruction::AddObservation)

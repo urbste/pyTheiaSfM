@@ -151,4 +151,13 @@ TwoPointPosePartialRotationWrapper(const Eigen::Vector3d& axis,
                                    const Eigen::Vector3d& image_ray_1,
                                    const Eigen::Vector3d& image_ray_2);
 
+std::tuple<bool, 
+           std::vector<Eigen::Matrix3d>, 
+           std::vector<Eigen::Vector3d>, 
+           double> 
+PlanarUncalibratedOrthographicPoseWrapper(
+  const std::vector<Eigen::Vector2d>& features, 
+  const std::vector<Eigen::Vector3d>& world_points,
+  const Eigen::Vector2d& principal_point);
+
 }  // namespace theia

@@ -122,7 +122,7 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
       return new ceres::AutoDiffCostFunction<
           OrthoReprojectionError<OrthographicCameraModel>,
           kResidualSize,
-          Camera::kExtrinsicsSize-1,
+          Camera::kExtrinsicsSize,
           OrthographicCameraModel::kIntrinsicsSize,
           kPointSize>(
           new OrthoReprojectionError<OrthographicCameraModel>(feature));

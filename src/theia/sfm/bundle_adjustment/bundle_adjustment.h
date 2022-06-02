@@ -136,6 +136,9 @@ struct BundleAdjustmentOptions {
 
   // Add depth priors
   bool use_depth_priors = false;
+
+  // Adjusting orthographic camera
+  bool orthographic_camera = false;
 };
 
 // Some important metrics for analyzing bundle adjustment results.

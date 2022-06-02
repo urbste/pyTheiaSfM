@@ -11,6 +11,7 @@
 #include "theia/sfm/pose/perspective_three_point.h"
 #include "theia/sfm/pose/three_point_relative_pose_partial_rotation.h"
 #include "theia/sfm/pose/two_point_pose_partial_rotation.h"
+#include "theia/sfm/pose/orthographic_four_point.h"
 
 #include "theia/sfm/pose/dls_pnp.h"
 #include "theia/sfm/pose/sqpnp.h"
@@ -481,6 +482,23 @@ TwoPointPosePartialRotationWrapper(const Vector3d& axis,
   }
 
   return std::make_tuple(num_solutions, soln_rotations, soln_translations_out);
+}
+
+std::tuple<bool, std::vector<Matrix3d>, std::vector<Vector3d>, double> 
+PlanarUncalibratedOrthographicPoseWrapper(
+  const std::vector<Eigen::Vector2d>& features, 
+  const std::vector<Eigen::Vector3d>& world_points,
+  const Eigen::Vector2d& principal_point) {
+
+
+  std::vector<Matrix3d> rotations;
+  std::vector<Vector3d> translations;
+  double magnification;
+  bool success = PlanarUncalibratedOrthographicPose(
+    features, world_points, principal_point,
+    &rotations, &translations, &magnification);
+
+  return std::make_tuple(success, rotations, translations, magnification);
 }
 
 }  // namespace theia

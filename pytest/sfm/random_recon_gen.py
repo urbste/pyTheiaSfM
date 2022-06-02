@@ -85,8 +85,8 @@ class RandomReconGenerator:
             track_id = self.recon.AddTrack()
             point = np.array([X[i], Y[i], Z[i], 1], dtype=np.float32)
             track = self.recon.MutableTrack(track_id)
-            track.Point = point
-            track.IsEstimated = True
+            track.SetPoint(point.tolist())
+            track.SetIsEstimated(True)
 
     def generate_random_recon(self,
                               nr_views=10,

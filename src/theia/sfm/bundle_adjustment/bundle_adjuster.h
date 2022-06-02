@@ -109,6 +109,7 @@ class BundleAdjuster {
   // Methods for setting camera extrinsics to be (partially) constant.
   virtual void SetCameraPositionConstant(const ViewId view_id);
   virtual void SetCameraOrientationConstant(const ViewId view_id);
+  virtual void SetTzConstant(const ViewId view_id);
   virtual void SetTrackConstant(const TrackId track_id);
   virtual void SetTrackVariable(const TrackId track_id);
   virtual void SetHomogeneousPointParametrization(const TrackId track_id);
