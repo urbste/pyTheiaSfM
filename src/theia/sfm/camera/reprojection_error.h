@@ -121,22 +121,23 @@ struct OrthoReprojectionError {
                   const T* point,
                   T* reprojection_error) const {
     typedef Eigen::Matrix<T, 3, 1> Vector3T;
+    typedef Eigen::Matrix<T, 4, 1> Vector4T;
     typedef Eigen::Matrix<T, 3, 3> Matrix3T;
+    typedef Eigen::Matrix<T, 3, 4> Matrix34T;
+
     typedef Eigen::Map<const Vector3T> ConstMap3T;
+    typedef Eigen::Map<const Vector4T> ConstMap4T;
 
     Matrix3T R;
     ceres::AngleAxisToRotationMatrix(extrinsic_parameters + Camera::ORIENTATION, R.data());
     const Vector3T t = ConstMap3T(extrinsic_parameters + Camera::POSITION);
-    // make the point euclidean
-    Vector3T pt_w(point[0]/point[3],point[1]/point[3],T(1.0));
+    const Vector4T pt_w = ConstMap4T(point);
 
-    Matrix3T T_w_c;
-    T_w_c <<
-        R(0,0), R(0,1), t(0),
-        R(1,0), R(1,1), t(1),
-        T(0)  , T(0)  , T(1.0);
-    const Vector3T pt_in_cam = T_w_c * pt_w;
-
+    Matrix34T T_w_c = Matrix34T::Identity();
+    T_w_c.template block<3,3>(0,0) = R;
+    T_w_c.template block<3,1>(0,3) = t;
+    T_w_c(2,3) = T(0);
+    Vector3T pt_in_cam = T_w_c * pt_w;
     // Apply the camera intrinsics to get the reprojected pixel.
     T reprojection[2];
     const bool res = CameraModel::CameraToPixelCoordinates(

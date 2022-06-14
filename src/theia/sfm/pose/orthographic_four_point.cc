@@ -81,11 +81,11 @@ bool PlanarUncalibratedOrthographicPose(
     Eigen::Vector3d t(
             (H(0,2)-principal_point[0]) / (*magnification),
             (H(1,2)-principal_point[1]) / (*magnification),
-            1.0);
+            0.0);
 
     // get rotation
-    const double term1 = std::pow(E(0,0),2) - std::pow(E(1,0),2);
-    const double term2 = std::pow(E(0,1),2) - std::pow(E(1,1),2);
+    const double term1 = std::pow(E(0,0),2) + std::pow(E(1,0),2);
+    const double term2 = std::pow(E(0,1),2) + std::pow(E(1,1),2);
     // Avoid getting imaginary values in sqrt
     if (term1 > 1.0 || term2 > 1.0) {
         return false;
