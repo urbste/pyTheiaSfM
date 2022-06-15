@@ -507,6 +507,8 @@ void pytheia_sfm_classes(py::module& m) {
       .value("DOUBLE_SPHERE", theia::CameraIntrinsicsModelType::DOUBLE_SPHERE)
       .value("EXTENDED_UNIFIED",
              theia::CameraIntrinsicsModelType::EXTENDED_UNIFIED)
+      .value("ORTHOGRAPHIC",
+             theia::CameraIntrinsicsModelType::ORTHOGRAPHIC)
       .export_values();
 
   py::class_<theia::CameraIntrinsicsPrior>(m, "CameraIntrinsicsPrior")
