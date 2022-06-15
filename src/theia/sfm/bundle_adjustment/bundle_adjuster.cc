@@ -260,6 +260,12 @@ void BundleAdjuster::SetCameraExtrinsicsParameterization() {
       SetCameraPositionConstant(view_id);
     }
   }
+  // for orthographic cameras we set tz constant
+  if (options_.orthographic_camera) {
+    for (const ViewId view_id : optimized_views_) {
+      SetTzConstant(view_id);
+    }
+  }
 }
 
 void BundleAdjuster::SetCameraIntrinsicsParameterization() {
@@ -387,6 +393,17 @@ void BundleAdjuster::SetCameraOrientationConstant(const ViewId view_id) {
   Camera* camera = view->MutableCamera();
   problem_->SetParameterization(camera->mutable_extrinsics(),
                                 subset_parameterization);
+}
+
+void BundleAdjuster::SetTzConstant(const ViewId view_id) {
+    static const std::vector<int> position_parameters = {Camera::POSITION + 2};
+    ceres::SubsetParameterization* subset_parameterization =
+        new ceres::SubsetParameterization(Camera::kExtrinsicsSize,
+                                          position_parameters);
+    View* view = reconstruction_->MutableView(view_id);
+    Camera* camera = view->MutableCamera();
+    problem_->SetParameterization(camera->mutable_extrinsics(),
+                                  subset_parameterization);
 }
 
 void BundleAdjuster::SetTrackConstant(const TrackId track_id) {

@@ -35,6 +35,7 @@
 #ifndef THEIA_MATH_UTIL_H_
 #define THEIA_MATH_UTIL_H_
 
+#include <Eigen/Core>
 #include <algorithm>
 #include <cmath>
 
@@ -57,6 +58,17 @@ inline double DegToRad(const double angle_degrees) {
 
 inline double Clamp(const double val, const double min, const double max) {
   return std::max(min, std::min(val, max));
+}
+
+// method to calculate the pseudo-Inverse as recommended by Eigen developers
+// https://gist.github.com/gokhansolak/d2abaefcf3e3b767f5bc7d81cfe0b36a
+template<typename _Matrix_Type_>
+_Matrix_Type_ PseudoInverse(const _Matrix_Type_ &a, double epsilon = std::numeric_limits<double>::epsilon())
+{
+    Eigen::JacobiSVD< _Matrix_Type_ > svd(a ,Eigen::ComputeThinU | Eigen::ComputeThinV);
+    double tolerance = epsilon * std::max(a.cols(), a.rows()) *svd.singularValues().array().abs()(0);
+    return svd.matrixV() *  (svd.singularValues().array().abs() > tolerance).select(
+                svd.singularValues().array().inverse(), 0).matrix().asDiagonal() * svd.matrixU().adjoint();
 }
 
 }  // namespace theia

@@ -38,16 +38,16 @@ TEST(OrthographicCameraModel, InternalParameterGettersAndSetters) {
   EXPECT_EQ(camera.RadialDistortion2(), 0.0);
 
   // Set parameters to different values.
-  camera.SetFocalLength(600.0);
-  camera.SetAspectRatio(0.9);
-  camera.SetSkew(0.01);
+  camera.SetFocalLength(30000);
+  camera.SetAspectRatio(1.1);
+  camera.SetSkew(0.1);
   camera.SetPrincipalPoint(300.0, 400.0);
   camera.SetRadialDistortion(0.01, 0.001);
 
   // Check that the values were updated.
-  EXPECT_EQ(camera.FocalLength(), 600.0);
-  EXPECT_EQ(camera.AspectRatio(), 0.9);
-  EXPECT_EQ(camera.Skew(), 0.01);
+  EXPECT_EQ(camera.FocalLength(), 30000);
+  EXPECT_EQ(camera.AspectRatio(), 1.1);
+  EXPECT_EQ(camera.Skew(),0.1);
   EXPECT_EQ(camera.PrincipalPointX(), 300.0);
   EXPECT_EQ(camera.PrincipalPointY(), 400.0);
   EXPECT_EQ(camera.RadialDistortion1(), 0.01);
@@ -100,11 +100,11 @@ void TestSetFromCameraintrinsicsPrior(const CameraIntrinsicsPrior& prior) {
 // that setting the value of priors when is_set=false is handled properly.
 TEST(OrthographicCameraModel, SetFromCameraIntrinsicsPriors) {
   CameraIntrinsicsPrior prior;
-  prior.focal_length.value[0] = 1000.0;
+  prior.focal_length.value[0] = 30000;
   prior.principal_point.value[0] = 400.0;
   prior.principal_point.value[1] = 300.0;
-  prior.aspect_ratio.value[0] = 1.01;
-  prior.skew.value[0] = 0.01;
+  prior.skew.value[0] = 0.0;
+  prior.aspect_ratio.value[0] = 1.001;
   prior.radial_distortion.value[0] = 0.01;
   prior.radial_distortion.value[1] = 0.001;
 
@@ -134,11 +134,11 @@ TEST(OrthographicCameraModel, GetSubsetFromOptimizeIntrinsicsType) {
       camera.GetSubsetFromOptimizeIntrinsicsType(OptimizeIntrinsicsType::NONE);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters());
 
-  // Test that optimizing for focal length works correctly.
+  // Test that optimizing for magnification works correctly.
   constant_subset = camera.GetSubsetFromOptimizeIntrinsicsType(
       OptimizeIntrinsicsType::FOCAL_LENGTH);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters() - 1);
-  for (int i = 0; i < constant_subset.size(); i++) {
+  for (size_t i = 0; i < constant_subset.size(); i++) {
     EXPECT_NE(constant_subset[i], OrthographicCameraModel::FOCAL_LENGTH);
   }
 
@@ -146,24 +146,24 @@ TEST(OrthographicCameraModel, GetSubsetFromOptimizeIntrinsicsType) {
   constant_subset = camera.GetSubsetFromOptimizeIntrinsicsType(
       OptimizeIntrinsicsType::PRINCIPAL_POINTS);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters() - 2);
-  for (int i = 0; i < constant_subset.size(); i++) {
+  for (size_t i = 0; i < constant_subset.size(); i++) {
     EXPECT_NE(constant_subset[i], OrthographicCameraModel::PRINCIPAL_POINT_X);
     EXPECT_NE(constant_subset[i], OrthographicCameraModel::PRINCIPAL_POINT_Y);
   }
 
-  // Test that optimizing for aspect ratio works correctly.
+  // Test that optimizing for pixel pitches works correctly.
   constant_subset = camera.GetSubsetFromOptimizeIntrinsicsType(
       OptimizeIntrinsicsType::ASPECT_RATIO);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters() - 1);
-  for (int i = 0; i < constant_subset.size(); i++) {
+  for (size_t i = 0; i < constant_subset.size(); i++) {
     EXPECT_NE(constant_subset[i], OrthographicCameraModel::ASPECT_RATIO);
   }
 
-  // Test that optimizing for skew works correctly.
-  constant_subset =
-      camera.GetSubsetFromOptimizeIntrinsicsType(OptimizeIntrinsicsType::SKEW);
+  // Test that optimizing for pixel pitches works correctly.
+  constant_subset = camera.GetSubsetFromOptimizeIntrinsicsType(
+      OptimizeIntrinsicsType::SKEW);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters() - 1);
-  for (int i = 0; i < constant_subset.size(); i++) {
+  for (size_t i = 0; i < constant_subset.size(); i++) {
     EXPECT_NE(constant_subset[i], OrthographicCameraModel::SKEW);
   }
 
@@ -171,7 +171,7 @@ TEST(OrthographicCameraModel, GetSubsetFromOptimizeIntrinsicsType) {
   constant_subset = camera.GetSubsetFromOptimizeIntrinsicsType(
       OptimizeIntrinsicsType::RADIAL_DISTORTION);
   EXPECT_EQ(constant_subset.size(), camera.NumParameters() - 2);
-  for (int i = 0; i < constant_subset.size(); i++) {
+  for (size_t i = 0; i < constant_subset.size(); i++) {
     EXPECT_NE(constant_subset[i], OrthographicCameraModel::RADIAL_DISTORTION_1);
     EXPECT_NE(constant_subset[i], OrthographicCameraModel::RADIAL_DISTORTION_2);
   }
@@ -188,59 +188,52 @@ TEST(OrthographicCameraModel, GetSubsetFromOptimizeIntrinsicsType) {
 // edges of the image are modeled correctly.
 void ReprojectionTest(const OrthographicCameraModel& camera) {
   static const double kTolerance = 1e-5;
-  const double kNormalizedTolerance = kTolerance / camera.FocalLength();
-  static const int kImageWidth = 1200;
-  static const int kImageHeight = 980;
-  static const double kMinDepth = 2.0;
-  static const double kMaxDepth = 25.0;
+  const double kNormalizedTolerance = kTolerance;
+  static const int kImageWidth = 2560;
+  static const int kImageHeight = 1920;
+
+
+  // Ensure the camera -> image -> camera transformation works.
+  for (double x = -0.01; x < 0.01; x += 0.001) {
+    for (double y = -0.01; y < 0.01; y += 0.001) {
+        const Eigen::Vector3d point(x, y, 1.0);
+        const Vector2d pixel = camera.CameraToImageCoordinates(point);
+
+        // Get the normalized ray of that pixel.
+        const Vector3d p_c = camera.ImageToCameraCoordinates(pixel);
+
+        // Expect the reprojection to be close.
+        EXPECT_LT((point - p_c).norm(), kNormalizedTolerance)
+            << "gt pixel: " << point.transpose()
+            << "\nreprojected pixel: " << p_c.transpose();
+    }
+  }
+
 
   // Ensure the image -> camera -> image transformation works.
-  for (double x = 0.0; x < kImageWidth; x += 10.0) {
-    for (double y = 0.0; y < kImageHeight; y += 10.0) {
+  for (double x = 0.0; x < kImageWidth; x += 20.0) {
+    for (double y = 0.0; y < kImageHeight; y += 20.0) {
       const Eigen::Vector2d pixel(x, y);
       // Get the normalized ray of that pixel.
-      const Vector3d normalized_ray = camera.ImageToCameraCoordinates(pixel);
+      const Vector3d p_c = camera.ImageToCameraCoordinates(pixel);
 
       // Test the reprojection at several depths.
-      for (double depth = kMinDepth; depth < kMaxDepth; depth += 1.0) {
         // Convert it to a full 3D point in the camera coordinate system.
-        const Vector3d point = normalized_ray * depth;
         const Vector2d reprojected_pixel =
-            camera.CameraToImageCoordinates(point);
+            camera.CameraToImageCoordinates(p_c);
 
         // Expect the reprojection to be close.
         EXPECT_LT((pixel - reprojected_pixel).norm(), kTolerance)
             << "gt pixel: " << pixel.transpose()
             << "\nreprojected pixel: " << reprojected_pixel.transpose();
-      }
-    }
-  }
-
-  // Ensure the camera -> image -> camera transformation works.
-  for (double x = -0.8; x < 0.8; x += 0.1) {
-    for (double y = -0.8; y < 0.8; y += 0.1) {
-      for (double depth = kMinDepth; depth < kMaxDepth; depth += 1.0) {
-        const Eigen::Vector3d point(x, y, depth);
-        const Vector2d pixel = camera.CameraToImageCoordinates(point);
-
-        // Get the normalized ray of that pixel.
-        const Vector3d normalized_ray = camera.ImageToCameraCoordinates(pixel);
-
-        // Convert it to a full 3D point in the camera coordinate system.
-        const Vector3d reprojected_point = normalized_ray * depth;
-
-        // Expect the reprojection to be close.
-        EXPECT_LT((point - reprojected_point).norm(), kNormalizedTolerance)
-            << "gt pixel: " << point.transpose()
-            << "\nreprojected pixel: " << reprojected_point.transpose();
-      }
     }
   }
 }
 
 TEST(OrthographicCameraModel, ReprojectionNoDistortion) {
-  static const double kPrincipalPoint[2] = {600.0, 400.0};
-  static const double kFocalLength = 1200;
+  static const double kPrincipalPoint[2] = {1180.0, 1010.0};
+  // this is actually magnification / pixel_pitch, e.g. 0.08/2e-6
+  static const double kFocalLength = 40000.0;
   OrthographicCameraModel camera;
   camera.SetFocalLength(kFocalLength);
   camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1]);
@@ -249,22 +242,22 @@ TEST(OrthographicCameraModel, ReprojectionNoDistortion) {
 }
 
 TEST(OrthographicCameraModel, ReprojectionOneDistortion) {
-  static const double kPrincipalPoint[2] = {600.0, 400.0};
-  static const double kFocalLength = 1200;
+  static const double kPrincipalPoint[2] = {1180.0, 1010.0};
+  static const double kFocalLength = 40000.0;
   OrthographicCameraModel camera;
   camera.SetFocalLength(kFocalLength);
   camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1]);
-  camera.SetRadialDistortion(0.01, 0);
+  camera.SetRadialDistortion(1e-4, 0);
   ReprojectionTest(camera);
 }
 
 TEST(OrthographicCameraModel, ReprojectionTwoDistortion) {
-  static const double kPrincipalPoint[2] = {600.0, 400.0};
-  static const double kFocalLength = 1200;
+  static const double kPrincipalPoint[2] = {1180.0, 1010.0};
+  static const double kFocalLength = 40000.0;
   OrthographicCameraModel camera;
   camera.SetFocalLength(kFocalLength);
   camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1]);
-  camera.SetRadialDistortion(0.01, 0.001);
+  camera.SetRadialDistortion(1e-4, 1e-5);
   ReprojectionTest(camera);
 }
 

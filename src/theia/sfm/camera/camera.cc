@@ -204,13 +204,27 @@ void Camera::GetCalibrationMatrix(Matrix3d* kmatrix) const {
 }
 
 double Camera::ProjectPoint(const Vector4d& point, Vector2d* pixel) const {
-  Eigen::Vector3d adjusted_point = point.head<3>() - point[3] * GetPosition();
-  Eigen::Vector3d rotated_point;
-  ceres::AngleAxisRotatePoint(
-      extrinsics() + ORIENTATION, adjusted_point.data(), rotated_point.data());
-  *pixel = camera_intrinsics_->CameraToImageCoordinates(rotated_point);
+  if (camera_intrinsics_->Type() == CameraIntrinsicsModelType::ORTHOGRAPHIC) {
+      const Eigen::Vector3d t = GetPosition(); // position == translation for ortho cam
+      const Eigen::Matrix3d R = GetOrientationAsRotationMatrix();
+      // z coordinate does not matter
+      const Eigen::Vector3d pt_w(point[0],point[1],1.0);
+      Eigen::Matrix3d T_w_c;
+      T_w_c << R(0,0), R(0,1), t(0),
+               R(1,0), R(1,1), t(1),
+               0.0, 0.0, 1.0;
+      const Eigen::Vector3d rotated_point = T_w_c * pt_w;
+      *pixel = camera_intrinsics_->CameraToImageCoordinates(rotated_point);
+      return 0.0;
+  } else {
+      Eigen::Vector3d adjusted_point = point.head<3>() - point[3] * GetPosition();
+      Eigen::Vector3d rotated_point;
+      ceres::AngleAxisRotatePoint(
+          extrinsics() + ORIENTATION, adjusted_point.data(), rotated_point.data());
+      *pixel = camera_intrinsics_->CameraToImageCoordinates(rotated_point);
 
-  return rotated_point[2] / point[3];
+      return rotated_point[2] / point[3];
+  }
 }
 
 Vector3d Camera::PixelToUnitDepthRay(const Vector2d& pixel) const {
@@ -304,5 +318,4 @@ std::tuple<double, Eigen::Vector2d> Camera::ProjectPointWrapper(
   double depth = ProjectPoint(point, &pixel);
   return std::make_tuple(depth, pixel);
 }
-
 }  // namespace theia

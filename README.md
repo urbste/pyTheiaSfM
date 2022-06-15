@@ -34,6 +34,7 @@ Hence, we removed some libaries from the original TheiaSfM:
 * Camera models
   * Double Sphere
   * Extended Unified
+  * Orthographic
 * Bundle adjustment
   * Using a homogeneous representation for scene points
   * Extracting covariance information
@@ -46,8 +47,17 @@ Hence, we removed some libaries from the original TheiaSfM:
   * Added covariance_, depth_prior_, depth_prior_variance_ to **Feature** class
 * Absolute Pose solvers
   * SQPnP
+  * UncalibratedPlanarOrthographic Pose
 
 ## Usage Examples
+
+### Full reconstruction example: Global, Hybrid or Incremental SfM using OpenCV feature detection and matching
+Have a look at the short example: [sfm_pipeline.py](pytest/sfm_pipeline.py).
+Download the south_building dataset from [here](https://demuc.de/colmap/datasets/).
+Extract it somewhere and run: 
+```bash
+python pytest/sfm_pipeline.py --image_path /path/to/south-building/images/
+```
 
 ### Creating a camera
 The following example show you how to create a camera in pyTheia.
@@ -176,48 +186,6 @@ res = BundleAdjustTracksWithCov(recon, opts, [view_id1,trackid])
 res = BundleAdjustTwoViewsAngular(recon, [pt.sfm.FeatureCorrespondence], pt.sfm.TwoViewInfo())
 ```
 
-### Reconstruction example: Global, Hybrid or Incremental SfM using OpenCV feature detection and matching
-Have a look at the short example: [sfm_pipeline.py](src/pytheia/sfm_pipeline.py)
-``` Python
-import pytheia as pt
-# use your favourite Feature extractor matcher 
-# can also be any deep stuff
-view_graph = pt.sfm.ViewGraph()
-recon = pt.sfm.Reconstruction()
-track_builder = pt.sfm.TrackBuilder(3, 30)
-
-# ... match some features to find putative correspondences
-success, twoview_info, inlier_indices = pt.sfm.EstimateTwoViewInfo(options, prior, prior, correspondences)
-# ... get filtered feature correspondences and add them to the reconstruction
-correspondences = pt.matching.FeatureCorrespondence(
-            pt.sfm.Feature(point1), pt.sfm.Feature(point2))
-for i in range(len(verified_matches)):
-  track_builder.AddFeatureCorrespondence(view_id1, correspondences[i].feature1, 
-                                         view_id2, correspondences[i].feature2)
-
-# ... Build Tracks
-track_builder.BuildTracks(recon)
-
-ptions = pt.sfm.ReconstructionEstimatorOptions()
-options.num_threads = 4
-options.rotation_filtering_max_difference_degrees = 10.0
-options.bundle_adjustment_robust_loss_width = 3.0
-options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
-options.subsample_tracks_for_bundle_adjustment = True
-
-if reconstructiontype == 'global':
-  options.filter_relative_translations_with_1dsfm = True
-  reconstruction_estimator = pt.sfm.GlobalReconstructionEstimator(options)
-elif reconstructiontype == 'incremental':
-  reconstruction_estimator = pt.sfm.IncrementalReconstructionEstimator(options)
-elif reconstructiontype == 'hybrid':
-  reconstruction_estimator = pt.sfm.HybridReconstructionEstimator(options)
-recon_sum = reconstruction_estimator.Estimate(view_graph, recon)
-
-pt.io.WritePlyFile("test.ply", recon, [255,0,0],2)
-pt.io.WriteReconstruction(recon, "reconstruction_file")
-```
-
 ## Building
 This section describes how to build on Ubuntu locally or on WSL2 both with sudo rights.
 The basic dependency is:
@@ -251,16 +219,50 @@ cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF
 make -j && make install
 ```
 
-## How to build Python wheels
+### Local build without sudo
+To build it locally it is best to set the EXPORT_BUILD_DIR flag for the ceres-solver.
+You will still need ```sudo apt install libgflags-dev libgoogle-glog-dev libatlas-base-dev```. 
+So go ask your admin ;)
 
-### Local build
+```bash
+# cd to your favourite library folder. The local installation will be all relative to this path!
+mkdir /home/LIBS
+cd /home/LIBS
+
+# eigen
+git clone https://gitlab.com/libeigen/eigen
+cd eigen && git checkout 3.3.9
+mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/home/LIBS/eigen/build && make -j install
+
+cd /home/LIBS
+git clone https://ceres-solver.googlesource.com/ceres-solver
+cd ceres-solver && git checkout 2.0.0 && mkdir build && cd build
+cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DEXPORT_BUILD_DIR=ON
+make -j
+
+# cd to the pyTheiaSfM folder
+cd pyTheiaSfM && mkdir build && cd build 
+cmake -DEigen3_DIR=/home/LIBS/eigen/build/share/eigen3/cmake/ .. 
+make -j
+```
+
+## How to build Python wheels
+### Local build with sudo installed ceres-solver and Eigen
 Tested on Ubuntu. In your Python >= 3.5 environment of choice run:
 ```bash
 sh build_and_install.sh
 ```
 
 ### With Docker
-The docker build will actually build manylinux wheels for Linux (Python 3.5-3.9)
+The docker build will actually build manylinux wheels for Linux (Python 3.5-3.9).
+There are two ways to do that. One will clutter the source directory, but you will have the wheel file directly available (./wheelhouse/).
+Another drawback of this approach is that the files will have been created with docker sudo rights and are diffcult to delete:
+```bash
+# e.g. for python 3.9
+docker run --rm -e PYTHON_VERSION="cp39-cp39" -v `pwd`:/home urbste/pytheia_base:1.0.1 /home/pypackage/build-wheel-linux.sh
+```
+
+The other one is cleaner but you will have to copy the wheels out of the docker container afterwards:
 ```bash
 docker build -t pytheia:0.1 .
 docker run -it pytheia:0.1

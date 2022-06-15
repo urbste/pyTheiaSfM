@@ -11,18 +11,10 @@
 #include <glog/logging.h>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
-#include "theia/sfm/camera/projection_matrix_utils.h"
 #include "theia/sfm/camera_intrinsics_prior.h"
+#include "theia/sfm/camera/projection_matrix_utils.h"
 
 namespace theia {
-
-using Eigen::AngleAxisd;
-using Eigen::Map;
-using Eigen::Matrix;
-using Eigen::Matrix3d;
-using Eigen::Vector2d;
-using Eigen::Vector3d;
-using Eigen::Vector4d;
 
 OrthographicCameraModel::OrthographicCameraModel() {
   parameters_.resize(kIntrinsicsSize);
@@ -38,7 +30,7 @@ int OrthographicCameraModel::NumParameters() const { return kIntrinsicsSize; }
 
 // Returns the camera model type of the object.
 CameraIntrinsicsModelType OrthographicCameraModel::Type() const {
-  return CameraIntrinsicsModelType::PINHOLE;
+  return CameraIntrinsicsModelType::ORTHOGRAPHIC;
 }
 
 // Set the intrinsic camera parameters from the priors.

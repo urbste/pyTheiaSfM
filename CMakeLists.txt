@@ -123,7 +123,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 #endif (PYTHON_BUILD)
 
 # Eigen
-set(MIN_EIGEN_VERSION 3.2.0)
+set(MIN_EIGEN_VERSION 3.3)
 find_package(Eigen ${MIN_EIGEN_VERSION} REQUIRED)
 if (EIGEN_FOUND)
   message("-- Found Eigen version ${EIGEN_VERSION}: ${EIGEN_INCLUDE_DIRS}")
@@ -186,6 +186,7 @@ else (CERES_FOUND)
   message(FATAL_ERROR "Can't find Ceres. Please set CERES_INCLUDE_DIR & "
     "CERES_LIBRARY")
 endif (CERES_FOUND)
+
 
 # RocksDB
 if (NOT PYTHON_BUILD AND WITH_ROCKSDB)

@@ -11,6 +11,7 @@ auditwheel-*
 pyelf*
 elftools*
 debug_out*
+build*
 
 *.ply
 *.json

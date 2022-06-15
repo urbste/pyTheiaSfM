@@ -67,6 +67,7 @@
 #include "theia/sfm/camera/fov_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
+#include "theia/sfm/camera/orthographic_camera_model.h"
 
 #include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
 #include "theia/sfm/bundle_adjustment/bundle_adjuster.h"
@@ -383,6 +384,38 @@ void pytheia_sfm_classes(py::module& m) {
       .def("SetRadialDistortion",
            &theia::PinholeCameraModel::SetRadialDistortion);
 
+  // OrthographicCameraModel
+  py::class_<theia::OrthographicCameraModel,
+             std::shared_ptr<theia::OrthographicCameraModel>>(
+      m, "OrthographicCameraModel", camera_intrinsics_model)
+      .def(py::init<>())
+      .def("Type", &theia::OrthographicCameraModel::Type)
+      .def("NumParameters", &theia::OrthographicCameraModel::NumParameters)
+      .def("SetFromCameraIntrinsicsPriors",
+           &theia::OrthographicCameraModel::SetFromCameraIntrinsicsPriors)
+      .def("CameraIntrinsicsPriorFromIntrinsics",
+           &theia::OrthographicCameraModel::CameraIntrinsicsPriorFromIntrinsics)
+      // OptimizeIntrinsicsType not defined
+      .def("GetSubsetFromOptimizeIntrinsicsType",
+           &theia::OrthographicCameraModel::GetSubsetFromOptimizeIntrinsicsType)
+      .def("GetCalibrationMatrix",
+           &theia::OrthographicCameraModel::GetCalibrationMatrix)
+      .def("PrintIntrinsics", &theia::OrthographicCameraModel::PrintIntrinsics)
+      .def_property_readonly("kIntrinsicsSize",
+                             &theia::OrthographicCameraModel::NumParameters)
+      .def_property("AspectRatio",
+                    &theia::OrthographicCameraModel::AspectRatio,
+                    &theia::OrthographicCameraModel::SetAspectRatio)
+      .def_property("Skew",
+                    &theia::OrthographicCameraModel::Skew,
+                    &theia::OrthographicCameraModel::SetSkew)
+      .def_property_readonly("RadialDistortion1",
+                             &theia::OrthographicCameraModel::RadialDistortion1)
+      .def_property_readonly("RadialDistortion2",
+                             &theia::OrthographicCameraModel::RadialDistortion2)
+      .def("SetRadialDistortion",
+           &theia::OrthographicCameraModel::SetRadialDistortion);
+
   // FOVCameraModel
   py::class_<theia::FOVCameraModel, std::shared_ptr<theia::FOVCameraModel>>(
       m, "FOVCameraModel", camera_intrinsics_model)
@@ -474,6 +507,8 @@ void pytheia_sfm_classes(py::module& m) {
       .value("DOUBLE_SPHERE", theia::CameraIntrinsicsModelType::DOUBLE_SPHERE)
       .value("EXTENDED_UNIFIED",
              theia::CameraIntrinsicsModelType::EXTENDED_UNIFIED)
+      .value("ORTHOGRAPHIC",
+             theia::CameraIntrinsicsModelType::ORTHOGRAPHIC)
       .export_values();
 
   py::class_<theia::CameraIntrinsicsPrior>(m, "CameraIntrinsicsPrior")
@@ -546,6 +581,7 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("EssentialMatrixFromFundamentalMatrix",
         theia::EssentialMatrixFromFundamentalMatrixWrapper);
   m.def("ComposeFundamentalMatrix", theia::ComposeFundamentalMatrixWrapper);
+  m.def("PlanarUncalibratedOrthographicPose", theia::PlanarUncalibratedOrthographicPoseWrapper);
 
   // transformation
   m.def("AlignPointCloudsUmeyama", theia::AlignPointCloudsUmeyamaWrapper);
@@ -834,7 +870,7 @@ void pytheia_sfm_classes(py::module& m) {
            py::return_value_policy::reference)
       .def("MutableCamera",
            &theia::View::MutableCamera,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("GetPositionPrior", &theia::View::GetPositionPrior)
       .def("GetPositionPriorSqrtInformation",
            &theia::View::GetPositionPriorSqrtInformation)
@@ -908,27 +944,24 @@ void pytheia_sfm_classes(py::module& m) {
   // Track class
   py::class_<theia::Track>(m, "Track")
       .def(py::init<>())
-      .def_property("IsEstimated",
-                    &theia::Track::IsEstimated,
-                    &theia::Track::SetEstimated)
+      .def("SetIsEstimated", &theia::Track::SetEstimated)
+      .def_property_readonly("IsEstimated", &theia::Track::IsEstimated)
       .def("NumViews", &theia::Track::NumViews)
       .def("AddView", &theia::Track::AddView)
       .def("RemoveView", &theia::Track::RemoveView)
       .def_property_readonly("ViewIds", &theia::Track::ViewIds)
-      .def("Point", &theia::Track::Point)
+      .def_property_readonly("Point", &theia::Track::Point)
+      .def("SetPoint", &theia::Track::SetPoint)
       .def_property("Point", &theia::Track::Point, &theia::Track::SetPoint)
-      .def("Color", &theia::Track::Color)
-      .def_property("Color", &theia::Track::Color, &theia::Track::SetColor)
+      .def_property_readonly("Color", &theia::Track::Color)
+      .def("SetColor", &theia::Track::SetColor)
       .def("ReferenceViewId", &theia::Track::ReferenceViewId)
-      .def("InverseDepth", &theia::Track::InverseDepth)
-      .def_property("InverseDepth",
-                    &theia::Track::InverseDepth,
-                    &theia::Track::SetInverseDepth)
-      .def("SetReferenceBearingVector",
-           &theia::Track::SetReferenceBearingVector)
-      .def("ReferenceBearingVector", &theia::Track::ReferenceBearingVector)
+      .def_property_readonly("InverseDepth", &theia::Track::InverseDepth)
+      .def("SetInverseDepth", &theia::Track::SetInverseDepth)
+      .def("SetReferenceBearingVector", &theia::Track::SetReferenceBearingVector)
+      .def_property_readonly("ReferenceBearingVector", &theia::Track::ReferenceBearingVector)
       .def("SetReferenceDescriptor", &theia::Track::SetReferenceDescriptor)
-      .def("ReferenceDescriptor", &theia::Track::ReferenceDescriptor);
+      .def_property_readonly("ReferenceDescriptor", &theia::Track::ReferenceDescriptor);
 
   // Track builder class
   py::class_<theia::TrackBuilder>(m, "TrackBuilder")
@@ -972,7 +1005,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("max_trust_region_radius",
                      &theia::BundleAdjustmentOptions::max_trust_region_radius)
       .def_readwrite("use_position_priors",
-                     &theia::BundleAdjustmentOptions::use_position_priors);
+                     &theia::BundleAdjustmentOptions::use_position_priors)
+      .def_readwrite("orthographic_camera",
+                     &theia::BundleAdjustmentOptions::orthographic_camera);
 
   // Reconstruction Options
   py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
@@ -1300,14 +1335,8 @@ void pytheia_sfm_classes(py::module& m) {
   // Reconstruction class
   py::class_<theia::Reconstruction>(m, "Reconstruction")
       .def(py::init<>())
-      //.def_property("IsEstimated", &theia::Reconstruction::IsEstimated,
-      //&theia::Track::SetEstimated)
       .def("NumViews", &theia::Reconstruction::NumViews)
       .def("ViewIdFromName", &theia::Reconstruction::ViewIdFromName)
-      //.def("set", static_cast<void (Pet::*)(int)>(&Pet::set), "Set the pet's
-      //age") .def("AddView", static_cast<theia::ViewId
-      //(theia::Reconstruction*)(const
-      //std::string&)>(&theia::Reconstruction::AddView))
       .def("AddView",
            (theia::ViewId(theia::Reconstruction::*)(const std::string&,
                                                     const double)) &
@@ -1323,15 +1352,27 @@ void pytheia_sfm_classes(py::module& m) {
       .def("RemoveView", &theia::Reconstruction::RemoveView)
       .def_property_readonly("ViewIds", &theia::Reconstruction::ViewIds)
       .def_property_readonly("NumTracks", &theia::Reconstruction::NumTracks)
-      .def("AddTrack",
-           (theia::TrackId(theia::Reconstruction::*)()) &
-               theia::Reconstruction::AddTrack,
-           py::return_value_policy::reference_internal)
-      .def("AddTrack",
-           (theia::TrackId(theia::Reconstruction::*)(
-               const std::vector<std::pair<theia::ViewId, theia::Feature>>&)) &
-               theia::Reconstruction::AddTrack,
-           py::return_value_policy::reference_internal)
+    //   .def("AddTrack",
+    //        (theia::TrackId(theia::Reconstruction::*)()) &
+    //            theia::Reconstruction::AddTrack,
+    //        py::return_value_policy::reference_internal)
+    //   .def("AddTrack",
+    //        ((theia::Reconstruction::*)(const theia::TrackId&)) &
+    //            theia::Reconstruction::AddTrack,
+    //        py::return_value_policy::reference_internal)
+        //   .def("AddTrack",
+    //        (theia::TrackId(theia::Reconstruction::*)()) &
+    //            theia::Reconstruction::AddTrack,
+    //        py::return_value_policy::reference_internal)
+    //   .def("AddTrack",
+    //        ((theia::Reconstruction::*)(const theia::TrackId&)) &
+    //            theia::Reconstruction::AddTrack,
+    //        py::return_value_policy::reference_internal)
+      .def("AddTrack", static_cast<theia::TrackId (theia::Reconstruction::*)()>(&theia::Reconstruction::AddTrack))
+      .def("AddTrack", static_cast<void (theia::Reconstruction::*)(
+          const theia::TrackId &)>(&theia::Reconstruction::AddTrack))
+      .def("AddTrack", static_cast<theia::TrackId (theia::Reconstruction::*)(
+          const std::vector<std::pair<theia::ViewId, theia::Feature>>&)>(&theia::Reconstruction::AddTrack))
       .def("RemoveTrack", &theia::Reconstruction::RemoveTrack)
       .def_property_readonly("TrackIds", &theia::Reconstruction::TrackIds)
       .def("AddObservation", &theia::Reconstruction::AddObservation)
@@ -1344,16 +1385,16 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::Reconstruction::CameraIntrinsicsGroupIds)
       .def("View",
            &theia::Reconstruction::View,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("MutableView",
            &theia::Reconstruction::MutableView,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("Track",
-           &theia::Reconstruction::Track,
-           py::return_value_policy::reference)
+           &theia::Reconstruction::Track, 
+           py::return_value_policy::reference_internal)
       .def("MutableTrack",
            &theia::Reconstruction::MutableTrack,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("GetViewsInCameraIntrinsicGroup",
            &theia::Reconstruction::GetViewsInCameraIntrinsicGroup)
       //.def("GetSubReconstruction",
