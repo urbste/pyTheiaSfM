@@ -251,8 +251,34 @@ cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF
 make -j && make install
 ```
 
-## How to build Python wheels
+### Local build without sudo
+To build it locally it is best to set the EXPORT_BUILD_DIR flag for the ceres-solver.
+You will still need ```sudo apt install libgflags-dev libgoogle-glog-dev libatlas-base-dev```. 
+So go ask your admin ;)
 
+```bash
+# cd to your favourite library folder. The local installation will be all relative to this path!
+mkdir /home/LIBS
+cd /home/LIBS
+
+# eigen
+git clone https://gitlab.com/libeigen/eigen
+cd eigen && git checkout 3.3.9
+mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/home/LIBS/eigen/build && make -j install
+
+cd /home/LIBS
+git clone https://ceres-solver.googlesource.com/ceres-solver
+cd ceres-solver && git checkout 2.0.0 && mkdir build && cd build
+cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DEXPORT_BUILD_DIR=ON
+make -j
+
+# cd to the pyTheiaSfM folder
+cd pyTheiaSfM && mkdir build && cd build 
+cmake -DEigen3_DIR=/home/LIBS/eigen/build/share/eigen3/cmake/ .. 
+make -j
+```
+
+## How to build Python wheels
 ### Local build
 Tested on Ubuntu. In your Python >= 3.5 environment of choice run:
 ```bash
