@@ -67,11 +67,11 @@ def extract_features(image_path, mask_path, featuretype, recon, scale_factor):
 
     img_name = remove_prefix_and_suffix(image_path)
     view_id = recon.ViewIdFromName(img_name)
-    cam = recon.MutableView(view_id).MutableCamera()
+    cam = recon.View(view_id).Camera()
     img = cv2.imread(image_path, 0)
     if scale_factor != 1.0:
         img = cv2.resize(img, (-1,-1), fx=scale_factor, fy=scale_factor)
-    cam.SetImageSize(img.shape[1],img.shape[0])
+    # cam.SetImageSize(img.shape[1],img.shape[0])
 
     if mask_path:
         mask = cv2.resize(cv2.imread(mask_path, 0), 
@@ -124,7 +124,7 @@ def match_image_pair(recon, track_builder, features, vid1, vid2, matchertype):
 
     options = pt.sfm.EstimateTwoViewInfoOptions()
     options.max_sampson_error_pixels = 1.0
-    options.max_ransac_iterations = 1000
+    options.max_ransac_iterations = 250
     if ransactype == 'ransac':
         options.ransac_type = pt.sfm.RansacType(0)
     elif ransactype == 'prosac':
@@ -204,12 +204,10 @@ if __name__ == "__main__":
     prior.radial_distortion.value = [0, 0, 0, 0]
     prior.tangential_distortion.value = [0, 0]
     prior.skew.value = [0]
+    prior.image_width = int(3072*scaler)
+    prior.image_height = int(2304*scaler)
     # 'PINHOLE_RADIAL_TANGENTIAL', 'DIVISION_UNDISTORTION', 'DOUBLE_SPHERE', 'FOV', 'EXTENDED_UNIFIED', 'FISHEYE
     prior.camera_intrinsics_model_type = 'PINHOLE' 
-
-    # init camera
-    camera = pt.sfm.Camera()
-    camera.SetFromCameraIntrinsicsPriors(prior)
 
     # opencv extraction of features from images
     images_files = glob.glob(os.path.join(args.image_path,'*.JPG'))
@@ -222,8 +220,8 @@ if __name__ == "__main__":
 
     for i, image_name in enumerate(image_names):
         view_id = recon.AddView(image_name, 0, i)
-        c = recon.MutableView(view_id).MutableCamera()
-        c.DeepCopy(camera)
+        v = recon.MutableView(view_id)
+        v.SetCameraIntrinsicsPrior(prior)
 
     features = {}
     num_images = len(images_files)
@@ -258,6 +256,9 @@ if __name__ == "__main__":
             else:
                 print("No match between view {} and view {}.\n\n ".format(view_id1, view_id2))
     
+    # make sure all data is set
+    pt.sfm.SetCameraIntrinsicsFromPriors(recon)
+    
     print('{} edges were added to the view graph.'.format(view_graph.NumEdges))
     track_builder.BuildTracks(recon)
     options = pt.sfm.ReconstructionEstimatorOptions()
@@ -271,7 +272,7 @@ if __name__ == "__main__":
     options.min_triangulation_angle_degrees = 2.0
     options.triangulation_method = pt.sfm.TriangulationMethodType(0)
     if reconstructiontype == 'global':
-        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LIGT
+        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LEAST_UNSQUARED_DEVIATION
         options.global_rotation_estimator_type = pt.sfm.GlobalRotationEstimatorType.ROBUST_L1L2  
         reconstruction_estimator = pt.sfm.GlobalReconstructionEstimator(options)
     elif reconstructiontype == 'incremental':
