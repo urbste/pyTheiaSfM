@@ -279,7 +279,7 @@ make -j
 ```
 
 ## How to build Python wheels
-### Local build
+### Local build with sudo installed ceres-solver and Eigen
 Tested on Ubuntu. In your Python >= 3.5 environment of choice run:
 ```bash
 sh build_and_install.sh
