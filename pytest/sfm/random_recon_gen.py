@@ -20,6 +20,9 @@ class CameraPrior:
         self.cam_prior.camera_intrinsics_model_type = "DIVISION_UNDISTORTION"
         self.cam_prior.radial_distortion.value = [distortion, 0.0, 0.0, 0.0]
 
+    def set_to_orthographic(self):
+        self.cam_prior.camera_intrinsics_model_type = "ORTHOGRAPHIC"
+
 
 class RandomReconGenerator:
     def __init__(self, seed=42,
@@ -114,7 +117,11 @@ class RandomReconGenerator:
                 view = self.recon.View(vid)
                 cam = view.Camera()
                 obs = cam.ProjectPoint(track)
-                if obs[0] <= 0 or obs[1][0] < 0.0 or obs[1][0] > self.camera.ImageWidth or obs[1][1] < 0.0 or obs[1][1] > self.camera.ImageHeight:
+                if cam.GetCameraIntrinsicsModelType() != pt.sfm.ORTHOGRAPHIC:
+                    if obs[0] <= 0:
+                        continue
+
+                if obs[1][0] < 0.0 or obs[1][0] > self.camera.ImageWidth or obs[1][1] < 0.0 or obs[1][1] > self.camera.ImageHeight:
                     continue
 
                 point2d = obs[1] + np.random.randn(2) * pixel_noise

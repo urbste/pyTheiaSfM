@@ -34,6 +34,7 @@ Hence, we removed some libaries from the original TheiaSfM:
 * Camera models
   * Double Sphere
   * Extended Unified
+  * Orthographic
 * Bundle adjustment
   * Using a homogeneous representation for scene points
   * Extracting covariance information
@@ -46,8 +47,17 @@ Hence, we removed some libaries from the original TheiaSfM:
   * Added covariance_, depth_prior_, depth_prior_variance_ to **Feature** class
 * Absolute Pose solvers
   * SQPnP
+  * UncalibratedPlanarOrthographic Pose
 
 ## Usage Examples
+
+### Full reconstruction example: Global, Hybrid or Incremental SfM using OpenCV feature detection and matching
+Have a look at the short example: [sfm_pipeline.py](pytest/sfm_pipeline.py).
+Download the south_building dataset from [here](https://demuc.de/colmap/datasets/).
+Extract it somewhere and run: 
+```bash
+python pytest/sfm_pipeline.py --image_path /path/to/south-building/images/
+```
 
 ### Creating a camera
 The following example show you how to create a camera in pyTheia.
@@ -174,48 +184,6 @@ res = BundleAdjustTracksWithCov(recon, opts, [view_id1,trackid])
 
 # two view optimization
 res = BundleAdjustTwoViewsAngular(recon, [pt.sfm.FeatureCorrespondence], pt.sfm.TwoViewInfo())
-```
-
-### Reconstruction example: Global, Hybrid or Incremental SfM using OpenCV feature detection and matching
-Have a look at the short example: [sfm_pipeline.py](src/pytheia/sfm_pipeline.py)
-``` Python
-import pytheia as pt
-# use your favourite Feature extractor matcher 
-# can also be any deep stuff
-view_graph = pt.sfm.ViewGraph()
-recon = pt.sfm.Reconstruction()
-track_builder = pt.sfm.TrackBuilder(3, 30)
-
-# ... match some features to find putative correspondences
-success, twoview_info, inlier_indices = pt.sfm.EstimateTwoViewInfo(options, prior, prior, correspondences)
-# ... get filtered feature correspondences and add them to the reconstruction
-correspondences = pt.matching.FeatureCorrespondence(
-            pt.sfm.Feature(point1), pt.sfm.Feature(point2))
-for i in range(len(verified_matches)):
-  track_builder.AddFeatureCorrespondence(view_id1, correspondences[i].feature1, 
-                                         view_id2, correspondences[i].feature2)
-
-# ... Build Tracks
-track_builder.BuildTracks(recon)
-
-ptions = pt.sfm.ReconstructionEstimatorOptions()
-options.num_threads = 4
-options.rotation_filtering_max_difference_degrees = 10.0
-options.bundle_adjustment_robust_loss_width = 3.0
-options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
-options.subsample_tracks_for_bundle_adjustment = True
-
-if reconstructiontype == 'global':
-  options.filter_relative_translations_with_1dsfm = True
-  reconstruction_estimator = pt.sfm.GlobalReconstructionEstimator(options)
-elif reconstructiontype == 'incremental':
-  reconstruction_estimator = pt.sfm.IncrementalReconstructionEstimator(options)
-elif reconstructiontype == 'hybrid':
-  reconstruction_estimator = pt.sfm.HybridReconstructionEstimator(options)
-recon_sum = reconstruction_estimator.Estimate(view_graph, recon)
-
-pt.io.WritePlyFile("test.ply", recon, [255,0,0],2)
-pt.io.WriteReconstruction(recon, "reconstruction_file")
 ```
 
 ## Building

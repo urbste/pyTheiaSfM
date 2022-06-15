@@ -34,7 +34,8 @@
 
 import os
 import numpy as np
-import cv2 
+import cv2
+from sklearn.preprocessing import scale 
 from cv2.xfeatures2d import matchGMS
 import glob
 import argparse
@@ -42,7 +43,7 @@ import time
 
 import pytheia as pt
 
-min_num_inlier_matches = 150
+min_num_inlier_matches = 100
 
 def remove_prefix_and_suffix(image_file):
     pos = image_file.rfind('/')+1
@@ -62,26 +63,28 @@ def correspondence_from_matches(filtered_matches, feat1, feat2):
 
     return correspondences
 
-def extract_features(image_path, mask_path, featuretype, recon):
+def extract_features(image_path, mask_path, featuretype, recon, scale_factor):
 
     img_name = remove_prefix_and_suffix(image_path)
     view_id = recon.ViewIdFromName(img_name)
     cam = recon.MutableView(view_id).MutableCamera()
     img = cv2.imread(image_path, 0)
+    if scale_factor != 1.0:
+        img = cv2.resize(img, (-1,-1), fx=scale_factor, fy=scale_factor)
     cam.SetImageSize(img.shape[1],img.shape[0])
 
-    img = cv2.resize(img, (cam.ImageWidth,cam.ImageHeight))
     if mask_path:
-        mask = cv2.resize(cv2.imread(mask_path, 0), (cam.ImageWidth,cam.ImageHeight))
+        mask = cv2.resize(cv2.imread(mask_path, 0), 
+            (cam.ImageWidth,cam.ImageHeight))
     else:
         mask = None
 
     if featuretype == 'akaze':
-        feature = cv2.AKAZE_create(cv2.AKAZE_DESCRIPTOR_KAZE, 0, 3, 0.0001, 2, 2)
+        feature = cv2.AKAZE_create(cv2.AKAZE_DESCRIPTOR_KAZE, 0, 3, 0.0001, 4, 4)
     elif featuretype == 'sift':
-        feature = cv2.SIFT_create(5000)
+        feature = cv2.SIFT_create(10000)
     elif featuretype == 'akaze_bin':
-        feature = cv2.AKAZE_create(cv2.AKAZE_DESCRIPTOR_MLDB, 0, 3, 0.0001, 2, 2)
+        feature = cv2.AKAZE_create(cv2.AKAZE_DESCRIPTOR_MLDB, 0, 3, 0.0001, 4, 4)
 
     kpts1, desc1 = feature.detectAndCompute(img, mask)
 
@@ -120,8 +123,8 @@ def match_image_pair(recon, track_builder, features, vid1, vid2, matchertype):
         filtered_matches, features[vid1]["keypoints"], features[vid2]["keypoints"])
 
     options = pt.sfm.EstimateTwoViewInfoOptions()
-    options.max_sampson_error_pixels = 0.5
-    options.max_ransac_iterations = 200
+    options.max_sampson_error_pixels = 1.0
+    options.max_ransac_iterations = 1000
     if ransactype == 'ransac':
         options.ransac_type = pt.sfm.RansacType(0)
     elif ransactype == 'prosac':
@@ -154,26 +157,34 @@ def match_image_pair(recon, track_builder, features, vid1, vid2, matchertype):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for sfm pipeline')
-    parser.add_argument('--feature', type=str, default='akaze_bin',
-                    help='feature descriptor type: sift or akaze')
-    parser.add_argument('--matcher', type=str, default='gms', choices=["knn", "gms"],
+    parser.add_argument('--image_path', type=str, default="")
+    parser.add_argument('--feature', type=str, default='akaze',
+                    help='feature descriptor type: sift or akaze or akaze_bin')
+    parser.add_argument('--matcher', type=str, default='knn', choices=["knn", "gms"],
                     help='feature matcher type: knn or gms')
     parser.add_argument('--ransac', type=str, default='ransac', 
                     help='ransac type for estimator: ransac, prosac or lmed')
-    parser.add_argument('--reconstruction', type=str, default='global',
+    parser.add_argument('--reconstruction_type', type=str, default='global',
                     help='reconstruction type: global, incremental or hybrid')
-    parser.add_argument('--image_path', type=str, default="")
     parser.add_argument('--output_path', type=str, default="")
-    parser.add_argument('--debug', type=int, default=1)
-    parser.add_argument("--fcxcy", nargs=3, default=["5287.877","698.1492", "523.5119"],
+    parser.add_argument('--debug', type=int, default=0)
+    parser.add_argument("--fcxcy", nargs=3, default=["2559.68","1536", "1152"],
                         help="pinhole camera params: focal length, printipcal point cx, cy", type=float)
-                    
+    parser.add_argument("--img_downscale_factor", default=0.5,
+                        help="image downscale factor so that new_wh = factor * wh", type=float)
+
     args = parser.parse_args()
-    print(float(args.fcxcy[0]))
+
+    if args.output_path == "":
+        print("No output path specified. Taking args.image_path: {}".format(args.image_path))
+        output_path = args.image_path
+    else:
+        output_path = args.output_path
+
     ransactype = args.ransac
     featuretype = args.feature
     matchertype = args.matcher
-    reconstructiontype = args.reconstruction
+    reconstructiontype = args.reconstruction_type
     print('Configurations: ransactype: {}; featuretype: {}; matchertype: {}; reconstructiontype: {}'.format(
         ransactype, featuretype, matchertype, reconstructiontype))
 
@@ -185,9 +196,11 @@ if __name__ == "__main__":
     track_builder = pt.sfm.TrackBuilder(3, 30)
 
     prior = pt.sfm.CameraIntrinsicsPrior()
-    prior.focal_length.value = [args.focal_length]
+    scaler = args.img_downscale_factor
+    prior.focal_length.value = [float(args.fcxcy[0])*scaler]
     prior.aspect_ratio.value = [1.0]
-    prior.principal_point.value = [698.1492792451463, 523.5119897611621]
+    prior.principal_point.value = [
+        float(args.fcxcy[1])*scaler,float(args.fcxcy[2])*scaler]
     prior.radial_distortion.value = [0, 0, 0, 0]
     prior.tangential_distortion.value = [0, 0]
     prior.skew.value = [0]
@@ -199,7 +212,7 @@ if __name__ == "__main__":
     camera.SetFromCameraIntrinsicsPriors(prior)
 
     # opencv extraction of features from images
-    images_files = glob.glob(os.path.join(args.image_path,'*.png'))
+    images_files = glob.glob(os.path.join(args.image_path,'*.JPG'))
     image_names = []
     for image_file in images_files:
         image_names.append(remove_prefix_and_suffix(image_file))
@@ -215,7 +228,7 @@ if __name__ == "__main__":
     features = {}
     num_images = len(images_files)
     for i in range(num_images):
-        kpts, desc, view_id, img = extract_features(images_files[i], None, featuretype, recon)
+        kpts, desc, view_id, img = extract_features(images_files[i], None, featuretype, recon, scaler)
         features[view_id] = {"keypoints" : kpts, "descriptors" : desc, "img": img, "img_wh": img.shape[:2][::-1]}
         print("Extracted {} features from {}".format(len(kpts), images_files[i]))
 
@@ -236,8 +249,9 @@ if __name__ == "__main__":
                         pt1 = (int(cor.feature1.point[0]), int(cor.feature1.point[1]))
                         pt2 = (int(cor.feature2.point[0]+img2.shape[1]), int(cor.feature2.point[1]))
                         images=cv2.line(images, pt1, pt2, (255,0,0), 1)
+                    images = cv2.resize(images, (2*640,480))
                     cv2.imshow("matches", images)
-                    cv2.waitKey(0)
+                    cv2.waitKey(1)
                 view_graph.AddEdge(view_id1, view_id2, two_view_info)
 
                 print("Match between view {} and view {}. ".format(view_id1, view_id2))
@@ -248,7 +262,7 @@ if __name__ == "__main__":
     track_builder.BuildTracks(recon)
     options = pt.sfm.ReconstructionEstimatorOptions()
     options.num_threads = 7
-    options.rotation_filtering_max_difference_degrees = 10.0
+    options.rotation_filtering_max_difference_degrees = 15.0
     options.bundle_adjustment_robust_loss_width = 3.0
     options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
     options.subsample_tracks_for_bundle_adjustment = False
@@ -257,7 +271,7 @@ if __name__ == "__main__":
     options.min_triangulation_angle_degrees = 2.0
     options.triangulation_method = pt.sfm.TriangulationMethodType(0)
     if reconstructiontype == 'global':
-        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LEAST_UNSQUARED_DEVIATION
+        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LIGT
         options.global_rotation_estimator_type = pt.sfm.GlobalRotationEstimatorType.ROBUST_L1L2  
         reconstruction_estimator = pt.sfm.GlobalReconstructionEstimator(options)
     elif reconstructiontype == 'incremental':
@@ -267,6 +281,6 @@ if __name__ == "__main__":
     recon_sum = reconstruction_estimator.Estimate(view_graph, recon)
 
     print('Reconstruction summary message: {}'.format(recon_sum.message))
-    print("Writing results to ",args.output_path)
-    pt.io.WritePlyFile(os.path.join(args.output_path,"test.ply"), recon, [255,0,0],2)
-    pt.io.WriteReconstruction(recon, os.path.join(args.output_path,"theia_recon.recon"))
+    print("Writing results to ",output_path)
+    pt.io.WritePlyFile(os.path.join(output_path,"test_recon.ply"), recon, [255,0,0],2)
+    pt.io.WriteReconstruction(recon, os.path.join(output_path,"theia_recon.recon"))
