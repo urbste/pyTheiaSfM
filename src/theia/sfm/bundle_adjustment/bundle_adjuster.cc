@@ -260,7 +260,7 @@ void BundleAdjuster::SetCameraExtrinsicsParameterization() {
       SetCameraPositionConstant(view_id);
     }
   }
-  // for orthographic cameras we set tz constant
+  // for orthographic cameras we set tz constant = 0
   if (options_.orthographic_camera) {
     for (const ViewId view_id : optimized_views_) {
       SetTzConstant(view_id);

@@ -67,11 +67,11 @@ class RandomReconGenerator:
             view = self.recon.View(view_id)
             m_cam = view.MutableCamera()
             m_cam.DeepCopy(self.camera)
-            m_cam.Position = np.array([X[i], Y[i], Z[i]])
+            m_cam.SetPosition(np.array([X[i], Y[i], Z[i]]))
             rot_axis = np.array([RX[i], RY[i], RZ[i]])
             rot_axis /= np.linalg.norm(rot_axis)
             m_cam.SetOrientationFromAngleAxis(angles[i] * rot_axis)
-            view.IsEstimated = True
+            view.SetIsEstimated(True)
 
     def _sample_tracks(self, nr_tracks, xyz_min=[-2, -2, -2], xyz_max=[2, 2, 2]):
         if self.verbose:
@@ -112,16 +112,16 @@ class RandomReconGenerator:
 
     def _create_observations(self, pixel_noise=0.0):
         for tid in self.recon.TrackIds:
-            track = self.recon.Track(tid).Point
+            pt3d = self.recon.Track(tid).Point()
             for vid in self.recon.ViewIds:
                 view = self.recon.View(vid)
                 cam = view.Camera()
-                obs = cam.ProjectPoint(track)
+                obs = cam.ProjectPoint(pt3d)
                 if cam.GetCameraIntrinsicsModelType() != pt.sfm.ORTHOGRAPHIC:
                     if obs[0] <= 0:
                         continue
 
-                if obs[1][0] < 0.0 or obs[1][0] > self.camera.ImageWidth or obs[1][1] < 0.0 or obs[1][1] > self.camera.ImageHeight:
+                if obs[1][0] < 0.0 or obs[1][0] > self.camera.ImageWidth() or obs[1][1] < 0.0 or obs[1][1] > self.camera.ImageHeight():
                     continue
 
                 point2d = obs[1] + np.random.randn(2) * pixel_noise
@@ -136,23 +136,23 @@ class RandomReconGenerator:
         if self.verbose:
             print("Adding view {}".format(view_id))
         view = self.recon.View(view_id)
-        view.MutableCamera().Position = np.array(view_pos)
+        view.MutableCamera().SetPosition(np.array(view_pos))
         view.MutableCamera().SetOrientationFromAngleAxis(view_ax_angle)
-        view.IsEstimated = True
+        view.SetIsEstimated(True)
 
     def add_track(self, track_xyz):
         track_id = self.recon.AddTrack()
         if self.verbose:
             print("Adding track {}".format(track_id))
         track = self.recon.MutableTrack(track_id)
-        track.Point = np.array(
-            [track_xyz[0], track_xyz[1], track_xyz[2], 1], dtype=np.float32)
-        track.IsEstimated = True
+        track.SetPoint(np.array(
+            [track_xyz[0], track_xyz[1], track_xyz[2], 1], dtype=np.float32))
+        track.SetIsEstimated(True)
 
     def add_noise_to_view(self, view_id, noise_pos, noise_angle):
         view = self.recon.View(view_id)
-        view.MutableCamera().Position = view.MutableCamera().Position + \
-            noise_pos * np.random.randn(3)
+        view.MutableCamera().SetPosition(view.MutableCamera().GetPosition() + \
+            noise_pos * np.random.randn(3))
         ax_angle = view.Camera().GetOrientationAsAngleAxis()
         noise_angle_rad = noise_angle * np.pi / 180.
         view.MutableCamera().SetOrientationFromAngleAxis(
@@ -165,7 +165,7 @@ class RandomReconGenerator:
     def add_noise_to_track(self, track_id, noise_track):
         noisy_track = self.recon.Track(track_id).Point[:3] / self.recon.Track(track_id).Point[3]
         noisy_track += noise_track * np.random.randn(3)
-        self.recon.MutableTrack(track_id).Point = np.append(noisy_track,1)
+        self.recon.MutableTrack(track_id).SetPoint(np.append(noisy_track,1))
 
     def add_noise_to_tracks(self, noise_track=1e-5):
         for track_id in self.recon.TrackIds:

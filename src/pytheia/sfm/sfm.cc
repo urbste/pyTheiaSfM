@@ -467,14 +467,13 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::Camera::InitializeFromProjectionMatrix)
       .def("GetCalibrationMatrix", &theia::Camera::GetCalibrationMatrixWrapper)
       .def("GetProjectionMatrix", &theia::Camera::GetProjectionMatrixWrapper)
-      .def_property("FocalLength",
-                    &theia::Camera::FocalLength,
-                    &theia::Camera::SetFocalLength)
-      .def_property_readonly("ImageHeight", &theia::Camera::ImageHeight)
-      .def_property_readonly("ImageWidth", &theia::Camera::ImageWidth)
+      .def("FocalLength", &theia::Camera::FocalLength)
+      .def("SetFocalLength", &theia::Camera::SetFocalLength)
+      .def("ImageHeight", &theia::Camera::ImageHeight)
+      .def("ImageWidth", &theia::Camera::ImageWidth)
       .def("SetImageSize", &theia::Camera::SetImageSize)
-      .def_property_readonly("PrincipalPointX", &theia::Camera::PrincipalPointX)
-      .def_property_readonly("PrincipalPointY", &theia::Camera::PrincipalPointY)
+      .def("PrincipalPointX", &theia::Camera::PrincipalPointX)
+      .def("PrincipalPointY", &theia::Camera::PrincipalPointY)
       .def("SetPrincipalPoint", &theia::Camera::SetPrincipalPoint)
       .def("GetOrientationAsAngleAxis",
            &theia::Camera::GetOrientationAsAngleAxis)
@@ -484,8 +483,8 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::Camera::SetOrientationFromAngleAxis)
       .def("SetOrientationFromRotationMatrix",
            &theia::Camera::SetOrientationFromRotationMatrix)
-      .def_property(
-          "Position", &theia::Camera::GetPosition, &theia::Camera::SetPosition)
+      .def("GetPosition", &theia::Camera::GetPosition)
+      .def("SetPosition", &theia::Camera::SetPosition)
       .def("PrintCameraIntrinsics", &theia::Camera::PrintCameraIntrinsics)
       .def("PixelToNormalizedCoordinates",
            &theia::Camera::PixelToNormalizedCoordinates)
@@ -849,13 +848,13 @@ void pytheia_sfm_classes(py::module& m) {
   py::class_<theia::View>(m, "View")
       .def(py::init<>())
       .def(py::init<std::string>())
-      .def_property_readonly("Name", &theia::View::Name)
-      .def_property(
-          "IsEstimated", &theia::View::IsEstimated, &theia::View::SetEstimated)
+      .def("Name", &theia::View::Name)
+      .def("IsEstimated", &theia::View::IsEstimated)
+      .def("SetIsEstimated", &theia::View::SetEstimated)
       .def("NumFeatures", &theia::View::NumFeatures)
       .def("AddFeature", &theia::View::AddFeature)
       .def("RemoveFeature", &theia::View::RemoveFeature)
-      .def_property_readonly("TrackIds", &theia::View::TrackIds)
+      .def("TrackIds", &theia::View::TrackIds)
       //.def_readwrite("focal_length", &theia::View::Track)
       .def("GetFeature",
            &theia::View::GetFeature,
@@ -945,23 +944,23 @@ void pytheia_sfm_classes(py::module& m) {
   py::class_<theia::Track>(m, "Track")
       .def(py::init<>())
       .def("SetIsEstimated", &theia::Track::SetEstimated)
-      .def_property_readonly("IsEstimated", &theia::Track::IsEstimated)
+      .def("IsEstimated", &theia::Track::IsEstimated)
       .def("NumViews", &theia::Track::NumViews)
       .def("AddView", &theia::Track::AddView)
       .def("RemoveView", &theia::Track::RemoveView)
-      .def_property_readonly("ViewIds", &theia::Track::ViewIds)
-      .def_property_readonly("Point", &theia::Track::Point)
+      .def("ViewIds", &theia::Track::ViewIds)
+      .def("Point", &theia::Track::Point)
       .def("SetPoint", &theia::Track::SetPoint)
-      .def_property("Point", &theia::Track::Point, &theia::Track::SetPoint)
-      .def_property_readonly("Color", &theia::Track::Color)
+      .def("Point", &theia::Track::Point)
+      .def("Color", &theia::Track::Color)
       .def("SetColor", &theia::Track::SetColor)
       .def("ReferenceViewId", &theia::Track::ReferenceViewId)
-      .def_property_readonly("InverseDepth", &theia::Track::InverseDepth)
+      .def("InverseDepth", &theia::Track::InverseDepth)
       .def("SetInverseDepth", &theia::Track::SetInverseDepth)
       .def("SetReferenceBearingVector", &theia::Track::SetReferenceBearingVector)
-      .def_property_readonly("ReferenceBearingVector", &theia::Track::ReferenceBearingVector)
+      .def("ReferenceBearingVector", &theia::Track::ReferenceBearingVector)
       .def("SetReferenceDescriptor", &theia::Track::SetReferenceDescriptor)
-      .def_property_readonly("ReferenceDescriptor", &theia::Track::ReferenceDescriptor);
+      .def("ReferenceDescriptor", &theia::Track::ReferenceDescriptor);
 
   // Track builder class
   py::class_<theia::TrackBuilder>(m, "TrackBuilder")
