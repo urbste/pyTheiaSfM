@@ -1006,7 +1006,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("use_position_priors",
                      &theia::BundleAdjustmentOptions::use_position_priors)
       .def_readwrite("orthographic_camera",
-                     &theia::BundleAdjustmentOptions::orthographic_camera);
+                     &theia::BundleAdjustmentOptions::orthographic_camera)      
+      .def_readwrite("z_constrain_sqrt_info",
+                     &theia::BundleAdjustmentOptions::z_constrain_sqrt_info);
 
   // Reconstruction Options
   py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")

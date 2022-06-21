@@ -139,6 +139,7 @@ struct BundleAdjustmentOptions {
 
   // Adjusting orthographic camera
   bool orthographic_camera = false;
+  double z_constrain_sqrt_info = 10000.0;
 };
 
 // Some important metrics for analyzing bundle adjustment results.

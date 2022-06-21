@@ -48,6 +48,7 @@
 #include "theia/sfm/camera/create_reprojection_error_cost_function.h"
 #include "theia/sfm/bundle_adjustment/position_error.h"
 #include "theia/sfm/bundle_adjustment/depth_prior_error.h"
+#include "theia/sfm/bundle_adjustment/ortho_z_error.h"
 
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
@@ -148,11 +149,17 @@ void BundleAdjuster::AddView(const ViewId view_id) {
     if (options_.use_depth_priors && feature->depth_prior() != 0.0) {
       AddDepthPriorErrorResidual(*feature, camera, track);
     }
+
   }
 
   // add a position prior if available
   if (options_.use_position_priors && view->HasPositionPrior()) {
     AddPositionPriorErrorResidual(view, camera);
+  }
+
+  // add a constrain on the z coordinate of t_c_w(2) == 0
+  if (options_.orthographic_camera) {
+    AddOrthoZConstrain(camera, options_.z_constrain_sqrt_info);
   }
 }
 
@@ -258,12 +265,6 @@ void BundleAdjuster::SetCameraExtrinsicsParameterization() {
   } else if (options_.constant_camera_position) {
     for (const ViewId view_id : optimized_views_) {
       SetCameraPositionConstant(view_id);
-    }
-  }
-  // for orthographic cameras we set tz constant = 0
-  if (options_.orthographic_camera) {
-    for (const ViewId view_id : optimized_views_) {
-      SetTzConstant(view_id);
     }
   }
 }
@@ -480,11 +481,17 @@ void BundleAdjuster::AddPositionPriorErrorResidual(View* view, Camera* camera) {
 void BundleAdjuster::AddDepthPriorErrorResidual(const Feature& feature,
                                           Camera* camera,
                                           Track* track) {
-
   problem_->AddResidualBlock(
     DepthPriorError::Create(feature),
     depth_prior_loss_function_.get(),
     camera->mutable_extrinsics(), track->MutablePoint()->data());
+}
+
+void BundleAdjuster::AddOrthoZConstrain(Camera* camera,
+    const double weight_sqrt_information) {
+  problem_->AddResidualBlock(
+    OrthographicZConstrain::Create(weight_sqrt_information), NULL,
+    camera->mutable_extrinsics());
 }
 
 bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id,

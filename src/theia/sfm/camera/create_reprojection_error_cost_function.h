@@ -120,12 +120,12 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
       break;
     case CameraIntrinsicsModelType::ORTHOGRAPHIC:
       return new ceres::AutoDiffCostFunction<
-          OrthoReprojectionError<OrthographicCameraModel>,
+          ReprojectionError<OrthographicCameraModel>,
           kResidualSize,
           Camera::kExtrinsicsSize,
           OrthographicCameraModel::kIntrinsicsSize,
           kPointSize>(
-          new OrthoReprojectionError<OrthographicCameraModel>(feature));
+          new ReprojectionError<OrthographicCameraModel>(feature));
       break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "

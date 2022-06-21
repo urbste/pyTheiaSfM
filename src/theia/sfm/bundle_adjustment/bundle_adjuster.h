@@ -129,6 +129,10 @@ class BundleAdjuster {
   virtual void AddDepthPriorErrorResidual(const Feature& feature,
                                           Camera* camera,
                                           Track* track);
+  // Add a regularization constrain for orthographic cameras
+  // so that t_c_w(2) == 0
+  virtual void AddOrthoZConstrain(Camera* camera,
+                                  const double weight_sqrt_information);
 
   const BundleAdjustmentOptions options_;
   Reconstruction* reconstruction_;

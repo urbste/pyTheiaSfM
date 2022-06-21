@@ -120,6 +120,7 @@
 #include "theia/sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.h"
 #include "theia/sfm/bundle_adjustment/orthogonal_vector_error.h"
 #include "theia/sfm/bundle_adjustment/unit_norm_three_vector_parameterization.h"
+#include "theia/sfm/bundle_adjustment/ortho_z_error.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/camera_intrinsics_model.h"
 #include "theia/sfm/camera/camera_intrinsics_model_type.h"
