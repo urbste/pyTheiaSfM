@@ -77,7 +77,7 @@ camera = pt.sfm.Camera()
 camera.SetFromCameraIntrinsicsPriors(prior)
 
 # the camera object also carries extrinsics information
-camera.Position = [0,0,-2]
+camera.SetPosition([0,0,-2])
 camera.SetOrientationFromAngleAxis([0,0,0.1])
 
 # project with intrinsics image to camera coordinates
@@ -91,7 +91,7 @@ pt3_h = [1,1,2,1] # homogeneous 3d point
 depth, pt2 = camera.ProjectPoint(pt3_h)
 # get a ray from camera to 3d point in the world frame
 ray = camera.PixelToUnitDepthRay(pt2)
-pt3_h_ = ray*depth + camera.Position # == pt3_h[:3]
+pt3_h_ = ray*depth + camera.GetPosition() # == pt3_h[:3]
 ```
 
 ### Solve for absolute or relative camera pose
