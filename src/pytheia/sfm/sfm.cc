@@ -951,7 +951,6 @@ void pytheia_sfm_classes(py::module& m) {
       .def("ViewIds", &theia::Track::ViewIds)
       .def("Point", &theia::Track::Point)
       .def("SetPoint", &theia::Track::SetPoint)
-      .def("Point", &theia::Track::Point)
       .def("Color", &theia::Track::Color)
       .def("SetColor", &theia::Track::SetColor)
       .def("ReferenceViewId", &theia::Track::ReferenceViewId)
