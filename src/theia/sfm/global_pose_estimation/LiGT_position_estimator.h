@@ -32,7 +32,7 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
-// Author: Steffen Urban (steffen.urban@googlemail.com), March 2021
+// Author: Steffen Urban (urbste@googlemail.com), March 2021
 
 #ifndef THEIA_SFM_GLOBAL_POSE_ESTIMATION_LiGT_POSITION_ESTIMATOR_H_
 #define THEIA_SFM_GLOBAL_POSE_ESTIMATION_LiGT_POSITION_ESTIMATOR_H_

@@ -32,6 +32,8 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+// Edited: Steffen Urban (urbste@googlemail.com), 2021-2023
+
 #ifndef THEIA_SFM_CAMERA_CAMERA_INTRINSICS_MODEL_TYPE_H_
 #define THEIA_SFM_CAMERA_CAMERA_INTRINSICS_MODEL_TYPE_H_
 
@@ -52,7 +54,8 @@ enum class CameraIntrinsicsModelType {
   DIVISION_UNDISTORTION = 4,
   DOUBLE_SPHERE = 5,
   EXTENDED_UNIFIED = 6,
-  ORTHOGRAPHIC = 7
+  ORTHOGRAPHIC = 7,
+  EQUIRECTANGULAR = 8
 };
 
 // Converts an input string to the corresponding camera intrinsics model type.
@@ -74,6 +77,8 @@ inline CameraIntrinsicsModelType StringToCameraIntrinsicsModelType(
     return CameraIntrinsicsModelType::EXTENDED_UNIFIED;
   } else if (camera_model_type_string == "ORTHOGRAPHIC") {
     return CameraIntrinsicsModelType::ORTHOGRAPHIC;
+  } else if (camera_model_type_string == "EQUIRECTANGULAR") {
+    return CameraIntrinsicsModelType::EQUIRECTANGULAR;
   } else {
     LOG(FATAL) << "Invalid camera model type supplied: "
                << camera_model_type_string;
@@ -99,6 +104,8 @@ inline std::string CameraIntrinsicsModelTypeToString(
       return "EXTENDED_UNIFIED";
     case CameraIntrinsicsModelType::ORTHOGRAPHIC:
       return "ORTHOGRAPHIC";
+    case CameraIntrinsicsModelType::EQUIRECTANGULAR:
+      return "EQUIRECTANGULAR";
     default:
       LOG(FATAL) << "Invalid Camera model chosen.";
       break;
@@ -126,6 +133,8 @@ inline bool IsCameraIntrinsicsModelTypeValid(
   } else if (camera_model_type_string == "EXTENDED_UNIFIED") {
     return true;
   } else if (camera_model_type_string == "ORTHOGRAPHIC") {
+    return true;
+  } else if (camera_model_type_string == "EQUIRECTANGULAR") {
     return true;
   }
   return false;
