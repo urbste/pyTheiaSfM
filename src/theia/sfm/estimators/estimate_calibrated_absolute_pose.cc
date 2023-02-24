@@ -120,7 +120,7 @@ class CalibratedAbsolutePoseEstimator
   }
 
   bool RefineModel(const std::vector<FeatureCorrespondence2D3D>& correspondences,
-    CalibratedAbsolutePose* absolute_pose) {
+    CalibratedAbsolutePose* absolute_pose) const {
     Reconstruction reconstruction;
     const auto v_id = reconstruction.AddView("0", 0, 0.0);
     auto m_view = reconstruction.MutableView(v_id);
@@ -133,7 +133,7 @@ class CalibratedAbsolutePoseEstimator
         auto m_track = reconstruction.MutableTrack(t_id);
         m_track->SetEstimated(true);
         m_track->SetPoint(correspondences[i].world_point.homogeneous());
-        reconstruction.AddObservation(v_id, t_id, theia::Feature(correspondences[i].feature))
+        reconstruction.AddObservation(v_id, t_id, theia::Feature(correspondences[i].feature));
     }
     
     theia::BundleAdjustmentSummary summary = theia::BundleAdjustView(
