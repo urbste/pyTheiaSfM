@@ -48,6 +48,9 @@
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
 
+#include "theia/sfm/reconstruction.h"
+#include "theia/sfm/bundle_adjustment/bundle_adjuster.h"
+
 namespace theia {
 namespace {
 
@@ -60,7 +63,11 @@ using Eigen::Vector3d;
 class CalibratedAbsolutePoseEstimator
     : public Estimator<FeatureCorrespondence2D3D, CalibratedAbsolutePose> {
  public:
-  CalibratedAbsolutePoseEstimator() : pnp_type_(PnPType::KNEIP) {}
+  CalibratedAbsolutePoseEstimator() : pnp_type_(PnPType::KNEIP) {
+    ba_opts_.max_num_iterations = 2;
+    ba_opts_.use_homogeneous_local_point_parametrization = false;
+    ba_opts_.intrinsics_to_optimize = theia::OptimizeIntrinsicsType::NONE;
+  }
 
   CalibratedAbsolutePoseEstimator(const PnPType& pnp_type) : pnp_type_(pnp_type) {}
   // 3 correspondences are needed to determine the absolute pose.
@@ -112,6 +119,35 @@ class CalibratedAbsolutePoseEstimator
     return absolute_poses->size() > 0;
   }
 
+  bool RefineModel(const std::vector<FeatureCorrespondence2D3D>& correspondences,
+    CalibratedAbsolutePose* absolute_pose) {
+    Reconstruction reconstruction;
+    const auto v_id = reconstruction.AddView("0", 0, 0.0);
+    auto m_view = reconstruction.MutableView(v_id);
+    auto m_cam = m_view->MutableCamera();
+    m_view->SetEstimated(true);
+    m_cam->SetOrientationFromRotationMatrix(absolute_pose->rotation);
+    m_cam->SetPosition(absolute_pose->position);
+    for (int i=0; i < correspondences.size(); ++i) {
+        const auto t_id = reconstruction.AddTrack();
+        auto m_track = reconstruction.MutableTrack(t_id);
+        m_track->SetEstimated(true);
+        m_track->SetPoint(correspondences[i].world_point.homogeneous());
+        reconstruction.AddObservation(v_id, t_id, theia::Feature(correspondences[i].feature))
+    }
+    
+    theia::BundleAdjustmentSummary summary = theia::BundleAdjustView(
+        ba_opts_, v_id, &reconstruction);
+
+    if (summary.final_cost < summary.initial_cost) {
+        absolute_pose->position = m_cam->GetPosition();
+        absolute_pose->rotation = m_cam->GetOrientationAsRotationMatrix();
+    }
+
+    return summary.final_cost < summary.initial_cost;
+  }
+
+
   // The error for a correspondences given an absolute pose. This is the squared
   // reprojection error.
   double Error(const FeatureCorrespondence2D3D& correspondence,
@@ -127,6 +163,7 @@ class CalibratedAbsolutePoseEstimator
 
  private:
   PnPType pnp_type_;
+  theia::BundleAdjustmentOptions ba_opts_;
   DISALLOW_COPY_AND_ASSIGN(CalibratedAbsolutePoseEstimator);
 };
 
