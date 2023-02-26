@@ -60,6 +60,7 @@ using Eigen::Vector3d;
 static const int kNumPoints = 100;
 static const double kFocalLength = 1000.0;
 static const double kReprojectionError = 4.0;
+static const int kMinIterations = 50;
 static const double kErrorThreshold =
     (kReprojectionError * kReprojectionError) / (kFocalLength * kFocalLength);
 
@@ -121,6 +122,7 @@ TEST(EstimateCalibratedAbsolutePose, AllInliersNoNoiseKNEIP) {
   options.use_mle = true;
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
+  options.min_iterations = kMinIterations;
   const double kInlierRatio = 1.0;
   const double kNoise = 0.0;
   const double kPoseTolerance = 1e-4;
@@ -152,6 +154,7 @@ TEST(EstimateCalibratedAbsolutePose, AllInliersWithNoiseKNEIP) {
   options.use_mle = true;
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
+  options.min_iterations = kMinIterations;
   const double kInlierRatio = 1.0;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
@@ -184,6 +187,7 @@ TEST(EstimateCalibratedAbsolutePose, AllInliersWithNoiseDLS) {
   options.use_mle = true;
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
+  options.min_iterations = kMinIterations;
   const double kInlierRatio = 1.0;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
@@ -216,6 +220,7 @@ TEST(EstimateCalibratedAbsolutePose, AllInliersWithNoiseSQPnP) {
   options.use_mle = true;
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
+  options.min_iterations = kMinIterations;
   const double kInlierRatio = 1.0;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
@@ -248,6 +253,7 @@ TEST(EstimateCalibratedAbsolutePose, OutliersNoNoiseKNEIP) {
   options.use_mle = true;
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
+  options.min_iterations = kMinIterations;
   const double kInlierRatio = 0.7;
   const double kNoise = 0.0;
   const double kPoseTolerance = 1e-2;
@@ -277,6 +283,7 @@ TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseKNEIP) {
   options.use_mle = true;
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
+  options.min_iterations = kMinIterations;
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
@@ -306,6 +313,7 @@ TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseDLS) {
   options.use_mle = true;
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
+  options.min_iterations = kMinIterations;
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
@@ -335,10 +343,76 @@ TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseSQPNP) {
   options.use_mle = true;
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
+  options.min_iterations = kMinIterations;
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
   const PnPType type = PnPType::SQPnP;
+
+  const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
+                                           RandomRotation(10.0, &rng)};
+  const std::vector<Vector3d> positions = {Vector3d(1, 0, 0),
+                                           Vector3d(0, 1, 0)};
+
+  for (size_t i = 0; i < rotations.size(); i++) {
+    for (size_t j = 0; j < positions.size(); j++) {
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kInlierRatio,
+                        kNoise,
+                        kPoseTolerance,
+                        type);
+    }
+  }
+}
+
+TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseKNEIP_LO) {
+  RansacParameters options;
+  options.rng = std::make_shared<RandomNumberGenerator>(rng);
+  options.use_mle = true;
+  options.error_thresh = kErrorThreshold;
+  options.failure_probability = 0.001;
+  options.use_lo = true;
+  options.lo_start_iterations = 5;
+  options.min_iterations = kMinIterations;
+  const double kInlierRatio = 0.7;
+  const double kNoise = 1.0;
+  const double kPoseTolerance = 1e-4;
+  const PnPType type = PnPType::KNEIP;
+
+  const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
+                                           RandomRotation(10.0, &rng)};
+  const std::vector<Vector3d> positions = {Vector3d(1, 0, 0),
+                                           Vector3d(0, 1, 0)};
+
+  for (size_t i = 0; i < rotations.size(); i++) {
+    for (size_t j = 0; j < positions.size(); j++) {
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kInlierRatio,
+                        kNoise,
+                        kPoseTolerance,
+                        type);
+    }
+  }
+}
+
+
+TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseDLS_LO) {
+  RansacParameters options;
+  options.rng = std::make_shared<RandomNumberGenerator>(rng);
+  options.use_mle = true;
+  options.error_thresh = kErrorThreshold;
+  options.failure_probability = 0.001;
+  options.use_lo = true;
+  options.lo_start_iterations = 5;
+  options.min_iterations = kMinIterations;
+  const double kInlierRatio = 0.7;
+  const double kNoise = 1.0;
+  const double kPoseTolerance = 1e-4;
+  const PnPType type = PnPType::DLS;
 
   const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
                                            RandomRotation(10.0, &rng)};
@@ -365,11 +439,11 @@ TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseSQPNP_LO) {
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
   options.use_lo = true;
-  options.lo_start_iterations = 10;
-  options.min_iterations = 20;
+  options.lo_start_iterations = 5;
+  options.min_iterations = kMinIterations;
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
-  const double kPoseTolerance = 1e-2;
+  const double kPoseTolerance = 1e-4;
   const PnPType type = PnPType::SQPnP;
 
   const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),

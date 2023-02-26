@@ -336,7 +336,8 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
         }
 
 
-        if (summary->num_iterations >= ransac_params_.lo_start_iterations) {
+        if (summary->num_iterations >= ransac_params_.lo_start_iterations &&
+            ransac_params_.use_lo) {
           std::vector<Datum> inliers;
           GetInlierDatum(data, inliers, inlier_indices);
           if (!estimator_.RefineModel(inliers, best_model)) {

@@ -119,6 +119,8 @@
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
 #include "theia/sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.h"
 #include "theia/sfm/bundle_adjustment/orthogonal_vector_error.h"
+#include "theia/sfm/bundle_adjustment/sampson_error.h"
+#include "theia/sfm/bundle_adjustment/fundamental_matrix_parameterization.h"
 #include "theia/sfm/bundle_adjustment/unit_norm_three_vector_parameterization.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/camera_intrinsics_model.h"

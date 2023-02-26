@@ -42,16 +42,19 @@
 #include "theia/sfm/pose/util.h"
 #include "theia/solvers/estimator.h"
 #include "theia/util/util.h"
+#include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
 
 namespace theia {
 namespace {
 
-// An estimator for computing the fundamental matrix from 6 feature
+// An estimator for computing the fundamental matrix from 8 feature
 // correspondences. The feature correspondences should be in pixel coordinates.
 class FundamentalMatrixEstimator
     : public Estimator<FeatureCorrespondence, Eigen::Matrix3d> {
  public:
-  FundamentalMatrixEstimator() {}
+  FundamentalMatrixEstimator() {
+      ba_opts_.max_num_iterations = 2;
+  }
 
   // 8 correspondences are needed to determine an fundamental matrix.
   double SampleSize() const { return 8; }
@@ -75,6 +78,15 @@ class FundamentalMatrixEstimator
     return true;
   }
 
+  bool RefineModel(const std::vector<FeatureCorrespondence>& correspondences,
+                   Eigen::Matrix3d* fundamental_matrix) const {
+
+   theia::BundleAdjustmentSummary ba_summary =
+        theia::OptimizeFundamentalMatrix(ba_opts_, correspondences, fundamental_matrix);
+
+    return ba_summary.final_cost < ba_summary.initial_cost && ba_summary.success;
+  }
+
   // The error for a correspondences given a model. This is the squared sampson
   // error.
   double Error(const FeatureCorrespondence& correspondence,
@@ -85,6 +97,7 @@ class FundamentalMatrixEstimator
   }
 
  private:
+  theia::BundleAdjustmentOptions ba_opts_;
   DISALLOW_COPY_AND_ASSIGN(FundamentalMatrixEstimator);
 };
 

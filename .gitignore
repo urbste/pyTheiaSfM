@@ -12,6 +12,8 @@ pyelf*
 elftools*
 debug_out*
 build*
+cmake_build
+*.csv
 
 *.ply
 *.json

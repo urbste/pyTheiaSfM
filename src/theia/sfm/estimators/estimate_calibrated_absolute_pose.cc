@@ -136,15 +136,12 @@ class CalibratedAbsolutePoseEstimator
         reconstruction.AddObservation(v_id, t_id, theia::Feature(correspondences[i].feature));
     }
     
-    theia::BundleAdjustmentSummary summary = theia::BundleAdjustView(
+    theia::BundleAdjustmentSummary ba_summary = theia::BundleAdjustView(
         ba_opts_, v_id, &reconstruction);
 
-    if (summary.final_cost < summary.initial_cost) {
-        absolute_pose->position = m_cam->GetPosition();
-        absolute_pose->rotation = m_cam->GetOrientationAsRotationMatrix();
-    }
-
-    return summary.final_cost < summary.initial_cost;
+    absolute_pose->position = m_cam->GetPosition();
+    absolute_pose->rotation = m_cam->GetOrientationAsRotationMatrix();
+    return ba_summary.final_cost < ba_summary.initial_cost && ba_summary.success;
   }
 
 
