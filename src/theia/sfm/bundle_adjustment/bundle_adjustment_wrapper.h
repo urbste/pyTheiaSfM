@@ -22,10 +22,20 @@ BundleAdjustmentSummary BundleAdjustViewWrapper(
     const BundleAdjustmentOptions& options,
     const ViewId view_id);
 
+BundleAdjustmentSummary BundleAdjustViewsWrapper(
+    Reconstruction& reconstruction,
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& view_id);
+
 BundleAdjustmentSummary BundleAdjustTrackWrapper(
     Reconstruction& reconstruction,
     const BundleAdjustmentOptions& options,
     const TrackId track_id);
+
+BundleAdjustmentSummary BundleAdjustTracksWrapper(
+    Reconstruction& reconstruction,
+    const BundleAdjustmentOptions& options,
+    const std::vector<TrackId>& track_ids);
 
 // with covariance information
 std::tuple<BundleAdjustmentSummary, Matrix6d, double>
@@ -46,7 +56,7 @@ BundleAdjustViewsWithCovWrapper(Reconstruction& reconstruction,
 std::tuple<BundleAdjustmentSummary, std::map<TrackId, Matrix3d>, double>
 BundleAdjustTracksWithCovWrapper(Reconstruction& reconstruction,
                                  const BundleAdjustmentOptions& options,
-                                 const std::vector<TrackId>& track_id);
+                                 const std::vector<TrackId>& track_ids);
 
 BundleAdjustmentSummary BundleAdjustReconstructionWrapper(
     const BundleAdjustmentOptions& options, Reconstruction& reconstruction);

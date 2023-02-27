@@ -17,12 +17,34 @@
 namespace theia {
 
 bool PlanarUncalibratedOrthographicPose(
+        const std::vector<FeatureCorrespondence2D3D>& correspondences,
+        const Eigen::Vector2d &principal_point,
+        std::vector<Eigen::Matrix3d>* solution_rotations,
+        std::vector<Eigen::Vector3d>* solution_translations,
+        double* magnification) {
+
+  std::vector<Eigen::Vector2d> feature_points(correspondences.size());
+  std::vector<Eigen::Vector3d> world_points(correspondences.size());
+
+  for (size_t i=0; i < correspondences.size(); ++i) {
+    feature_points[i] = correspondences[i].feature;
+    world_points[i] = correspondences[i].world_point;
+  }
+
+  return PlanarUncalibratedOrthographicPose(
+    feature_points, world_points,
+    principal_point, solution_rotations, solution_translations,
+    magnification
+  );
+}
+
+bool PlanarUncalibratedOrthographicPose(
         const std::vector<Eigen::Vector2d>& feature_point,
-         const std::vector<Eigen::Vector3d>& world_point,
-         const Eigen::Vector2d& principal_point,
-         std::vector<Eigen::Matrix3d>* solution_rotations,
-         std::vector<Eigen::Vector3d>* solution_translations,
-         double* magnification) {
+        const std::vector<Eigen::Vector3d>& world_point,
+        const Eigen::Vector2d& principal_point,
+        std::vector<Eigen::Matrix3d>* solution_rotations,
+        std::vector<Eigen::Vector3d>* solution_translations,
+        double* magnification) {
     Eigen::MatrixXd pts2d;
     Eigen::MatrixXd pts3d;
 

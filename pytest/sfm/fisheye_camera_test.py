@@ -10,33 +10,33 @@ def test_InternalParameterGetterandSetter():
     assert camera.Type() == pt.sfm.CameraIntrinsicsModelType.FISHEYE
 
     # Check that default values are set
-    assert camera.FocalLength == 1.0
-    assert camera.AspectRatio == 1.0
-    assert camera.Skew == 0.0
-    assert camera.PrincipalPointX == 0.0
-    assert camera.PrincipalPointY == 0.0
-    assert camera.RadialDistortion1 == 0.0
-    assert camera.RadialDistortion2 == 0.0
-    assert camera.RadialDistortion3 == 0.0
-    assert camera.RadialDistortion4 == 0.0
+    assert camera.FocalLength() == 1.0
+    assert camera.AspectRatio() == 1.0
+    assert camera.Skew() == 0.0
+    assert camera.PrincipalPointX() == 0.0
+    assert camera.PrincipalPointY() == 0.0
+    assert camera.RadialDistortion1() == 0.0
+    assert camera.RadialDistortion2() == 0.0
+    assert camera.RadialDistortion3() == 0.0
+    assert camera.RadialDistortion4() == 0.0
 
     # Set parameters to different values.
-    camera.FocalLength = 600.0
-    camera.AspectRatio = 0.9
-    camera.Skew = 0.01
+    camera.SetFocalLength(600.0)
+    camera.SetAspectRatio(0.9)
+    camera.SetSkew (0.01)
     camera.SetPrincipalPoint(300.0, 400.0)
     camera.SetRadialDistortion(0.01, 0.001, 0.002, 0.003)
 
     # Check the values are updated
-    assert camera.FocalLength == 600.0
-    assert camera.AspectRatio == 0.9
-    assert camera.Skew == 0.01
-    assert camera.PrincipalPointX == 300.0
-    assert camera.PrincipalPointY == 400.0
-    assert camera.RadialDistortion1 == 0.01
-    assert camera.RadialDistortion2 == 0.001
-    assert camera.RadialDistortion3 == 0.002
-    assert camera.RadialDistortion4 == 0.003
+    assert camera.FocalLength() == 600.0
+    assert camera.AspectRatio() == 0.9
+    assert camera.Skew() == 0.01
+    assert camera.PrincipalPointX() == 300.0
+    assert camera.PrincipalPointY() == 400.0
+    assert camera.RadialDistortion1() == 0.01
+    assert camera.RadialDistortion2() == 0.001
+    assert camera.RadialDistortion3() == 0.002
+    assert camera.RadialDistortion4() == 0.003
 
 
 # Test to ensure that the camera intrinsics are being set appropriately.
@@ -47,37 +47,37 @@ def SetFromCameraintrinsicsPrior(prior):
     camera.SetFromCameraIntrinsicsPriors(prior)
 
     if(prior.focal_length.is_set):
-        assert camera.FocalLength == prior.focal_length.value[0]
+        assert camera.FocalLength() == prior.focal_length.value[0]
     else:
-        assert camera.FocalLength == default_camera.FocalLength
+        assert camera.FocalLength() == default_camera.FocalLength()
 
     if(prior.aspect_ratio.is_set):
-        assert camera.AspectRatio == prior.aspect_ratio.value[0]
+        assert camera.AspectRatio() == prior.aspect_ratio.value[0]
     else:
-        assert camera.AspectRatio == default_camera.AspectRatio
+        assert camera.AspectRatio() == default_camera.AspectRatio()
 
     if(prior.skew.is_set):
-        assert camera.Skew == prior.skew.value[0]
+        assert camera.Skew() == prior.skew.value[0]
     else:
-        assert camera.Skew == default_camera.Skew
+        assert camera.Skew() == default_camera.Skew()
 
     if(prior.principal_point.is_set):
-        assert camera.PrincipalPointX == prior.principal_point.value[0]
-        assert camera.PrincipalPointY == prior.principal_point.value[1]
+        assert camera.PrincipalPointX() == prior.principal_point.value[0]
+        assert camera.PrincipalPointY() == prior.principal_point.value[1]
     else:
-        assert camera.PrincipalPointX == default_camera.PrincipalPointX
-        assert camera.PrincipalPointY == default_camera.PrincipalPointY
+        assert camera.PrincipalPointX() == default_camera.PrincipalPointX()
+        assert camera.PrincipalPointY() == default_camera.PrincipalPointY()
 
     if(prior.radial_distortion.is_set):
-        assert camera.RadialDistortion1 == prior.radial_distortion.value[0]
-        assert camera.RadialDistortion2 == prior.radial_distortion.value[1]
-        assert camera.RadialDistortion3 == prior.radial_distortion.value[2]
-        assert camera.RadialDistortion4 == prior.radial_distortion.value[3]
+        assert camera.RadialDistortion1() == prior.radial_distortion.value[0]
+        assert camera.RadialDistortion2() == prior.radial_distortion.value[1]
+        assert camera.RadialDistortion3() == prior.radial_distortion.value[2]
+        assert camera.RadialDistortion4() == prior.radial_distortion.value[3]
     else:
-        assert camera.RadialDistortion1 == default_camera.RadialDistortion1
-        assert camera.RadialDistortion2 == default_camera.RadialDistortion2
-        assert camera.RadialDistortion3 == default_camera.RadialDistortion3
-        assert camera.RadialDistortion4 == default_camera.RadialDistortion4
+        assert camera.RadialDistortion1() == default_camera.RadialDistortion1()
+        assert camera.RadialDistortion2() == default_camera.RadialDistortion2()
+        assert camera.RadialDistortion3() == default_camera.RadialDistortion3()
+        assert camera.RadialDistortion4() == default_camera.RadialDistortion4()
 
 
 '''
@@ -118,7 +118,7 @@ def test_reprejection_nodistortion():
     kPrincipalPoint = np.array([600.0, 400.0])
     kFocalLength = 1200
     camera = pt.sfm.FisheyeCameraModel()
-    camera.FocalLength = kFocalLength
+    camera.SetFocalLength(kFocalLength)
     camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1])
     camera.SetRadialDistortion(0, 0, 0, 0)
     Reprojection(camera)
@@ -128,7 +128,7 @@ def test_reprejection_onedistortion():
     kPrincipalPoint = np.array([600.0, 400.0])
     kFocalLength = 1200
     camera = pt.sfm.FisheyeCameraModel()
-    camera.FocalLength = kFocalLength
+    camera.SetFocalLength(kFocalLength)
     camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1])
     camera.SetRadialDistortion(0.01, 0, 0, 0)
     Reprojection(camera)
@@ -138,7 +138,7 @@ def test_reprejection_twodistortion():
     kPrincipalPoint = np.array([600.0, 400.0])
     kFocalLength = 1200
     camera = pt.sfm.FisheyeCameraModel()
-    camera.FocalLength = kFocalLength
+    camera.SetFocalLength(kFocalLength)
     camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1])
     camera.SetRadialDistortion(0.01, 0.001, 0, 0)
     Reprojection(camera)
@@ -148,7 +148,7 @@ def test_reprejection_threedistortion():
     kPrincipalPoint = np.array([600.0, 400.0])
     kFocalLength = 1200
     camera = pt.sfm.FisheyeCameraModel()
-    camera.FocalLength = kFocalLength
+    camera.SetFocalLength(kFocalLength)
     camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1])
     camera.SetRadialDistortion(0.01, 0.001, 0.001, 0)
     Reprojection(camera)
@@ -158,7 +158,7 @@ def test_reprejection_fourdistortion():
     kPrincipalPoint = np.array([600.0, 400.0])
     kFocalLength = 1200
     camera = pt.sfm.FisheyeCameraModel()
-    camera.FocalLength = kFocalLength
+    camera.SetFocalLength(kFocalLength)
     camera.SetPrincipalPoint(kPrincipalPoint[0], kPrincipalPoint[1])
     camera.SetRadialDistortion(0.01, 0.001, 0.001, 0.001)
     Reprojection(camera)
