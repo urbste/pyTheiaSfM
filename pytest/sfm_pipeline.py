@@ -57,9 +57,8 @@ def correspondence_from_matches(filtered_matches, feat1, feat2):
     for match in filtered_matches:
         point1 = np.array(feat1[match.queryIdx].pt)
         point2 = np.array(feat2[match.trainIdx].pt)
-        feature_correspondece = pt.matching.FeatureCorrespondence(
-            pt.sfm.Feature(point1), pt.sfm.Feature(point2))
-        correspondences.append(feature_correspondece)
+        correspondences.append(pt.matching.FeatureCorrespondence(
+            pt.sfm.Feature(point1), pt.sfm.Feature(point2)))
 
     return correspondences
 
@@ -75,7 +74,7 @@ def extract_features(image_path, mask_path, featuretype, recon, scale_factor):
 
     if mask_path:
         mask = cv2.resize(cv2.imread(mask_path, 0), 
-            (cam.ImageWidth,cam.ImageHeight))
+            (cam.ImageWidth(),cam.ImageHeight()))
     else:
         mask = None
 
@@ -235,7 +234,8 @@ if __name__ == "__main__":
         for j in range(i+1,len(view_ids)):
             view_id1 = view_ids[i]
             view_id2 = view_ids[j]
-            success, two_view_info, correspondences_verified = match_image_pair(recon, track_builder, features, view_id1, view_id2, matchertype)
+            success, two_view_info, correspondences_verified = match_image_pair(
+                recon, track_builder, features, view_id1, view_id2, matchertype)
  
             if success == True:
                 if args.debug:

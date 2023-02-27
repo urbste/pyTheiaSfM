@@ -486,16 +486,14 @@ TwoPointPosePartialRotationWrapper(const Vector3d& axis,
 
 std::tuple<bool, std::vector<Matrix3d>, std::vector<Vector3d>, double> 
 PlanarUncalibratedOrthographicPoseWrapper(
-  const std::vector<Eigen::Vector2d>& features, 
-  const std::vector<Eigen::Vector3d>& world_points,
+  const std::vector<FeatureCorrespondence2D3D>& correspondences,
   const Eigen::Vector2d& principal_point) {
-
 
   std::vector<Matrix3d> rotations;
   std::vector<Vector3d> translations;
   double magnification;
   bool success = PlanarUncalibratedOrthographicPose(
-    features, world_points, principal_point,
+    correspondences, principal_point,
     &rotations, &translations, &magnification);
 
   return std::make_tuple(success, rotations, translations, magnification);

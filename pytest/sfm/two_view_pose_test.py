@@ -2,8 +2,8 @@ import pytheia as pt
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation as R
-from Projects.TheiaSfM.pytest.sfm.random_recon_gen import RandomReconGenerator
-from Projects.TheiaSfM.pytest.sfm.random_recon_gen import CameraPrior
+from random_recon_gen import RandomReconGenerator
+from random_recon_gen import CameraPrior
 
 
 class GroundTruthRelPose:
@@ -15,7 +15,7 @@ class GroundTruthRelPose:
         R0 = cam0.GetOrientationAsRotationMatrix()
         R1 = cam1.GetOrientationAsRotationMatrix()
         self.R_rel_gt = R1 * R0.T
-        self.t_rel_gt = R0 @ (cam0.Position - cam1.Position)
+        self.t_rel_gt = R0 @ (cam0.GetPosition() - cam1.GetPosition())
         self.t_rel_gt /= np.linalg.norm(self.t_rel_gt)
         self.p_rel_gt = -R0.T @ self.t_rel_gt
 
@@ -131,8 +131,8 @@ if __name__ == "__main__":
     view1 = gen.recon.View(1)
     cam0 = view0.Camera()
     cam1 = view1.Camera()
-    principal_point0 = np.array([cam0.PrincipalPointX, cam0.PrincipalPointY])
-    principal_point1 = np.array([cam1.PrincipalPointX, cam1.PrincipalPointY])
+    principal_point0 = np.array([cam0.PrincipalPointX(), cam0.PrincipalPointY()])
+    principal_point1 = np.array([cam1.PrincipalPointX(), cam1.PrincipalPointY()])
 
     # get observations visible in both cameras
     img_pts0 = []
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     img_pts1 = []
     img_pts1_norm = []
     normalized_corr = []
-    for t_id in gen.recon.TrackIds:
+    for t_id in gen.recon.TrackIds():
         feat1 = view0.GetFeature(t_id)
         feat2 = view1.GetFeature(t_id)
         if not feat1 or not feat2:

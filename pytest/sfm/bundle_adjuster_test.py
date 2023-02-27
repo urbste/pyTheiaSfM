@@ -5,8 +5,8 @@ from random_recon_gen import RandomReconGenerator
 
 def test_BundleAdjustView(gen, ba_options):
 
-    for vid in gen.recon.ViewIds:
-        orig_pos = gen.recon.View(vid).Camera().Position
+    for vid in gen.recon.ViewIds():
+        orig_pos = gen.recon.View(vid).Camera().GetPosition()
         gen.add_noise_to_views(noise_pos=1e-3, noise_angle=1e-1)
         result = pt.sfm.BundleAdjustView(gen.recon, ba_options, vid)
         dist_pos = np.linalg.norm(

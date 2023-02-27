@@ -111,9 +111,9 @@ class RandomReconGenerator:
         return self.recon
 
     def _create_observations(self, pixel_noise=0.0):
-        for tid in self.recon.TrackIds:
+        for tid in self.recon.TrackIds():
             pt3d = self.recon.Track(tid).Point()
-            for vid in self.recon.ViewIds:
+            for vid in self.recon.ViewIds():
                 view = self.recon.View(vid)
                 cam = view.Camera()
                 obs = cam.ProjectPoint(pt3d)
@@ -131,7 +131,7 @@ class RandomReconGenerator:
                 self.recon.AddObservation(vid, tid, pt.sfm.Feature(point2d))
 
     def add_view(self, view_pos, view_ax_angle, view_name=""):
-        num_views = len(self.recon.ViewIds)
+        num_views = len(self.recon.ViewIds())
         view_id = self.recon.AddView(view_name, 0, num_views + 1)
         if self.verbose:
             print("Adding view {}".format(view_id))
@@ -159,7 +159,7 @@ class RandomReconGenerator:
             ax_angle + noise_angle_rad * np.random.randn(3))
 
     def add_noise_to_views(self, noise_pos=1e-5, noise_angle=1e-2):
-        for view_id in self.recon.ViewIds:
+        for view_id in self.recon.ViewIds():
             self.add_noise_to_view(view_id, noise_pos, noise_angle)
 
     def add_noise_to_track(self, track_id, noise_track):

@@ -20,12 +20,32 @@ BundleAdjustmentSummary BundleAdjustViewWrapper(
   return ba_summary;
 }
 
+BundleAdjustmentSummary
+BundleAdjustViewsWrapper(Reconstruction& reconstruction,
+                  const BundleAdjustmentOptions& options,
+                  const std::vector<ViewId>& view_ids) {
+  std::map<ViewId, Matrix6d> cov_mats;
+  double emp_variance_factor;
+  BundleAdjustmentSummary ba_summary = BundleAdjustViews(
+      options, view_ids, &reconstruction);
+  return ba_summary;
+}
+
 BundleAdjustmentSummary BundleAdjustTrackWrapper(
     Reconstruction& reconstruction,
     const BundleAdjustmentOptions& options,
     const TrackId track_id) {
   BundleAdjustmentSummary ba_summary =
       BundleAdjustTrack(options, track_id, &reconstruction);
+  return ba_summary;
+}
+
+BundleAdjustmentSummary BundleAdjustTracksWrapper(
+    Reconstruction& reconstruction,
+    const BundleAdjustmentOptions& options,
+    const std::vector<TrackId>& track_ids) {
+  BundleAdjustmentSummary ba_summary =
+      BundleAdjustTracks(options, track_ids, &reconstruction);
   return ba_summary;
 }
 
@@ -39,6 +59,8 @@ BundleAdjustViewWithCovWrapper(Reconstruction& reconstruction,
       options, view_id, &reconstruction, &cov_mat, &emp_variance_factor);
   return std::make_tuple(ba_summary, cov_mat, emp_variance_factor);
 }
+
+
 
 std::tuple<BundleAdjustmentSummary, std::map<ViewId, Matrix6d>, double>
 BundleAdjustViewsWithCovWrapper(Reconstruction& reconstruction,

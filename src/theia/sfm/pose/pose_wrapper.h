@@ -156,8 +156,7 @@ std::tuple<bool,
            std::vector<Eigen::Vector3d>, 
            double> 
 PlanarUncalibratedOrthographicPoseWrapper(
-  const std::vector<Eigen::Vector2d>& features, 
-  const std::vector<Eigen::Vector3d>& world_points,
+  const std::vector<FeatureCorrespondence2D3D>& correspondences,
   const Eigen::Vector2d& principal_point);
 
 }  // namespace theia

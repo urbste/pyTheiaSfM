@@ -195,13 +195,10 @@ void pytheia_sfm_classes(py::module& m) {
              std::shared_ptr<theia::CameraIntrinsicsModel>>
       camera_intrinsics_model(m, "CameraIntrinsicsModel");
   camera_intrinsics_model
-      .def_property("FocalLength",
-                    &theia::CameraIntrinsicsModel::FocalLength,
-                    &theia::CameraIntrinsicsModel::SetFocalLength)
-      .def_property_readonly("PrincipalPointX",
-                             &theia::CameraIntrinsicsModel::PrincipalPointX)
-      .def_property_readonly("PrincipalPointY",
-                             &theia::CameraIntrinsicsModel::PrincipalPointY)
+      .def("SetFocalLength",&theia::CameraIntrinsicsModel::SetFocalLength)
+      .def("FocalLength",&theia::CameraIntrinsicsModel::FocalLength)
+      .def("PrincipalPointX",&theia::CameraIntrinsicsModel::PrincipalPointX)
+      .def("PrincipalPointY",&theia::CameraIntrinsicsModel::PrincipalPointY)
       .def("SetPrincipalPoint",
            &theia::CameraIntrinsicsModel::SetPrincipalPoint)
       .def("CameraToImageCoordinates",
@@ -250,22 +247,15 @@ void pytheia_sfm_classes(py::module& m) {
       .def("PrintIntrinsics", &theia::FisheyeCameraModel::PrintIntrinsics)
       .def_property_readonly("kIntrinsicsSize",
                              &theia::FisheyeCameraModel::NumParameters)
-      .def_property("AspectRatio",
-                    &theia::FisheyeCameraModel::AspectRatio,
-                    &theia::FisheyeCameraModel::SetAspectRatio)
-      .def_property("Skew",
-                    &theia::FisheyeCameraModel::Skew,
-                    &theia::FisheyeCameraModel::SetSkew)
-      .def_property_readonly("RadialDistortion1",
-                             &theia::FisheyeCameraModel::RadialDistortion1)
-      .def_property_readonly("RadialDistortion2",
-                             &theia::FisheyeCameraModel::RadialDistortion2)
-      .def_property_readonly("RadialDistortion3",
-                             &theia::FisheyeCameraModel::RadialDistortion3)
-      .def_property_readonly("RadialDistortion4",
-                             &theia::FisheyeCameraModel::RadialDistortion4)
-      .def("SetRadialDistortion",
-           &theia::FisheyeCameraModel::SetRadialDistortion);
+      .def("AspectRatio", &theia::FisheyeCameraModel::AspectRatio)
+      .def("SetAspectRatio",&theia::FisheyeCameraModel::SetAspectRatio)
+      .def("Skew", &theia::FisheyeCameraModel::Skew)
+      .def("SetSkew", &theia::FisheyeCameraModel::SetSkew)
+      .def("RadialDistortion1", &theia::FisheyeCameraModel::RadialDistortion1)
+      .def("RadialDistortion2", &theia::FisheyeCameraModel::RadialDistortion2)
+      .def("RadialDistortion3", &theia::FisheyeCameraModel::RadialDistortion3)
+      .def("RadialDistortion4", &theia::FisheyeCameraModel::RadialDistortion4)
+      .def("SetRadialDistortion", &theia::FisheyeCameraModel::SetRadialDistortion);
 
   // PinholeRadialTangentialCameraModel
   py::class_<theia::PinholeRadialTangentialCameraModel,
@@ -292,26 +282,16 @@ void pytheia_sfm_classes(py::module& m) {
       .def_property_readonly(
           "kIntrinsicsSize",
           &theia::PinholeRadialTangentialCameraModel::NumParameters)
-      .def_property("AspectRatio",
-                    &theia::PinholeRadialTangentialCameraModel::AspectRatio,
-                    &theia::PinholeRadialTangentialCameraModel::SetAspectRatio)
-      .def_property("Skew",
-                    &theia::PinholeRadialTangentialCameraModel::Skew,
-                    &theia::PinholeRadialTangentialCameraModel::SetSkew)
-      .def_property_readonly(
-          "RadialDistortion1",
-          &theia::PinholeRadialTangentialCameraModel::RadialDistortion1)
-      .def_property_readonly(
-          "RadialDistortion2",
-          &theia::PinholeRadialTangentialCameraModel::RadialDistortion2)
-      .def_property_readonly(
-          "RadialDistortion3",
-          &theia::PinholeRadialTangentialCameraModel::RadialDistortion3)
-      .def_property_readonly(
-          "TangentialDistortion1",
+      .def("AspectRatio", &theia::PinholeRadialTangentialCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::PinholeRadialTangentialCameraModel::SetAspectRatio)
+      .def("Skew", &theia::PinholeRadialTangentialCameraModel::Skew)
+      .def("SetSkew", &theia::PinholeRadialTangentialCameraModel::SetSkew)
+      .def("RadialDistortion1", &theia::PinholeRadialTangentialCameraModel::RadialDistortion1)
+      .def("RadialDistortion2", &theia::PinholeRadialTangentialCameraModel::RadialDistortion2)
+      .def("RadialDistortion3", &theia::PinholeRadialTangentialCameraModel::RadialDistortion3)
+      .def("TangentialDistortion1",
           &theia::PinholeRadialTangentialCameraModel::TangentialDistortion1)
-      .def_property_readonly(
-          "TangentialDistortion2",
+      .def("TangentialDistortion2",
           &theia::PinholeRadialTangentialCameraModel::TangentialDistortion2)
       .def("SetRadialDistortion",
            &theia::PinholeRadialTangentialCameraModel::SetRadialDistortion)
@@ -343,11 +323,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_property_readonly(
           "kIntrinsicsSize",
           &theia::DivisionUndistortionCameraModel::NumParameters)
-      .def_property("AspectRatio",
-                    &theia::DivisionUndistortionCameraModel::AspectRatio,
-                    &theia::DivisionUndistortionCameraModel::SetAspectRatio)
-      .def_property_readonly(
-          "RadialDistortion1",
+      .def("AspectRatio", &theia::DivisionUndistortionCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::DivisionUndistortionCameraModel::SetAspectRatio)
+      .def("RadialDistortion1",
           &theia::DivisionUndistortionCameraModel::RadialDistortion1)
       .def("SetRadialDistortion",
            &theia::DivisionUndistortionCameraModel::SetRadialDistortion);
@@ -371,16 +349,12 @@ void pytheia_sfm_classes(py::module& m) {
       .def("PrintIntrinsics", &theia::PinholeCameraModel::PrintIntrinsics)
       .def_property_readonly("kIntrinsicsSize",
                              &theia::PinholeCameraModel::NumParameters)
-      .def_property("AspectRatio",
-                    &theia::PinholeCameraModel::AspectRatio,
-                    &theia::PinholeCameraModel::SetAspectRatio)
-      .def_property("Skew",
-                    &theia::PinholeCameraModel::Skew,
-                    &theia::PinholeCameraModel::SetSkew)
-      .def_property_readonly("RadialDistortion1",
-                             &theia::PinholeCameraModel::RadialDistortion1)
-      .def_property_readonly("RadialDistortion2",
-                             &theia::PinholeCameraModel::RadialDistortion2)
+      .def("AspectRatio", &theia::PinholeCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::PinholeCameraModel::SetAspectRatio)
+      .def("Skew", &theia::PinholeCameraModel::Skew)
+      .def("SetSkew", &theia::PinholeCameraModel::SetSkew)
+      .def("RadialDistortion1", &theia::PinholeCameraModel::RadialDistortion1)
+      .def("RadialDistortion2", &theia::PinholeCameraModel::RadialDistortion2)
       .def("SetRadialDistortion",
            &theia::PinholeCameraModel::SetRadialDistortion);
 
@@ -403,15 +377,13 @@ void pytheia_sfm_classes(py::module& m) {
       .def("PrintIntrinsics", &theia::OrthographicCameraModel::PrintIntrinsics)
       .def_property_readonly("kIntrinsicsSize",
                              &theia::OrthographicCameraModel::NumParameters)
-      .def_property("AspectRatio",
-                    &theia::OrthographicCameraModel::AspectRatio,
-                    &theia::OrthographicCameraModel::SetAspectRatio)
-      .def_property("Skew",
-                    &theia::OrthographicCameraModel::Skew,
-                    &theia::OrthographicCameraModel::SetSkew)
-      .def_property_readonly("RadialDistortion1",
+      .def("AspectRatio", &theia::OrthographicCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::OrthographicCameraModel::SetAspectRatio)
+      .def("Skew", &theia::OrthographicCameraModel::Skew)
+      .def("SetSkew", &theia::OrthographicCameraModel::SetSkew)
+      .def("RadialDistortion1",
                              &theia::OrthographicCameraModel::RadialDistortion1)
-      .def_property_readonly("RadialDistortion2",
+      .def("RadialDistortion2",
                              &theia::OrthographicCameraModel::RadialDistortion2)
       .def("SetRadialDistortion",
            &theia::OrthographicCameraModel::SetRadialDistortion);
@@ -433,11 +405,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def("PrintIntrinsics", &theia::FOVCameraModel::PrintIntrinsics)
       .def_property_readonly("kIntrinsicsSize",
                              &theia::FOVCameraModel::NumParameters)
-      .def_property("AspectRatio",
-                    &theia::FOVCameraModel::AspectRatio,
-                    &theia::FOVCameraModel::SetAspectRatio)
-      .def_property_readonly("RadialDistortion1",
-                             &theia::FOVCameraModel::RadialDistortion1)
+      .def("AspectRatio", &theia::FOVCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::FOVCameraModel::SetAspectRatio)
+      .def("RadialDistortion1", &theia::FOVCameraModel::RadialDistortion1)
       .def("SetRadialDistortion", &theia::FOVCameraModel::SetRadialDistortion);
 
   m.def("ComposeProjectionMatrix", theia::ComposeProjectionMatrixWrapper);
@@ -1348,8 +1318,8 @@ void pytheia_sfm_classes(py::module& m) {
                theia::Reconstruction::AddView,
            py::return_value_policy::reference_internal)
       .def("RemoveView", &theia::Reconstruction::RemoveView)
-      .def_property_readonly("ViewIds", &theia::Reconstruction::ViewIds)
-      .def_property_readonly("NumTracks", &theia::Reconstruction::NumTracks)
+      .def("ViewIds", &theia::Reconstruction::ViewIds)
+      .def("NumTracks", &theia::Reconstruction::NumTracks)
     //   .def("AddTrack",
     //        (theia::TrackId(theia::Reconstruction::*)()) &
     //            theia::Reconstruction::AddTrack,
@@ -1372,9 +1342,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def("AddTrack", static_cast<theia::TrackId (theia::Reconstruction::*)(
           const std::vector<std::pair<theia::ViewId, theia::Feature>>&)>(&theia::Reconstruction::AddTrack))
       .def("RemoveTrack", &theia::Reconstruction::RemoveTrack)
-      .def_property_readonly("TrackIds", &theia::Reconstruction::TrackIds)
+      .def("TrackIds", &theia::Reconstruction::TrackIds)
       .def("AddObservation", &theia::Reconstruction::AddObservation)
-      .def_property_readonly("NumCameraIntrinsicGroups",
+      .def("NumCameraIntrinsicGroups",
                              &theia::Reconstruction::NumCameraIntrinsicGroups)
       .def("Normalize", &theia::Reconstruction::Normalize)
       .def("CameraIntrinsicsGroupIdFromViewId",
@@ -1510,10 +1480,13 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("BundleAdjustPartialViewsConstant", theia::BundleAdjustPartialViewsConstantWrapper);
   m.def("BundleAdjustReconstruction", theia::BundleAdjustReconstructionWrapper);
   m.def("BundleAdjustView", theia::BundleAdjustViewWrapper);
-  m.def("BundleAdjustTrack", theia::BundleAdjustTrackWrapper);
+  m.def("BundleAdjustViews", theia::BundleAdjustViewsWrapper);
   m.def("BundleAdjustViewWithCov", theia::BundleAdjustViewWithCovWrapper);
-  m.def("BundleAdjustTrackWithCov", theia::BundleAdjustTrackWithCovWrapper);
   m.def("BundleAdjustViewsWithCov", theia::BundleAdjustViewsWithCovWrapper);
+ 
+  m.def("BundleAdjustTrack", theia::BundleAdjustTrackWrapper);
+  m.def("BundleAdjustTracks", theia::BundleAdjustTracksWrapper);
+  m.def("BundleAdjustTrackWithCov", theia::BundleAdjustTrackWithCovWrapper);
   m.def("BundleAdjustTracksWithCov", theia::BundleAdjustTracksWithCovWrapper);
   // m.def("BundleAdjustTwoViews", theia::BundleAdjustTwoViewsWrapper);
   m.def("BundleAdjustTwoViewsAngular",

@@ -73,9 +73,9 @@ std::shared_ptr<CameraIntrinsicsModel> CameraIntrinsicsModel::Create(
     case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
       return std::make_shared<ExtendedUnifiedCameraModel>();
       break;
-  case CameraIntrinsicsModelType::ORTHOGRAPHIC:
-    return std::make_shared<OrthographicCameraModel>();
-    break;
+    case CameraIntrinsicsModelType::ORTHOGRAPHIC:
+      return std::make_shared<OrthographicCameraModel>();
+      break;
     default:
       break;
   }

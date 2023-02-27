@@ -3,7 +3,7 @@ import numpy as np
 
 def Reprojection(camera):
     kTolerance = 1e-5
-    kNormalizedTolerance = kTolerance / camera.FocalLength
+    kNormalizedTolerance = kTolerance / camera.FocalLength()
     kImageWidth = 1200
     kImageHeight = 980
     kMinDepth = 2
@@ -50,7 +50,7 @@ def Reprojection(camera):
 
 def ReprojectionOrthographic(camera):
     kTolerance = 1e-5
-    kNormalizedTolerance = kTolerance / camera.FocalLength
+    kNormalizedTolerance = kTolerance / camera.FocalLength()
     kImageWidth = 2560
     kImageHeight = 1920
 
