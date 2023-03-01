@@ -214,7 +214,7 @@ sudo apt install libgflags-dev libgoogle-glog-dev libatlas-base-dev
 # ceres solver
 cd LIBS
 git clone https://ceres-solver.googlesource.com/ceres-solver
-cd ceres-solver && git checkout 2.0.0 && mkdir build && cd build
+cd ceres-solver && git checkout 2.1.0 && mkdir build && cd build
 cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF
 make -j && make install
 ```

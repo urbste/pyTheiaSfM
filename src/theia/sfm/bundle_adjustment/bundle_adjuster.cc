@@ -320,10 +320,10 @@ void BundleAdjuster::SetCameraIntrinsicsParameterization() {
       problem_->SetParameterBlockConstant(
           camera_intrinsics->mutable_parameters());
     } else if (constant_intrinsics.size() > 0) {
-      ceres::SubsetParameterization* subset_parameterization =
-          new ceres::SubsetParameterization(camera_intrinsics->NumParameters(),
+      ceres::SubsetManifold* subset_parameterization =
+          new ceres::SubsetManifold(camera_intrinsics->NumParameters(),
                                             constant_intrinsics);
-      problem_->SetParameterization(camera_intrinsics->mutable_parameters(),
+      problem_->SetManifold(camera_intrinsics->mutable_parameters(),
                                     subset_parameterization);
     }
   }
@@ -372,13 +372,13 @@ void BundleAdjuster::SetCameraExtrinsicsConstant(const ViewId view_id) {
 void BundleAdjuster::SetCameraPositionConstant(const ViewId view_id) {
   static const std::vector<int> position_parameters = {
       Camera::POSITION + 0, Camera::POSITION + 1, Camera::POSITION + 2};
-  ceres::SubsetParameterization* subset_parameterization =
-      new ceres::SubsetParameterization(Camera::kExtrinsicsSize,
+  ceres::SubsetManifold* subset_parameterization =
+      new ceres::SubsetManifold(Camera::kExtrinsicsSize,
                                         position_parameters);
   View* view = reconstruction_->MutableView(view_id);
   Camera* camera = view->MutableCamera();
-  problem_->SetParameterization(camera->mutable_extrinsics(),
-                                subset_parameterization);
+  problem_->SetManifold(camera->mutable_extrinsics(),
+                        subset_parameterization);
 }
 
 void BundleAdjuster::SetCameraOrientationConstant(const ViewId view_id) {
@@ -386,24 +386,24 @@ void BundleAdjuster::SetCameraOrientationConstant(const ViewId view_id) {
       Camera::ORIENTATION + 0,
       Camera::ORIENTATION + 1,
       Camera::ORIENTATION + 2};
-  ceres::SubsetParameterization* subset_parameterization =
-      new ceres::SubsetParameterization(Camera::kExtrinsicsSize,
+  ceres::SubsetManifold* subset_parameterization =
+      new ceres::SubsetManifold(Camera::kExtrinsicsSize,
                                         orientation_parameters);
   View* view = reconstruction_->MutableView(view_id);
   Camera* camera = view->MutableCamera();
-  problem_->SetParameterization(camera->mutable_extrinsics(),
-                                subset_parameterization);
+  problem_->SetManifold(camera->mutable_extrinsics(),
+                        subset_parameterization);
 }
 
 void BundleAdjuster::SetTzConstant(const ViewId view_id) {
     static const std::vector<int> position_parameters = {Camera::POSITION + 2};
-    ceres::SubsetParameterization* subset_parameterization =
-        new ceres::SubsetParameterization(Camera::kExtrinsicsSize,
+    ceres::SubsetManifold* subset_parameterization =
+        new ceres::SubsetManifold(Camera::kExtrinsicsSize,
                                           position_parameters);
     View* view = reconstruction_->MutableView(view_id);
     Camera* camera = view->MutableCamera();
-    problem_->SetParameterization(camera->mutable_extrinsics(),
-                                  subset_parameterization);
+    problem_->SetManifold(camera->mutable_extrinsics(),
+                          subset_parameterization);
 }
 
 void BundleAdjuster::SetTrackConstant(const TrackId track_id) {
@@ -418,11 +418,11 @@ void BundleAdjuster::SetTrackVariable(const TrackId track_id) {
 
 void BundleAdjuster::SetHomogeneousPointParametrization(
     const TrackId track_id) {
-  ceres::LocalParameterization* point_parametrization =
-      new ceres::HomogeneousVectorParameterization(4);
+  ceres::Manifold* point_parametrization =
+      new ceres::SphereManifold<4>();
   Track* track = reconstruction_->MutableTrack(track_id);
-  problem_->SetParameterization(track->MutablePoint()->data(),
-                                point_parametrization);
+  problem_->SetManifold(track->MutablePoint()->data(),
+                        point_parametrization);
 }
 
 void BundleAdjuster::SetCameraSchurGroups(const ViewId view_id) {

@@ -1,4 +1,4 @@
-FROM urbste/pytheia_base:1.0.1
+FROM urbste/pytheia_base:1.1.0
 
 COPY . ./home
 
