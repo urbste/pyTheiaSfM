@@ -130,6 +130,7 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "
                     "for a list of valid camera models.";
+      return NULL;
       break;
   }
 }
