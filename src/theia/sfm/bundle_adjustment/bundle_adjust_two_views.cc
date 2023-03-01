@@ -265,6 +265,7 @@ BundleAdjustmentSummary OptimizeFundamentalMatrix(
   solver_options.linear_solver_ordering.reset();
 
   // Add the fundamental matrix as a parameter block.
+
   ceres::LocalParameterization* fundamental_parametrization = new ceres::
       AutoDiffLocalParameterization<FundamentalMatrixParametrization, 9, 7>;
   problem.AddParameterBlock(
