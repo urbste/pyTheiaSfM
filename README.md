@@ -259,7 +259,7 @@ There are two ways to do that. One will clutter the source directory, but you wi
 Another drawback of this approach is that the files will have been created with docker sudo rights and are diffcult to delete:
 ```bash
 # e.g. for python 3.9
-docker run --rm -e PYTHON_VERSION="cp39-cp39" -v `pwd`:/home urbste/pytheia_base:1.0.1 /home/pypackage/build-wheel-linux.sh
+docker run --rm -e PYTHON_VERSION="cp39-cp39" -v `pwd`:/home urbste/pytheia_base:1.1.0 /home/pypackage/build-wheel-linux.sh
 ```
 
 The other one is cleaner but you will have to copy the wheels out of the docker container afterwards:
