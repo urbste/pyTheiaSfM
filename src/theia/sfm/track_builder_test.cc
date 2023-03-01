@@ -75,9 +75,9 @@ TEST(TrackBuilder, ConsistentTracks) {
   }
 
   Reconstruction reconstruction;
-  reconstruction.AddView("0");
-  reconstruction.AddView("1");
-  reconstruction.AddView("2");
+  reconstruction.AddView("0", 0.0);
+  reconstruction.AddView("1", 1.0);
+  reconstruction.AddView("2", 2.0);
   track_builder.BuildTracks(&reconstruction);
   VerifyTracks(reconstruction);
   EXPECT_EQ(reconstruction.NumTracks(), kNumCorrespondences);
@@ -98,9 +98,9 @@ TEST(TrackBuilder, SingletonTracks) {
   }
 
   Reconstruction reconstruction;
-  reconstruction.AddView("0");
-  reconstruction.AddView("1");
-  reconstruction.AddView("2");
+  reconstruction.AddView("0", 0.0);
+  reconstruction.AddView("1", 1.0);
+  reconstruction.AddView("2", 2.0);
 
   track_builder.BuildTracks(&reconstruction);
   VerifyTracks(reconstruction);
@@ -122,9 +122,9 @@ TEST(TrackBuilder, InconsistentTracks) {
   }
 
   Reconstruction reconstruction;
-  reconstruction.AddView("0");
-  reconstruction.AddView("1");
-  reconstruction.AddView("2");
+  reconstruction.AddView("0", 0.0);
+  reconstruction.AddView("1", 1.0);
+  reconstruction.AddView("2", 2.0);
 
   track_builder.BuildTracks(&reconstruction);
   VerifyTracks(reconstruction);
@@ -145,12 +145,12 @@ TEST(TrackBuilder, MaxTrackLength) {
   }
 
   Reconstruction reconstruction;
-  reconstruction.AddView("0");
-  reconstruction.AddView("1");
-  reconstruction.AddView("2");
-  reconstruction.AddView("3");
-  reconstruction.AddView("4");
-  reconstruction.AddView("5");
+  reconstruction.AddView("0", 0.0);
+  reconstruction.AddView("1", 1.0);
+  reconstruction.AddView("2", 2.0);
+  reconstruction.AddView("3", 3.0);
+  reconstruction.AddView("4", 4.0);
+  reconstruction.AddView("5", 5.0);
 
   track_builder.BuildTracks(&reconstruction);
   VerifyTracks(reconstruction);
@@ -177,12 +177,12 @@ TEST(TrackBuilder, MinTrackLength) {
       view_ids[0], Feature(1, 1), view_ids[1], Feature(1, 1));
 
   Reconstruction reconstruction;
-  reconstruction.AddView("0");
-  reconstruction.AddView("1");
-  reconstruction.AddView("2");
-  reconstruction.AddView("3");
-  reconstruction.AddView("4");
-  reconstruction.AddView("5");
+  reconstruction.AddView("0", 0.0);
+  reconstruction.AddView("1", 1.0);
+  reconstruction.AddView("2", 2.0);
+  reconstruction.AddView("3", 3.0);
+  reconstruction.AddView("4", 4.0);
+  reconstruction.AddView("5", 5.0);
 
   track_builder.BuildTracks(&reconstruction);
   VerifyTracks(reconstruction);

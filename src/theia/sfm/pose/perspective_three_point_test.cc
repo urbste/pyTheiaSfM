@@ -65,12 +65,13 @@ void PoseFromThreeCalibratedTest(const double noise) {
   projection_mat << gt_rotation, gt_translation;
 
   // Points in the 3D scene.
-  const Vector3d kPoints3d[3] = {Vector3d(-0.3001, -0.5840, 1.2271),
-                                 Vector3d(-1.4487, 0.6965, 0.3889),
-                                 Vector3d(-0.7815, 0.7642, 0.1257)};
+  std::vector<Eigen::Vector3d> kPoints3d = {
+    Vector3d(-0.3001, -0.5840, 1.2271),
+    Vector3d(-1.4487, 0.6965, 0.3889),
+    Vector3d(-0.7815, 0.7642, 0.1257)};
 
   // Points in the camera view.
-  Vector2d kPoints2d[3];
+  std::vector<Vector2d> kPoints2d(3);
   for (int i = 0; i < 3; i++) {
     kPoints2d[i] =
         (projection_mat * kPoints3d[i].homogeneous()).eval().hnormalized();

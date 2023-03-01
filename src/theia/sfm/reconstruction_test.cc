@@ -46,7 +46,7 @@ const std::vector<Feature> features = {
 
 TEST(Reconstruction, ViewIdFromNameValid) {
   Reconstruction reconstruction;
-  const ViewId gt_view_id = reconstruction.AddView(view_names[0]);
+  const ViewId gt_view_id = reconstruction.AddView(view_names[0],0.);
 
   const ViewId view_id = reconstruction.ViewIdFromName(view_names[0]);
   EXPECT_EQ(gt_view_id, view_id);
@@ -59,11 +59,11 @@ TEST(Reconstruction, ViewIdFromNameInvalid) {
 
 TEST(Reconstruction, AddView) {
   Reconstruction reconstruction;
-  const ViewId view_id = reconstruction.AddView(view_names[0]);
+  const ViewId view_id = reconstruction.AddView(view_names[0],0.0);
   EXPECT_NE(view_id, kInvalidViewId);
   EXPECT_EQ(reconstruction.NumViews(), 1);
   EXPECT_EQ(reconstruction.NumTracks(), 0);
-  EXPECT_EQ(reconstruction.AddView(view_names[0]), kInvalidViewId);
+  EXPECT_EQ(reconstruction.AddView(view_names[0], 0.0), kInvalidViewId);
   EXPECT_EQ(reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id), 0);
 }
 
@@ -78,13 +78,13 @@ TEST(Reconstruction, AddViewWithCameraIntrinsicsGroup) {
   EXPECT_EQ(reconstruction.NumCameraIntrinsicGroups(), 1);
   EXPECT_EQ(reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id),
             intrinsics_id);
-  EXPECT_EQ(reconstruction.AddView(view_names[0]), kInvalidViewId);
+  EXPECT_EQ(reconstruction.AddView(view_names[0], 0.0), kInvalidViewId);
 }
 
 TEST(Reconstruction, RemoveView) {
   Reconstruction reconstruction;
-  const ViewId view_id1 = reconstruction.AddView(view_names[0]);
-  const ViewId view_id2 = reconstruction.AddView(view_names[1]);
+  const ViewId view_id1 = reconstruction.AddView(view_names[0], 0.0);
+  const ViewId view_id2 = reconstruction.AddView(view_names[1], 1.0);
   EXPECT_EQ(reconstruction.NumViews(), 2);
   EXPECT_EQ(reconstruction.NumCameraIntrinsicGroups(), 2);
 
@@ -121,7 +121,7 @@ TEST(Reconstruction, RemoveView) {
 
 TEST(Reconstruction, GetViewValid) {
   Reconstruction reconstruction;
-  const ViewId view_id = reconstruction.AddView(view_names[0]);
+  const ViewId view_id = reconstruction.AddView(view_names[0], 0.0);
   EXPECT_NE(view_id, kInvalidViewId);
 
   const View* const_view = reconstruction.View(view_id);
@@ -146,7 +146,7 @@ TEST(Reconstruction, GetViewsInCameraIntrinsicGroup) {
   static const double kFocalLength2 = 1200.0;
 
   Reconstruction reconstruction;
-  const ViewId view_id1 = reconstruction.AddView(view_names[0]);
+  const ViewId view_id1 = reconstruction.AddView(view_names[0], 0, 0.0);
   const CameraIntrinsicsGroupId intrinsics_id1 =
       reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id1);
 
@@ -158,7 +158,7 @@ TEST(Reconstruction, GetViewsInCameraIntrinsicGroup) {
   EXPECT_EQ(intrinsics_id1, intrinsics_id2);
 
   // Add a third view that is in it's own camera intrinsics group.
-  const ViewId view_id3 = reconstruction.AddView(view_names[2]);
+  const ViewId view_id3 = reconstruction.AddView(view_names[2], 3, 0.0);
   const CameraIntrinsicsGroupId intrinsics_id3 =
       reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id3);
   EXPECT_NE(intrinsics_id1, intrinsics_id3);
@@ -182,7 +182,7 @@ TEST(Reconstruction, GetViewsInCameraIntrinsicGroup) {
 
 TEST(Reconstruction, CameraIntrinsicsGroupIds) {
   Reconstruction reconstruction;
-  const ViewId view_id1 = reconstruction.AddView(view_names[0]);
+  const ViewId view_id1 = reconstruction.AddView(view_names[0], 0.0);
   const CameraIntrinsicsGroupId intrinsics_id1 =
       reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id1);
 
@@ -194,7 +194,7 @@ TEST(Reconstruction, CameraIntrinsicsGroupIds) {
   EXPECT_EQ(intrinsics_id1, intrinsics_id2);
 
   // Add a third view that is in it's own camera intrinsics group.
-  const ViewId view_id3 = reconstruction.AddView(view_names[2]);
+  const ViewId view_id3 = reconstruction.AddView(view_names[2], 1.0);
   const CameraIntrinsicsGroupId intrinsics_id3 =
       reconstruction.CameraIntrinsicsGroupIdFromViewId(view_id3);
   EXPECT_NE(intrinsics_id1, intrinsics_id3);
@@ -217,8 +217,8 @@ TEST(Reconstruction, AddEmptyTrack) {
 TEST(Reconstruction, AddObservationValid) {
   Reconstruction reconstruction;
 
-  const ViewId view_id1 = reconstruction.AddView(view_names[0]);
-  const ViewId view_id2 = reconstruction.AddView(view_names[1]);
+  const ViewId view_id1 = reconstruction.AddView(view_names[0], 0.0);
+  const ViewId view_id2 = reconstruction.AddView(view_names[1], 1.0);
   EXPECT_NE(view_id1, kInvalidViewId);
   EXPECT_NE(view_id2, kInvalidViewId);
 
@@ -250,8 +250,8 @@ TEST(Reconstruction, AddObservationValid) {
 TEST(Reconstruction, AddObservationInvalid) {
   Reconstruction reconstruction;
 
-  const ViewId view_id1 = reconstruction.AddView(view_names[0]);
-  const ViewId view_id2 = reconstruction.AddView(view_names[1]);
+  const ViewId view_id1 = reconstruction.AddView(view_names[0], 0.0);
+  const ViewId view_id2 = reconstruction.AddView(view_names[1], 1.0);
   EXPECT_NE(view_id1, kInvalidViewId);
   EXPECT_NE(view_id2, kInvalidViewId);
 
@@ -271,8 +271,8 @@ TEST(Reconstruction, AddTrackValid) {
 
   const std::vector<std::pair<ViewId, Feature> > track = {{0, features[0]},
                                                           {1, features[1]}};
-  EXPECT_NE(reconstruction.AddView(view_names[0]), kInvalidViewId);
-  EXPECT_NE(reconstruction.AddView(view_names[1]), kInvalidViewId);
+  EXPECT_NE(reconstruction.AddView(view_names[0], 0.0), kInvalidViewId);
+  EXPECT_NE(reconstruction.AddView(view_names[1], 1.0), kInvalidViewId);
 
   const TrackId track_id = reconstruction.AddTrack(track);
   EXPECT_NE(track_id, kInvalidTrackId);
@@ -286,7 +286,7 @@ TEST(Reconstruction, AddTrackInvalid) {
   // Should fail with less than two views.
   const std::vector<std::pair<ViewId, Feature> > small_track = {
       {0, features[0]}};
-  EXPECT_NE(reconstruction.AddView(view_names[0]), kInvalidViewId);
+  EXPECT_NE(reconstruction.AddView(view_names[0], 0.0), kInvalidViewId);
   EXPECT_EQ(reconstruction.AddTrack(small_track), kInvalidTrackId);
   EXPECT_EQ(reconstruction.NumTracks(), 0);
 }
@@ -298,8 +298,8 @@ TEST(Reconstruction, RemoveTrackValid) {
                                                           {1, features[1]}};
 
   // Should be able to successfully remove the track.
-  EXPECT_NE(reconstruction.AddView(view_names[0]), kInvalidViewId);
-  EXPECT_NE(reconstruction.AddView(view_names[1]), kInvalidViewId);
+  EXPECT_NE(reconstruction.AddView(view_names[0], 0.0), kInvalidViewId);
+  EXPECT_NE(reconstruction.AddView(view_names[1], 1.0), kInvalidViewId);
   const TrackId track_id = reconstruction.AddTrack(track);
   EXPECT_TRUE(reconstruction.RemoveTrack(track_id));
 }
@@ -316,8 +316,8 @@ TEST(Reconstruction, GetTrackValid) {
   Reconstruction reconstruction;
   const std::vector<std::pair<ViewId, Feature> > track = {{0, features[0]},
                                                           {1, features[1]}};
-  EXPECT_NE(reconstruction.AddView(view_names[0]), kInvalidViewId);
-  EXPECT_NE(reconstruction.AddView(view_names[1]), kInvalidViewId);
+  EXPECT_NE(reconstruction.AddView(view_names[0], 0.0), kInvalidViewId);
+  EXPECT_NE(reconstruction.AddView(view_names[1], 1.0), kInvalidViewId);
   const TrackId track_id = reconstruction.AddTrack(track);
   EXPECT_NE(track_id, kInvalidTrackId);
 
@@ -348,7 +348,7 @@ TEST(Reconstruction, GetSubReconstruction) {
 
   Reconstruction reconstruction;
   for (int i = 0; i < kNumViews; i++) {
-    const ViewId view_id = reconstruction.AddView(StringPrintf("%d", i));
+    const ViewId view_id = reconstruction.AddView(StringPrintf("%d", i), i);
     CHECK_NE(view_id, kInvalidViewId);
   }
 

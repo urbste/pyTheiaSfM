@@ -69,8 +69,8 @@ void BuildReconstructions(const int num_views,
                           Reconstruction* reconstruction2) {
   for (int i = 0; i < num_views; i++) {
     const std::string name = StringPrintf("%d", i);
-    const ViewId view_id1 = reconstruction1->AddView(name);
-    const ViewId view_id2 = reconstruction2->AddView(name);
+    const ViewId view_id1 = reconstruction1->AddView(name, i);
+    const ViewId view_id2 = reconstruction2->AddView(name, i);
 
     Camera camera = RandomCamera();
     *reconstruction1->MutableView(view_id1)->MutableCamera() = camera;
