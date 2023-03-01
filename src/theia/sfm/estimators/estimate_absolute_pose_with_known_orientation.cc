@@ -101,6 +101,11 @@ class AbsolutePoseWithKnownOrientationEstimator
     return true;
   }
 
+  bool RefineModel(const std::vector<FeatureCorrespondence2D3D>& correspondences,
+    Eigen::Vector3d* absolute_position) const {
+      return true;
+  }
+
   // The error for a correspondences given an absolute position. This is the
   // squared reprojection error.
   double Error(const FeatureCorrespondence2D3D& correspondence,

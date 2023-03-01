@@ -80,6 +80,15 @@ BundleAdjustmentSummary BundleAdjustTwoViewsAngular(
     const std::vector<FeatureCorrespondence>& correspondences,
     TwoViewInfo* info);
 
+// Optimizes a fundamentral matrix. It uses the manifold presented in
+// Non-Linear Estimation of the Fundamental Matrix With Minimal Parameters,
+// PAMI 2004, by Bartoli and Sturm
+BundleAdjustmentSummary OptimizeFundamentalMatrix(
+    const BundleAdjustmentOptions& options,
+    const std::vector<FeatureCorrespondence>& correspondences,
+    Eigen::Matrix3d* fundamental_matrix);
+
+
 }  // namespace theia
 
 #endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_BUNDLE_ADJUST_TWO_VIEWS_H_

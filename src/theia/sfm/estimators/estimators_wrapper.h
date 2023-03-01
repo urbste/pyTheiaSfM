@@ -111,6 +111,7 @@ std::tuple<bool, UncalibratedRelativePose, RansacSummary>
 EstimateUncalibratedRelativePoseWrapper(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
-    const std::vector<FeatureCorrespondence>& centered_correspondences);
+    const std::vector<FeatureCorrespondence>& centered_correspondences,
+    const Eigen::Vector2d& min_max_focal_length);
 
 }  // namespace theia

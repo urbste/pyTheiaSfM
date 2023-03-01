@@ -194,6 +194,7 @@ bool EstimateTwoViewInfoUncalibrated(
     const CameraIntrinsicsPrior& intrinsics1,
     const CameraIntrinsicsPrior& intrinsics2,
     const std::vector<FeatureCorrespondence>& correspondences,
+    const Eigen::Vector2d& min_max_focal_lengths,
     TwoViewInfo* twoview_info,
     std::vector<int>* inlier_indices) {
   // Normalize features w.r.t principal point.
@@ -226,6 +227,7 @@ bool EstimateTwoViewInfoUncalibrated(
   if (!EstimateUncalibratedRelativePose(ransac_options,
                                         options.ransac_type,
                                         centered_correspondences,
+                                        min_max_focal_lengths,
                                         &relative_pose,
                                         &summary)) {
     return false;
@@ -275,19 +277,30 @@ bool EstimateTwoViewInfo(
     LOG(WARNING) << "Solving for two view infos when exactly one view is "
                     "calibrated has not been implemented yet. Treating both "
                     "views as uncalibrated instead.";
+    
+    // we are assuming similar cameras if focal length of one camera is set
+    Eigen::Vector2d min_max_focal_length(0.0,0.0);
+    const double focal_guess = intrinsics1.focal_length.is_set ?
+                intrinsics1.focal_length.value[0] : intrinsics2.focal_length.value[0];
+    min_max_focal_length[0] = focal_guess*0.5;
+    min_max_focal_length[1] = focal_guess*2.0;
+    
     return EstimateTwoViewInfoUncalibrated(options,
                                            intrinsics1,
                                            intrinsics2,
                                            correspondences,
+                                           min_max_focal_length,
                                            twoview_info,
                                            inlier_indices);
   }
 
   // Assume both views are uncalibrated.
+  Eigen::Vector2d min_max_focal_length(0.0,0.0);
   return EstimateTwoViewInfoUncalibrated(options,
                                          intrinsics1,
                                          intrinsics2,
                                          correspondences,
+                                         min_max_focal_length,
                                          twoview_info,
                                          inlier_indices);
 }

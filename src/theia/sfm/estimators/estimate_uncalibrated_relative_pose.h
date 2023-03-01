@@ -61,10 +61,10 @@ struct UncalibratedRelativePose {
 // that the principal point is (0, 0). Returns true if a pose could be
 // succesfully estimated, and false otherwise. The quality of the result depends
 // on the quality of the input data.
-bool EstimateUncalibratedRelativePose(
-    const RansacParameters& ransac_params,
+bool EstimateUncalibratedRelativePose(const RansacParameters& ransac_params,
     const RansacType& ransac_type,
     const std::vector<FeatureCorrespondence>& centered_correspondences,
+    const Eigen::Vector2d& min_max_focal_lengths,
     UncalibratedRelativePose* relative_pose,
     RansacSummary* ransac_summary);
 

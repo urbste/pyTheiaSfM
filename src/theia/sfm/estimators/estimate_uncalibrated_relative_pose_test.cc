@@ -65,8 +65,9 @@ void ExecuteRandomTest(const RansacParameters& options,
                        const double focal_length1,
                        const double focal_length2,
                        const double inlier_ratio,
-                       const double noise) {
-  static const int kNumCorrespondences = 600;
+                       const double noise,
+                       const double tolerance_degrees) {
+  static const int kNumCorrespondences = 200;
 
   // Create feature correspondences (inliers and outliers) and add noise if
   // appropriate.
@@ -98,17 +99,29 @@ void ExecuteRandomTest(const RansacParameters& options,
   // Estimate the relative pose.
   UncalibratedRelativePose relative_pose;
   RansacSummary ransac_summary;
+  Eigen::Vector2d min_max_focal_length(600., 2000.);
   EXPECT_TRUE(EstimateUncalibratedRelativePose(options,
                                                RansacType::RANSAC,
                                                correspondences,
+                                               min_max_focal_length,
                                                &relative_pose,
                                                &ransac_summary));
+
 
   // Expect that the inlier ratio is close to the ground truth.
   const double observed_inlier_ratio =
       ransac_summary.inliers.size() /
       static_cast<double>(correspondences.size());
   EXPECT_GT(observed_inlier_ratio, 0.7 * inlier_ratio);
+
+  Eigen::AngleAxisd rotation_loop(rotation *
+                                  relative_pose.rotation.transpose());
+  EXPECT_LT(RadToDeg(rotation_loop.angle()), tolerance_degrees);
+
+  const double translation_diff_rad = std::acos(
+      Clamp(position.normalized().dot(relative_pose.position), -1.0, 1.0));
+
+  EXPECT_LT(RadToDeg(translation_diff_rad), tolerance_degrees);
 }
 
 TEST(EstimateUncalibratedRelativePose, AllInliersNoNoise) {
@@ -119,6 +132,7 @@ TEST(EstimateUncalibratedRelativePose, AllInliersNoNoise) {
   options.failure_probability = 0.001;
   const double kInlierRatio = 1.0;
   const double kNoise = 0.0;
+  const double kPoseToleranceDegrees = 1e-4;
 
   for (int k = 0; k < kNumTrials; k++) {
     const Matrix3d rotation = RandomRotation(10.0, &rng);
@@ -131,7 +145,8 @@ TEST(EstimateUncalibratedRelativePose, AllInliersNoNoise) {
                       focal_length1,
                       focal_length2,
                       kInlierRatio,
-                      kNoise);
+                      kNoise,
+                      kPoseToleranceDegrees);
   }
 }
 
@@ -143,6 +158,7 @@ TEST(EstimateUncalibratedRelativePose, AllInliersWithNoise) {
   options.failure_probability = 0.001;
   const double kInlierRatio = 1.0;
   const double kNoise = 1.0;
+  const double kPoseToleranceDegrees = 20.0;
 
   for (int k = 0; k < kNumTrials; k++) {
     const Matrix3d rotation = RandomRotation(10.0, &rng);
@@ -155,7 +171,8 @@ TEST(EstimateUncalibratedRelativePose, AllInliersWithNoise) {
                       focal_length1,
                       focal_length2,
                       kInlierRatio,
-                      kNoise);
+                      kNoise,
+                      kPoseToleranceDegrees);
   }
 }
 
@@ -167,6 +184,7 @@ TEST(EstimateUncalibratedRelativePose, OutliersNoNoise) {
   options.failure_probability = 0.001;
   const double kInlierRatio = 0.7;
   const double kNoise = 0.0;
+  const double kPoseToleranceDegrees = 20.0;
 
   for (int k = 0; k < kNumTrials; k++) {
     const Matrix3d rotation = RandomRotation(10.0, &rng);
@@ -179,7 +197,8 @@ TEST(EstimateUncalibratedRelativePose, OutliersNoNoise) {
                       focal_length1,
                       focal_length2,
                       kInlierRatio,
-                      kNoise);
+                      kNoise,
+                      kPoseToleranceDegrees);
   }
 }
 
@@ -192,6 +211,7 @@ TEST(EstimateUncalibratedRelativePose, OutliersWithNoise) {
   options.max_iterations = 1000;
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
+  const double kPoseToleranceDegrees = 20.0;
 
   for (int k = 0; k < kNumTrials; k++) {
     const Matrix3d rotation = RandomRotation(10.0, &rng);
@@ -205,7 +225,38 @@ TEST(EstimateUncalibratedRelativePose, OutliersWithNoise) {
                       focal_length1,
                       focal_length2,
                       kInlierRatio,
-                      kNoise);
+                      kNoise,
+                      kPoseToleranceDegrees);
+  }
+}
+
+TEST(EstimateUncalibratedRelativePose, OutliersWithNoise_LO) {
+  RansacParameters options;
+  options.rng = std::make_shared<RandomNumberGenerator>(rng);
+  options.use_mle = true;
+  options.failure_probability = 0.001;
+  options.error_thresh = 4.0 * 4.0;
+  options.max_iterations = 1000;
+  options.use_lo = true;
+  options.lo_start_iterations = 10;
+  const double kInlierRatio = 0.7;
+  const double kNoise = 1.0;
+  const double kPoseToleranceDegrees = 20.0;
+
+  for (int k = 0; k < kNumTrials; k++) {
+    const Matrix3d rotation = RandomRotation(10.0, &rng);
+    const Vector3d position = rng.RandVector3d();
+    const double focal_length1 = rng.RandDouble(800, 1600);
+    const double focal_length2 = rng.RandDouble(800, 1600);
+
+    ExecuteRandomTest(options,
+                      rotation,
+                      position,
+                      focal_length1,
+                      focal_length2,
+                      kInlierRatio,
+                      kNoise,
+                      kPoseToleranceDegrees);
   }
 }
 

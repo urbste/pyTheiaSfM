@@ -62,7 +62,9 @@ struct RansacParameters {
         min_iterations(100),
         max_iterations(std::numeric_limits<int>::max()),
         use_mle(false),
-        use_Tdd_test(false) {}
+        use_Tdd_test(false),
+        use_lo(false),
+        lo_start_iterations(50) {}
 
   // The random number generator used to compute random number during
   // RANSAC. This may be controlled by the caller for debugging purposes.
@@ -101,6 +103,15 @@ struct RansacParameters {
   // and outliers count as a constant penalty.
   bool use_mle;
 
+  // If local optimization should be used (LO-RANSAC). This only works if the
+  // corresponding estimator has the RefineModel() model function implemented.
+  // Otherwise no local optimization is performed
+  bool use_lo;
+
+  // Local optimizaton should not start directly at the beginning but
+  // rather after ransac has performed some sifting already
+  int lo_start_iterations;
+
   // Whether to use the T_{d,d}, with d=1, test proposed in
   // Chum, O. and Matas, J.: Randomized RANSAC and T(d,d) test, BMVC 2002.
   // After computing the pose, RANSAC selects one match at random and evaluates
@@ -126,6 +137,9 @@ struct RansacSummary {
 
   // The confidence in the solution.
   double confidence;
+
+  // Number of local optimization iterations
+  int num_lo_iterations = 0;
 };
 
 template <class ModelEstimator>
@@ -168,6 +182,11 @@ class SampleConsensusEstimator {
   int ComputeMaxIterations(const double min_sample_size,
                            const double inlier_ratio,
                            const double log_failure_prob) const;
+
+  // Get inlier datum points (for LO)
+  void GetInlierDatum(const std::vector<Datum>& data,
+                      std::vector<Datum>& inlier_datum, 
+                      std::vector<int> inlier_indices);
 
   // The sampling strategy.
   std::unique_ptr<Sampler> sampler_;
@@ -316,6 +335,17 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
           continue;
         }
 
+
+        if (summary->num_iterations >= ransac_params_.lo_start_iterations &&
+            ransac_params_.use_lo) {
+          std::vector<Datum> inliers;
+          GetInlierDatum(data, inliers, inlier_indices);
+          if (!estimator_.RefineModel(inliers, best_model)) {
+            continue;
+          }
+          ++summary->num_lo_iterations;
+        }
+
         // A better cost does not guarantee a higher inlier ratio (i.e, the MLE
         // case) so we only update the max iterations if the number decreases.
         max_iterations = std::min(
@@ -327,12 +357,20 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
                 << " and max number of iterations = " << max_iterations;
       }
     }
+
   }
 
   // Compute the final inliers for the best model.
   const std::vector<double> best_residuals =
       estimator_.Residuals(data, *best_model);
   quality_measurement_->ComputeCost(best_residuals, &summary->inliers);
+
+  if (ransac_params_.use_lo) {
+    std::vector<Datum> inliers;
+    GetInlierDatum(data, inliers, summary->inliers);
+    estimator_.RefineModel(inliers, best_model);
+    ++summary->num_lo_iterations;
+  }
 
   const double inlier_ratio =
       static_cast<double>(summary->inliers.size()) / data.size();
@@ -341,6 +379,17 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
                 summary->num_iterations);
 
   return true;
+}
+
+template <class ModelEstimator>
+void SampleConsensusEstimator<ModelEstimator>::GetInlierDatum(
+  const std::vector<Datum>& data,
+  std::vector<Datum>& inlier_datum, 
+  std::vector<int> inlier_indices) {
+    inlier_datum.resize(inlier_indices.size());
+    for (int i = 0; i < inlier_indices.size(); i++) {
+      inlier_datum[i] = data[inlier_indices[i]];
+    }
 }
 
 }  // namespace theia

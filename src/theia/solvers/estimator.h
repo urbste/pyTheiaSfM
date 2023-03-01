@@ -14,7 +14,7 @@
 //       with the distribution.
 //
 //     * Neither the name of The Regents or University of California nor the
-//       names of its contributors may be used to endorse or promote products
+//       names of its contributors may be used to endorse or pRefineModelromote products
 //       derived from this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"

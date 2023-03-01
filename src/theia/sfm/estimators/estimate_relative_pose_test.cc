@@ -126,6 +126,7 @@ void ExecuteRandomTest(const RansacParameters& options,
   // Expect that the inlier ratio is close to the ground truth.
   EXPECT_GT(static_cast<double>(ransac_summary.inliers.size()), 5);
 
+  std::cout<<"Num lo-ransac iterations: "<<ransac_summary.num_lo_iterations<<"\n";
   Eigen::AngleAxisd rotation_loop(rotation *
                                   relative_pose.rotation.transpose());
   EXPECT_LT(RadToDeg(rotation_loop.angle()), tolerance_degrees);
@@ -227,6 +228,35 @@ TEST(EstimateRelativePose, OutliersWithNoise) {
   options.use_mle = true;
   options.error_thresh = kErrorThreshold;
   options.failure_probability = 0.001;
+  const double kInlierRatio = 0.7;
+  const double kNoise = 1.0;
+  const double kPoseToleranceDegrees = 5.0;
+
+  const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
+                                           RandomRotation(10.0, &rng)};
+  const std::vector<Vector3d> positions = {Vector3d(1, 0.2, 0),
+                                           Vector3d(0, 1, 0.1)};
+
+  for (int i = 0; i < rotations.size(); i++) {
+    for (int j = 0; j < positions.size(); j++) {
+      ExecuteRandomTest(options,
+                        rotations[i],
+                        positions[j],
+                        kInlierRatio,
+                        kNoise,
+                        kPoseToleranceDegrees);
+    }
+  }
+}
+
+TEST(EstimateRelativePose, OutliersWithNoise_LO) {
+  RansacParameters options;
+  options.rng = std::make_shared<RandomNumberGenerator>(rng);
+  options.use_mle = true;
+  options.error_thresh = kErrorThreshold;
+  options.failure_probability = 0.001;
+  options.use_lo = true;
+  options.lo_start_iterations = 5;
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
   const double kPoseToleranceDegrees = 5.0;

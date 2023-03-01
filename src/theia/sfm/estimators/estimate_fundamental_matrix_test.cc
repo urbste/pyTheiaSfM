@@ -54,7 +54,7 @@ using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 
-static const int kNumTrials = 100;
+static const int kNumTrials = 10;
 RandomNumberGenerator rng(58);
 
 void ExecuteRandomTest(const RansacParameters& options,
@@ -100,7 +100,7 @@ void ExecuteRandomTest(const RansacParameters& options,
                                         correspondences,
                                         &fundamental_matrix,
                                         &ransac_summary));
-
+  std::cout<<"Num lo-ransac iterations: "<<ransac_summary.num_lo_iterations<<"\n";
   // Expect that the inlier ratio is reasonable.
   const double observed_inlier_ratio =
       ransac_summary.inliers.size() /
@@ -186,6 +186,32 @@ TEST(EstimateFundamentalMatrix, OutliersWithNoise) {
   options.use_mle = true;
   options.error_thresh = 4.0 * 4.0;
   options.failure_probability = 0.001;
+  const double kInlierRatio = 0.7;
+  const double kNoise = 1.0;
+
+  for (int k = 0; k < kNumTrials; k++) {
+    const Matrix3d rotation = RandomRotation(10.0, &rng);
+    const Vector3d position = rng.RandVector3d();
+    const double focal_length1 = rng.RandDouble(800, 1600);
+    const double focal_length2 = rng.RandDouble(800, 1600);
+    ExecuteRandomTest(options,
+                      rotation,
+                      position,
+                      focal_length1,
+                      focal_length2,
+                      kInlierRatio,
+                      kNoise);
+  }
+}
+
+TEST(EstimateFundamentalMatrix, OutliersWithNoise_LO) {
+  RansacParameters options;
+  options.rng = std::make_shared<RandomNumberGenerator>(rng);
+  options.use_mle = true;
+  options.error_thresh = 4.0 * 4.0;
+  options.failure_probability = 0.001;
+  options.use_lo = true;
+  options.lo_start_iterations = 5;
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
 

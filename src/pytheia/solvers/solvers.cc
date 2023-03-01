@@ -85,7 +85,7 @@ void pytheia_solvers_classes(py::module& m) {
                      &theia::RansacSummary::num_input_data_points)
       .def_readwrite("num_iterations", &theia::RansacSummary::num_iterations)
       .def_readwrite("confidence", &theia::RansacSummary::confidence)
-
+      .def_readwrite("num_lo_iterations", &theia::RansacSummary::num_lo_iterations)
       ;
 
   py::class_<theia::RansacParameters>(m, "RansacParameters")
@@ -98,6 +98,8 @@ void pytheia_solvers_classes(py::module& m) {
       .def_readwrite("min_iterations", &theia::RansacParameters::min_iterations)
       .def_readwrite("max_iterations", &theia::RansacParameters::max_iterations)
       .def_readwrite("use_mle", &theia::RansacParameters::use_mle)
+      .def_readwrite("use_lo", &theia::RansacParameters::use_lo)
+      .def_readwrite("lo_start_iterations", &theia::RansacParameters::lo_start_iterations)
       .def_readwrite("use_Tdd_test", &theia::RansacParameters::use_Tdd_test);
   /*
   py::enum_<theia::FittingMethod>(m, "FittingMethod")

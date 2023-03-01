@@ -50,6 +50,8 @@
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
+#include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
+#include "theia/sfm/twoview_info.h"
 
 namespace theia {
 
@@ -67,7 +69,10 @@ namespace {
 class UncalibratedRelativePoseEstimator
     : public Estimator<FeatureCorrespondence, UncalibratedRelativePose> {
  public:
-  UncalibratedRelativePoseEstimator() {}
+  UncalibratedRelativePoseEstimator(const Eigen::Vector2d& min_max_focal_length) {
+      ba_opts_.max_num_iterations = 10;
+      min_max_f_ = min_max_focal_length;
+  }
 
   // 8 correspondences are needed to determine a fundamental matrix and thus a
   // relative pose.
@@ -99,7 +104,13 @@ class UncalibratedRelativePoseEstimator
     }
 
     // TODO(cmsweeney): Should we check if the focal lengths are reasonable?
-
+    // check focal length bounds
+    if (min_max_f_[0] > 1.0 && min_max_f_[1] > 1.0) {
+        if (relative_pose.focal_length1 < min_max_f_[0] || relative_pose.focal_length2 < min_max_f_[0] ||
+            relative_pose.focal_length1 > min_max_f_[1] || relative_pose.focal_length2 > min_max_f_[1]) {
+            return false;
+        }
+    }
     // Compose the essential matrix from the fundamental matrix and focal
     // lengths.
     Matrix3d essential_matrix;
@@ -129,6 +140,35 @@ class UncalibratedRelativePoseEstimator
     return true;
   }
 
+  bool RefineModel(const std::vector<FeatureCorrespondence>& centered_correspondences,
+                   UncalibratedRelativePose* relative_pose) const {
+      // Normalize the centered_correspondences.
+      std::vector<FeatureCorrespondence> normalized_correspondences(
+          centered_correspondences.size());
+      for (int i = 0; i < centered_correspondences.size(); i++) {
+        normalized_correspondences[i].feature1 =
+            Feature(centered_correspondences[i].feature1.point_ /
+                    relative_pose->focal_length1);
+        normalized_correspondences[i].feature2 =
+            Feature(centered_correspondences[i].feature2.point_ /
+                    relative_pose->focal_length2);
+      }
+
+      theia::TwoViewInfo two_view_info;
+      Eigen::AngleAxisd rotvec(relative_pose->rotation);
+      two_view_info.rotation_2 = rotvec.angle() * rotvec.axis();
+      two_view_info.position_2 = relative_pose->position;
+      const auto ba_summary = theia::BundleAdjustTwoViewsAngular(
+        ba_opts_, normalized_correspondences, &two_view_info);
+
+      relative_pose->position = two_view_info.position_2;
+      Eigen::AngleAxisd rot_vec_out;
+      rot_vec_out.angle() = two_view_info.rotation_2.norm();
+      rot_vec_out.axis() = two_view_info.rotation_2 / rot_vec_out.angle();
+      relative_pose->rotation = rot_vec_out.toRotationMatrix();
+      return ba_summary.final_cost < ba_summary.initial_cost && ba_summary.success;
+  }
+
   // The error for a correspondences given a model. This is the squared sampson
   // error.
   double Error(const FeatureCorrespondence& centered_correspondence,
@@ -150,6 +190,9 @@ class UncalibratedRelativePoseEstimator
   }
 
  private:
+  theia::BundleAdjustmentOptions ba_opts_;
+  // for sanity checks
+  Eigen::Vector2d min_max_f_;
   DISALLOW_COPY_AND_ASSIGN(UncalibratedRelativePoseEstimator);
 };
 
@@ -159,14 +202,15 @@ bool EstimateUncalibratedRelativePose(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
     const std::vector<FeatureCorrespondence>& centered_correspondences,
+    const Eigen::Vector2d& min_max_focal_lengths,
     UncalibratedRelativePose* relative_pose,
     RansacSummary* ransac_summary) {
-  UncalibratedRelativePoseEstimator relative_pose_estimator;
+  UncalibratedRelativePoseEstimator relative_pose_estimator(min_max_focal_lengths);
   std::unique_ptr<SampleConsensusEstimator<UncalibratedRelativePoseEstimator> >
       ransac = CreateAndInitializeRansacVariant(
           ransac_type, ransac_params, relative_pose_estimator);
 
-  // Estimate essential matrix.
+  // Estimate relative pose matrix.
   return ransac->Estimate(
       centered_correspondences, relative_pose, ransac_summary);
 }

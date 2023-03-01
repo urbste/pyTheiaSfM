@@ -49,6 +49,8 @@
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
+#include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
+#include "theia/sfm/twoview_info.h"
 
 namespace theia {
 namespace {
@@ -62,7 +64,9 @@ using Eigen::Vector3d;
 class RelativePoseEstimator
     : public Estimator<FeatureCorrespondence, RelativePose> {
  public:
-  RelativePoseEstimator() {}
+  RelativePoseEstimator() {
+    ba_opts_.max_num_iterations = 2;
+  }
 
   // 5 correspondences are needed to determine an essential matrix and thus a
   // relative pose..
@@ -105,6 +109,23 @@ class RelativePoseEstimator
     return relative_poses->size() > 0;
   }
 
+  bool RefineModel(const std::vector<FeatureCorrespondence>& correspondences,
+      RelativePose* relative_pose) const {
+    theia::TwoViewInfo two_view_info;
+    Eigen::AngleAxisd rotvec(relative_pose->rotation);
+    two_view_info.rotation_2 = rotvec.angle() * rotvec.axis();
+    two_view_info.position_2 = relative_pose->position;
+    const auto ba_summary = theia::BundleAdjustTwoViewsAngular(
+      ba_opts_, correspondences, &two_view_info);
+
+    relative_pose->position = two_view_info.position_2;
+    Eigen::AngleAxisd rot_vec_out;
+    rot_vec_out.angle() = two_view_info.rotation_2.norm();
+    rot_vec_out.axis() = two_view_info.rotation_2 / rot_vec_out.angle();
+    relative_pose->rotation = rot_vec_out.toRotationMatrix();
+    return ba_summary.final_cost < ba_summary.initial_cost;
+  }
+
   // The error for a correspondences given a model. This is the squared sampson
   // error.
   double Error(const FeatureCorrespondence& correspondence,
@@ -119,6 +140,7 @@ class RelativePoseEstimator
   }
 
  private:
+  theia::BundleAdjustmentOptions ba_opts_;
   DISALLOW_COPY_AND_ASSIGN(RelativePoseEstimator);
 };
 

@@ -41,6 +41,7 @@
 #include "theia/solvers/lmed.h"
 #include "theia/solvers/prosac.h"
 #include "theia/solvers/ransac.h"
+#include "theia/solvers/evsac.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 
 namespace theia {
@@ -52,7 +53,7 @@ enum class RansacType {
   RANSAC = 0,
   PROSAC = 1,
   LMED = 2,
-  EXHAUSTIVE = 3,
+  EXHAUSTIVE = 3
 };
 
 // Factory method to create a ransac variant based on the specified options. The
@@ -77,6 +78,9 @@ CreateAndInitializeRansacVariant(const RansacType& ransac_type,
       ransac_variant.reset(
           new ExhaustiveRansac<Estimator>(ransac_options, estimator));
       break;
+//    case RansacType::EVSAC:
+//      ransac_variant.reset(new Evsac<Estimator>(ransac_options, estimator));
+//      break;
     default:
       ransac_variant.reset(new Ransac<Estimator>(ransac_options, estimator));
       break;
