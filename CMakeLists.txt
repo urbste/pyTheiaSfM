@@ -79,7 +79,7 @@ endif (EXISTS ${LOCAL_GIT_DIRECTORY})
 # ==============================================================================
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-option(SubsetManifoldING "Enable testing" OFF)
+option(BUILD_TESTING "Enable testing" OFF)
 option(BUILD_DOCUMENTATION "Build html User's Guide" OFF)
 option(PYTHON_BUILD "If we are building python bindings" OFF)
 option(WITH_ROCKSDB "If rcocksdb should be included as a feature database" OFF)
