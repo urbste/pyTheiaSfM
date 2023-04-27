@@ -229,7 +229,7 @@ if __name__ == "__main__":
         features[view_id] = {"keypoints" : kpts, "descriptors" : desc, "img": img, "img_wh": img.shape[:2][::-1]}
         print("Extracted {} features from {}".format(len(kpts), images_files[i]))
 
-    view_ids = recon.ViewIds
+    view_ids = recon.ViewIds()
     for i in range(len(view_ids)):
         for j in range(i+1,len(view_ids)):
             view_id1 = view_ids[i]
