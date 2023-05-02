@@ -1,3 +1,5 @@
+#pragma once
+
 #include "theia/sfm/colorize_reconstruction.h"
 #include "theia/sfm/estimate_twoview_info.h"
 #include "theia/sfm/extract_maximally_parallel_rigid_subgraph.h"

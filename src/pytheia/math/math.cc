@@ -42,19 +42,14 @@
 #include <glog/logging.h>
 #include <math.h>
 
-#include "theia/math/polynomial.h"
+#include "theia/math/math_wrapper.h"
 #include "theia/math/rotation.h"
-
-// for overloaded function in CameraInstrinsicsModel
-template <typename... Args>
-using overload_cast_ = pybind11::detail::overload_cast_impl<Args...>;
+#include "theia/math/polynomial.h"
 
 namespace py = pybind11;
 #include <iostream>
 #include <pybind11/numpy.h>
 #include <vector>
-
-namespace py = pybind11;
 
 namespace pytheia {
 namespace math {
@@ -65,7 +60,7 @@ void pytheia_math_classes(py::module& m) {
   // rotation.h
   m.def("AlignRotations", &theia::AlignRotations,
     "Solves a nonlinear least squares problem so that: rotations * R = gt_rotations.");
-  m.def("AlignOrientations", &theia::AlignOrientations,
+  m.def("AlignOrientations", &theia::AlignOrientationsWrapper,
     "This functions takes as input a dictionary of view_ids to global orientations that should be aligned. Then it calls AlignRotations internally.");
   m.def("MultiplyRotations", &theia::MultiplyRotations, "return R = R1 * R2");
   m.def("RelativeRotationFromTwoRotations", 

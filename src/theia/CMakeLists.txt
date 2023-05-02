@@ -226,6 +226,7 @@ set(THEIA_SRC
 # for pytheia
 set(PYTHEIA_SRC
     io/io_wrapper.cc
+    math/math_wrapper.cc
     sfm/sfm_wrapper.cc
     sfm/bundle_adjustment/bundle_adjustment_wrapper.cc
     sfm/global_pose_estimation/global_pose_estimation_wrapper.cc

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "theia/sfm/reconstruction.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>

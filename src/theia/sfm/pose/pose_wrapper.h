@@ -1,3 +1,5 @@
+#pragma once
+
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h"
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"

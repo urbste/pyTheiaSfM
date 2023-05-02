@@ -163,8 +163,6 @@ void AddIntrinsicsPriorType(py::module& m, const std::string& name) {
                     &theia::Prior<N>::SetParametersValues);
 }
 
-namespace py = pybind11;
-
 namespace pytheia {
 namespace sfm {
 
@@ -1371,13 +1369,6 @@ void pytheia_sfm_classes(py::module& m) {
 
   // Reconstruction Estimator
 
-  // ExifReader
-  // py::class_<theia::ExifReader>(m, "ExifReader")
-  //   .def(py::init<>())
-  //   .def("ExtractEXIFMetadataWrapper",
-  //   &theia::ExifReader::ExtractEXIFMetadataWrapper)
-  // ;
-
   // TwoViewInfo
   py::class_<theia::TwoViewInfo>(m, "TwoViewInfo")
       .def(py::init<>())
@@ -1404,8 +1395,8 @@ void pytheia_sfm_classes(py::module& m) {
       .def("HasEdge", &theia::ViewGraph::HasEdge)
       .def("AddEdge", &theia::ViewGraph::AddEdge)
       .def("RemoveEdge", &theia::ViewGraph::RemoveEdge)
-      .def_property_readonly("NumViews", &theia::ViewGraph::NumViews)
-      .def_property_readonly("NumEdges", &theia::ViewGraph::NumEdges)
+      .def("NumViews", &theia::ViewGraph::NumViews)
+      .def("NumEdges", &theia::ViewGraph::NumEdges)
       .def("GetNeighborIdsForView",
            &theia::ViewGraph::GetNeighborIdsForView,
            py::return_value_policy::reference)
