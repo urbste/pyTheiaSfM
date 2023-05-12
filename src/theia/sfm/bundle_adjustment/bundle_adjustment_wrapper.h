@@ -78,10 +78,10 @@ BundleAdjustmentSummary BundleAdjustPartialViewsConstantWrapper(
 //     const TwoViewBundleAdjustmentOptions& options,
 //     const std::vector<FeatureCorrespondence>& correspondences);
 
-// std::tuple<bool, Eigen::Vector3d>
-// OptimizeRelativePositionWithKnownRotationWrapper(
-//     const std::vector<FeatureCorrespondence>& correspondences,
-//     const Eigen::Vector3d& rotation1,
-//     const Eigen::Vector3d& rotation2);
+std::tuple<bool, Eigen::Vector3d>
+OptimizeRelativePositionWithKnownRotationWrapper(
+    const std::vector<FeatureCorrespondence>& correspondences,
+    const Eigen::Vector3d& rotation1,
+    const Eigen::Vector3d& rotation2);
 
 }  // namespace theia

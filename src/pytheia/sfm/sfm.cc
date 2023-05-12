@@ -1482,8 +1482,8 @@ void pytheia_sfm_classes(py::module& m) {
   // m.def("BundleAdjustTwoViews", theia::BundleAdjustTwoViewsWrapper);
   m.def("BundleAdjustTwoViewsAngular",
         theia::BundleAdjustTwoViewsAngularWrapper);
-  // m.def("OptimizeRelativePositionWithKnownRotation",
-  // theia::OptimizeRelativePositionWithKnownRotationWrapper);
+  m.def("OptimizeRelativePositionWithKnownRotation",
+  theia::OptimizeRelativePositionWithKnownRotationWrapper);
 
   m.def("OptimizeAbsolutePoseOnNormFeatures",theia::OptimizeAbsolutePoseOnNormFeatures);
   // Bundle Adjuster
