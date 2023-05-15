@@ -20,15 +20,21 @@ NUM_CORES=4
 
 cd /home
 mkdir -p wheelhouse
+NOT_BUILDING='cp311-cp311'
+
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
-    "${PYBIN}/pip" install nose
-    "${PYBIN}/python" setup.py bdist_wheel
-    rm -rf /home/cmake_build/lib/*.so
-    rm -rf /home/build/lib/pytheia/*.so
-    rm -rf /home/src/pytheia/*.so
-    rm -rf /home/build/lib/pytheia/*.so
-    rm -rf /home/pytheia.egg-info
+    if [[ "$PYBIN" == *"$NOT_BUILDING"* ]]; then
+        echo "Not building for python 3.11"
+    else
+        "${PYBIN}/pip" install nose
+        "${PYBIN}/python" setup.py bdist_wheel
+        rm -rf /home/cmake_build/lib/*.so
+        rm -rf /home/build/lib/pytheia/*.so
+        rm -rf /home/src/pytheia/*.so
+        rm -rf /home/build/lib/pytheia/*.so
+        rm -rf /home/pytheia.egg-info
+    fi
 done
 cp /home/dist/*.whl /home/wheelhouse
 rm -rf /home/dist

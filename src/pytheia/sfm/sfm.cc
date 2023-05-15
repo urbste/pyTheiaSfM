@@ -784,28 +784,24 @@ void pytheia_sfm_classes(py::module& m) {
           "min_num_inliers",
           &theia::LocalizeViewToReconstructionOptions::min_num_inliers);
 
-  m.def("EstimateTwoViewInfo", theia::EstimateTwoViewInfoWrapper);
-  m.def("ColorizeReconstruction", theia::ColorizeReconstructionWrapper);
+  m.def("EstimateTwoViewInfo", theia::EstimateTwoViewInfo);
+  m.def("ColorizeReconstruction", theia::ColorizeReconstruction);
   m.def("ExtractMaximallyParallelRigidSubgraph",
-        theia::ExtractMaximallyParallelRigidSubgraphWrapper);
+        theia::ExtractMaximallyParallelRigidSubgraph);
   m.def("FilterViewGraphCyclesByRotation",
-        theia::FilterViewGraphCyclesByRotationWrapper);
+        theia::FilterViewGraphCyclesByRotation);
   m.def("FilterViewPairsFromOrientation",
-        theia::FilterViewPairsFromOrientationWrapper);
+        theia::FilterViewPairsFromOrientation);
   m.def("FilterViewPairsFromRelativeTranslation",
-        theia::FilterViewPairsFromRelativeTranslationWrapper);
+        theia::FilterViewPairsFromRelativeTranslation);
   m.def("LocalizeViewToReconstruction",
-        theia::LocalizeViewToReconstructionWrapper);
-  m.def("SelectGoodTracksForBundleAdjustmentAll",
-        theia::SelectGoodTracksForBundleAdjustmentAllWrapper);
+        theia::LocalizeViewToReconstruction);
   m.def("SelectGoodTracksForBundleAdjustment",
         theia::SelectGoodTracksForBundleAdjustmentWrapper);
-  m.def("SetCameraIntrinsicsFromPriors",
-        theia::SetCameraIntrinsicsFromPriorsWrapper);
   m.def("SetOutlierTracksToUnestimated",
         theia::SetOutlierTracksToUnestimatedWrapper);
-  m.def("SetOutlierTracksToUnestimatedAll",
-        theia::SetOutlierTracksToUnestimatedAllWrapper);
+  m.def("SetCameraIntrinsicsFromPriors",
+        theia::SetCameraIntrinsicsFromPriors);
   // m.def("UndistortImage", theia::UndistortImageWrapper);
   // m.def("UndistortCamera", theia::UndistortCameraWrapper);
   // m.def("UndistortReconstruction", theia::UndistortReconstructionWrapper);
