@@ -137,16 +137,16 @@ BundleAdjustmentSummary BundleAdjustPartialViewsConstantWrapper(
 //     std::make_tuple(ba_summary, camera1, camera2, points_3d);
 // }
 
-// std::tuple<bool, Eigen::Vector3d>
-// OptimizeRelativePositionWithKnownRotationWrapper(
-//     const std::vector<FeatureCorrespondence>& correspondences,
-//     const Eigen::Vector3d& rotation1,
-//     const Eigen::Vector3d& rotation2){
-//     Eigen::Vector3d relative_position;
-//     const bool success =
-//     OptimizeRelativePositionWithKnownRotation(correspondences, rotation1,
-//     rotation2, &relative_position); return std::make_tuple(success,
-//     relative_position);
-// }
+std::tuple<bool, Eigen::Vector3d>
+OptimizeRelativePositionWithKnownRotationWrapper(
+    const std::vector<FeatureCorrespondence>& correspondences,
+    const Eigen::Vector3d& rotation1,
+    const Eigen::Vector3d& rotation2){
+    Eigen::Vector3d relative_position;
+    const bool success =
+    OptimizeRelativePositionWithKnownRotation(correspondences, rotation1,
+    rotation2, &relative_position); return std::make_tuple(success,
+    relative_position);
+}
 
 }  // namespace theia
