@@ -784,7 +784,7 @@ void pytheia_sfm_classes(py::module& m) {
           "min_num_inliers",
           &theia::LocalizeViewToReconstructionOptions::min_num_inliers);
 
-  m.def("EstimateTwoViewInfo", theia::EstimateTwoViewInfo);
+  m.def("EstimateTwoViewInfo", theia::EstimateTwoViewInfoWrapper);
   m.def("ColorizeReconstruction", theia::ColorizeReconstruction);
   m.def("ExtractMaximallyParallelRigidSubgraph",
         theia::ExtractMaximallyParallelRigidSubgraph);

@@ -8,6 +8,22 @@
 
 namespace theia {
 
+std::tuple<bool, TwoViewInfo, std::vector<int>> EstimateTwoViewInfoWrapper(
+    const EstimateTwoViewInfoOptions& options,
+    const CameraIntrinsicsPrior& intrinsics1,
+    const CameraIntrinsicsPrior& intrinsics2,
+    const std::vector<FeatureCorrespondence>& correspondences) {
+  TwoViewInfo twoview_info;
+  std::vector<int> inlier_indices;
+  const bool success = EstimateTwoViewInfo(options,
+                                           intrinsics1,
+                                           intrinsics2,
+                                           correspondences,
+                                           &twoview_info,
+                                           &inlier_indices);
+  return std::make_tuple(success, twoview_info, inlier_indices);
+}
+
 std::tuple<bool, std::unordered_set<TrackId>>
 SelectGoodTracksForBundleAdjustmentWrapper(
     const Reconstruction& reconstruction,

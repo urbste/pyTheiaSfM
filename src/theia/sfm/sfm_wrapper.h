@@ -23,6 +23,12 @@ class TwoViewInfo;
 class ViewGraph;
 class Camera;
 
+std::tuple<bool, TwoViewInfo, std::vector<int>> EstimateTwoViewInfoWrapper(
+    const EstimateTwoViewInfoOptions& options,
+    const CameraIntrinsicsPrior& intrinsics1,
+    const CameraIntrinsicsPrior& intrinsics2,
+    const std::vector<FeatureCorrespondence>& correspondences);
+    
 std::tuple<bool, std::unordered_set<TrackId>>
 SelectGoodTracksForBundleAdjustmentWrapper(
     const Reconstruction& reconstruction,
