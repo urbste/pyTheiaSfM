@@ -139,6 +139,9 @@ struct BundleAdjustmentOptions {
 
   // Adjusting orthographic camera
   bool orthographic_camera = false;
+
+  // Use gravity priors
+  bool use_gravity_priors = false;
 };
 
 // Some important metrics for analyzing bundle adjustment results.

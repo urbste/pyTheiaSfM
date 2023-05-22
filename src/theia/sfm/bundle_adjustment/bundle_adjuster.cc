@@ -47,6 +47,7 @@
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/create_reprojection_error_cost_function.h"
 #include "theia/sfm/bundle_adjustment/position_error.h"
+#include "theia/sfm/bundle_adjustment/gravity_error.h"
 #include "theia/sfm/bundle_adjustment/depth_prior_error.h"
 
 #include "theia/sfm/reconstruction.h"
@@ -153,6 +154,11 @@ void BundleAdjuster::AddView(const ViewId view_id) {
   // add a position prior if available
   if (options_.use_position_priors && view->HasPositionPrior()) {
     AddPositionPriorErrorResidual(view, camera);
+  }
+
+  // add a gravity prior if available
+  if (options_.use_gravity_priors && view->HasGravityPrior()) {
+    AddGravityPriorErrorResidual(view, camera);
   }
 }
 
@@ -473,6 +479,15 @@ void BundleAdjuster::AddPositionPriorErrorResidual(View* view, Camera* camera) {
   problem_->AddResidualBlock(
       PositionError::Create(view->GetPositionPrior(),
                             view->GetPositionPriorSqrtInformation()),
+      NULL,
+      camera->mutable_extrinsics());
+}
+
+void BundleAdjuster::AddGravityPriorErrorResidual(View* view, Camera* camera) {
+  // Adds a gravity priors to the camera orientation
+  problem_->AddResidualBlock(
+      GravityError::Create(view->GetGravityPrior(),
+                           view->GetGravityPriorSqrtInformation()),
       NULL,
       camera->mutable_extrinsics());
 }
