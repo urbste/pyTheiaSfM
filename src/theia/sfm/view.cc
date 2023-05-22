@@ -51,27 +51,36 @@ View::View()
     : name_(""),
       is_estimated_(false),
       timestamp_(0.0),
-      has_position_prior_(false) {
+      has_position_prior_(false),
+      has_gravity_prior_(false) {
   position_prior_.setZero();
   position_prior_sqrt_information_.setIdentity();
+  gravity_prior_.setZero();
+  gravity_prior_sqrt_information_.setIdentity();
 }
 
 View::View(const std::string& name)
     : name_(name),
       is_estimated_(false),
       timestamp_(0.0),
-      has_position_prior_(false) {
+      has_position_prior_(false),
+      has_gravity_prior_(false) {
   position_prior_.setZero();
   position_prior_sqrt_information_.setIdentity();
+  gravity_prior_.setZero();
+  gravity_prior_sqrt_information_.setIdentity();
 }
 
 View::View(const std::string& name, const double timestamp)
     : name_(name),
       is_estimated_(false),
       timestamp_(timestamp),
-      has_position_prior_(false) {
+      has_position_prior_(false),
+      has_gravity_prior_(false) {
   position_prior_.setZero();
   position_prior_sqrt_information_.setIdentity();
+  gravity_prior_.setZero();
+  gravity_prior_sqrt_information_.setIdentity();
 }
 
 const std::string& View::Name() const { return name_; }
@@ -153,6 +162,22 @@ Eigen::Matrix3d View::GetPositionPriorSqrtInformation() {
   return position_prior_sqrt_information_;
 }
 
-bool View::HasPositionPrior() { return has_position_prior_; }
+bool View::HasGravityPrior() { return has_gravity_prior_; }
+
+void View::SetGravityPrior(
+    const Eigen::Vector3d& gravity_prior,
+    const Eigen::Matrix3d& gravity_prior_sqrt_information) {
+  gravity_prior_ = position_prior;
+  gravity_prior_sqrt_information_ = gravity_prior_sqrt_information;
+  has_gravity_prior_ = true;
+}
+
+Eigen::Vector3d View::GetGravityPrior() { return gravity_prior_; }
+
+Eigen::Matrix3d View::GetGravityPriorSqrtInformation() {
+  return gravity_prior_sqrt_information_;
+}
+
+bool View::HasGravityPrior() { return has_gravity_prior_; }
 
 }  // namespace theia

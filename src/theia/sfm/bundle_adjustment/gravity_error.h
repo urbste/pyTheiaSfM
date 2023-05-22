@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Steffen Urban
+// Copyright (C) 2023 Steffen Urban
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,48 +32,54 @@
 // Please contact the author of this library if you have any questions.
 // Author: Steffen Urban (urbste@googlemail.com)
 
-#ifndef THEIA_SFM_BUNDLE_ADJUSTMENT_POSITION_ERROR_H_
-#define THEIA_SFM_BUNDLE_ADJUSTMENT_POSITION_ERROR_H_
+#ifndef THEIA_SFM_BUNDLE_ADJUSTMENT_GRAVITY_ERROR_H_
+#define THEIA_SFM_BUNDLE_ADJUSTMENT_GRAVITY_ERROR_H_
 
 #include <ceres/ceres.h>
+#include <ceres/rotation.h>
 
 #include <Eigen/Core>
 
 namespace theia {
 
-struct PositionError {
+struct GravityError {
  public:
-  explicit PositionError(const Eigen::Vector3d& position_prior,
-                         const Eigen::Matrix3d& position_prior_sqrt_information)
-      : position_prior_(position_prior),
-        position_prior_sqrt_information_(position_prior_sqrt_information) {}
+  explicit GravityError(const Eigen::Vector3d& gravity_prior,
+                         const Eigen::Matrix3d& gravity_prior_sqrt_information)
+      : gravity_prior_(gravity_prior),
+        gravity_prior_sqrt_information_(gravity_prior_sqrt_information) {}
 
   template <typename T>
   bool operator()(const T* camera_extrinsics, T* residual) const {
     Eigen::Map<Eigen::Matrix<T, 3, 1>> res(residual);
-    Eigen::Map<const Eigen::Matrix<T, 3, 1>> position(camera_extrinsics +
-                                                      Camera::POSITION);
+    
+    Eigen::Matrix<T, 3, 1> gravity_in_camera;
+    // g_camera = R_c_w * g_world = R_c_w * (0,0,-1)
+    ceres::AngleAxisRotatePoint(camera_extrinsics + Camera::ORIENTATION,
+                                gravity_prior_.data(),
+                                gravity_in_camera.data());
 
-    res = position_prior_sqrt_information_.cast<T>() *
-          (position_prior_.cast<T>() - position);
+    res = gravity_prior_sqrt_information_.cast<T>() * (
+          gravity_in_camera - gravity_prior_.cast<T>())
     return true;
   }
 
   static ceres::CostFunction* Create(
-      const Eigen::Vector3d& position_prior,
-      const Eigen::Matrix3d& position_prior_sqrt_information) {
+      const Eigen::Vector3d& gravity_prior,
+      const Eigen::Matrix3d& gravity_prior_sqrt_information) {
     static const int kParameterSize = 6;
     static const int kNumResiduals = 3;
     return new ceres::
-        AutoDiffCostFunction<PositionError, kNumResiduals, kParameterSize>(
-            new PositionError(position_prior, position_prior_sqrt_information));
+        AutoDiffCostFunction<GravityError, kNumResiduals, kParameterSize>(
+            new GravityError(gravity_prior, gravity_prior_sqrt_information));
   }
 
  private:
-  const Eigen::Vector3d position_prior_;
-  const Eigen::Matrix3d position_prior_sqrt_information_;
+  const Eigen::Vector3d gravity_prior_;
+  const Eigen::Matrix3d gravity_prior_sqrt_information_;
+  const Eigen::Vector3d gravity_world_ = Eigen::Vector3d(0.,0.,-1.);
 };
 
 }  // namespace theia
 
-#endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_POSITION_ERROR_H_
+#endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_GRAVITY_ERROR_H_
