@@ -125,6 +125,9 @@ class BundleAdjuster {
   // Add a position prior residual. This can for example be a GPS position.
   virtual void AddPositionPriorErrorResidual(View* view, Camera* camera);
 
+  // Add a gravity prior residual. Gravity is supposed to be measured in image coordinates.
+  virtual void AddGravityPriorErrorResidual(View* view, Camera* camera);
+
   // Add a depth prior residual. Could be used e.g. for RGB-D cameras
   virtual void AddDepthPriorErrorResidual(const Feature& feature,
                                           Camera* camera,

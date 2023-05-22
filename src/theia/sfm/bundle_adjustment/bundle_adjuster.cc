@@ -484,8 +484,7 @@ void BundleAdjuster::AddPositionPriorErrorResidual(View* view, Camera* camera) {
 }
 
 void BundleAdjuster::AddGravityPriorErrorResidual(View* view, Camera* camera) {
-  // Adds a position priors to the camera poses. This can for example be a GPS
-  // position.
+  // Adds a gravity priors to the camera orientation
   problem_->AddResidualBlock(
       GravityError::Create(view->GetGravityPrior(),
                            view->GetGravityPriorSqrtInformation()),

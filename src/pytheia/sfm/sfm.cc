@@ -838,7 +838,12 @@ void pytheia_sfm_classes(py::module& m) {
       .def("GetPositionPriorSqrtInformation",
            &theia::View::GetPositionPriorSqrtInformation)
       .def("SetPositionPrior", &theia::View::SetPositionPrior)
-      .def("HasPositionPrior", &theia::View::HasPositionPrior);
+      .def("HasPositionPrior", &theia::View::HasPositionPrior)
+      .def("GetGravityPrior", &theia::View::GetGravityPrior)
+      .def("GetGravityPriorSqrtInformation",
+           &theia::View::GetGravityPriorSqrtInformation)
+      .def("SetGravityPrior", &theia::View::SetGravityPrior)
+      .def("HasGravityPrior", &theia::View::HasGravityPrior);
 
   // Visibility pyramid
   py::class_<theia::VisibilityPyramid>(m, "VisibilityPyramid")

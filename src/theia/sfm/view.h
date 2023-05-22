@@ -94,12 +94,15 @@ class View {
 
   void SetPositionPrior(const Eigen::Vector3d& position_prior,
                         const Eigen::Matrix3d& position_prior_information);
+  Eigen::Vector3d GetPositionPrior() const;
+  Eigen::Matrix3d GetPositionPriorSqrtInformation() const;
+  bool HasPositionPrior() const;
 
-  Eigen::Vector3d GetPositionPrior();
-
-  Eigen::Matrix3d GetPositionPriorSqrtInformation();
-
-  bool HasPositionPrior();
+  void SetGravityPrior(const Eigen::Vector3d& gravity_prior,
+                       const Eigen::Matrix3d& gravity_prior_information);
+  Eigen::Vector3d GetGravityPrior() const;
+  Eigen::Matrix3d GetGravityPriorSqrtInformation() const;
+  bool HasGravityPrior() const;
 
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
@@ -116,7 +119,10 @@ class View {
        features_to_tracks_,
        position_prior_,
        position_prior_sqrt_information_,
-       has_position_prior_);
+       has_position_prior_,
+       gravity_prior_,
+       gravity_prior_sqrt_information_,
+       has_gravity_prior_);
   }
 
   std::string name_;
@@ -135,7 +141,7 @@ class View {
   // A prior on gravity (in the image coordinate system, z-forward, y-down, x-right)
   Eigen::Vector3d gravity_prior_;
   Eigen::Matrix3d gravity_prior_sqrt_information_;
-  bool has_gravity_prior_
+  bool has_gravity_prior_;
 };
 
 }  // namespace theia

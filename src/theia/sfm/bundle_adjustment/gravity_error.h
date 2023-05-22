@@ -45,22 +45,22 @@ namespace theia {
 struct GravityError {
  public:
   explicit GravityError(const Eigen::Vector3d& gravity_prior,
-                         const Eigen::Matrix3d& gravity_prior_sqrt_information)
+                        const Eigen::Matrix3d& gravity_prior_sqrt_information)
       : gravity_prior_(gravity_prior),
         gravity_prior_sqrt_information_(gravity_prior_sqrt_information) {}
 
   template <typename T>
   bool operator()(const T* camera_extrinsics, T* residual) const {
     Eigen::Map<Eigen::Matrix<T, 3, 1>> res(residual);
-    
+    Eigen::Matrix<T, 3, 1> g_world(T(0), T(0), T(-1));
     Eigen::Matrix<T, 3, 1> gravity_in_camera;
     // g_camera = R_c_w * g_world = R_c_w * (0,0,-1)
     ceres::AngleAxisRotatePoint(camera_extrinsics + Camera::ORIENTATION,
-                                gravity_prior_.data(),
+                                g_world.data(),
                                 gravity_in_camera.data());
 
     res = gravity_prior_sqrt_information_.cast<T>() * (
-          gravity_in_camera - gravity_prior_.cast<T>())
+          gravity_in_camera - gravity_prior_.cast<T>());
     return true;
   }
 
@@ -77,7 +77,6 @@ struct GravityError {
  private:
   const Eigen::Vector3d gravity_prior_;
   const Eigen::Matrix3d gravity_prior_sqrt_information_;
-  const Eigen::Vector3d gravity_world_ = Eigen::Vector3d(0.,0.,-1.);
 };
 
 }  // namespace theia

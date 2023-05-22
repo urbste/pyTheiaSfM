@@ -156,28 +156,28 @@ void View::SetPositionPrior(
   has_position_prior_ = true;
 }
 
-Eigen::Vector3d View::GetPositionPrior() { return position_prior_; }
+Eigen::Vector3d View::GetPositionPrior() const { return position_prior_; }
 
-Eigen::Matrix3d View::GetPositionPriorSqrtInformation() {
+Eigen::Matrix3d View::GetPositionPriorSqrtInformation() const {
   return position_prior_sqrt_information_;
 }
 
-bool View::HasGravityPrior() { return has_gravity_prior_; }
+bool View::HasPositionPrior() const { return has_gravity_prior_; }
 
 void View::SetGravityPrior(
     const Eigen::Vector3d& gravity_prior,
     const Eigen::Matrix3d& gravity_prior_sqrt_information) {
-  gravity_prior_ = position_prior;
+  gravity_prior_ = gravity_prior;
   gravity_prior_sqrt_information_ = gravity_prior_sqrt_information;
   has_gravity_prior_ = true;
 }
 
-Eigen::Vector3d View::GetGravityPrior() { return gravity_prior_; }
+Eigen::Vector3d View::GetGravityPrior() const { return gravity_prior_; }
 
-Eigen::Matrix3d View::GetGravityPriorSqrtInformation() {
+Eigen::Matrix3d View::GetGravityPriorSqrtInformation() const {
   return gravity_prior_sqrt_information_;
 }
 
-bool View::HasGravityPrior() { return has_gravity_prior_; }
+bool View::HasGravityPrior() const { return has_gravity_prior_; }
 
 }  // namespace theia
