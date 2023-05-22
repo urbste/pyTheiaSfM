@@ -98,6 +98,7 @@
 #include "theia/sfm/view.h"
 #include "theia/sfm/view_graph/view_graph.h"
 #include "theia/sfm/visibility_pyramid.h"
+#include "theia/sfm/view_graph/remove_disconnected_view_pairs.h"
 
 #include "theia/sfm/global_reconstruction_estimator.h"
 #include "theia/sfm/hybrid_reconstruction_estimator.h"
@@ -807,6 +808,9 @@ void pytheia_sfm_classes(py::module& m) {
   // m.def("UndistortReconstruction", theia::UndistortReconstructionWrapper);
   m.def("FindCommonViewsByName", theia::FindCommonViewsByName);
   m.def("FindCommonTracksInViews", theia::FindCommonTracksInViews);
+
+
+  m.def("RemoveDisconnectedViewPairs", theia::RemoveDisconnectedViewPairs);
 
   // View class
   py::class_<theia::View>(m, "View")
