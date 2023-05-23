@@ -980,7 +980,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("use_gravity_priors",
                      &theia::BundleAdjustmentOptions::use_gravity_priors)
       .def_readwrite("orthographic_camera",
-                     &theia::BundleAdjustmentOptions::orthographic_camera);
+                     &theia::BundleAdjustmentOptions::orthographic_camera)
+      .def_readwrite("use_homogeneous_point_parametrization",
+                     &theia::BundleAdjustmentOptions::use_homogeneous_point_parametrization);
 
   // Reconstruction Options
   py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")

@@ -57,7 +57,7 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
   }
   for (const TrackId track_id : track_ids) {
     bundle_adjuster.AddTrack(
-        track_id, options.use_homogeneous_local_point_parametrization);
+        track_id, options.use_homogeneous_point_parametrization);
   }
 
   return bundle_adjuster.Optimize();
@@ -83,7 +83,7 @@ BundleAdjustPartialViewsConstant(const BundleAdjustmentOptions &options,
 
   for (const TrackId track_id : reconstruction->TrackIds()) {
     bundle_adjuster.AddTrack(
-        track_id, options.use_homogeneous_local_point_parametrization);
+        track_id, options.use_homogeneous_point_parametrization);
   }
 
   return bundle_adjuster.Optimize();
@@ -101,7 +101,7 @@ BundleAdjustmentSummary BundleAdjustReconstruction(
   }
   for (const TrackId track_id : track_ids) {
     bundle_adjuster.AddTrack(
-        track_id, options.use_homogeneous_local_point_parametrization);
+        track_id, options.use_homogeneous_point_parametrization);
   }
 
   return bundle_adjuster.Optimize();
@@ -147,7 +147,7 @@ BundleAdjustmentSummary BundleAdjustTrack(
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   bundle_adjuster.AddTrack(track_id,
-                           options.use_homogeneous_local_point_parametrization);
+                           options.use_homogeneous_point_parametrization);
   return bundle_adjuster.Optimize();
 }
 
@@ -247,7 +247,7 @@ BundleAdjustmentSummary BundleAdjustTracks(
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   for (const auto& track_id : tracks_to_optimize) {
     bundle_adjuster.AddTrack(
-        track_id, options.use_homogeneous_local_point_parametrization);
+        track_id, options.use_homogeneous_point_parametrization);
   }
   return bundle_adjuster.Optimize();
 }

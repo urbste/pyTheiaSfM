@@ -109,7 +109,7 @@ struct BundleAdjustmentOptions {
 
   // use local parametrization for points. Apply increments in local tangent
   // space. Reduce from dim 4 -> 3
-  bool use_homogeneous_local_point_parametrization = true;
+  bool use_homogeneous_point_parametrization = true;
 
   // Indicates which intrinsics should be optimized as part of bundle
   // adjustment. Default to NONE!

@@ -65,7 +65,7 @@ class CalibratedAbsolutePoseEstimator
  public:
   CalibratedAbsolutePoseEstimator() : pnp_type_(PnPType::KNEIP) {
     ba_opts_.max_num_iterations = 2;
-    ba_opts_.use_homogeneous_local_point_parametrization = false;
+    ba_opts_.use_homogeneous_point_parametrization = false;
     ba_opts_.intrinsics_to_optimize = theia::OptimizeIntrinsicsType::NONE;
   }
 
