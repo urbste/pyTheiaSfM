@@ -242,6 +242,7 @@
 #include "theia/sfm/view_graph/orientations_from_maximum_spanning_tree.h"
 #include "theia/sfm/view_graph/remove_disconnected_view_pairs.h"
 #include "theia/sfm/view_graph/view_graph.h"
+#include "theia/sfm/view_graph/view_graph_from_reconstruction.h"
 #include "theia/sfm/visibility_pyramid.h"
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/evsac.h"
