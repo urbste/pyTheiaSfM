@@ -1,6 +1,6 @@
-#pragma once
+#ifndef SOPHUS_INTERPOLATE_DETAILS_HPP
+#define SOPHUS_INTERPOLATE_DETAILS_HPP
 
-#include "cartesian.hpp"
 #include "rxso2.hpp"
 #include "rxso3.hpp"
 #include "se2.hpp"
@@ -16,24 +16,15 @@ namespace interp_details {
 template <class Group>
 struct Traits;
 
-template <class Scalar, int Dim>
-struct Traits<Cartesian<Scalar, Dim>> {
-  static bool constexpr supported = true;
-
-  static bool hasShortestPathAmbiguity(Cartesian<Scalar, Dim> const&) {
-    return false;
-  }
-};
-
 template <class Scalar>
 struct Traits<SO2<Scalar>> {
   static bool constexpr supported = true;
 
   static bool hasShortestPathAmbiguity(SO2<Scalar> const& foo_T_bar) {
     using std::abs;
-    Scalar angle = abs(foo_T_bar.log());
-    Scalar const kPi = Constants<Scalar>::pi();
-    return abs(angle - kPi) / (angle + kPi) < Constants<Scalar>::epsilon();
+    Scalar angle = foo_T_bar.log();
+    return abs(abs(angle) - Constants<Scalar>::pi()) <
+           Constants<Scalar>::epsilon();
   }
 };
 
@@ -52,9 +43,9 @@ struct Traits<SO3<Scalar>> {
 
   static bool hasShortestPathAmbiguity(SO3<Scalar> const& foo_T_bar) {
     using std::abs;
-    Scalar angle = abs(foo_T_bar.logAndTheta().theta);
-    Scalar const kPi = Constants<Scalar>::pi();
-    return abs(angle - kPi) / (angle + kPi) < Constants<Scalar>::epsilon();
+    Scalar angle = foo_T_bar.logAndTheta().theta;
+    return abs(abs(angle) - Constants<Scalar>::pi()) <
+           Constants<Scalar>::epsilon();
   }
 };
 
@@ -109,3 +100,5 @@ struct Traits<Sim3<Scalar>> {
 
 }  // namespace interp_details
 }  // namespace Sophus
+
+#endif  // SOPHUS_INTERPOLATE_DETAILS_HPP

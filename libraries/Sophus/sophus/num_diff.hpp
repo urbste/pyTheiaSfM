@@ -1,7 +1,8 @@
 /// @file
 /// Numerical differentiation using finite differences
 
-#pragma once
+#ifndef SOPHUS_NUM_DIFF_HPP
+#define SOPHUS_NUM_DIFF_HPP
 
 #include <functional>
 #include <type_traits>
@@ -88,3 +89,5 @@ Eigen::Matrix<Scalar, N, M> vectorFieldNumDiff(
 }
 
 }  // namespace Sophus
+
+#endif  // SOPHUS_NUM_DIFF_HPP

@@ -1,7 +1,8 @@
 /// @file
 /// Interpolation for Lie groups.
 
-#pragma once
+#ifndef SOPHUS_INTERPOLATE_HPP
+#define SOPHUS_INTERPOLATE_HPP
 
 #include <Eigen/Eigenvalues>
 
@@ -28,8 +29,10 @@ enable_if_t<interp_details::Traits<G>::supported, G> interpolate(
   using Scalar = typename G::Scalar;
   Scalar inter_p(p);
   SOPHUS_ENSURE(inter_p >= Scalar(0) && inter_p <= Scalar(1),
-                "p ({}) must in [0, 1].", SOPHUS_FMT_ARG(inter_p));
+                "p (%) must in [0, 1].");
   return foo_T_bar * G::exp(inter_p * (foo_T_bar.inverse() * foo_T_baz).log());
 }
 
 }  // namespace Sophus
+
+#endif  // SOPHUS_INTERPOLATE_HPP

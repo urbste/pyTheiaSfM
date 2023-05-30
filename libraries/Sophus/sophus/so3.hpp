@@ -1,7 +1,8 @@
 /// @file
 /// Special orthogonal group SO(3) - rotation in 3d.
 
-#pragma once
+#ifndef SOPHUS_SO3_HPP
+#define SOPHUS_SO3_HPP
 
 #include "rotation_matrix.hpp"
 #include "so2.hpp"
@@ -87,14 +88,10 @@ class SO3Base {
   static int constexpr num_parameters = 4;
   /// Group transformations are 3x3 matrices.
   static int constexpr N = 3;
-  /// Points are 3-dimensional
-  static int constexpr Dim = 3;
-
   using Transformation = Matrix<Scalar, N, N>;
   using Point = Vector3<Scalar>;
   using HomogeneousPoint = Vector4<Scalar>;
   using Line = ParametrizedLine3<Scalar>;
-  using Hyperplane = Hyperplane3<Scalar>;
   using Tangent = Vector<Scalar, DoF>;
   using Adjoint = Matrix<Scalar, DoF, DoF>;
 
@@ -218,20 +215,6 @@ class SO3Base {
     return J;
   }
 
-  /// Returns derivative of log(this^{-1} * x) by x at x=this.
-  ///
-  SOPHUS_FUNC Matrix<Scalar, DoF, num_parameters> Dx_log_this_inv_by_x_at_this()
-      const {
-    auto& q = unit_quaternion();
-    Matrix<Scalar, DoF, num_parameters> J;
-    // clang-format off
-    J << q.w(),  q.z(), -q.y(), -q.x(),
-        -q.z(),  q.w(),  q.x(), -q.y(),
-         q.y(), -q.x(),  q.w(), -q.z();
-    // clang-format on
-    return J * Scalar(2.);
-  }
-
   /// Returns internal parameters of SO(3).
   ///
   /// It returns (q.imag[0], q.imag[1], q.imag[2], q.real), with q being the
@@ -264,7 +247,7 @@ class SO3Base {
   SOPHUS_FUNC TangentAndTheta logAndTheta() const {
     TangentAndTheta J;
     using std::abs;
-    using std::atan2;
+    using std::atan;
     using std::sqrt;
     Scalar squared_n = unit_quaternion().vec().squaredNorm();
     Scalar w = unit_quaternion().w();
@@ -283,26 +266,23 @@ class SO3Base {
       // If quaternion is normalized and n=0, then w should be 1;
       // w=0 should never happen here!
       SOPHUS_ENSURE(abs(w) >= Constants<Scalar>::epsilon(),
-                    "Quaternion ({}) should be normalized!",
-                    SOPHUS_FMT_ARG(unit_quaternion().coeffs().transpose()));
+                    "Quaternion (%) should be normalized!",
+                    unit_quaternion().coeffs().transpose());
       Scalar squared_w = w * w;
       two_atan_nbyw_by_n =
           Scalar(2) / w - Scalar(2.0 / 3.0) * (squared_n) / (w * squared_w);
       J.theta = Scalar(2) * squared_n / w;
     } else {
       Scalar n = sqrt(squared_n);
-
-      // w < 0 ==> cos(theta/2) < 0 ==> theta > pi
-      //
-      // By convention, the condition |theta| < pi is imposed by wrapping theta
-      // to pi; The wrap operation can be folded inside evaluation of atan2
-      //
-      // theta - pi = atan(sin(theta - pi), cos(theta - pi))
-      //            = atan(-sin(theta), -cos(theta))
-      //
-      Scalar atan_nbyw =
-          (w < Scalar(0)) ? Scalar(atan2(-n, -w)) : Scalar(atan2(n, w));
-      two_atan_nbyw_by_n = Scalar(2) * atan_nbyw / n;
+      if (abs(w) < Constants<Scalar>::epsilon()) {
+        if (w > Scalar(0)) {
+          two_atan_nbyw_by_n = Constants<Scalar>::pi() / n;
+        } else {
+          two_atan_nbyw_by_n = -Constants<Scalar>::pi() / n;
+        }
+      } else {
+        two_atan_nbyw_by_n = Scalar(2) * atan(n / w) / n;
+      }
       J.theta = two_atan_nbyw_by_n * n;
     }
 
@@ -317,10 +297,9 @@ class SO3Base {
   ///
   SOPHUS_FUNC void normalize() {
     Scalar length = unit_quaternion_nonconst().norm();
-    SOPHUS_ENSURE(
-        length >= Constants<Scalar>::epsilon(),
-        "Quaternion ({}) should not be close to zero!",
-        SOPHUS_FMT_ARG(unit_quaternion_nonconst().coeffs().transpose()));
+    SOPHUS_ENSURE(length >= Constants<Scalar>::epsilon(),
+                  "Quaternion (%) should not be close to zero!",
+                  unit_quaternion_nonconst().coeffs().transpose());
     unit_quaternion_nonconst().coeffs() /= length;
   }
 
@@ -341,17 +320,6 @@ class SO3Base {
     return *this;
   }
 
-  template <typename QuaternionProductType, typename QuaternionTypeA,
-            typename QuaternionTypeB>
-  static QuaternionProductType QuaternionProduct(const QuaternionTypeA& a,
-                                                 const QuaternionTypeB& b) {
-    return QuaternionProductType(
-        a.w() * b.w() - a.x() * b.x() - a.y() * b.y() - a.z() * b.z(),
-        a.w() * b.x() + a.x() * b.w() + a.y() * b.z() - a.z() * b.y(),
-        a.w() * b.y() + a.y() * b.w() + a.z() * b.x() - a.x() * b.z(),
-        a.w() * b.z() + a.z() * b.w() + a.x() * b.y() - a.y() * b.x());
-  }
-
   /// Group multiplication, which is rotation concatenation.
   ///
   template <typename OtherDerived>
@@ -364,8 +332,11 @@ class SO3Base {
     /// NOTE: We cannot use Eigen's Quaternion multiplication because it always
     /// returns a Quaternion of the same Scalar as this object, so it is not
     /// able to multiple Jets and doubles correctly.
-    return SO3Product<OtherDerived>(
-        QuaternionProduct<QuaternionProductType>(a, b));
+    return SO3Product<OtherDerived>(QuaternionProductType(
+        a.w() * b.w() - a.x() * b.x() - a.y() * b.y() - a.z() * b.z(),
+        a.w() * b.x() + a.x() * b.w() + a.y() * b.z() - a.z() * b.y(),
+        a.w() * b.y() + a.y() * b.w() + a.z() * b.x() - a.x() * b.z(),
+        a.w() * b.z() + a.z() * b.w() + a.x() * b.y() - a.y() * b.x()));
   }
 
   /// Group action on 3-points.
@@ -415,18 +386,6 @@ class SO3Base {
   ///
   SOPHUS_FUNC Line operator*(Line const& l) const {
     return Line((*this) * l.origin(), (*this) * l.direction());
-  }
-
-  /// Group action on planes.
-  ///
-  /// This function rotates a plane
-  /// ``n.x + d = 0`` by the SO3 element:
-  ///
-  /// Normal vector ``n`` is rotated
-  /// Offset ``d`` is left unchanged
-  ///
-  SOPHUS_FUNC Hyperplane operator*(Hyperplane const& p) const {
-    return Hyperplane((*this) * p.normal(), p.offset());
   }
 
   /// In-place group multiplication. This method is only valid if the return
@@ -486,11 +445,6 @@ class SO3 : public SO3Base<SO3<Scalar_, Options>> {
 
   using Base::operator=;
 
-  /// Define copy-assignment operator explicitly. The definition of
-  /// implicit copy assignment operator is deprecated in presence of a
-  /// user-declared copy constructor (-Wdeprecated-copy in clang >= 13).
-  SOPHUS_FUNC SO3& operator=(SO3 const& other) = default;
-
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   /// Default constructor initializes unit quaternion to identity rotation.
@@ -514,10 +468,10 @@ class SO3 : public SO3Base<SO3<Scalar_, Options>> {
   /// of 1.
   ///
   SOPHUS_FUNC SO3(Transformation const& R) : unit_quaternion_(R) {
-    SOPHUS_ENSURE(isOrthogonal(R), "R is not orthogonal:\n {}",
-                  SOPHUS_FMT_ARG(R * R.transpose()));
-    SOPHUS_ENSURE(R.determinant() > Scalar(0), "det(R) is not positive: {}",
-                  SOPHUS_FMT_ARG(R.determinant()));
+    SOPHUS_ENSURE(isOrthogonal(R), "R is not orthogonal:\n %",
+                  R * R.transpose());
+    SOPHUS_ENSURE(R.determinant() > Scalar(0), "det(R) is not positive: %",
+                  R.determinant());
   }
 
   /// Constructor from quaternion
@@ -537,63 +491,6 @@ class SO3 : public SO3Base<SO3<Scalar_, Options>> {
   ///
   SOPHUS_FUNC QuaternionMember const& unit_quaternion() const {
     return unit_quaternion_;
-  }
-
-  /// Returns the left Jacobian on lie group. See 1st entry in rightmost column
-  /// in: http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17_identities.pdf
-  ///
-  /// A precomputed `theta` can be optionally passed in
-  ///
-  /// Warning: Not to be confused with Dx_exp_x(), which is derivative of the
-  ///          internal quaternion representation of SO3 wrt the tangent vector
-  ///
-  SOPHUS_FUNC static Sophus::Matrix<Scalar, DoF, DoF> leftJacobian(
-      Tangent const& omega, optional<Scalar> const& theta_o = nullopt) {
-    using std::cos;
-    using std::sin;
-    using std::sqrt;
-
-    Scalar const theta_sq = theta_o ? *theta_o * *theta_o : omega.squaredNorm();
-    Matrix3<Scalar> const Omega = SO3<Scalar>::hat(omega);
-    Matrix3<Scalar> const Omega_sq = Omega * Omega;
-    Matrix3<Scalar> V;
-
-    if (theta_sq <
-        Constants<Scalar>::epsilon() * Constants<Scalar>::epsilon()) {
-      V = Matrix3<Scalar>::Identity() + Scalar(0.5) * Omega;
-    } else {
-      Scalar theta = theta_o ? *theta_o : sqrt(theta_sq);
-      V = Matrix3<Scalar>::Identity() +
-          (Scalar(1) - cos(theta)) / theta_sq * Omega +
-          (theta - sin(theta)) / (theta_sq * theta) * Omega_sq;
-    }
-    return V;
-  }
-
-  SOPHUS_FUNC static Sophus::Matrix<Scalar, DoF, DoF> leftJacobianInverse(
-      Tangent const& omega, optional<Scalar> const& theta_o = nullopt) {
-    using std::cos;
-    using std::sin;
-    using std::sqrt;
-    Scalar const theta_sq = theta_o ? *theta_o * *theta_o : omega.squaredNorm();
-    Matrix3<Scalar> const Omega = SO3<Scalar>::hat(omega);
-
-    Matrix3<Scalar> V_inv;
-    if (theta_sq <
-        Constants<Scalar>::epsilon() * Constants<Scalar>::epsilon()) {
-      V_inv = Matrix3<Scalar>::Identity() - Scalar(0.5) * Omega +
-              Scalar(1. / 12.) * (Omega * Omega);
-
-    } else {
-      Scalar const theta = theta_o ? *theta_o : sqrt(theta_sq);
-      Scalar const half_theta = Scalar(0.5) * theta;
-
-      V_inv = Matrix3<Scalar>::Identity() - Scalar(0.5) * Omega +
-              (Scalar(1) -
-               Scalar(0.5) * theta * cos(half_theta) / sin(half_theta)) /
-                  (theta * theta) * (Omega * Omega);
-    }
-    return V_inv;
   }
 
   /// Returns derivative of exp(x) wrt. x.
@@ -660,13 +557,6 @@ class SO3 : public SO3Base<SO3<Scalar_, Options>> {
     return J;
   }
 
-  /// Returns derivative of exp(x) * p wrt. x_i at x=0.
-  ///
-  SOPHUS_FUNC static Sophus::Matrix<Scalar, 3, DoF> Dx_exp_x_times_point_at_0(
-      Point const& point) {
-    return hat(-point);
-  }
-
   /// Returns derivative of exp(x).matrix() wrt. ``x_i at x=0``.
   ///
   SOPHUS_FUNC static Transformation Dxi_exp_x_matrix_at_0(int i) {
@@ -724,9 +614,8 @@ class SO3 : public SO3Base<SO3<Scalar_, Options>> {
                          imag_factor * omega.y(), imag_factor * omega.z());
     SOPHUS_ENSURE(abs(q.unit_quaternion().squaredNorm() - Scalar(1)) <
                       Sophus::Constants<Scalar>::epsilon(),
-                  "SO3::exp failed! omega: {}, real: {}, img: {}",
-                  SOPHUS_FMT_ARG(omega.transpose()),
-                  SOPHUS_FMT_ARG(real_factor), SOPHUS_FMT_ARG(imag_factor));
+                  "SO3::exp failed! omega: %, real: %, img: %",
+                  omega.transpose(), real_factor, imag_factor);
     return q;
   }
 
@@ -904,7 +793,7 @@ class Map<Sophus::SO3<Scalar_>, Options>
   using Base::operator*=;
   using Base::operator*;
 
-  SOPHUS_FUNC explicit Map(Scalar* coeffs) : unit_quaternion_(coeffs) {}
+  SOPHUS_FUNC Map(Scalar* coeffs) : unit_quaternion_(coeffs) {}
 
   /// Accessor of unit quaternion.
   ///
@@ -943,7 +832,7 @@ class Map<Sophus::SO3<Scalar_> const, Options>
   using Base::operator*=;
   using Base::operator*;
 
-  SOPHUS_FUNC explicit Map(Scalar const* coeffs) : unit_quaternion_(coeffs) {}
+  SOPHUS_FUNC Map(Scalar const* coeffs) : unit_quaternion_(coeffs) {}
 
   /// Accessor of unit quaternion.
   ///
@@ -958,3 +847,5 @@ class Map<Sophus::SO3<Scalar_> const, Options>
   Map<Eigen::Quaternion<Scalar> const, Options> const unit_quaternion_;
 };
 }  // namespace Eigen
+
+#endif

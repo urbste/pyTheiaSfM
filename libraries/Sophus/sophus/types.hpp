@@ -1,7 +1,8 @@
 /// @file
 /// Common type aliases.
 
-#pragma once
+#ifndef SOPHUS_TYPES_HPP
+#define SOPHUS_TYPES_HPP
 
 #include <type_traits>
 #include "common.hpp"
@@ -77,19 +78,6 @@ using ParametrizedLine2 = ParametrizedLine<Scalar, 2, Options>;
 using ParametrizedLine2f = ParametrizedLine2<float>;
 using ParametrizedLine2d = ParametrizedLine2<double>;
 
-template <class Scalar, int N, int Options = 0>
-using Hyperplane = Eigen::Hyperplane<Scalar, N, Options>;
-
-template <class Scalar, int Options = 0>
-using Hyperplane3 = Eigen::Hyperplane<Scalar, 3, Options>;
-using Hyperplane3f = Hyperplane3<float>;
-using Hyperplane3d = Hyperplane3<double>;
-
-template <class Scalar, int Options = 0>
-using Hyperplane2 = Eigen::Hyperplane<Scalar, 2, Options>;
-using Hyperplane2f = Hyperplane2<float>;
-using Hyperplane2d = Hyperplane2<double>;
-
 namespace details {
 template <class Scalar>
 class MaxMetric {
@@ -128,7 +116,7 @@ template <class Scalar>
 class SetElementAt<Scalar, Scalar> {
  public:
   static void impl(Scalar& s, Scalar value, int at) {
-    SOPHUS_ENSURE(at == 0, "is {}", SOPHUS_FMT_ARG(at));
+    SOPHUS_ENSURE(at == 0, "is %", at);
     s = value;
   }
 };
@@ -137,7 +125,7 @@ template <class Scalar, int N>
 class SetElementAt<Vector<Scalar, N>, Scalar> {
  public:
   static void impl(Vector<Scalar, N>& v, Scalar value, int at) {
-    SOPHUS_ENSURE(at >= 0 && at < N, "is {}", SOPHUS_FMT_ARG(at));
+    SOPHUS_ENSURE(at >= 0 && at < N, "is %", at);
     v[at] = value;
   }
 };
@@ -249,3 +237,5 @@ using Line2d = Line2<double>;
 using Line2f = Line2<float>;
 
 }  // namespace Sophus
+
+#endif  // SOPHUS_TYPES_HPP

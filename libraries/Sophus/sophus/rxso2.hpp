@@ -1,7 +1,8 @@
 /// @file
 /// Direct product R X SO(2) - rotation and scaling in 2d.
 
-#pragma once
+#ifndef SOPHUS_RXSO2_HPP
+#define SOPHUS_RXSO2_HPP
 
 #include "so2.hpp"
 
@@ -90,13 +91,10 @@ class RxSO2Base {
   static int constexpr num_parameters = 2;
   /// Group transformations are 2x2 matrices.
   static int constexpr N = 2;
-  /// Points are 2-dimensional
-  static int constexpr Dim = 2;
   using Transformation = Matrix<Scalar, N, N>;
   using Point = Vector2<Scalar>;
   using HomogeneousPoint = Vector3<Scalar>;
   using Line = ParametrizedLine2<Scalar>;
-  using Hyperplane = Hyperplane2<Scalar>;
   using Tangent = Vector<Scalar, DoF>;
   using Adjoint = Matrix<Scalar, DoF, DoF>;
 
@@ -135,9 +133,7 @@ class RxSO2Base {
   ///
   template <class NewScalarType>
   SOPHUS_FUNC RxSO2<NewScalarType> cast() const {
-    typename RxSO2<NewScalarType>::ComplexType c =
-        complex().template cast<NewScalarType>();
-    return RxSO2<NewScalarType>(c);
+    return RxSO2<NewScalarType>(complex().template cast<NewScalarType>());
   }
 
   /// This provides unsafe read/write access to internal data. RxSO(2) is
@@ -158,8 +154,8 @@ class RxSO2Base {
   ///
   SOPHUS_FUNC RxSO2<Scalar> inverse() const {
     Scalar squared_scale = complex().squaredNorm();
-    Vector2<Scalar> xy = complex() / squared_scale;
-    return RxSO2<Scalar>(xy.x(), -xy.y());
+    return RxSO2<Scalar>(complex().x() / squared_scale,
+                         -complex().y() / squared_scale);
   }
 
   /// Logarithmic map
@@ -279,23 +275,6 @@ class RxSO2Base {
     return Line((*this) * l.origin(), (*this) * l.direction() / scale());
   }
 
-  /// Group action on hyper-planes.
-  ///
-  /// This function rotates a hyper-plane ``n.x + d = 0`` by the SO2
-  /// element and scales offset by the scale factor
-  ///
-  /// Normal vector ``n`` is rotated
-  /// Offset ``d`` is scaled
-  ///
-  /// Note that in 2d-case hyper-planes are just another parametrization of
-  /// lines
-  ///
-  SOPHUS_FUNC Hyperplane operator*(Hyperplane const& p) const {
-    const auto this_scale = scale();
-    return Hyperplane((*this) * p.normal() / this_scale,
-                      this_scale * p.offset());
-  }
-
   /// In-place group multiplication. This method is only valid if the return
   /// type of the multiplication is compatible with this SO2's Scalar type.
   ///
@@ -318,16 +297,6 @@ class RxSO2Base {
     Matrix<Scalar, num_parameters, DoF> J;
     J << -complex().y(), complex().x(), complex().x(), complex().y();
     return J;
-  }
-
-  /// Returns derivative of log(this^{-1} * x) by x at x=this.
-  ///
-  SOPHUS_FUNC Matrix<Scalar, DoF, num_parameters> Dx_log_this_inv_by_x_at_this()
-      const {
-    Matrix<Scalar, DoF, num_parameters> J;
-    const Scalar norm_sq_inv = Scalar(1.) / complex().squaredNorm();
-    J << -complex().y(), complex().x(), complex().x(), complex().y();
-    return J * norm_sq_inv;
   }
 
   /// Returns internal parameters of RxSO(2).
@@ -367,10 +336,8 @@ class RxSO2Base {
 
   /// Returns scale.
   ///
-  SOPHUS_FUNC Scalar scale() const {
-    using std::hypot;
-    return hypot(complex().x(), complex().y());
-  }
+  SOPHUS_FUNC
+  Scalar scale() const { return complex().norm(); }
 
   /// Setter of rotation angle, leaves scale as is.
   ///
@@ -399,7 +366,7 @@ class RxSO2Base {
   ///
   SOPHUS_FUNC void setScaledRotationMatrix(Transformation const& sR) {
     SOPHUS_ENSURE(isScaledOrthogonalAndPositive(sR),
-                  "sR must be scaled orthogonal:\n {}", SOPHUS_FMT_ARG(sR));
+                  "sR must be scaled orthogonal:\n %", sR);
     complex_nonconst() = sR.col(0);
   }
 
@@ -439,11 +406,6 @@ class RxSO2 : public RxSO2Base<RxSO2<Scalar_, Options>> {
   friend class RxSO2Base<RxSO2<Scalar_, Options>>;
 
   using Base::operator=;
-
-  /// Define copy-assignment operator explicitly. The definition of
-  /// implicit copy assignment operator is deprecated in presence of a
-  /// user-declared copy constructor (-Wdeprecated-copy in clang >= 13).
-  SOPHUS_FUNC RxSO2& operator=(RxSO2 const& other) = default;
 
   static int constexpr DoF = Base::DoF;
   static int constexpr num_parameters = Base::num_parameters;
@@ -497,17 +459,15 @@ class RxSO2 : public RxSO2Base<RxSO2<Scalar_, Options>> {
   SOPHUS_FUNC explicit RxSO2(Vector2<Scalar> const& z) : complex_(z) {
     SOPHUS_ENSURE(complex_.squaredNorm() >= Constants<Scalar>::epsilon() *
                                                 Constants<Scalar>::epsilon(),
-                  "Scale factor must be greater-equal epsilon: {} vs {}",
-                  SOPHUS_FMT_ARG(complex_.squaredNorm()),
-                  SOPHUS_FMT_ARG(Constants<Scalar>::epsilon() *
-                                 Constants<Scalar>::epsilon()));
+                  "Scale factor must be greater-equal epsilon: % vs %",
+                  complex_.squaredNorm(),
+                  Constants<Scalar>::epsilon() * Constants<Scalar>::epsilon());
     SOPHUS_ENSURE(
         complex_.squaredNorm() <= Scalar(1.) / (Constants<Scalar>::epsilon() *
                                                 Constants<Scalar>::epsilon()),
-        "Inverse scale factor must be greater-equal epsilon: {} vs {}",
-        SOPHUS_FMT_ARG(Scalar(1.) / complex_.squaredNorm()),
-        SOPHUS_FMT_ARG(Constants<Scalar>::epsilon() *
-                       Constants<Scalar>::epsilon()));
+        "Inverse scale factor must be greater-equal epsilon: % vs %",
+        Scalar(1.) / complex_.squaredNorm(),
+        Constants<Scalar>::epsilon() * Constants<Scalar>::epsilon());
   }
 
   /// Constructor from complex number.
@@ -547,21 +507,11 @@ class RxSO2 : public RxSO2Base<RxSO2<Scalar_, Options>> {
     return J;
   }
 
-  /// Returns derivative of exp(x) * p wrt. x_i at x=0.
-  ///
-  SOPHUS_FUNC static Sophus::Matrix<Scalar, 2, DoF> Dx_exp_x_times_point_at_0(
-      Point const& point) {
-    Sophus::Matrix<Scalar, 2, DoF> j;
-    j << Sophus::SO2<Scalar>::Dx_exp_x_times_point_at_0(point), point;
-    return j;
-  }
-
   /// Returns derivative of exp(x).matrix() wrt. ``x_i at x=0``.
   ///
   SOPHUS_FUNC static Transformation Dxi_exp_x_matrix_at_0(int i) {
     return generator(i);
   }
-
   /// Group exponential
   ///
   /// This functions takes in an element of tangent space (= rotation angle
@@ -712,7 +662,7 @@ class Map<Sophus::RxSO2<Scalar_>, Options>
   using Base::operator*=;
   using Base::operator*;
 
-  SOPHUS_FUNC explicit Map(Scalar* coeffs) : complex_(coeffs) {}
+  SOPHUS_FUNC Map(Scalar* coeffs) : complex_(coeffs) {}
 
   /// Accessor of complex.
   ///
@@ -749,7 +699,7 @@ class Map<Sophus::RxSO2<Scalar_> const, Options>
   using Base::operator*;
 
   SOPHUS_FUNC
-  explicit Map(Scalar const* coeffs) : complex_(coeffs) {}
+  Map(Scalar const* coeffs) : complex_(coeffs) {}
 
   /// Accessor of complex.
   ///
@@ -762,3 +712,5 @@ class Map<Sophus::RxSO2<Scalar_> const, Options>
   Map<Sophus::Vector2<Scalar> const, Options> const complex_;
 };
 }  // namespace Eigen
+
+#endif  /// SOPHUS_RXSO2_HPP

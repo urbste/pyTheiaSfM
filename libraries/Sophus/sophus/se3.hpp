@@ -1,7 +1,8 @@
 /// @file
 /// Special Euclidean group SE(3) - rotation and translation in 3d.
 
-#pragma once
+#ifndef SOPHUS_SE3_HPP
+#define SOPHUS_SE3_HPP
 
 #include "so3.hpp"
 
@@ -69,13 +70,10 @@ class SE3Base {
   static int constexpr num_parameters = 7;
   /// Group transformations are 4x4 matrices.
   static int constexpr N = 4;
-  /// Points are 3-dimensional
-  static int constexpr Dim = 3;
   using Transformation = Matrix<Scalar, N, N>;
   using Point = Vector3<Scalar>;
   using HomogeneousPoint = Vector4<Scalar>;
   using Line = ParametrizedLine3<Scalar>;
-  using Hyperplane = Hyperplane3<Scalar>;
   using Tangent = Vector<Scalar, DoF>;
   using Adjoint = Matrix<Scalar, DoF, DoF>;
 
@@ -205,18 +203,6 @@ class SE3Base {
     return J;
   }
 
-  /// Returns derivative of log(this^{-1} * x) by x at x=this.
-  ///
-  SOPHUS_FUNC Matrix<Scalar, DoF, num_parameters> Dx_log_this_inv_by_x_at_this()
-      const {
-    Matrix<Scalar, DoF, num_parameters> J;
-    J.template block<3, 4>(0, 0).setZero();
-    J.template block<3, 3>(0, 4) = so3().inverse().matrix();
-    J.template block<3, 4>(3, 0) = so3().Dx_log_this_inv_by_x_at_this();
-    J.template block<3, 3>(3, 4).setZero();
-    return J;
-  }
-
   /// Returns group inverse.
   ///
   SOPHUS_FUNC SE3<Scalar> inverse() const {
@@ -246,10 +232,26 @@ class SE3Base {
     Tangent upsilon_omega;
     auto omega_and_theta = so3().logAndTheta();
     Scalar theta = omega_and_theta.theta;
-    Vector3<Scalar> const& omega = omega_and_theta.tangent;
-    upsilon_omega.template tail<3>() = omega;
-    Matrix3<Scalar> V_inv = SO3<Scalar>::leftJacobianInverse(omega, theta);
-    upsilon_omega.template head<3>() = V_inv * translation();
+    upsilon_omega.template tail<3>() = omega_and_theta.tangent;
+    Matrix3<Scalar> const Omega =
+        SO3<Scalar>::hat(upsilon_omega.template tail<3>());
+
+    if (abs(theta) < Constants<Scalar>::epsilon()) {
+      Matrix3<Scalar> const V_inv = Matrix3<Scalar>::Identity() -
+                                    Scalar(0.5) * Omega +
+                                    Scalar(1. / 12.) * (Omega * Omega);
+
+      upsilon_omega.template head<3>() = V_inv * translation();
+    } else {
+      Scalar const half_theta = Scalar(0.5) * theta;
+
+      Matrix3<Scalar> const V_inv =
+          (Matrix3<Scalar>::Identity() - Scalar(0.5) * Omega +
+           (Scalar(1) -
+            theta * cos(half_theta) / (Scalar(2) * sin(half_theta))) /
+               (theta * theta) * (Omega * Omega));
+      upsilon_omega.template head<3>() = V_inv * translation();
+    }
     return upsilon_omega;
   }
 
@@ -345,20 +347,6 @@ class SE3Base {
     return Line((*this) * l.origin(), so3() * l.direction());
   }
 
-  /// Group action on planes.
-  ///
-  /// This function rotates and translates a plane
-  /// ``n.x + d = 0`` by the SE(3) element:
-  ///
-  /// Normal vector ``n`` is rotated
-  /// Offset ``d`` is adjusted for translation
-  ///
-  SOPHUS_FUNC Hyperplane operator*(Hyperplane const& p) const {
-    Hyperplane const rotated = so3() * p;
-    return Hyperplane(rotated.normal(),
-                      rotated.offset() - translation().dot(rotated.normal()));
-  }
-
   /// In-place group multiplication. This method is only valid if the return
   /// type of the multiplication is compatible with this SE3's Scalar type.
   ///
@@ -397,10 +385,9 @@ class SE3Base {
   /// Precondition: ``R`` must be orthogonal and ``det(R)=1``.
   ///
   SOPHUS_FUNC void setRotationMatrix(Matrix3<Scalar> const& R) {
-    SOPHUS_ENSURE(isOrthogonal(R), "R is not orthogonal:\n {}",
-                  SOPHUS_FMT_ARG(R));
-    SOPHUS_ENSURE(R.determinant() > Scalar(0), "det(R) is not positive: {}",
-                  SOPHUS_FMT_ARG(R.determinant()));
+    SOPHUS_ENSURE(isOrthogonal(R), "R is not orthogonal:\n %", R);
+    SOPHUS_ENSURE(R.determinant() > Scalar(0), "det(R) is not positive: %",
+                  R.determinant());
     so3().setQuaternion(Eigen::Quaternion<Scalar>(R));
   }
 
@@ -453,11 +440,6 @@ class SE3 : public SE3Base<SE3<Scalar_, Options>> {
   using TranslationMember = Vector3<Scalar, Options>;
 
   using Base::operator=;
-
-  /// Define copy-assignment operator explicitly. The definition of
-  /// implicit copy assignment operator is deprecated in presence of a
-  /// user-declared copy constructor (-Wdeprecated-copy in clang >= 13).
-  SOPHUS_FUNC SE3& operator=(SE3 const& other) = default;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -518,8 +500,7 @@ class SE3 : public SE3Base<SE3<Scalar_, Options>> {
     SOPHUS_ENSURE((T.row(3) - Matrix<Scalar, 1, 4>(Scalar(0), Scalar(0),
                                                    Scalar(0), Scalar(1)))
                           .squaredNorm() < Constants<Scalar>::epsilon(),
-                  "Last row is not (0,0,0,1), but ({}).",
-                  SOPHUS_FMT_ARG(T.row(3)));
+                  "Last row is not (0,0,0,1), but (%).", T.row(3));
   }
 
   /// This provides unsafe read/write access to internal data. SO(3) is
@@ -555,67 +536,6 @@ class SE3 : public SE3Base<SE3<Scalar_, Options>> {
   ///
   SOPHUS_FUNC TranslationMember const& translation() const {
     return translation_;
-  }
-
-  SOPHUS_FUNC static Matrix3<Scalar> jacobianUpperRightBlock(
-      Vector3<Scalar> const& upsilon, Vector3<Scalar> const& omega) {
-    using std::cos;
-    using std::sin;
-    using std::sqrt;
-
-    Scalar const k1By2(0.5);
-
-    Scalar const theta_sq = omega.squaredNorm();
-    Matrix3<Scalar> const Upsilon = SO3<Scalar>::hat(upsilon);
-
-    Matrix3<Scalar> Q;
-    if (theta_sq <
-        Constants<Scalar>::epsilon() * Constants<Scalar>::epsilon()) {
-      Q = k1By2 * Upsilon;
-
-    } else {
-      Scalar const theta = sqrt(theta_sq);
-      Scalar const i_theta = Scalar(1) / theta;
-      Scalar const i_theta_sq = i_theta * i_theta;
-      Scalar const i_theta_po4 = i_theta_sq * i_theta_sq;
-      Scalar const st = sin(theta);
-      Scalar const ct = cos(theta);
-      Scalar const c1 = i_theta_sq - st * i_theta_sq * i_theta;
-      Scalar const c2 = k1By2 * i_theta_sq + ct * i_theta_po4 - i_theta_po4;
-      Scalar const c3 = i_theta_po4 + k1By2 * ct * i_theta_po4 -
-                        Scalar(1.5) * st * i_theta * i_theta_po4;
-
-      Matrix3<Scalar> const Omega = SO3<Scalar>::hat(omega);
-      Matrix3<Scalar> const OmegaUpsilon = Omega * Upsilon;
-      Matrix3<Scalar> const OmegaUpsilonOmega = OmegaUpsilon * Omega;
-      Q = k1By2 * Upsilon +
-          c1 * (OmegaUpsilon + Upsilon * Omega + OmegaUpsilonOmega) -
-          c2 * (theta_sq * Upsilon + Scalar(2) * OmegaUpsilonOmega) +
-          c3 * (OmegaUpsilonOmega * Omega + Omega * OmegaUpsilonOmega);
-    }
-    return Q;
-  }
-
-  SOPHUS_FUNC static Sophus::Matrix<Scalar, DoF, DoF> leftJacobian(
-      Tangent const& upsilon_omega) {
-    Vector3<Scalar> const upsilon = upsilon_omega.template head<3>();
-    Vector3<Scalar> const omega = upsilon_omega.template tail<3>();
-    Matrix3<Scalar> const J = SO3<Scalar>::leftJacobian(omega);
-    Matrix3<Scalar> Q = jacobianUpperRightBlock(upsilon, omega);
-    Matrix6<Scalar> U;
-    U << J, Q, Matrix3<Scalar>::Zero(), J;
-    return U;
-  }
-
-  SOPHUS_FUNC static Sophus::Matrix<Scalar, DoF, DoF> leftJacobianInverse(
-      Tangent const& upsilon_omega) {
-    Vector3<Scalar> const upsilon = upsilon_omega.template head<3>();
-    Vector3<Scalar> const omega = upsilon_omega.template tail<3>();
-    Matrix3<Scalar> const J_inv = SO3<Scalar>::leftJacobianInverse(omega);
-    Matrix3<Scalar> Q = jacobianUpperRightBlock(upsilon, omega);
-    Matrix6<Scalar> U;
-    U << J_inv, -J_inv * Q * J_inv, Matrix3<Scalar>::Zero(), J_inv;
-    return U;
   }
 
   /// Returns derivative of exp(x) wrt. x.
@@ -810,13 +730,12 @@ class SE3 : public SE3Base<SE3<Scalar_, Options>> {
     Scalar const i(1);
 
     // clang-format off
-    J << o, o, o, h, o, o,
-         o, o, o, o, h, o,
-	 o, o, o, o, o, h,
-	 o, o, o, o, o, o,
-	 i, o, o, o, o, o,
-	 o, i, o, o, o, o,
-	 o, o, i, o, o, o;
+    J << o, o, o, h, o, o, o,
+         o, o, o, h, o, o, o,
+         o, o, o, h, o, o, o,
+         o, o, o, i, o, o, o,
+         o, o, o, i, o, o, o,
+         o, o, o, i, o, o, o;
     // clang-format on
     return J;
   }
@@ -825,16 +744,6 @@ class SE3 : public SE3Base<SE3<Scalar_, Options>> {
   ///
   SOPHUS_FUNC static Transformation Dxi_exp_x_matrix_at_0(int i) {
     return generator(i);
-  }
-
-  /// Returns derivative of exp(x) * p wrt. x_i at x=0.
-  ///
-  SOPHUS_FUNC static Sophus::Matrix<Scalar, 3, DoF> Dx_exp_x_times_point_at_0(
-      Point const& point) {
-    Sophus::Matrix<Scalar, 3, DoF> J;
-    J << Sophus::Matrix3<Scalar>::Identity(),
-        Sophus::SO3<Scalar>::Dx_exp_x_times_point_at_0(point);
-    return J;
   }
 
   /// Group exponential
@@ -856,11 +765,23 @@ class SE3 : public SE3Base<SE3<Scalar_, Options>> {
 
     Scalar theta;
     SO3<Scalar> const so3 = SO3<Scalar>::expAndTheta(omega, &theta);
-    Matrix3<Scalar> const V = SO3<Scalar>::leftJacobian(omega, theta);
+    Matrix3<Scalar> const Omega = SO3<Scalar>::hat(omega);
+    Matrix3<Scalar> const Omega_sq = Omega * Omega;
+    Matrix3<Scalar> V;
+
+    if (theta < Constants<Scalar>::epsilon()) {
+      V = so3.matrix();
+      /// Note: That is an accurate expansion!
+    } else {
+      Scalar theta_sq = theta * theta;
+      V = (Matrix3<Scalar>::Identity() +
+           (Scalar(1) - cos(theta)) / (theta_sq)*Omega +
+           (theta - sin(theta)) / (theta_sq * theta) * Omega_sq);
+    }
     return SE3<Scalar>(so3, V * a.template head<3>());
   }
 
-  /// Returns closest SE3 given arbitrary 4x4 matrix.
+  /// Returns closest SE3 given arbirary 4x4 matrix.
   ///
   template <class S = Scalar>
   SOPHUS_FUNC static enable_if_t<std::is_floating_point<S>::value, SE3>
@@ -1046,8 +967,7 @@ class SE3 : public SE3Base<SE3<Scalar_, Options>> {
 };
 
 template <class Scalar, int Options>
-SOPHUS_FUNC SE3<Scalar, Options>::SE3()
-    : translation_(TranslationMember::Zero()) {
+SE3<Scalar, Options>::SE3() : translation_(TranslationMember::Zero()) {
   static_assert(std::is_standard_layout<SE3>::value,
                 "Assume standard layout for the use of offsetof check below.");
   static_assert(
@@ -1081,7 +1001,7 @@ class Map<Sophus::SE3<Scalar_>, Options>
   using Base::operator*=;
   using Base::operator*;
 
-  SOPHUS_FUNC explicit Map(Scalar* coeffs)
+  SOPHUS_FUNC Map(Scalar* coeffs)
       : so3_(coeffs),
         translation_(coeffs + Sophus::SO3<Scalar>::num_parameters) {}
 
@@ -1130,7 +1050,7 @@ class Map<Sophus::SE3<Scalar_> const, Options>
   using Base::operator*=;
   using Base::operator*;
 
-  SOPHUS_FUNC explicit Map(Scalar const* coeffs)
+  SOPHUS_FUNC Map(Scalar const* coeffs)
       : so3_(coeffs),
         translation_(coeffs + Sophus::SO3<Scalar>::num_parameters) {}
 
@@ -1152,3 +1072,5 @@ class Map<Sophus::SE3<Scalar_> const, Options>
   Map<Sophus::Vector3<Scalar> const, Options> const translation_;
 };
 }  // namespace Eigen
+
+#endif
