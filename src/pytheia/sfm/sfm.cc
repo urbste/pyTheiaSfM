@@ -750,7 +750,9 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::EstimateTwoViewInfoOptions::min_ransac_iterations)
       .def_readwrite("max_ransac_iterations",
                      &theia::EstimateTwoViewInfoOptions::max_ransac_iterations)
-      .def_readwrite("use_mle", &theia::EstimateTwoViewInfoOptions::use_mle);
+      .def_readwrite("use_mle", &theia::EstimateTwoViewInfoOptions::use_mle)
+      .def_readwrite("use_lo", &theia::EstimateTwoViewInfoOptions::use_lo)
+      .def_readwrite("lo_start_iterations", &theia::EstimateTwoViewInfoOptions::lo_start_iterations);
 
   py::class_<theia::FilterViewPairsFromRelativeTranslationOptions>(
       m, "FilterViewPairsFromRelativeTranslationOptions")

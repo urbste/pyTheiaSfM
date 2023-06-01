@@ -70,6 +70,8 @@ struct EstimateTwoViewInfoOptions {
   int min_ransac_iterations = 10;
   int max_ransac_iterations = 1000;
   bool use_mle = true;
+  bool use_lo = false;
+  int lo_start_iterations = 10;
 };
 
 // Estimates two view info for the given view pair from the correspondences. The
