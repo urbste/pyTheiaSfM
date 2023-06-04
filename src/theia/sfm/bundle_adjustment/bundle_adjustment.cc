@@ -43,6 +43,29 @@
 
 namespace theia {
 
+
+void ConvertInvDepthTracksToHomogeneous(
+  const std::vector<theia::TrackId>& track_ids,
+  theia::Reconstruction& recon) {
+  for (const auto& track_id : track_ids) {
+    theia::Track* mutable_track = recon.MutableTrack(track_id);
+    if (!mutable_track->IsEstimated()) {
+      continue;
+    }
+
+    const theia::View* ref_view = recon.View(mutable_track->ReferenceViewId());
+    const theia::Camera ref_cam = ref_view->Camera();
+    if (mutable_track->InverseDepth() > 0.0) {
+      Eigen::Vector3d bearing = 
+        mutable_track->ReferenceBearingVector() / mutable_track->InverseDepth();
+
+      Eigen::Matrix3d R_c_w = ref_cam.GetOrientationAsRotationMatrix();
+      Eigen::Vector3d p_world = R_c_w.transpose() * bearing + ref_cam.GetPosition();
+      *mutable_track->MutablePoint() = p_world.homogeneous();
+    }
+  }
+}
+
 // Bundle adjust the specified views and tracks.
 BundleAdjustmentSummary BundleAdjustPartialReconstruction(
     const BundleAdjustmentOptions& options,
@@ -56,11 +79,17 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
     bundle_adjuster.AddView(view_id);
   }
   for (const TrackId track_id : track_ids) {
-    bundle_adjuster.AddTrack(
-        track_id, options.use_homogeneous_point_parametrization);
+    bundle_adjuster.AddTrack(track_id);
+  }
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+
+  if (options.use_inverse_depth_parametrization) {
+    std::vector<TrackId> tracks(track_ids.size());
+    tracks.insert(tracks.end(), track_ids.begin(), track_ids.end());
+    ConvertInvDepthTracksToHomogeneous(tracks, *reconstruction);
   }
 
-  return bundle_adjuster.Optimize();
+  return summary;
 }
 
 // Bundle adjust the specified views.
@@ -82,8 +111,7 @@ BundleAdjustPartialViewsConstant(const BundleAdjustmentOptions &options,
   }
 
   for (const TrackId track_id : reconstruction->TrackIds()) {
-    bundle_adjuster.AddTrack(
-        track_id, options.use_homogeneous_point_parametrization);
+    bundle_adjuster.AddTrack(track_id);
   }
 
   return bundle_adjuster.Optimize();
@@ -100,11 +128,16 @@ BundleAdjustmentSummary BundleAdjustReconstruction(
     bundle_adjuster.AddView(view_id);
   }
   for (const TrackId track_id : track_ids) {
-    bundle_adjuster.AddTrack(
-        track_id, options.use_homogeneous_point_parametrization);
+    bundle_adjuster.AddTrack(track_id);
   }
 
-  return bundle_adjuster.Optimize();
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+  
+  if (options.use_inverse_depth_parametrization) {
+    ConvertInvDepthTracksToHomogeneous(track_ids, *reconstruction);
+  }
+
+  return summary;
 }
 
 // Bundle adjust a single view.
@@ -146,9 +179,15 @@ BundleAdjustmentSummary BundleAdjustTrack(
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  bundle_adjuster.AddTrack(track_id,
-                           options.use_homogeneous_point_parametrization);
-  return bundle_adjuster.Optimize();
+  bundle_adjuster.AddTrack(track_id);
+
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+  
+  if (options.use_inverse_depth_parametrization) {
+    ConvertInvDepthTracksToHomogeneous({track_id}, *reconstruction);
+  }
+
+  return summary;
 }
 
 // Bundle adjust a single track.
@@ -161,9 +200,11 @@ BundleAdjustmentSummary BundleAdjustTrack(
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
+  ba_options.use_homogeneous_point_parametrization = true;
+  ba_options.use_inverse_depth_parametrization = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  bundle_adjuster.AddTrack(track_id, true);
+  bundle_adjuster.AddTrack(track_id);
 
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
   if (!summary.success) {
@@ -194,12 +235,14 @@ BundleAdjustmentSummary BundleAdjustTracks(
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
+  ba_options.use_homogeneous_point_parametrization = true;
+  ba_options.use_inverse_depth_parametrization = false; 
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   for (const auto& track_id : tracks_to_optimize) {
     // set homogeneous representation to true. otherwise covariance matrix will
     // be singular
-    bundle_adjuster.AddTrack(track_id, true);
+    bundle_adjuster.AddTrack(track_id);
   }
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
 
@@ -246,10 +289,16 @@ BundleAdjustmentSummary BundleAdjustTracks(
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   for (const auto& track_id : tracks_to_optimize) {
-    bundle_adjuster.AddTrack(
-        track_id, options.use_homogeneous_point_parametrization);
+    bundle_adjuster.AddTrack(track_id);
   }
-  return bundle_adjuster.Optimize();
+
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+
+  if (options.use_inverse_depth_parametrization) {
+    ConvertInvDepthTracksToHomogeneous(tracks_to_optimize, *reconstruction);
+  }
+
+  return summary;
 }
 
 BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,

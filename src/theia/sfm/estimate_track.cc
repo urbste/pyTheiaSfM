@@ -57,13 +57,13 @@ namespace {
 
 void GetObservationsFromTrackViews(
     const TrackId track_id,
-    const Reconstruction& reconstruction,
+    Reconstruction& reconstruction,
     std::vector<ViewId>* view_ids,
     std::vector<Eigen::Vector2d>* features,
     std::vector<Eigen::Vector3d>* origins,
     std::vector<Matrix3x4d>* proj_matrices,
     std::vector<Eigen::Vector3d>* ray_directions) {
-  const Track* track = reconstruction.Track(track_id);
+  Track* track = reconstruction.MutableTrack(track_id);
   for (const ViewId view_id : track->ViewIds()) {
     const View* view = reconstruction.View(view_id);
 
@@ -72,11 +72,17 @@ void GetObservationsFromTrackViews(
       continue;
     }
 
+
+
     // If the feature is not in the view then we have an ill-formed
     // reconstruction.
     const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
-    const Eigen::Vector3d image_ray =
-        view->Camera().PixelToUnitDepthRay((*feature).point_).normalized();
+    const Eigen::Vector3d bearing_vector =
+        view->Camera().PixelToUnitDepthRay((*feature).point_);
+
+    if (view_id == track->ReferenceViewId()) {
+      track->SetReferenceBearingVector(bearing_vector);
+    }
 
     features->emplace_back((*feature).point_);
     view_ids->emplace_back(view_id);
@@ -84,7 +90,7 @@ void GetObservationsFromTrackViews(
     Matrix3x4d proj_mat;
     view->Camera().GetProjectionMatrix(&proj_mat);
     proj_matrices->emplace_back(proj_mat);
-    ray_directions->emplace_back(image_ray);
+    ray_directions->emplace_back(bearing_vector.normalized());
   }
 }
 
@@ -258,6 +264,20 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
         return false;
       }
   }
+
+  // Set the inverse depth of the track
+  if (options_.ba_options.use_inverse_depth_parametrization) {
+    const View* ref_view = reconstruction_->View(track->ReferenceViewId());
+    if (ref_view != nullptr) {
+      if (ref_view->IsEstimated()) {
+        Eigen::Vector2d point_i;
+        const double depth = reconstruction_->View(
+          track->ReferenceViewId())->Camera().ProjectPoint(track->Point(), &point_i);
+        track->SetInverseDepth(1/depth);
+      }
+    }
+  }
+
   // Bundle adjust the track.
   if (options_.bundle_adjustment) {
     track->SetEstimated(true);

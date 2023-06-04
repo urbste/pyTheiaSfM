@@ -135,6 +135,88 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
   }
 }
 
+inline ceres::CostFunction* CreateInvReprojectionErrorCostFunction(
+    const CameraIntrinsicsModelType& camera_model_type,
+    const Feature& feature, const Eigen::Vector3d& ref_bearing) {
+  static const int kResidualSize = 2;
+  static const int kPointSize = 1;
+  // Return the appropriate reprojection error cost function based on the camera
+  // model type.
+  switch (camera_model_type) {
+    case CameraIntrinsicsModelType::PINHOLE:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<PinholeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          PinholeCameraModel::kIntrinsicsSize,
+          kPointSize>(new InvReprojectionError<PinholeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::PINHOLE_RADIAL_TANGENTIAL:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<PinholeRadialTangentialCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          PinholeRadialTangentialCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionError<PinholeRadialTangentialCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<FisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          FisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(new InvReprojectionError<FisheyeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::FOV:
+      return new ceres::AutoDiffCostFunction<InvReprojectionError<FOVCameraModel>,
+                                             kResidualSize,
+                                             Camera::kExtrinsicsSize, // anch
+                                             Camera::kExtrinsicsSize, // other
+                                             FOVCameraModel::kIntrinsicsSize,
+                                             kPointSize>(
+          new InvReprojectionError<FOVCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::DIVISION_UNDISTORTION:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<DivisionUndistortionCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          DivisionUndistortionCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionError<DivisionUndistortionCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::DOUBLE_SPHERE:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<DoubleSphereCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          DoubleSphereCameraModel::kIntrinsicsSize,
+          kPointSize>(new InvReprojectionError<DoubleSphereCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<ExtendedUnifiedCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          ExtendedUnifiedCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionError<ExtendedUnifiedCameraModel>(feature, ref_bearing));
+      break;
+    default:
+      LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "
+                    "for a list of valid camera models.";
+      return NULL;
+      break;
+  }
+}
+
 }  // namespace theia
 
 #endif  // THEIA_SFM_CAMERA_CREATE_REPROJECTION_ERROR_COST_FUNCTION_H_

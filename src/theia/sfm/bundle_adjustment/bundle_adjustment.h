@@ -111,6 +111,10 @@ struct BundleAdjustmentOptions {
   // space. Reduce from dim 4 -> 3
   bool use_homogeneous_point_parametrization = true;
 
+  // if inverse depth parametrization should be used
+  // if this is set to true use_homogeneous_point_parametrization is ignored
+  bool use_inverse_depth_parametrization = false;
+
   // Indicates which intrinsics should be optimized as part of bundle
   // adjustment. Default to NONE!
   OptimizeIntrinsicsType intrinsics_to_optimize = OptimizeIntrinsicsType::NONE;

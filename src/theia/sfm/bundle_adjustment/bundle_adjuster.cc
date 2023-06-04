@@ -162,8 +162,7 @@ void BundleAdjuster::AddView(const ViewId view_id) {
   }
 }
 
-void BundleAdjuster::AddTrack(const TrackId track_id,
-                              const bool use_homogeneous) {
+void BundleAdjuster::AddTrack(const TrackId track_id) {
   Track* track = CHECK_NOTNULL(reconstruction_->MutableTrack(track_id));
   // Only optimize estimated tracks.
   if (!track->IsEstimated() || ContainsKey(optimized_tracks_, track_id)) {
@@ -174,11 +173,21 @@ void BundleAdjuster::AddTrack(const TrackId track_id,
   optimized_tracks_.emplace(track_id);
 
   // Add all observations of the track to the problem.
+  const auto& reference_view_id = track->ReferenceViewId();
   const auto& observed_view_ids = track->ViewIds();
   for (const ViewId view_id : observed_view_ids) {
+    if (reference_view_id == view_id && options_.use_inverse_depth_parametrization) {
+      continue;
+    }
+    
     View* view = CHECK_NOTNULL(reconstruction_->MutableView(view_id));
+    View* ref_view = CHECK_NOTNULL(reconstruction_->MutableView(reference_view_id));
+
     // Only optimize estimated views that have not already been added.
     if (ContainsKey(optimized_views_, view_id) || !view->IsEstimated()) {
+      continue;
+    }
+    if (ContainsKey(optimized_views_, reference_view_id) || !ref_view->IsEstimated()) {
       continue;
     }
 
@@ -186,7 +195,12 @@ void BundleAdjuster::AddTrack(const TrackId track_id,
     Camera* camera = view->MutableCamera();
 
     // Add the reprojection error to the optimization.
-    AddReprojectionErrorResidual(*feature, camera, track);
+    if (options_.use_inverse_depth_parametrization) {
+      AddInvReprojectionErrorResidual(*feature, track->ReferenceBearingVector(),
+        ref_view->MutableCamera(), camera, track);
+    } else {
+      AddReprojectionErrorResidual(*feature, camera, track);
+    }
 
     // Any camera that reaches this point was not added by AddView() and so we
     // want to mark it as constant.
@@ -203,7 +217,9 @@ void BundleAdjuster::AddTrack(const TrackId track_id,
   SetTrackVariable(track_id);
   SetTrackSchurGroup(track_id);
 
-  if (use_homogeneous) {
+  if (options_.use_inverse_depth_parametrization) {
+    problem_->SetParameterLowerBound(track->MutableInverseDepth(), 0, 0.0);
+  } else if (options_.use_homogeneous_point_parametrization) {
     SetHomogeneousPointParametrization(track_id);
   }
 }
@@ -414,12 +430,20 @@ void BundleAdjuster::SetTzConstant(const ViewId view_id) {
 
 void BundleAdjuster::SetTrackConstant(const TrackId track_id) {
   Track* track = reconstruction_->MutableTrack(track_id);
-  problem_->SetParameterBlockConstant(track->MutablePoint()->data());
+  if (options_.use_inverse_depth_parametrization) {
+    problem_->SetParameterBlockConstant(track->MutableInverseDepth());
+  } else {
+    problem_->SetParameterBlockConstant(track->MutablePoint()->data());
+  }
 }
 
 void BundleAdjuster::SetTrackVariable(const TrackId track_id) {
   Track* track = reconstruction_->MutableTrack(track_id);
-  problem_->SetParameterBlockVariable(track->MutablePoint()->data());
+  if (options_.use_inverse_depth_parametrization) {
+    problem_->SetParameterBlockVariable(track->MutableInverseDepth());
+  } else {
+    problem_->SetParameterBlockVariable(track->MutablePoint()->data());
+  }
 }
 
 void BundleAdjuster::SetHomogeneousPointParametrization(
@@ -471,6 +495,25 @@ void BundleAdjuster::AddReprojectionErrorResidual(const Feature& feature,
       camera->mutable_extrinsics(),
       camera->mutable_intrinsics(),
       track->MutablePoint()->data());
+}
+
+void BundleAdjuster::AddInvReprojectionErrorResidual(const Feature& feature,
+                                                     const Eigen::Vector3d& ref_bearing,
+                                                     Camera* camera_ref,
+                                                     Camera* camera_other,
+                                                     Track* track) {
+  // Add the residual for the track to the problem. The shared intrinsics
+  // parameter block will be set to constant after the loop if no optimized
+  // cameras share the same camera intrinsics.
+  problem_->AddResidualBlock(
+      CreateInvReprojectionErrorCostFunction(
+          camera_other->GetCameraIntrinsicsModelType(), 
+          feature, ref_bearing),
+      loss_function_.get(),
+      camera_ref->mutable_extrinsics(),
+      camera_other->mutable_extrinsics(),
+      camera_other->mutable_intrinsics(),
+      track->MutableInverseDepth());
 }
 
 void BundleAdjuster::AddPositionPriorErrorResidual(View* view, Camera* camera) {
