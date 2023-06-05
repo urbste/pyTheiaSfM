@@ -107,6 +107,7 @@
 #include "theia/sfm/reconstruction_estimator.h"
 #include "theia/sfm/reconstruction_estimator_options.h"
 #include "theia/sfm/track_builder.h"
+#include "theia/sfm/reconstruction_estimator_utils.h"
 
 #include "theia/sfm/rigid_transformation.h"
 #include "theia/sfm/similarity_transformation.h"
@@ -1377,6 +1378,9 @@ void pytheia_sfm_classes(py::module& m) {
       //.def("GetSubReconstruction",
       //&theia::Reconstruction::GetSubReconstructionWrapper)
       ;
+
+  m.def("SetUnderconstrainedTracksToUnestimated", theia::SetUnderconstrainedTracksToUnestimated);
+  m.def("SetUnderconstrainedViewsToUnestimated", theia::SetUnderconstrainedViewsToUnestimated);
 
   // Reconstruction Estimator
 
