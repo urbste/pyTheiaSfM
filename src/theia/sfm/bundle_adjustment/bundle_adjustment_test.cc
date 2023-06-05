@@ -161,10 +161,12 @@ void TestOptimizeTracks(const int kNumPoints, const double kPixelNoise,
 
 
       Eigen::Vector2d tmp;
-      const double depth = reconstruction.View(track->ReferenceViewId())->Camera().ProjectPoint(
+      const ViewId ref_view_id = track->ReferenceViewId();
+      const double depth = reconstruction.View(ref_view_id)->Camera().ProjectPoint(
         point.homogeneous(), &tmp);
+      const Feature* reference_obs = reconstruction.View(ref_view_id)->GetFeature(tid);
       const Eigen::Vector3d bearing_vector =
-        reconstruction.View(track->ReferenceViewId())->Camera().PixelToUnitDepthRay(tmp);
+        reconstruction.View(ref_view_id)->Camera().PixelToUnitDepthRay(reference_obs->point_);
       track->SetReferenceBearingVector(bearing_vector);
       track->SetInverseDepth(1.0/depth);
     }
