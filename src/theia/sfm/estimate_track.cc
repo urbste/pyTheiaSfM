@@ -75,8 +75,8 @@ void GetObservationsFromTrackViews(
     // If the feature is not in the view then we have an ill-formed
     // reconstruction.
     const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
-    const Eigen::Vector3d bearing_vector =
-        view->Camera().PixelToUnitDepthRay((*feature).point_);
+    const Eigen::Vector3d ray_dir =
+        view->Camera().PixelToUnitDepthRay((*feature).point_).normalized();
 
     features->emplace_back((*feature).point_);
     view_ids->emplace_back(view_id);
@@ -84,7 +84,7 @@ void GetObservationsFromTrackViews(
     Matrix3x4d proj_mat;
     view->Camera().GetProjectionMatrix(&proj_mat);
     proj_matrices->emplace_back(proj_mat);
-    ray_directions->emplace_back(bearing_vector.normalized());
+    ray_directions->emplace_back(ray_dir);
   }
 }
 
@@ -259,26 +259,6 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
       }
   }
 
-  // Set the inverse depth of the track
-  if (options_.ba_options.use_inverse_depth_parametrization) {
-    const ViewId ref_view_id = track->ReferenceViewId();
-    const View* ref_view = reconstruction_->View(ref_view_id);
-    const Camera ref_cam = ref_view->Camera();
-    if (ref_view != nullptr) {
-      if (ref_view->IsEstimated()) {
-        Eigen::Vector2d point_i;
-        const double depth = ref_cam.ProjectPoint(track->Point(), &point_i);
-        track->SetInverseDepth(1./depth);
-        // get reference 2D observation and convert it to the reference bearing vector
-        const Feature* reference_obs = ref_view->GetFeature(track_id);
-        track->SetReferenceBearingVector(
-          ref_cam.PixelToUnitDepthRay(reference_obs->point_));
-        std::cout<<"Setting reference "<<ref_cam.PixelToUnitDepthRay(reference_obs->point_)<<std::endl;
-        std::cout<<"Setting inverse depth "<<1./depth<<std::endl;
-      }
-    }
-  }
-
   // Bundle adjust the track.
   if (options_.bundle_adjustment) {
     track->SetEstimated(true);
@@ -305,6 +285,26 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
   }
 
   track->SetEstimated(true);
+  // Set the inverse depth of the track
+  if (options_.ba_options.use_inverse_depth_parametrization) {
+    const ViewId ref_view_id = track->ReferenceViewId();
+    const View* ref_view = reconstruction_->View(ref_view_id);
+    const Camera ref_cam = ref_view->Camera();
+    if (ref_view == nullptr || !ref_view->IsEstimated()) {
+        track->SetEstimated(false);
+        std::cout<<"Reference view is not estimated"<<std::endl;
+        return false;
+    } else {
+      Eigen::Vector2d point_i;
+      const double depth = ref_cam.ProjectPoint(track->Point(), &point_i);
+      track->SetInverseDepth(1./depth);
+      // get reference 2D observation and convert it to the reference bearing vector
+      track->SetReferenceBearingVector(
+        ref_cam.PixelToNormalizedCoordinates(ref_view->GetFeature(track_id)->point_));
+      std::cout<<"Setting reference "<<ref_cam.PixelToNormalizedCoordinates(ref_view->GetFeature(track_id)->point_)<<std::endl;
+      std::cout<<"Setting inverse depth "<<1./depth<<std::endl;
+    }
+  }
   return true;
 }
 

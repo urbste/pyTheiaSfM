@@ -153,27 +153,25 @@ void TestOptimizeTracks(const int kNumPoints, const double kPixelNoise,
       AddNoiseToProjection(kPixelNoise, &rng, &pixel3);
 
     }
-    if (depth1 > 0.0 && depth2 > 0.0) {
+    if (depth1 > 0.0 && depth2 > 0.0 && depth3 > 0.0) {
       reconstruction.AddObservation(vid1, tid, Feature(pixel1));
       reconstruction.AddObservation(vid2, tid, Feature(pixel2));
       reconstruction.AddObservation(vid3, tid, Feature(pixel3));
       track->SetEstimated(true);
 
-
       Eigen::Vector2d tmp;
       const ViewId ref_view_id = track->ReferenceViewId();
-      const double depth = reconstruction.View(ref_view_id)->Camera().ProjectPoint(
-        point.homogeneous(), &tmp);
-      const Feature* reference_obs = reconstruction.View(ref_view_id)->GetFeature(tid);
-      const Eigen::Vector3d bearing_vector =
-        reconstruction.View(ref_view_id)->Camera().PixelToUnitDepthRay(reference_obs->point_);
+      const View* ref_view = reconstruction.View(ref_view_id);
+      const Camera ref_cam = ref_view->Camera();
+      const double depth = ref_cam.ProjectPoint(point.homogeneous(), &tmp);
+      const Feature* reference_obs = ref_view->GetFeature(tid);
+      const Eigen::Vector3d bearing_vector = ref_cam.PixelToNormalizedCoordinates(reference_obs->point_);
       track->SetReferenceBearingVector(bearing_vector);
       track->SetInverseDepth(1.0/depth);
     }
   }
 
   BundleAdjustmentOptions opts;
-  opts.verbose = true;
   if (track_type == TrackParametrizationType::XYZW) {
     opts.use_inverse_depth_parametrization = false;
     opts.use_homogeneous_point_parametrization = false;
@@ -187,16 +185,21 @@ void TestOptimizeTracks(const int kNumPoints, const double kPixelNoise,
     LOG(FATAL) << "Unknown track parametrization type.";
   }
 
+  opts.verbose = true;
   BundleAdjustmentSummary sum = BundleAdjustTracks(opts, 
     reconstruction.TrackIds(), &reconstruction);
-  const auto num_obs = reconstruction.View(vid1)->NumFeatures() + reconstruction.View(vid2)->NumFeatures();
+
+  size_t num_obs = 0;
+  for (auto v_id : reconstruction.ViewIds()) {
+    num_obs += reconstruction.View(v_id)->NumFeatures();
+  }
 
   std::cout << "Success: " << sum.success << "\n";
   std::cout << "Final squared reprojection error: " << 2.0 * sum.final_cost / num_obs
             << "\n";
   if (kPixelNoise == 0.0) {
     EXPECT_TRUE(2.0 * sum.final_cost / num_obs <
-                1e-12);
+                1e-15);
   } else {
     EXPECT_TRUE(2.0 * sum.final_cost / num_obs <
                 kPixelNoise);
@@ -237,19 +240,19 @@ TEST(OptimizeTracks, NoNoise_INVERSE_DEPTH) {
 }
 
 TEST(OptimizeTracks, Noise_XYZW) {
-  static const double kPixelNoise = 0.1;
+  static const double kPixelNoise = 0.5;
   static const int kNumPoints = 100;
   TestOptimizeTracks(kNumPoints, kPixelNoise, TrackParametrizationType::XYZW);
 }
 
 TEST(OptimizeTracks, Noise_XYZW_MANIFOLD) {
-  static const double kPixelNoise = 0.1;
+  static const double kPixelNoise = 0.5;
   static const int kNumPoints = 100;
   TestOptimizeTracks(kNumPoints, kPixelNoise, TrackParametrizationType::XYZW_MANIFOLD);
 }
 
 TEST(OptimizeTracks, Noise_INVERSE_DEPTH) {
-  static const double kPixelNoise = 0.1;
+  static const double kPixelNoise = 0.5;
   static const int kNumPoints = 100;
   TestOptimizeTracks(kNumPoints, kPixelNoise, TrackParametrizationType::INVERSE_DEPTH);
 }
