@@ -253,6 +253,11 @@ Tested on Ubuntu. In your Python >= 3.5 environment of choice run:
 sh build_and_install.sh
 ```
 
+If you have problems like **/lib/libstdc++.so.6: version `GLIBCXX_3.4.30' not found** on Ubuntu 22.04 in an Anaconda environment try:
+```bash
+conda install -c conda-forge libstdcxx-ng
+```
+
 ### With Docker
 The docker build will actually build manylinux wheels for Linux (Python 3.5-3.9).
 There are two ways to do that. One will clutter the source directory, but you will have the wheel file directly available (./wheelhouse/).

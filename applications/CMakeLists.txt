@@ -1,5 +1,9 @@
 ## Basic programs
 
+add_executable(test_inv_track_ba test_inv_track_ba.cc)
+target_link_libraries(test_inv_track_ba ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+
 #add_executable(extract_features extract_features.cc)
 #target_link_libraries(extract_features ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES})
 

@@ -75,11 +75,18 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
   CHECK_NOTNULL(reconstruction);
 
   BundleAdjuster bundle_adjuster(options, reconstruction);
-  for (const ViewId view_id : view_ids) {
-    bundle_adjuster.AddView(view_id);
-  }
-  for (const TrackId track_id : track_ids) {
-    bundle_adjuster.AddTrack(track_id);
+  if (options.use_inverse_depth_parametrization) {
+    for (const TrackId track_id : track_ids) {
+      bundle_adjuster.AddInvTrack(track_id, false);
+    } 
+    bundle_adjuster.AddViewPriors();
+  } else {
+    for (const ViewId view_id : view_ids) {
+      bundle_adjuster.AddView(view_id);
+    }
+    for (const TrackId track_id : track_ids) {
+      bundle_adjuster.AddTrack(track_id);
+    }
   }
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
 
@@ -101,20 +108,34 @@ BundleAdjustPartialViewsConstant(const BundleAdjustmentOptions &options,
   CHECK_NOTNULL(reconstruction);
 
   BundleAdjuster bundle_adjuster(options, reconstruction);
-
-  for (const ViewId view_id : var_view_ids) {
-    bundle_adjuster.AddView(view_id);
+  
+  if (options.use_inverse_depth_parametrization) {
+    for (const TrackId track_id : reconstruction->TrackIds()) {
+      bundle_adjuster.AddInvTrack(track_id, false);
+    }
+    for (const ViewId view_id : const_view_ids) {
+      bundle_adjuster.SetCameraExtrinsicsConstant(view_id);
+    }
+    bundle_adjuster.AddViewPriors();
+  } else {
+    for (const ViewId view_id : var_view_ids) {
+      bundle_adjuster.AddView(view_id);
+    }
+    for (const ViewId view_id : const_view_ids) {
+      bundle_adjuster.AddView(view_id);
+      bundle_adjuster.SetCameraExtrinsicsConstant(view_id);
+    }
+    for (const TrackId track_id : reconstruction->TrackIds()) {
+      bundle_adjuster.AddTrack(track_id);
+    }
   }
-  for (const ViewId view_id : const_view_ids) {
-    bundle_adjuster.AddView(view_id);
-    bundle_adjuster.SetCameraExtrinsicsConstant(view_id);
-  }
 
-  for (const TrackId track_id : reconstruction->TrackIds()) {
-    bundle_adjuster.AddTrack(track_id);
-  }
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
 
-  return bundle_adjuster.Optimize();
+  if (options.use_inverse_depth_parametrization) {
+    ConvertInvDepthTracksToHomogeneous(reconstruction->TrackIds(), *reconstruction);
+  }
+  return summary;
 }
 
 // Bundle adjust the entire reconstruction.
@@ -124,11 +145,18 @@ BundleAdjustmentSummary BundleAdjustReconstruction(
   const auto& track_ids = reconstruction->TrackIds();
 
   BundleAdjuster bundle_adjuster(options, reconstruction);
-  for (const ViewId view_id : view_ids) {
-    bundle_adjuster.AddView(view_id);
-  }
-  for (const TrackId track_id : track_ids) {
-    bundle_adjuster.AddTrack(track_id);
+  if (options.use_inverse_depth_parametrization) {
+    for (const TrackId track_id : track_ids) {
+      bundle_adjuster.AddInvTrack(track_id, false);
+    } 
+    bundle_adjuster.AddViewPriors();
+  } else {
+    for (const ViewId view_id : view_ids) {
+      bundle_adjuster.AddView(view_id);
+    }
+    for (const TrackId track_id : track_ids) {
+      bundle_adjuster.AddTrack(track_id);
+    }
   }
 
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
@@ -147,6 +175,7 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
+  ba_options.use_inverse_depth_parametrization = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   bundle_adjuster.AddView(view_id);
@@ -161,6 +190,7 @@ BundleAdjustmentSummary BundleAdjustViews(
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
+  ba_options.use_inverse_depth_parametrization = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   for (const auto& view_id : view_ids_to_optimize) {
@@ -179,7 +209,11 @@ BundleAdjustmentSummary BundleAdjustTrack(
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  bundle_adjuster.AddTrack(track_id);
+  if (options.use_inverse_depth_parametrization) {
+    bundle_adjuster.AddInvTrack(track_id, true);
+  } else {
+    bundle_adjuster.AddTrack(track_id);
+  }
 
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
   
@@ -288,8 +322,15 @@ BundleAdjustmentSummary BundleAdjustTracks(
   ba_options.use_inner_iterations = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  for (const auto& track_id : tracks_to_optimize) {
-    bundle_adjuster.AddTrack(track_id);
+  if (options.use_inverse_depth_parametrization) {
+    for (const auto& track_id : tracks_to_optimize) {
+      bundle_adjuster.AddInvTrack(track_id, true);
+    } 
+    bundle_adjuster.AddViewPriors();
+  } else {
+    for (const auto& track_id : tracks_to_optimize) {
+      bundle_adjuster.AddTrack(track_id);
+    }
   }
 
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
@@ -309,6 +350,7 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
+  ba_options.use_inverse_depth_parametrization = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   bundle_adjuster.AddView(view_id);
@@ -342,6 +384,7 @@ BundleAdjustmentSummary BundleAdjustViews(
   BundleAdjustmentOptions ba_options = options;
   ba_options.linear_solver_type = ceres::DENSE_QR;
   ba_options.use_inner_iterations = false;
+  ba_options.use_inverse_depth_parametrization = false;
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   for (const auto& vid : view_ids) {

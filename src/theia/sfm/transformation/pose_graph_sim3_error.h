@@ -39,9 +39,9 @@
 #include <Eigen/Geometry>
 #include <vector>
 
-namespace theia {
-
 #include "sophus/sim3.hpp"
+
+namespace theia {
 
 class Sim3ReconAlignErrorTerm : public ceres::SizedCostFunction<7, 7, 7> {
  public:

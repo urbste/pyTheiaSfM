@@ -42,6 +42,7 @@
 #include <ceres/rotation.h>
 
 #include <Sophus/sophus/se3.hpp>
+#include "sophus/sim3.hpp"
 
 namespace theia {
 
@@ -227,6 +228,164 @@ struct InvReprojectionError {
   const Eigen::Vector3d bearing_vector_ref_;
 };
 
+template <class CameraModel>
+struct InvReprojectionPoseError {
+ public:
+  explicit InvReprojectionPoseError(
+    const Feature& feature,
+    const Eigen::Vector3d& bearing_vector_ref) : 
+    feature_(feature), bearing_vector_ref_(bearing_vector_ref)  {}
+
+  template <typename T>
+  bool operator()(const T* extrinsic_parameters_ref,
+                  const T* intrinsic_parameters_ref,
+                  const T* inverse_depth,
+                  T* reprojection_error) const {
+
+    typedef Eigen::Matrix<T, 3, 1> Vector3T;
+    typedef Eigen::Map<const Vector3T> ConstMap3T;
+
+    // first scale the bearing vector 
+    Vector3T point_ref = bearing_vector_ref_.cast<T>() / *inverse_depth;
+
+    // construct transformation matrices
+    Sophus::SO3<T> R_ref_world = Sophus::SO3<T>::exp(
+      ConstMap3T(extrinsic_parameters_ref + Camera::ORIENTATION));
+
+    Vector3T p_world_ref = ConstMap3T(extrinsic_parameters_ref + Camera::POSITION);
+
+    Sophus::SE3<T> T_world_ref(R_ref_world.inverse(), p_world_ref);
+
+    // transform the vector to the other camera
+    Vector3T point = T_world_ref.inverse() * T_world_ref * point_ref;
+
+    // Apply the camera intrinsics to get the reprojected pixel.
+    T reprojection[2];
+    const bool res = CameraModel::CameraToPixelCoordinates(
+        intrinsic_parameters_ref, point.data(), reprojection);
+
+    const T sqrt_information_x =
+        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
+    const T sqrt_information_y =
+        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
+    reprojection_error[0] =
+        sqrt_information_x * (reprojection[0] - feature_.point_.x());
+    reprojection_error[1] =
+        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+
+    return res;
+  }
+
+ private:
+  const Feature feature_;
+  const Eigen::Vector3d bearing_vector_ref_;
+};
+
+template <class CameraModel>
+struct Sim3InvReprojectionError {
+ public:
+  explicit Sim3InvReprojectionError(
+    const Feature& feature,
+    const Eigen::Vector3d& bearing_vector_ref) : 
+    feature_(feature), bearing_vector_ref_(bearing_vector_ref)  {}
+
+  template <typename T>
+  bool operator()(const T* extrinsic_parameters_ref,
+                  const T* extrinsic_parameters_other,
+                  const T* intrinsic_parameters_other,
+                  const T* inverse_depth,
+                  T* reprojection_error) const {
+
+    typedef Eigen::Matrix<T, 3, 1> Vector3T;
+    typedef Eigen::Map<const Vector3T> ConstMap3T;
+    typedef Sophus::Sim3<T> Sim3T;
+
+    // get sim3 poses of ref and anchor cam
+    Eigen::Map<const Eigen::Matrix<T, 7, 1>> lie_ref(extrinsic_parameters_ref);
+    Eigen::Map<const Eigen::Matrix<T, 7, 1>> lie_other(extrinsic_parameters_other);
+
+    Sim3T S_ref_world = Sim3T::exp(lie_ref);
+    Sim3T S_other_world = Sim3T::exp(lie_other);
+
+    // first scale the bearing vector 
+    Vector3T point_ref = bearing_vector_ref_.cast<T>() / *inverse_depth;
+
+    Vector3T point_world = S_ref_world.inverse() * point_ref;
+    // transform the vector to the other camera
+    Vector3T point_other = S_other_world * point_world;
+
+    // Apply the camera intrinsics to get the reprojected pixel.
+    T reprojection[2];
+    const bool res = CameraModel::CameraToPixelCoordinates(
+        intrinsic_parameters_other, point_other.data(), reprojection);
+
+    const T sqrt_information_x =
+        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
+    const T sqrt_information_y =
+        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
+    reprojection_error[0] =
+        sqrt_information_x * (reprojection[0] - feature_.point_.x());
+    reprojection_error[1] =
+        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+
+    return res;
+  }
+
+ private:
+  const Feature feature_;
+  const Eigen::Vector3d bearing_vector_ref_;
+};
+
+template <class CameraModel>
+struct Sim3InvReprojectionPoseError {
+ public:
+  explicit Sim3InvReprojectionPoseError(
+    const Feature& feature,
+    const Eigen::Vector3d& bearing_vector_ref) : 
+    feature_(feature), bearing_vector_ref_(bearing_vector_ref)  {}
+
+  template <typename T>
+  bool operator()(const T* extrinsic_parameters_ref,
+                  const T* intrinsic_parameters_other,
+                  const T* inverse_depth,
+                  T* reprojection_error) const {
+
+    typedef Eigen::Matrix<T, 3, 1> Vector3T;
+    typedef Eigen::Map<const Vector3T> ConstMap3T;
+    typedef Sophus::Sim3<T> Sim3T;
+
+    // get sim3 poses of ref and anchor cam
+    Eigen::Map<const Eigen::Matrix<T, 7, 1>> lie_ref(extrinsic_parameters_ref);
+
+    Sim3T S_ref_world = Sim3T::exp(lie_ref);
+
+    // first scale the bearing vector 
+    Vector3T point_ref = bearing_vector_ref_.cast<T>() / *inverse_depth;
+
+    // transform the vector to the other camera
+    Vector3T point_other = S_ref_world * S_ref_world.inverse() * point_ref;
+
+    // Apply the camera intrinsics to get the reprojected pixel.
+    T reprojection[2];
+    const bool res = CameraModel::CameraToPixelCoordinates(
+        intrinsic_parameters_other, point_other.data(), reprojection);
+
+    const T sqrt_information_x =
+        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
+    const T sqrt_information_y =
+        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
+    reprojection_error[0] =
+        sqrt_information_x * (reprojection[0] - feature_.point_.x());
+    reprojection_error[1] =
+        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+
+    return res;
+  }
+
+ private:
+  const Feature feature_;
+  const Eigen::Vector3d bearing_vector_ref_;
+};
 
 }  // namespace theia
 

@@ -133,7 +133,7 @@ struct CrossEdgesErrorTerm {
     Eigen::Map<const Eigen::Matrix<T, 7, 1>> lie_qry(params);
 
     Sophus::Sim3<T> S_qry = Sophus::Sim3<T>::exp(lie_qry);
-    Sophus::Sim3<T> error = S_qry * S_ref_.inverse().cast<T>(); // * S_ref_.inverse(); //.cast<T>().inverse();
+    Sophus::Sim3<T> error = S_qry * S_ref_.inverse().cast<T>();
     Eigen::Map<Eigen::Matrix<T, 7, 1>> residuals(residual);
     residuals = error.log();
 

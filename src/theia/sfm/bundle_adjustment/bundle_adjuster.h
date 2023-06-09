@@ -73,6 +73,12 @@ class BundleAdjuster {
   // Add a track to be optimized with bundle adjustment. A residual is created
   // for each estimated view that observes the track.
   void AddTrack(const TrackId track_id);
+  
+  // Add a inverse depth parametrization track to be optimized with bundle adjustment. 
+  // A residual is created for each estimated view that observes the track.
+  void AddInvTrack(const TrackId track_id, const bool views_constant);
+
+  void AddViewPriors();
 
   // After AddView and AddTrack have been called, optimize the provided views
   // and tracks with bundle adjustment.
