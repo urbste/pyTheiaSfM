@@ -230,6 +230,7 @@
 #include "theia/sfm/track_builder.h"
 #include "theia/sfm/transformation/align_point_clouds.h"
 #include "theia/sfm/transformation/align_reconstructions.h"
+#include "theia/sfm/transformation/align_reconstructions_pose_graph_optim.h"
 #include "theia/sfm/transformation/align_rotations.h"
 #include "theia/sfm/transformation/gdls_similarity_transform.h"
 #include "theia/sfm/transformation/transform_reconstruction.h"

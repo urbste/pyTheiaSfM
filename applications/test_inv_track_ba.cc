@@ -96,9 +96,26 @@ void TestOptimizeTracks(const int kNumPoints, const double kPixelNoise,
   }
 
   opts.verbose = true;
+  // print track inverse depth
+  for (const auto& track_id : reconstruction.TrackIds()) {
+    Track* track = CHECK_NOTNULL(reconstruction.MutableTrack(track_id));
+    if (track == nullptr || !track->IsEstimated()) {
+      continue;
+    }
+    std::cout<<"Old inv depth: "<<track->InverseDepth()<<std::endl;
+  }
+
   BundleAdjustmentSummary sum = BundleAdjustTracks(opts, 
     reconstruction.TrackIds(), &reconstruction);
-
+  // print track inverse depth
+  for (const auto& track_id : reconstruction.TrackIds()) {
+    Track* track = CHECK_NOTNULL(reconstruction.MutableTrack(track_id));
+    if (track == nullptr || !track->IsEstimated()) {
+      continue;
+    }
+    std::cout<<"New inv depth: "<<track->InverseDepth()<<std::endl;
+  }
+  
   size_t num_obs = 0;
   for (auto v_id : reconstruction.ViewIds()) {
     num_obs += reconstruction.View(v_id)->NumFeatures();
@@ -111,9 +128,9 @@ void TestOptimizeTracks(const int kNumPoints, const double kPixelNoise,
 
 int main(int argc, char** argv) {
 
-  //TestOptimizeTracks(100, 0.5, TrackParametrizationType::XYZW_MANIFOLD);
-  //TestOptimizeTracks(100, 0.5, TrackParametrizationType::XYZW);
-  TestOptimizeTracks(100, 0.5, TrackParametrizationType::INVERSE_DEPTH);
+  TestOptimizeTracks(10, 0.5, TrackParametrizationType::XYZW_MANIFOLD);
+  TestOptimizeTracks(10, 0.5, TrackParametrizationType::XYZW);
+  TestOptimizeTracks(10, 0.5, TrackParametrizationType::INVERSE_DEPTH);
   
   return 0;
 }

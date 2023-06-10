@@ -41,63 +41,43 @@
 #include <vector>
 #include <Sophus/sophus/se3.hpp>
 #include <Sophus/sophus/sim3.hpp>
-#include "gtest/gtest.h"
 
 #include <ceres/local_parameterization.h>
 #include <ceres/solver.h>
 
-#include "theia/sfm/reconstruction.h"
-#include "theia/sfm/transformation/align_reconstructions.h"
-#include "theia/sfm/transformation/transform_reconstruction.h"
-#include "theia/sfm/types.h"
-#include "theia/util/random.h"
-#include "theia/util/stringprintf.h"
-#include "theia/io/reconstruction_reader.h"
-#include "theia/io/reconstruction_writer.h"
-#include "theia/io/write_ply_file.h"
-#include "theia/sfm/view_graph/view_graph.h"
-#include "theia/sfm/view_graph/view_graph_from_reconstruction.h"
-#include "theia/sfm/transformation/align_reconstructions_pose_graph_optim.h"
-#include "theia/sfm/camera/create_reprojection_error_cost_function.h"
-#include "theia/sfm/transformation/align_reconstructions.h"
+#include <theia/theia.h>
 
+using namespace theia;
 
-namespace theia {
-
-
-TEST(AlignReconstructionPoseGraphOptim, Test) {
+int main() {
   Reconstruction recon_qry;
   Reconstruction recon_qry_in_ref;
   
   std::string base_path = "/home/steffen/Data/GPStrava/Muehltal/MilowsClaw";
   theia::ReadReconstruction(base_path+"/run2_recs/theia_recon_0.recon", &recon_qry);  
   theia::ReadReconstruction(base_path+"/run2_recs/run2_in_run1.recon", &recon_qry_in_ref);  
-  
 
   // first do a general transformation of traj 2 to 1 
   AlignReconstructionsRobust(1.0, recon_qry_in_ref, &recon_qry);
 
-  // // calculate inverse depth from depth
-  // for (const auto& track_id : recon_qry.TrackIds()) {
-  //   Track* track = CHECK_NOTNULL(recon_qry.MutableTrack(track_id));
-  //   if (track == nullptr || !track->IsEstimated()) {
-  //     continue;
-  //   }
-  //   std::cout<<"Old inv depth: "<<track->InverseDepth()<<std::endl;
-  //   const View* ref_view = recon_qry.View(track->ReferenceViewId());
-  //   Eigen::Vector2d pt;
-  //   const double d = ref_view->Camera().ProjectPoint(track->Point(), &pt);
-  //   track->SetInverseDepth(1/d);
-  //   std::cout<<"New inv depth: "<<track->InverseDepth()<<std::endl;
-
-  // }
+  // calculate inverse depth from depth
+  for (const auto& track_id : recon_qry.TrackIds()) {
+    Track* track = CHECK_NOTNULL(recon_qry.MutableTrack(track_id));
+    if (track == nullptr || !track->IsEstimated()) {
+      continue;
+    }
+    const View* ref_view = recon_qry.View(track->ReferenceViewId());
+    Eigen::Vector2d pt;
+    const double d = ref_view->Camera().ProjectPoint(track->Point(), &pt);
+    track->SetInverseDepth(1/d);
+  }
 
   // ViewGraph view_graph;
   // ViewGraphFromReconstruction(recon_qry, 0, &view_graph);
 
-   ceres::Problem problem;
-   ceres::LocalParameterization* sim3_local_parameterization =
-       new Sim3Parameterization;
+  ceres::Problem problem;
+  ceres::LocalParameterization* sim3_local_parameterization =
+      new Sim3Parameterization;
 
   // get all transformations
   std::map<ViewId, Eigen::Matrix<double, 7, 1>> sim3s;
@@ -146,24 +126,33 @@ TEST(AlignReconstructionPoseGraphOptim, Test) {
       if (vid_qry == kInvalidViewId) {
           continue;
       }
-      const View* view_in_qry = recon_qry.View(view_id);
+      const View* view_in_qry = recon_qry.View(vid_qry);
       if (view_in_qry == nullptr || view_qry_in_ref == nullptr) {
           continue;
       } 
 
-        // get pose from view_qrys_in_ref
-        Eigen::Matrix3d R_c_w_ref = view_qry_in_ref->Camera().GetOrientationAsRotationMatrix();
-        Eigen::Vector3d t_c_w_ref = -R_c_w_ref*view_qry_in_ref->Camera().GetPosition();
+      // get pose from view_qrys_in_ref
+      Eigen::Matrix3d R_c_w_ref = view_qry_in_ref->Camera().GetOrientationAsRotationMatrix();
+      Eigen::Vector3d t_c_w_ref = -R_c_w_ref*view_qry_in_ref->Camera().GetPosition();
 
-        Sophus::Sim3d S_r_w(Sophus::RxSO3d(1.0, R_c_w_ref), t_c_w_ref);
+      Eigen::Matrix3d R_c_w_qry = view_in_qry->Camera().GetOrientationAsRotationMatrix();
+      Eigen::Vector3d t_c_w_qry = -R_c_w_qry*view_in_qry->Camera().GetPosition();
+        
+        
+      Sophus::Sim3d S_r_w(Sophus::RxSO3d(1.0, R_c_w_ref), t_c_w_ref);
+      Sophus::Sim3d S_w_w(Sophus::RxSO3d(1.0, R_c_w_qry), t_c_w_qry);
 
-        Eigen::Matrix<double, 7, 7> inv_sqrt = Eigen::Matrix<double, 7, 7>::Identity();
-        inv_sqrt.block<3,3>(0,0) = Eigen::Matrix3d::Identity()*100.;
-        inv_sqrt.block<3,3>(3,3) = Eigen::Matrix3d::Identity()*100.;
-        inv_sqrt.block<1,1>(6,6) = Eigen::Matrix<double, 1, 1>::Identity()*0.1;
-        problem.AddResidualBlock(
-            CrossEdgesErrorTerm::Create(S_r_w, inv_sqrt), 
-            nullptr, sim3s[vid_qry].data());
+      // relative transformation from camera 1 to camera 2
+      Sophus::Sim3d S_r_qry = S_w_w * S_r_w.inverse();
+      std::cout<<"S_r_qry: "<<S_r_qry.log().transpose()<<std::endl;
+
+      Eigen::Matrix<double, 7, 7> inv_sqrt = Eigen::Matrix<double, 7, 7>::Identity();
+      inv_sqrt.block<3,3>(0,0) = Eigen::Matrix3d::Identity() * 5.;
+      inv_sqrt.block<3,3>(3,3) = Eigen::Matrix3d::Identity() * .01;
+      inv_sqrt.block<1,1>(6,6) = Eigen::Matrix<double, 1, 1>::Identity();
+      problem.AddResidualBlock(
+        CrossEdgesErrorTerm::Create(S_r_w, inv_sqrt), 
+        nullptr, sim3s[vid_qry].data());
     }
 
     // add reprojection residuals
@@ -199,22 +188,22 @@ TEST(AlignReconstructionPoseGraphOptim, Test) {
         if (camera != ref_cam) {
             problem.AddResidualBlock(
             CreateSim3InvReprojectionErrorCostFunction(
-                camera->GetCameraIntrinsicsModelType(), 
-                *feature, ref_bearing_vector), 
-            NULL,
-            sim3s[ref_view_id].data(),
-            sim3s[view_id].data(),
-            camera->mutable_intrinsics(), 
-            track->MutableInverseDepth());
+                    camera->GetCameraIntrinsicsModelType(), 
+                    *feature, ref_bearing_vector), 
+                NULL,
+                sim3s[ref_view_id].data(),
+                sim3s[view_id].data(),
+                camera->mutable_intrinsics(), 
+                track->MutableInverseDepth());
         } else {
             problem.AddResidualBlock(
             CreateSim3InvReprojectionPoseErrorCostFunction(
-                ref_cam->GetCameraIntrinsicsModelType(), 
-                *feature, ref_bearing_vector), 
-            NULL,
-            sim3s[ref_view_id].data(),
-            ref_cam->mutable_intrinsics(), 
-            track->MutableInverseDepth());
+                    ref_cam->GetCameraIntrinsicsModelType(), 
+                    *feature, ref_bearing_vector), 
+                NULL,
+                sim3s[ref_view_id].data(),
+                ref_cam->mutable_intrinsics(), 
+                track->MutableInverseDepth());
         }
       }
     }
@@ -223,10 +212,11 @@ TEST(AlignReconstructionPoseGraphOptim, Test) {
 
     ceres::Solver::Options solver_options;
     ceres::Solver::Summary solver_summary;
-    solver_options.linear_solver_type = ceres::CGNR;
+    solver_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
     solver_options.minimizer_progress_to_stdout = true;
-    solver_options.max_num_iterations = 30;
+    solver_options.max_num_iterations = 6;
     solver_options.num_threads = 20;
+
     ceres::Solve(solver_options, &problem, &solver_summary);
 
     // set sim3s to recon_qry
@@ -242,4 +232,3 @@ TEST(AlignReconstructionPoseGraphOptim, Test) {
     theia::WritePlyFile(base_path+"/run2_recs/run2_in_run1_sim3.ply",recon_qry, Eigen::Vector3i(255, 255,255), 2);
 }
 
-}  // namespace theia
