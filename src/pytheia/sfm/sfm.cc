@@ -107,6 +107,7 @@
 #include "theia/sfm/reconstruction_estimator.h"
 #include "theia/sfm/reconstruction_estimator_options.h"
 #include "theia/sfm/track_builder.h"
+#include "theia/sfm/reconstruction_estimator_utils.h"
 
 #include "theia/sfm/rigid_transformation.h"
 #include "theia/sfm/similarity_transformation.h"
@@ -750,7 +751,9 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::EstimateTwoViewInfoOptions::min_ransac_iterations)
       .def_readwrite("max_ransac_iterations",
                      &theia::EstimateTwoViewInfoOptions::max_ransac_iterations)
-      .def_readwrite("use_mle", &theia::EstimateTwoViewInfoOptions::use_mle);
+      .def_readwrite("use_mle", &theia::EstimateTwoViewInfoOptions::use_mle)
+      .def_readwrite("use_lo", &theia::EstimateTwoViewInfoOptions::use_lo)
+      .def_readwrite("lo_start_iterations", &theia::EstimateTwoViewInfoOptions::lo_start_iterations);
 
   py::class_<theia::FilterViewPairsFromRelativeTranslationOptions>(
       m, "FilterViewPairsFromRelativeTranslationOptions")
@@ -1380,6 +1383,9 @@ void pytheia_sfm_classes(py::module& m) {
       //.def("GetSubReconstruction",
       //&theia::Reconstruction::GetSubReconstructionWrapper)
       ;
+
+  m.def("SetUnderconstrainedTracksToUnestimated", theia::SetUnderconstrainedTracksToUnestimated);
+  m.def("SetUnderconstrainedViewsToUnestimated", theia::SetUnderconstrainedViewsToUnestimated);
 
   // Reconstruction Estimator
 

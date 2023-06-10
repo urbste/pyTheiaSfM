@@ -148,6 +148,8 @@ bool EstimateTwoViewInfoCalibrated(
   ransac_options.failure_probability = 1.0 - options.expected_ransac_confidence;
   ransac_options.min_iterations = options.min_ransac_iterations;
   ransac_options.max_iterations = options.max_ransac_iterations;
+  ransac_options.use_lo = options.use_lo;
+  ransac_options.lo_start_iterations = options.lo_start_iterations;
 
   // Compute the sampson error threshold to account for the resolution of the
   // images.
@@ -208,7 +210,9 @@ bool EstimateTwoViewInfoUncalibrated(
   ransac_options.failure_probability = 1.0 - options.expected_ransac_confidence;
   ransac_options.min_iterations = options.min_ransac_iterations;
   ransac_options.max_iterations = options.max_ransac_iterations;
-
+  ransac_options.use_lo = options.use_lo;
+  ransac_options.lo_start_iterations = options.lo_start_iterations;
+  
   // Compute the sampson error threshold to account for the resolution of the
   // images.
   const double max_sampson_error_pixels1 =
