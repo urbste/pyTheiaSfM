@@ -13,7 +13,7 @@
 
 // OpenMP
 #ifdef AKAZE_USE_OPENMP
-#include <omp.h>
+#include "/usr/local/opt/libomp/include/omp.h"
 #endif
 
 // System

@@ -154,7 +154,7 @@ normalization strategies. These are optionally applied in this order:
 #include <string.h>
 
 #if defined(_OPENMP)
-#include <omp.h>
+#include "/usr/local/opt/libomp/include/omp.h"
 #endif
 
 /* ================================================================ */

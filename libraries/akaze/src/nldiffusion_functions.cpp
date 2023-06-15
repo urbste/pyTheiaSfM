@@ -21,7 +21,7 @@
 
 #include <cassert>
 #ifdef AKAZE_USE_OPENMP
-#include <omp.h>
+#include "/usr/local/opt/libomp/include/omp.h"
 #endif  // AKAZE_USE_OPENMP
 #include <vector>
 

@@ -93,7 +93,7 @@ using the vl_kdforest_delete_searcher method.
 #include <stdlib.h>
 
 #if defined(_OPENMP)
-#include <omp.h>
+#include "/usr/local/opt/libomp/include/omp.h"
 #endif
 
 #define VL_HEAP_prefix     vl_kdforest_search_heap

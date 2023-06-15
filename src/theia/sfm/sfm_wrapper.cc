@@ -1,9 +1,11 @@
 
 #include "theia/sfm/sfm_wrapper.h"
+#include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/reconstruction.h"
+#include "theia/sfm/two_view_match_geometric_verification.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/view_graph/view_graph.h"
-//#include "theia/image/image.h"
+// #include "theia/image/image.h"
 #include "theia/sfm/camera/camera.h"
 
 namespace theia {
@@ -22,6 +24,23 @@ std::tuple<bool, TwoViewInfo, std::vector<int>> EstimateTwoViewInfoWrapper(
                                            &twoview_info,
                                            &inlier_indices);
   return std::make_tuple(success, twoview_info, inlier_indices);
+}
+
+std::tuple<bool, TwoViewInfo, std::vector<IndexedFeatureMatch>>
+VerifyMatchesWrapper(const TwoViewMatchGeometricVerification::Options& options,
+                     const CameraIntrinsicsPrior& intrinsics1,
+                     const CameraIntrinsicsPrior& intrinsics2,
+                     const KeypointsAndDescriptors& features1,
+                     const KeypointsAndDescriptors& features2,
+                     const std::vector<IndexedFeatureMatch>& matches) {
+  TwoViewMatchGeometricVerification geometric_verification(
+      options, intrinsics1, intrinsics2, features1, features2, matches);
+  TwoViewInfo twoview_info;
+  std::vector<FeatureCorrespondence> correspondences;
+  const bool success =
+      geometric_verification.VerifyMatches(&correspondences, &twoview_info);
+  return std::make_tuple(
+      success, twoview_info, geometric_verification.matches_);
 }
 
 std::tuple<bool, std::unordered_set<TrackId>>

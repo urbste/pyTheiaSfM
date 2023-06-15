@@ -290,7 +290,7 @@ Alternatively, one can manually specify a starting point
 #include <string.h>
 
 #ifdef _OPENMP
-#include <omp.h>
+#include "/usr/local/opt/libomp/include/omp.h"
 #endif
 
 #ifndef VL_DISABLE_SSE2

@@ -366,7 +366,7 @@ Elkan's while retaining a similar solution accuracy.
 #include <string.h>
 
 #ifdef _OPENMP
-#include <omp.h>
+#include "/usr/local/opt/libomp/include/omp.h"
 #endif
 
 /* ================================================================ */
