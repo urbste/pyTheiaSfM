@@ -788,7 +788,7 @@ calling @c omp_set_num_threads() in the application. Note that:
 #endif
 
 #if defined(_OPENMP)
-#include "/usr/local/opt/libomp/include/omp.h"
+#include <omp.h>
 #endif
 
 /* ---------------------------------------------------------------- */

@@ -36,7 +36,7 @@
 
 #include <ceres/rotation.h>
 #include <glog/logging.h>
-#include "/usr/local/opt/libomp/include/omp.h"
+#include <omp.h>
 
 #include <Eigen/Eigenvalues>
 #include <Eigen/QR>

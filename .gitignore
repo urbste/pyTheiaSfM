@@ -20,6 +20,8 @@ cmake_build
 
 .vscode
 
+.DS_Store
+
 *.so
 
 # Source for the following rules: https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore

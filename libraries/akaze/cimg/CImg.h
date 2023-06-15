@@ -222,7 +222,7 @@
 // OpenMP directives may be used in a (very) few CImg functions to get
 // advantages of multi-core CPUs.
 #ifdef cimg_use_openmp
-#include "/usr/local/opt/libomp/include/omp.h"
+#include <omp.h>
 #endif
 
 // Configure OpenCV support.

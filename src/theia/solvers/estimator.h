@@ -37,7 +37,7 @@
 
 #include <glog/logging.h>
 #ifdef THEIA_USE_OPENMP
-#include "/usr/local/opt/libomp/include/omp.h"
+#include <omp.h>
 #endif
 #include <vector>
 
