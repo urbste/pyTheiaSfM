@@ -1,4 +1,4 @@
-// Copyright (C) 2015 The Regents of the University of California (Regents).
+// Copyright (C) 2023 Steffen Urban
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -28,31 +28,26 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//
-// Please contact the author of this library if you have any questions.
-// Author: Steffen Urban (urbse@googlemail.com)
+
+#include "pytheia/mvs/mvs.h"
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
-#include "pytheia/io/io.h"
-#include "pytheia/matching/matching.h"
-#include "pytheia/math/math.h"
-#include "pytheia/mvs/mvs.h"
-#include "pytheia/sfm/sfm.h"
-#include "pytheia/solvers/solvers.h"
+#include "theia/mvs/view_selection_mvsnet.h"
+
+namespace py = pybind11;
 
 namespace pytheia {
-
-PYBIND11_MODULE(pytheia, m) {
-  m.doc() = "Python binding for TheiaSfM";
-
-  // register all submodules here
-  io::pytheia_io(m);
-  matching::pytheia_matching(m);
-  math::pytheia_math(m);
-  mvs::pytheia_mvs(m);
-  sfm::pytheia_sfm(m);
-  solvers::pytheia_solvers(m);
+namespace mvs {
+void pytheia_mvs_classes(py::module& m) {
+  m.def("ViewSelectionMVSNet", &theia::ViewSelectionMVSNet);
 }
 
+void pytheia_mvs(py::module& m) {
+  py::module m_submodule = m.def_submodule("mvs");
+  pytheia_mvs_classes(m_submodule);
+}
+
+} // namespace matching
 }  // namespace pytheia

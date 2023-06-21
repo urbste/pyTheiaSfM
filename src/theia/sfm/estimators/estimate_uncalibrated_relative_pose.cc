@@ -105,7 +105,7 @@ class UncalibratedRelativePoseEstimator
 
     // TODO(cmsweeney): Should we check if the focal lengths are reasonable?
     // check focal length bounds
-    if (min_max_f_[0] > 1.0 && min_max_f_[1] > 1.0) {
+    if (min_max_f_[0] >= 1.0 && min_max_f_[1] >= 1.0) {
         if (relative_pose.focal_length1 < min_max_f_[0] || relative_pose.focal_length2 < min_max_f_[0] ||
             relative_pose.focal_length1 > min_max_f_[1] || relative_pose.focal_length2 > min_max_f_[1]) {
             return false;

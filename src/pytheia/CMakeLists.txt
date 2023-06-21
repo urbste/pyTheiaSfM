@@ -5,6 +5,7 @@ set(PY_ALL_SOURCE_FILES
     pytheia_pybind.cc
     matching/matching.cc
     math/math.cc
+    mvs/mvs.cc
     solvers/solvers.cc
     sfm/sfm.cc
     io/io.cc)
@@ -13,6 +14,7 @@ set(PY_ALL_HEADER_FILES
     pytheia_pybind.h
     matching/matching.h
     math/math.h
+    mvs/mvs.h
     solvers/solvers.h
     sfm/sfm.h
     io/io.h)

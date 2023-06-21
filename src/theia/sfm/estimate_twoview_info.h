@@ -72,6 +72,12 @@ struct EstimateTwoViewInfoOptions {
   bool use_mle = true;
   bool use_lo = false;
   int lo_start_iterations = 10;
+
+  // min and max focal length
+  // this is very useful for the ransac loop, if we already
+  // have a guess of the focal length of our cameras
+  double min_focal_length = 1.;
+  double max_focal_length = std::numeric_limits<double>::max();
 };
 
 // Estimates two view info for the given view pair from the correspondences. The

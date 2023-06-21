@@ -1,2 +1,2 @@
-from pytheia.pytheia import (io, sfm, math, matching, solvers)
+from pytheia.pytheia import (io, math, matching, mvs, sfm, solvers)
 import pytheia.pytheia as pytheia

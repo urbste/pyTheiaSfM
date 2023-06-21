@@ -1,4 +1,4 @@
-// Copyright (C) 2015 The Regents of the University of California (Regents).
+// Copyright (C) 2023, Steffen Urban
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -28,31 +28,33 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//
-// Please contact the author of this library if you have any questions.
-// Author: Steffen Urban (urbse@googlemail.com)
 
-#include <pybind11/pybind11.h>
+#ifndef THEIA_MVS_VIEW_SELECTION_MVSNET_H_
+#define THEIA_MVS_VIEW_SELECTION_MVSNET_H_
 
-#include "pytheia/io/io.h"
-#include "pytheia/matching/matching.h"
-#include "pytheia/math/math.h"
-#include "pytheia/mvs/mvs.h"
-#include "pytheia/sfm/sfm.h"
-#include "pytheia/solvers/solvers.h"
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <unordered_map>
 
-namespace pytheia {
+#include "theia/sfm/types.h"
+#include "theia/sfm/reconstruction.h"
 
-PYBIND11_MODULE(pytheia, m) {
-  m.doc() = "Python binding for TheiaSfM";
+namespace theia {
 
-  // register all submodules here
-  io::pytheia_io(m);
-  matching::pytheia_matching(m);
-  math::pytheia_math(m);
-  mvs::pytheia_mvs(m);
-  sfm::pytheia_sfm(m);
-  solvers::pytheia_solvers(m);
-}
+// Selects the views that are most likely to be useful for MVSNet.
+// View selection is performed according to the slection criteria described in
+//      Yao, Yao, et al. "Mvsnet: Depth inference for unstructured multi-view stereo." 
+//      Proceedings of the European conference on computer vision (ECCV). 2018.
+// A score is calculated for each view pair (i, j) based on the covisibilty and angles
+// between observations of scene points
+std::unordered_map<ViewId, std::map<double, ViewId, std::greater<double>>> ViewSelectionMVSNet(
+    const Reconstruction& reconstruction,
+    const int num_neighbors,
+    const double theta0 = 5.0,
+    const double sigma1 = 1.0,
+    const double sigma2 = 10.0);
 
-}  // namespace pytheia
+}  // namespace theia
+
+#endif  // THEIA_MVS_VIEW_SELECTION_MVSNET_H_

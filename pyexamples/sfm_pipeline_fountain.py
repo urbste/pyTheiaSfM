@@ -8,6 +8,8 @@ import numpy as np
 import cv2, os, glob, argparse
 import pytheia as pt
 
+min_num_inlier_matches = 30
+
 # create correspondences of keypoints locations from indexed feature matches
 def correspondence_from_indexed_matches(filtered_matches, pts1, pts2):
     correspondences = []
@@ -70,14 +72,11 @@ def match_image_pair(img_i_data, img_j_data):
         
         return True, twoview_info
 
-min_num_inlier_matches = 30
-
-
 def extract_features(img, featuretype):
     if featuretype == 'akaze':
-        feature = cv2.AKAZE_create()
+        feature = cv2.AKAZE_create(cv2.AKAZE_DESCRIPTOR_KAZE_UPRIGHT, 0, 3, 1e-3)
     elif featuretype == 'sift':
-        feature = cv2.SIFT_create()
+        feature = cv2.SIFT_create(3000)
     
     kpts, desc = feature.detectAndCompute(img, None)
 
@@ -86,9 +85,9 @@ def extract_features(img, featuretype):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for sfm pipeline')
     parser.add_argument('--path_fountain_dataset', type=str, required=True)
-    parser.add_argument('--feature', type=str, default='sift',
+    parser.add_argument('--feature', type=str, default='akaze',
                     help='feature descriptor type: sift or akaze')
-    parser.add_argument('--reconstruction', type=str, default='global',
+    parser.add_argument('--reconstruction', type=str, default='incremental',
                     help='reconstruction type: global, incremental or hybrid')
     parser.add_argument('--img_ext', default='png')
     args = parser.parse_args()
@@ -158,7 +157,7 @@ if __name__ == "__main__":
     options.rotation_filtering_max_difference_degrees = 10.0
     options.bundle_adjustment_robust_loss_width = 3.0
     options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
-    options.subsample_tracks_for_bundle_adjustment = True
+    options.subsample_tracks_for_bundle_adjustment = False
     options.filter_relative_translations_with_1dsfm = True
 
     if reconstructiontype == 'global':

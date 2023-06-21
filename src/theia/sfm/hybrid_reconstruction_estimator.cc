@@ -53,6 +53,8 @@
 #include "theia/sfm/global_pose_estimation/linear_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/robust_rotation_estimator.h"
+#include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
+#include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/rotation_estimator.h"
 #include "theia/sfm/localize_view_to_reconstruction.h"
 #include "theia/sfm/reconstruction.h"
@@ -323,6 +325,25 @@ bool HybridReconstructionEstimator::EstimateCameraOrientations() {
           new RobustRotationEstimator(robust_rotation_estimator_options));
       break;
     }
+    case GlobalRotationEstimatorType::HYBRID: {
+      // Initialize the orientation estimations by walking along the maximum
+      // spanning tree.
+      CHECK(OrientationsFromMaximumSpanningTree(*view_graph_, &orientations_))
+          << "Could not estimate orientations from a spanning tree.";
+      HybridRotationEstimator::HybridRotationEstimatorOptions options;
+      rotation_estimator.reset(
+          new HybridRotationEstimator(options));
+      break;
+    }
+    case GlobalRotationEstimatorType::LAGRANGE_DUAL: {
+      // Initialize the orientation estimations by walking along the maximum
+      // spanning tree.
+      CHECK(OrientationsFromMaximumSpanningTree(*view_graph_, &orientations_))
+          << "Could not estimate orientations from a spanning tree.";
+      rotation_estimator.reset(
+          new LagrangeDualRotationEstimator());
+      break;
+    }
     case GlobalRotationEstimatorType::NONLINEAR: {
       // Initialize the orientation estimations by walking along the maximum
       // spanning tree.
@@ -518,7 +539,7 @@ bool HybridReconstructionEstimator::InitializeCamerasWithKnownOrientation(
 }
 
 bool HybridReconstructionEstimator::ChooseInitialViewPair() {
-  static const int kMinNumInitialTracks = 100;
+  static const int kMinNumInitialTracks = 200;
 
   // Sort the view pairs by the number of geometrically verified matches.
   std::vector<ViewIdPair> candidate_initial_view_pairs;

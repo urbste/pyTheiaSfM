@@ -753,7 +753,9 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::EstimateTwoViewInfoOptions::max_ransac_iterations)
       .def_readwrite("use_mle", &theia::EstimateTwoViewInfoOptions::use_mle)
       .def_readwrite("use_lo", &theia::EstimateTwoViewInfoOptions::use_lo)
-      .def_readwrite("lo_start_iterations", &theia::EstimateTwoViewInfoOptions::lo_start_iterations);
+      .def_readwrite("lo_start_iterations", &theia::EstimateTwoViewInfoOptions::lo_start_iterations)
+      .def_readwrite("min_focal_length", &theia::EstimateTwoViewInfoOptions::min_focal_length)
+      .def_readwrite("max_focal_length", &theia::EstimateTwoViewInfoOptions::max_focal_length);
 
   py::class_<theia::FilterViewPairsFromRelativeTranslationOptions>(
       m, "FilterViewPairsFromRelativeTranslationOptions")
@@ -1451,6 +1453,8 @@ void pytheia_sfm_classes(py::module& m) {
       .value("TANGENTIAL_DISTORTION",
              theia::OptimizeIntrinsicsType::TANGENTIAL_DISTORTION)
       .value("DISTORTION", theia::OptimizeIntrinsicsType::DISTORTION)
+      .value("FOCAL_LENGTH_DISTORTION", theia::OptimizeIntrinsicsType::FOCAL_LENGTH_DISTORTION)
+      .value("FOCAL_LENGTH_RADIAL_DISTORTION", theia::OptimizeIntrinsicsType::FOCAL_LENGTH_RADIAL_DISTORTION)
       .value("ALL", theia::OptimizeIntrinsicsType::ALL)
       .export_values();
 

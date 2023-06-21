@@ -1,6 +1,4 @@
-// Copyright (C) 2015 The Regents of the University of California (Regents).
-// All rights reserved.
-//
+// Copyright (C) 2023 Steffen Urban
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -28,31 +26,21 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//
-// Please contact the author of this library if you have any questions.
-// Author: Steffen Urban (urbse@googlemail.com)
 
-#include <pybind11/pybind11.h>
+#ifndef THEIA_MATCHING_GRAPH_MATCH_H_
+#define THEIA_MATCHING_GRAPH_MATCH_H_
 
-#include "pytheia/io/io.h"
-#include "pytheia/matching/matching.h"
-#include "pytheia/math/math.h"
-#include "pytheia/mvs/mvs.h"
-#include "pytheia/sfm/sfm.h"
-#include "pytheia/solvers/solvers.h"
+#include <vector>
+#include <string>
+#include <Eigen/Core>
 
-namespace pytheia {
+namespace theia {
 
-PYBIND11_MODULE(pytheia, m) {
-  m.doc() = "Python binding for TheiaSfM";
+std::vector<std::pair<std::string, std::string>> GraphMatch(
+  const std::vector<std::string>& image_names,
+  const std::vector<Eigen::VectorXf>& global_descriptors,
+  const int num_nearest_neighbors_for_global_descriptor_matching);
 
-  // register all submodules here
-  io::pytheia_io(m);
-  matching::pytheia_matching(m);
-  math::pytheia_math(m);
-  mvs::pytheia_mvs(m);
-  sfm::pytheia_sfm(m);
-  solvers::pytheia_solvers(m);
-}
+}  // namespace theia
 
-}  // namespace pytheia
+#endif  // THEIA_MATCHING_GRAPH_MATCH_H_

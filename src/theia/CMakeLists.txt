@@ -81,6 +81,7 @@ set(THEIA_SRC
   matching/feature_matcher_utils.cc
   matching/feature_matcher.cc
   matching/fisher_vector_extractor.cc
+  matching/graph_match.cc
   matching/guided_epipolar_matcher.cc
   matching/in_memory_features_and_matches_database.cc
   matching/rocksdb_features_and_matches_database.cc
@@ -98,6 +99,7 @@ set(THEIA_SRC
   math/rbr_sdp_solver.cc
   math/riemannian_staircase.cc
   math/matrix/matrix_square_root.cc
+  mvs/view_selection_mvsnet.cc
   sfm/bundle_adjustment/bundle_adjust_two_views.cc
   sfm/bundle_adjustment/bundle_adjuster.cc
   sfm/bundle_adjustment/bundle_adjustment.cc
