@@ -197,26 +197,26 @@ bool LinearPositionEstimator::EstimatePositions(
   // eigenvector corresponding to the smallest eigenvalue. This can be done
   // efficiently with inverse power iterations.
   VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
-  SparseSymShiftSolveLLT op(constraint_matrix);
-  Spectra::
-      SymEigsShiftSolver<double, Spectra::LARGEST_MAGN, SparseSymShiftSolveLLT>
-          eigs(&op, 1, 6, 0.0);
-  eigs.init();
-  eigs.compute();
+  // SparseSymShiftSolveLLT op(constraint_matrix);
+  // Spectra::
+  //     SymEigsShiftSolver<double, Spectra::LARGEST_MAGN, SparseSymShiftSolveLLT>
+  //         eigs(&op, 1, 6, 0.0);
+  // eigs.init();
+  // eigs.compute();
 
-  // Compute with power iterations.
-  const Eigen::VectorXd solution = eigs.eigenvectors().col(0);
+  // // Compute with power iterations.
+  // const Eigen::VectorXd solution = eigs.eigenvectors().col(0);
 
-  // Add the solutions to the output. Set the position with an index of -1 to
-  // be at the origin.
-  for (const auto& view_index : linear_system_index_) {
-    if (view_index.second < 0) {
-      (*positions)[view_index.first].setZero();
-    } else {
-      (*positions)[view_index.first] =
-          solution.segment<3>(view_index.second * 3);
-    }
-  }
+  // // Add the solutions to the output. Set the position with an index of -1 to
+  // // be at the origin.
+  // for (const auto& view_index : linear_system_index_) {
+  //   if (view_index.second < 0) {
+  //     (*positions)[view_index.first].setZero();
+  //   } else {
+  //     (*positions)[view_index.first] =
+  //         solution.segment<3>(view_index.second * 3);
+  //   }
+  // }
 
   // Flip the sign of the positions if necessary.
   FlipSignOfPositionsIfNecessary(positions);

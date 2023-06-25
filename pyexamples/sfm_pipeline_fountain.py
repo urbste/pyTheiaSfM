@@ -87,7 +87,7 @@ if __name__ == "__main__":
     parser.add_argument('--path_fountain_dataset', type=str, required=True)
     parser.add_argument('--feature', type=str, default='akaze',
                     help='feature descriptor type: sift or akaze')
-    parser.add_argument('--reconstruction', type=str, default='incremental',
+    parser.add_argument('--reconstruction', type=str, default='global',
                     help='reconstruction type: global, incremental or hybrid')
     parser.add_argument('--img_ext', default='png')
     args = parser.parse_args()
@@ -151,7 +151,7 @@ if __name__ == "__main__":
             else:
                 print("No match between image {} and image {}. ".format(img_i_name, img_j_name))
     
-    print('{} edges were added to the view graph.'.format(view_graph.NumEdges))
+    print('{} edges were added to the view graph.'.format(view_graph.NumEdges()))
     track_builder.BuildTracks(recon)
     options = pt.sfm.ReconstructionEstimatorOptions()
     options.num_threads = 7
@@ -162,6 +162,8 @@ if __name__ == "__main__":
     options.filter_relative_translations_with_1dsfm = True
 
     if reconstructiontype == 'global':
+        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LIGT
+        options.global_rotation_estimator_type = pt.sfm.GlobalRotationEstimatorType.HYBRID  
         reconstruction_estimator = pt.sfm.GlobalReconstructionEstimator(options)
     elif reconstructiontype == 'incremental':
         reconstruction_estimator = pt.sfm.IncrementalReconstructionEstimator(options)

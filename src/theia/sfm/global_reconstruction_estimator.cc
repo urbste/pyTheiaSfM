@@ -37,6 +37,7 @@
 #include <Eigen/Core>
 #include <memory>
 #include <sstream>  // NOLINT
+#include <iostream>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/estimate_track.h"

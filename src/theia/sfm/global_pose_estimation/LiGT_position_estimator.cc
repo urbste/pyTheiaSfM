@@ -81,7 +81,7 @@ Eigen::Matrix3d GetRij(const Eigen::Matrix3d& i, const Eigen::Matrix3d& j) {
 double GetThetaSq(const Eigen::Vector3d& feat_i,
                   const Eigen::Vector3d& feat_j,
                   const Eigen::Matrix3d& Rij) {
-  return (GetSkew(feat_j) * Rij * feat_i).squaredNorm();
+  return (GetSkew(feat_j) * Rij * feat_i).norm();
 }
 
 Eigen::Vector3d Get_aij(const Eigen::Matrix3d& Rij,
@@ -251,31 +251,42 @@ bool LiGTPositionEstimator::EstimatePositions(
   // Create the linear system based on triplet constraints.
   Eigen::SparseMatrix<double> constraint_matrix;
   CreateLinearSystem(&constraint_matrix);
-
+  Eigen::MatrixXd constraint_matrix_dense(constraint_matrix);
   // Solve for positions by examining the smallest eigenvalues. Since we have
   // set one position constant at the origin, we only need to solve for the
   // eigenvector corresponding to the smallest eigenvalue. This can be done
   // efficiently with inverse power iterations.
-  VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
-  SparseSymShiftSolveLLT op(constraint_matrix);
-  Spectra::SymEigsShiftSolver<double, Spectra::LARGEST_MAGN,
-                              SparseSymShiftSolveLLT>
-  eigs(&op, 1, 6, 0.0);
-  eigs.init();
-  eigs.compute();
+  // VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
+  // SparseSymShiftSolveLLT op(constraint_matrix);
+  // Spectra::SymEigsShiftSolver<double, Spectra::LARGEST_MAGN,
+  //                             SparseSymShiftSolveLLT>
+  // eigs(&op, 1, 8, 0.0);
+  // eigs.init();
+  // eigs.compute();
 
-  // Compute with power iterations.
-  const Eigen::VectorXd solution = eigs.eigenvectors().col(0);
-  // Add the solutions to the output. Set the position with an index of -1 to
-  // be at the origin.
-  for (const auto &view_index : linear_system_index_) {
-    if (view_index.second < 0) {
-      (*positions)[view_index.first].setZero();
-    } else {
-      (*positions)[view_index.first] =
-          solution.segment<3>(view_index.second * 3);
-    }
-  }
+  Spectra::DenseSymShiftSolve<double> op(constraint_matrix_dense);
+  Spectra::SymEigsShiftSolver<Spectra::DenseSymShiftSolve<double>>
+      eigs(op, 1, 8, 0.0);
+  eigs.init();
+  eigs.compute(Spectra::SortRule::LargestMagn);
+
+  // if (eigs.info() != Spectra::CompInfo::Successful) {
+  //   LOG(ERROR) << "Solve for SVD Failed!";
+  //   return false;
+  // }
+
+  // // Compute with power iterations.
+  // const Eigen::VectorXd solution = eigs.eigenvectors().col(0);
+  // // Add the solutions to the output. Set the position with an index of -1 to
+  // // be at the origin.
+  // for (const auto &view_index : linear_system_index_) {
+  //   if (view_index.second < 0) {
+  //     (*positions)[view_index.first].setZero();
+  //   } else {
+  //     (*positions)[view_index.first] =
+  //         solution.segment<3>(view_index.second * 3);
+  //   }
+  // }
 
   return true;
 }
@@ -421,10 +432,8 @@ void LiGTPositionEstimator::CreateLinearSystem(
     // We construct the constraint matrix A^t * A directly, which is an
     // N - 1 x N - 1 matrix where N is the number of cameras (and 3 entries per
     // camera, corresponding to the camera position entries).
-
     constraint_matrix->resize((num_views - 1) * 3, (num_views - 1) * 3);
-    constraint_matrix->setFromTriplets(triplet_list.begin(),
-    triplet_list.end());
+    constraint_matrix->setFromTriplets(triplet_list.begin(),  triplet_list.end());
 }
 
 void LiGTPositionEstimator::ComputeRotatedRelativeTranslationRotations(

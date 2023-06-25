@@ -1,6 +1,13 @@
 # <a href="https://spectralib.org"><img src="https://spectralib.org/img/logo.png" width="200px" /></a>
 
-[![Build Status](https://travis-ci.org/yixuan/spectra.svg?branch=master)](https://travis-ci.org/yixuan/spectra)
+[![Build Status](https://travis-ci.org/yixuan/spectra.svg?branch=master)](https://travis-ci.org/yixuan/spectra) ![Basic CI](https://github.com/yixuan/spectra/workflows/Basic%20CI/badge.svg) [![codecov](https://codecov.io/gh/yixuan/spectra/branch/master/graph/badge.svg)](https://codecov.io/gh/yixuan/spectra)
+
+> **NOTE**: Spectra 1.0.0 is released, with a lot of
+> API-breaking changes. Please see the [migration guide](MIGRATION.md)
+> for a smooth transition to the new version.
+
+> **NOTE**: If you are interested in the future development of Spectra, please join
+> [this thread](https://github.com/yixuan/spectra/issues/92) to share your comments and suggestions.
 
 [**Spectra**](https://spectralib.org) stands for **Sp**arse **E**igenvalue **C**omputation **T**oolkit
 as a **R**edesigned **A**RPACK. It is a C++ library for large scale eigenvalue
@@ -13,14 +20,15 @@ C++ projects that require calculating eigenvalues of large matrices.
 
 ## Relation to ARPACK
 
-[ARPACK](http://www.caam.rice.edu/software/ARPACK/) is a software written in
+[ARPACK](http://www.caam.rice.edu/software/ARPACK/) is a software package written in
 FORTRAN for solving large scale eigenvalue problems. The development of
-**Spectra** is much inspired by ARPACK, and as the whole name indicates,
-**Spectra** is a redesign of the ARPACK library using C++ language.
+**Spectra** is much inspired by ARPACK, and as the full name indicates,
+**Spectra** is a redesign of the ARPACK library using the C++ language.
 
-In fact, **Spectra** is based on the algorithms described in the
+In fact, **Spectra** is based on the algorithm described in the
 [ARPACK Users' Guide](http://www.caam.rice.edu/software/ARPACK/UG/ug.html),
-but it does not use the ARPACK code, and it is **NOT** a clone of ARPACK for C++.
+the implicitly restarted Arnoldi/Lanczos method. However,
+it does not use the ARPACK code, and it is **NOT** a clone of ARPACK for C++.
 In short, **Spectra** implements the major algorithms in ARPACK,
 but **Spectra** provides a completely different interface, and it does not
 depend on ARPACK.
@@ -28,16 +36,15 @@ depend on ARPACK.
 ## Common Usage
 
 **Spectra** is designed to calculate a specified number (`k`) of eigenvalues
-of a large square matrix (`A`). Usually `k` is much less than the size of matrix
+of a large square matrix (`A`). Usually `k` is much smaller than the size of the matrix
 (`n`), so that only a few eigenvalues and eigenvectors are computed, which
 in general is more efficient than calculating the whole spectral decomposition.
-Users can choose eigenvalue selection rules to pick up the eigenvalues of interest,
-such as the largest `k` eigenvalues, or eigenvalues with largest real parts,
-etc.
+Users can choose eigenvalue selection rules to pick the eigenvalues of interest,
+such as the largest `k` eigenvalues, or eigenvalues with largest real parts, etc.
 
 To use the eigen solvers in this library, the user does not need to directly
 provide the whole matrix, but instead, the algorithm only requires certain operations
-defined on `A`, and in the basic setting, it is simply the matrix-vector
+defined on `A`. In the basic setting, it is simply the matrix-vector
 multiplication. Therefore, if the matrix-vector product `A * x` can be computed
 efficiently, which is the case when `A` is sparse, **Spectra**
 will be very powerful for large scale eigenvalue problems.
@@ -60,6 +67,7 @@ of this object can then be called to conduct the computation and retrieve the
 eigenvalues and/or eigenvectors.
 
 Below is a list of the available eigen solvers in **Spectra**:
+
 - [SymEigsSolver](https://spectralib.org/doc/classSpectra_1_1SymEigsSolver.html):
 For real symmetric matrices
 - [GenEigsSolver](https://spectralib.org/doc/classSpectra_1_1GenEigsSolver.html):
@@ -69,11 +77,15 @@ For real symmetric matrices using the shift-and-invert mode
 - [GenEigsRealShiftSolver](https://spectralib.org/doc/classSpectra_1_1GenEigsRealShiftSolver.html):
 For general real matrices using the shift-and-invert mode,
 with a real-valued shift
-- [GenEigsComplexShiftSolver](https://spectralib.org/doc/classSpectra_1_1GenEigsRealShiftSolver.html):
+- [GenEigsComplexShiftSolver](https://spectralib.org/doc/classSpectra_1_1GenEigsComplexShiftSolver.html):
 For general real matrices using the shift-and-invert mode,
 with a complex-valued shift
 - [SymGEigsSolver](https://spectralib.org/doc/classSpectra_1_1SymGEigsSolver.html):
-For generalized eigen solver for real symmetric matrices
+For generalized eigen solver with real symmetric matrices
+- [SymGEigsShiftSolver](https://spectralib.org/doc/classSpectra_1_1SymGEigsShiftSolver.html):
+For generalized eigen solver with real symmetric matrices, using the shift-and-invert mode
+- [DavidsonSymEigsSolver](https://spectralib.org/doc/classSpectra_1_1DavidsonSymEigsSolver.html):
+Jacobi-Davidson eigen solver for real symmetric matrices, with the DPR correction method
 
 ## Examples
 
@@ -82,7 +94,8 @@ matrices.
 
 ```cpp
 #include <Eigen/Core>
-#include <SymEigsSolver.h>  // Also includes <MatOp/DenseSymMatProd.h>
+#include <Spectra/SymEigsSolver.h>
+// <Spectra/MatOp/DenseSymMatProd.h> is implicitly included
 #include <iostream>
 
 using namespace Spectra;
@@ -93,19 +106,19 @@ int main()
     Eigen::MatrixXd A = Eigen::MatrixXd::Random(10, 10);
     Eigen::MatrixXd M = A + A.transpose();
 
-    // Construct matrix operation object using the wrapper class DenseGenMatProd
+    // Construct matrix operation object using the wrapper class DenseSymMatProd
     DenseSymMatProd<double> op(M);
 
     // Construct eigen solver object, requesting the largest three eigenvalues
-    SymEigsSolver< double, LARGEST_ALGE, DenseSymMatProd<double> > eigs(&op, 3, 6);
+    SymEigsSolver<DenseSymMatProd<double>> eigs(op, 3, 6);
 
     // Initialize and compute
     eigs.init();
-    int nconv = eigs.compute();
+    int nconv = eigs.compute(SortRule::LargestAlge);
 
     // Retrieve results
     Eigen::VectorXd evalues;
-    if(eigs.info() == SUCCESSFUL)
+    if(eigs.info() == CompInfo::Successful)
         evalues = eigs.eigenvalues();
 
     std::cout << "Eigenvalues found:\n" << evalues << std::endl;
@@ -114,13 +127,14 @@ int main()
 }
 ```
 
-Sparse matrix is supported via the `SparseGenMatProd` class.
+Sparse matrix is supported via classes such as `SparseGenMatProd`
+and `SparseSymMatProd`.
 
 ```cpp
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
-#include <GenEigsSolver.h>
-#include <MatOp/SparseGenMatProd.h>
+#include <Spectra/GenEigsSolver.h>
+#include <Spectra/MatOp/SparseGenMatProd.h>
 #include <iostream>
 
 using namespace Spectra;
@@ -145,15 +159,15 @@ int main()
     SparseGenMatProd<double> op(M);
 
     // Construct eigen solver object, requesting the largest three eigenvalues
-    GenEigsSolver< double, LARGEST_MAGN, SparseGenMatProd<double> > eigs(&op, 3, 6);
+    GenEigsSolver<SparseGenMatProd<double>> eigs(op, 3, 6);
 
     // Initialize and compute
     eigs.init();
-    int nconv = eigs.compute();
+    int nconv = eigs.compute(SortRule::LargestMagn);
 
     // Retrieve results
     Eigen::VectorXcd evalues;
-    if(eigs.info() == SUCCESSFUL)
+    if(eigs.info() == CompInfo::Successful)
         evalues = eigs.eigenvalues();
 
     std::cout << "Eigenvalues found:\n" << evalues << std::endl;
@@ -166,7 +180,7 @@ And here is an example for user-supplied matrix operation class.
 
 ```cpp
 #include <Eigen/Core>
-#include <SymEigsSolver.h>
+#include <Spectra/SymEigsSolver.h>
 #include <iostream>
 
 using namespace Spectra;
@@ -175,10 +189,11 @@ using namespace Spectra;
 class MyDiagonalTen
 {
 public:
-    int rows() { return 10; }
-    int cols() { return 10; }
+    using Scalar = double;  // A typedef named "Scalar" is required
+    int rows() const { return 10; }
+    int cols() const { return 10; }
     // y_out = M * x_in
-    void perform_op(double *x_in, double *y_out)
+    void perform_op(const double *x_in, double *y_out) const
     {
         for(int i = 0; i < rows(); i++)
         {
@@ -190,10 +205,10 @@ public:
 int main()
 {
     MyDiagonalTen op;
-    SymEigsSolver<double, LARGEST_ALGE, MyDiagonalTen> eigs(&op, 3, 6);
+    SymEigsSolver<MyDiagonalTen> eigs(op, 3, 6);
     eigs.init();
-    eigs.compute();
-    if(eigs.info() == SUCCESSFUL)
+    eigs.compute(SortRule::LargestAlge);
+    if(eigs.info() == CompInfo::Successful)
     {
         Eigen::VectorXd evalues = eigs.eigenvalues();
         std::cout << "Eigenvalues found:\n" << evalues << std::endl;
@@ -205,7 +220,7 @@ int main()
 
 ## Shift-and-invert Mode
 
-When we want to find eigenvalues that are closest to a number `σ`,
+When it is needed to find eigenvalues that are closest to a number `σ`,
 for example to find the smallest eigenvalues of a positive definite matrix
 (in which case `σ = 0`), it is advised to use the shift-and-invert mode
 of eigen solvers.
@@ -224,6 +239,18 @@ of **Spectra** generated by [Doxygen](http://www.doxygen.org/),
 including all the background knowledge, example code and class APIs.
 
 More information can be found in the project page [https://spectralib.org](https://spectralib.org).
+
+## Installation
+
+An optional CMake installation is supported, if you have CMake with at least v3.10 installed. You can install the headers using the following commands:
+
+```bash
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX='intended installation directory' -DCMAKE_PREFIX_PATH='path where the installation of Eigen3 can be found' -DBUILD_TESTS=TRUE
+make all && make tests && make install
+```
+
+By installing **Spectra** in this way, you also create a CMake target `Spectra::Spectra` that can be used in subsequent build procedures for other programs.
 
 ## License
 
