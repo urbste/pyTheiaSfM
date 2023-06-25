@@ -111,4 +111,24 @@ bool CopyFile(const std::string& filepath_to_copy_from,
   return stlplus::file_copy(filepath_to_copy_from, filepath_to_copy_to);
 }
 
+std::string JoinPath(const std::string& path1, 
+  const std::string& path2)
+{
+
+    char sep = '/';
+    std::string tmp = path1;
+
+#ifdef _WIN32
+    sep = '\\';
+#endif
+
+    // Add separator if it is not included in the first path:
+    if (path1[path1.length() - 1] != sep) {
+        tmp += sep;
+        return tmp + path2;
+    } else {
+        return path1 + path2;
+    }
+}
+
 }  // namespace theia

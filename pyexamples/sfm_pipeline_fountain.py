@@ -122,12 +122,13 @@ if __name__ == "__main__":
     # add views and extract feature
     img_data = {}
     for idx, image_name in enumerate(image_names):
-        vid = recon.AddView(image_name, 0, idx)
+        img_name_ext = image_name+"."+args.img_ext
+        vid = recon.AddView(img_name_ext, 0, idx)
         v = recon.MutableView(vid)
         v.SetCameraIntrinsicsPrior(prior)
-        image = cv2.imread(os.path.join(img_path,image_name+"."+args.img_ext))
+        image = cv2.imread(os.path.join(img_path,img_name_ext))
         kpts, desc = extract_features(image, featuretype)
-        img_data[image_name] = {"view_id": vid, "kpts": kpts, "desc": desc}
+        img_data[img_name_ext] = {"view_id": vid, "kpts": kpts, "desc": desc}
     
     # make sure the intrinsics are all initialized fromt he priors
     pt.sfm.SetCameraIntrinsicsFromPriors(recon) 

@@ -1,11 +1,11 @@
 ## Basic programs
 
-add_executable(test_inv_track_ba test_inv_track_ba.cc)
-target_link_libraries(test_inv_track_ba ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+# add_executable(test_inv_track_ba test_inv_track_ba.cc)
+# target_link_libraries(test_inv_track_ba ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 
-add_executable(test_align_recon test_align_recon.cc)
-target_link_libraries(test_align_recon ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+# add_executable(test_align_recon test_align_recon.cc)
+# target_link_libraries(test_align_recon ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 
 
@@ -16,11 +16,11 @@ target_link_libraries(test_align_recon ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES}
 #target_link_libraries(compute_two_view_geometry ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ## Tools for building SfM models
-add_executable(build_reconstruction build_reconstruction.cc)
-target_link_libraries(build_reconstruction ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+# add_executable(build_reconstruction build_reconstruction.cc)
+# target_link_libraries(build_reconstruction ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(build_1dsfm_reconstruction build_1dsfm_reconstruction.cc)
-target_link_libraries(build_1dsfm_reconstruction ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+# add_executable(build_1dsfm_reconstruction build_1dsfm_reconstruction.cc)
+# target_link_libraries(build_1dsfm_reconstruction ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 #add_executable(calibrate_camera_intrinsics calibrate_camera_intrinsics.cc)
 #target_link_libraries(calibrate_camera_intrinsics ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
@@ -64,8 +64,8 @@ target_link_libraries(build_1dsfm_reconstruction ${CMAKE_PROJECT_NAME} ${GFLAGS_
 #add_executable(colorize_reconstruction colorize_reconstruction.cc)
 #target_link_libraries(colorize_reconstruction ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(compare_reconstructions compare_reconstructions.cc)
-target_link_libraries(compare_reconstructions ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+# add_executable(compare_reconstructions compare_reconstructions.cc)
+# target_link_libraries(compare_reconstructions ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 #add_executable(compute_matching_relative_pose_errors compute_matching_relative_pose_errors.cc)
 #target_link_libraries(compute_matching_relative_pose_errors ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
@@ -73,8 +73,8 @@ target_link_libraries(compare_reconstructions ${CMAKE_PROJECT_NAME} ${GFLAGS_LIB
 #add_executable(evaluate_relative_translation_optimization evaluate_relative_translation_optimization.cc)
 #target_link_libraries(evaluate_relative_translation_optimization ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(verify_1dsfm_input verify_1dsfm_input.cc)
-target_link_libraries(verify_1dsfm_input ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+# add_executable(verify_1dsfm_input verify_1dsfm_input.cc)
+# target_link_libraries(verify_1dsfm_input ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ## File conversions and exporters.
 #add_executable(convert_sift_key_file convert_sift_key_file.cc)

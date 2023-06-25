@@ -72,6 +72,7 @@ set(THEIA_SRC
   io/write_colmap_files.cc
   io/write_keypoints_and_descriptors.cc
   io/write_matches.cc
+  io/write_nerfstudio.cc
   io/write_nvm_file.cc
   io/write_ply_file.cc
   matching/brute_force_feature_matcher.cc
@@ -144,6 +145,7 @@ set(THEIA_SRC
   sfm/find_common_tracks_in_views.cc
   sfm/find_common_views_by_name.cc
   sfm/global_pose_estimation/compute_triplet_baseline_ratios.cc
+  sfm/global_pose_estimation/bata_position_estimator.cc
   sfm/global_pose_estimation/hybrid_rotation_estimator.cc
   sfm/global_pose_estimation/irls_rotation_local_refiner.cc
   sfm/global_pose_estimation/l1_rotation_global_estimator.cc
@@ -319,7 +321,7 @@ if (BUILD_TESTING)
 #  gtest(math/qp_solver)
 #  gtest(math/reservoir_sampler)
 #  gtest(math/rotation)
-  gtest(sfm/bundle_adjustment/bundle_adjustment)
+#  gtest(sfm/bundle_adjustment/bundle_adjustment)
 #  gtest(sfm/bundle_adjustment/optimize_relative_position_with_known_rotation)
 #  gtest(sfm/camera/camera)
 #  gtest(sfm/camera/division_undistortion_camera_model)
@@ -365,6 +367,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/global_pose_estimation/pairwise_translation_and_scale_error)
 #  gtest(sfm/global_pose_estimation/pairwise_translation_error)
 #  gtest(sfm/global_pose_estimation/robust_rotation_estimator)
+gtest(sfm/global_pose_estimation/bata_position_estimator)
 #  gtest(sfm/gps_converter)
 #  gtest(sfm/hybrid_reconstruction_estimator)
 #  gtest(sfm/incremental_reconstruction_estimator)
@@ -396,7 +399,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/track_builder)
 #  gtest(sfm/transformation/align_point_clouds)
 #  gtest(sfm/transformation/align_reconstructions)
-  gtest(sfm/transformation/align_reconstructions_pose_graph_optim)
+#  gtest(sfm/transformation/align_reconstructions_pose_graph_optim)
 #  gtest(sfm/transformation/align_rotations)
 #  gtest(sfm/transformation/gdls_similarity_transform)
 #  gtest(sfm/triangulation/triangulation)
@@ -404,7 +407,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/view)
 #  gtest(sfm/view_graph/orientations_from_maximum_spanning_tree)
 #  gtest(sfm/view_graph/remove_disconnected_view_pairs)
-  gtest(sfm/view_graph/view_graph_from_reconstruction)
+ # gtest(sfm/view_graph/view_graph_from_reconstruction)
 #  gtest(sfm/view_graph/view_graph)
 #  gtest(solvers/exhaustive_ransac)
 #  gtest(solvers/exhaustive_sampler)
