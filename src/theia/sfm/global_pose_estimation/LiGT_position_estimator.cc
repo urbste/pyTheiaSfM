@@ -1,4 +1,5 @@
-// Copyright (C) 2015 The Regents of the University of California (Regents).
+
+// Copyright (C) 2023 Steffen Urban
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -28,9 +29,6 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//
-// Please contact the author of this library if you have any questions.
-// Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 // Author: Steffen Urban (steffen.urban@googlemail.com), March 2021
 
@@ -50,6 +48,7 @@
 #include <vector>
 
 #include "spectra/include/SymEigsShiftSolver.h"
+#include "spectra/include/MatOp/SparseSymShiftSolve.h"
 
 #include "theia/math/graph/triplet_extractor.h"
 #include "theia/math/matrix/spectra_linear_operator.h"
@@ -81,7 +80,7 @@ Eigen::Matrix3d GetRij(const Eigen::Matrix3d& i, const Eigen::Matrix3d& j) {
 double GetThetaSq(const Eigen::Vector3d& feat_i,
                   const Eigen::Vector3d& feat_j,
                   const Eigen::Matrix3d& Rij) {
-  return (GetSkew(feat_j) * Rij * feat_i).norm();
+  return (GetSkew(feat_j) * Rij * feat_i).squaredNorm();
 }
 
 Eigen::Vector3d Get_aij(const Eigen::Matrix3d& Rij,
@@ -227,66 +226,37 @@ bool LiGTPositionEstimator::EstimatePositions(
   VLOG(2) << "Extracting triplets from tracks and calculating BCDs for tracks.";
   FindTripletsForTracks();
 
-//  VLOG(2) << "Calculating BCD for tracks.";
-//  for (const auto& t : triplets_for_tracks_) {
-//    auto t_id = t.first;
-//    auto view_ids = t.second;
-//    for (const auto& vids : view_ids) {
-//      const auto view1 = reconstruction_.View(std::get<0>(vids));
-//      const auto view2 = reconstruction_.View(std::get<1>(vids));
-//      const auto view3 = reconstruction_.View(std::get<2>(vids));
-//      std::tuple<Matrix3d, Matrix3d, Matrix3d> BCD;
-//      CalculateBCDForTrack(view1, view2, view3, t_id, BCD);
-
-////      Eigen::Vector3d shouldnull = std::get<1>(BCD)*view1->Camera().GetPosition() +
-////              std::get<0>(BCD)*view2->Camera().GetPosition() +
-////              std::get<2>(BCD)*view3->Camera().GetPosition();
-////      std::cout<<"shouldnull: "<<shouldnull<<"\n";
-
-//      BCDs_[t_id].push_back(BCD);
-//    }
-//  }
-
   VLOG(2) << "Building the constraint matrix...";
   // Create the linear system based on triplet constraints.
   Eigen::SparseMatrix<double> constraint_matrix;
   CreateLinearSystem(&constraint_matrix);
-  Eigen::MatrixXd constraint_matrix_dense(constraint_matrix);
+
   // Solve for positions by examining the smallest eigenvalues. Since we have
   // set one position constant at the origin, we only need to solve for the
   // eigenvector corresponding to the smallest eigenvalue. This can be done
   // efficiently with inverse power iterations.
-  // VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
-  // SparseSymShiftSolveLLT op(constraint_matrix);
-  // Spectra::SymEigsShiftSolver<double, Spectra::LARGEST_MAGN,
-  //                             SparseSymShiftSolveLLT>
-  // eigs(&op, 1, 8, 0.0);
-  // eigs.init();
-  // eigs.compute();
+  VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
 
-  Spectra::DenseSymShiftSolve<double> op(constraint_matrix_dense);
-  Spectra::SymEigsShiftSolver<Spectra::DenseSymShiftSolve<double>>
-      eigs(op, 1, 8, 0.0);
+  std::shared_ptr<SparseCholeskyLLt> linear_solver =
+      std::make_shared<SparseCholeskyLLt>();
+  SparseSymShiftSolveLLT<double> op(linear_solver, constraint_matrix);
+  Spectra::SymEigsShiftSolver<SparseSymShiftSolveLLT<double>>
+  eigs(op, 1, 6, 0.0);
   eigs.init();
-  eigs.compute(Spectra::SortRule::LargestMagn);
+  eigs.compute(Spectra::SortRule::LargestMagn, 1000, 1e-8);
 
-  // if (eigs.info() != Spectra::CompInfo::Successful) {
-  //   LOG(ERROR) << "Solve for SVD Failed!";
-  //   return false;
-  // }
-
-  // // Compute with power iterations.
-  // const Eigen::VectorXd solution = eigs.eigenvectors().col(0);
-  // // Add the solutions to the output. Set the position with an index of -1 to
-  // // be at the origin.
-  // for (const auto &view_index : linear_system_index_) {
-  //   if (view_index.second < 0) {
-  //     (*positions)[view_index.first].setZero();
-  //   } else {
-  //     (*positions)[view_index.first] =
-  //         solution.segment<3>(view_index.second * 3);
-  //   }
-  // }
+  // Compute with power iterations.
+  const Eigen::VectorXd solution = eigs.eigenvectors().col(0);
+  // Add the solutions to the output. Set the position with an index of -1 to
+  // be at the origin.
+  for (const auto &view_index : linear_system_index_) {
+    if (view_index.second < 0) {
+      (*positions)[view_index.first].setZero();
+    } else {
+      (*positions)[view_index.first] =
+          solution.segment<3>(view_index.second * 3);
+    }
+  }
 
   return true;
 }
@@ -328,7 +298,6 @@ void LiGTPositionEstimator::FindTripletsForTracks() {
   uint32_t total_nr_triplets = 0;
   for (size_t t = 0; t < track_ids.size(); ++t) {
     auto t_id = track_ids[t];
-    //std::cout<<"searching triplet for "<<t_id<<"\n";
 
     auto view_ids_for_track = reconstruction_.Track(t_id)->ViewIds();
     //std::cout<<"view_ids_for_track size: "<<view_ids_for_track.size()<<"\n";
@@ -344,7 +313,6 @@ void LiGTPositionEstimator::FindTripletsForTracks() {
       if (cur_id == base_views.first || cur_id == base_views.second) {
           continue;
       }
-      //std::cout<<"Track: "<<t_id<<" triplet: (base l, central, base r) ("<<base_views.first<<", "<<cur_id<<", "<<base_views.second<<")\n";
 
       ViewIdTriplet triplet = std::make_tuple(base_views.first, cur_id, base_views.second);
       AddTripletConstraint(triplet);
@@ -354,11 +322,6 @@ void LiGTPositionEstimator::FindTripletsForTracks() {
       const auto view3 = reconstruction_.View(base_views.second);
       std::tuple<Matrix3d, Matrix3d, Matrix3d> BCD;
       CalculateBCDForTrack(view1, view2, view3, t_id, BCD);
-
-//      Eigen::Vector3d shouldbezero = std::get<1>(BCD)*view1->Camera().GetPosition() +
-//              std::get<0>(BCD)*view2->Camera().GetPosition() +
-//              std::get<2>(BCD)*view3->Camera().GetPosition();
-//      std::cout<<"shouldbezero: "<<shouldbezero<<"\n";
 
       triplets_for_tracks_[t_id].push_back(triplet);
       BCDs_[t_id].push_back(BCD);
@@ -432,8 +395,10 @@ void LiGTPositionEstimator::CreateLinearSystem(
     // We construct the constraint matrix A^t * A directly, which is an
     // N - 1 x N - 1 matrix where N is the number of cameras (and 3 entries per
     // camera, corresponding to the camera position entries).
+
     constraint_matrix->resize((num_views - 1) * 3, (num_views - 1) * 3);
-    constraint_matrix->setFromTriplets(triplet_list.begin(),  triplet_list.end());
+    constraint_matrix->setFromTriplets(triplet_list.begin(),
+    triplet_list.end());
 }
 
 void LiGTPositionEstimator::ComputeRotatedRelativeTranslationRotations(

@@ -116,9 +116,9 @@ class RiemannianStaircase : public SDPSolver{
  public:
   RiemannianStaircase(const size_t n, const size_t block_dim);
   RiemannianStaircase(const size_t n, const size_t block_dim,
-                      const solver::SDPSolverOptions& options);
+                      const math::SDPSolverOptions& options);
 
-  void Solve(solver::Summary& summary) override;
+  void Solve(math::Summary& summary) override;
 
   Eigen::MatrixXd GetSolution() const override;
 

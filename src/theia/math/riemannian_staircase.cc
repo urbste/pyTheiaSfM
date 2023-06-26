@@ -43,18 +43,18 @@ namespace theia {
 namespace math {
 
 RiemannianStaircase::RiemannianStaircase(const size_t n, const size_t block_dim)
-  : RiemannianStaircase(n, block_dim, solver::SDPSolverOptions()) {}
+  : RiemannianStaircase(n, block_dim, math::SDPSolverOptions()) {}
 
 RiemannianStaircase::RiemannianStaircase(
     const size_t n, const size_t block_dim,
-    const solver::SDPSolverOptions& options)
+    const math::SDPSolverOptions& options)
   : SDPSolver(n, block_dim, options),
     n_(n),
     dim_(block_dim),
     sdp_options_(options),
     sdp_solver_(new RankRestrictedSDPSolver(n, block_dim, options)) {}
 
-void RiemannianStaircase::Solve(solver::Summary& summary) {
+void RiemannianStaircase::Solve(math::Summary& summary) {
   const RiemannianStaircaseOptions& riemannian_options =
       sdp_options_.riemannian_staircase_options;
   for (size_t i = riemannian_options.min_rank; i <= riemannian_options.max_rank; ++i) {
@@ -306,7 +306,7 @@ void RiemannianStaircase::RoundSolution() {
 #pragma omp parallel for num_threads(sdp_options_.num_threads)
   for (size_t i = 0; i < n_; ++i) {
     R_.block(0, i * dim_, dim_, dim_) =
-        geometry::ProjectToSOd(R_.block(0, i * dim_, dim_, dim_));
+        ProjectToSOd(R_.block(0, i * dim_, dim_, dim_));
   }
 }
 

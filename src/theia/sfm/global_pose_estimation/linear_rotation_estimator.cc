@@ -168,35 +168,37 @@ bool LinearRotationEstimator::EstimateRotations(
 
   // Compute the 3 eigenvectors corresponding to the smallest eigenvalues. These
   // orthogonal vectors will contain the solution rotation matrices.
-  // SparseSymShiftSolveLLT op(constraint_matrix);
-  // Spectra::
-  //     SymEigsShiftSolver<double, Spectra::LARGEST_MAGN, SparseSymShiftSolveLLT>
-  //         eigs(&op, 3, 6, 0.0);
-  // eigs.init();
-  // eigs.compute();
+  std::shared_ptr<SparseCholeskyLLt> linear_solver =
+      std::make_shared<SparseCholeskyLLt>();
+  SparseSymShiftSolveLLT<double> op(linear_solver, constraint_matrix);
+  Spectra::
+      SymEigsShiftSolver<SparseSymShiftSolveLLT<double>>
+          eigs(op, 3, 6, 0.0);
+  eigs.init();
+  eigs.compute(Spectra::SortRule::LargestMagn, 1000, 1e-4);
 
-  // // The solution appears in the first three eigenvectors.
-  // const Eigen::MatrixXd solution =
-  //     eigs.eigenvectors().leftCols<kNumRotationMatrixDimensions>();
+  // The solution appears in the first three eigenvectors.
+  const Eigen::MatrixXd solution =
+      eigs.eigenvectors().leftCols<kNumRotationMatrixDimensions>();
 
-  // // Project all solutions into a valid SO3 rotation space. The linear system
-  // // above makes no constraint on the space of the solutions, so the final
-  // // solutions are not guaranteed to be valid rotations (e.g., det(R) may not be
-  // // +1).
-  // global_orientations->reserve(view_id_map_.size());
-  // for (const auto& view_id_map : view_id_map_) {
-  //   const Matrix3d non_so3_rotation =
-  //       solution
-  //           .block<kNumRotationMatrixDimensions, kNumRotationMatrixDimensions>(
-  //               kNumRotationMatrixDimensions * view_id_map.second, 0);
-  //   const Matrix3d rotation = ProjectToRotationMatrix(non_so3_rotation);
+  // Project all solutions into a valid SO3 rotation space. The linear system
+  // above makes no constraint on the space of the solutions, so the final
+  // solutions are not guaranteed to be valid rotations (e.g., det(R) may not be
+  // +1).
+  global_orientations->reserve(view_id_map_.size());
+  for (const auto& view_id_map : view_id_map_) {
+    const Matrix3d non_so3_rotation =
+        solution
+            .block<kNumRotationMatrixDimensions, kNumRotationMatrixDimensions>(
+                kNumRotationMatrixDimensions * view_id_map.second, 0);
+    const Matrix3d rotation = ProjectToRotationMatrix(non_so3_rotation);
 
-  //   // Convert to angle axis.
-  //   Eigen::Vector3d rotation_aa;
-  //   ceres::RotationMatrixToAngleAxis(
-  //       ceres::ColumnMajorAdapter3x3(rotation.data()), rotation_aa.data());
-  //   global_orientations->emplace(view_id_map.first, rotation_aa);
-  // }
+    // Convert to angle axis.
+    Eigen::Vector3d rotation_aa;
+    ceres::RotationMatrixToAngleAxis(
+        ceres::ColumnMajorAdapter3x3(rotation.data()), rotation_aa.data());
+    global_orientations->emplace(view_id_map.first, rotation_aa);
+  }
 
   return true;
 }

@@ -162,7 +162,7 @@ if __name__ == "__main__":
     options.filter_relative_translations_with_1dsfm = True
 
     if reconstructiontype == 'global':
-        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LIGT
+        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LEAST_UNSQUARED_DEVIATION
         options.global_rotation_estimator_type = pt.sfm.GlobalRotationEstimatorType.HYBRID  
         reconstruction_estimator = pt.sfm.GlobalReconstructionEstimator(options)
     elif reconstructiontype == 'incremental':

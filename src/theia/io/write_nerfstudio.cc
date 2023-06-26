@@ -78,9 +78,6 @@ bool WriteNerfStudio(const std::string& path_to_images,
 	// // define the document as an object rather than an array
 	// document.SetObject();
 
-  Eigen::Matrix4d cv_to_ogl = Eigen::Matrix4d::Identity();
-  cv_to_ogl(1,1) = -1.;
-  cv_to_ogl(2,2) = -1.;
   
   rapidjson::Value frames_array(rapidjson::kObjectType);
   
@@ -109,26 +106,37 @@ bool WriteNerfStudio(const std::string& path_to_images,
       writer.String(img_path.c_str());
 
       rapidjson::Value file_path;
-  
-      //object.AddMember("file_path", file_path, allocator);
-
-      //rapidjson::Value object(rapidjson::kObjectType);
-
       // name should be filename, e.g. image001.png
+
+      // https://github.com/nerfstudio-project/nerfstudio/blob/6486c00d4d717ee437198d08930a86f5cced5359/nerfstudio/process_data/colmap_utils.py#L422
+      // w2c = np.concatenate([rotation, translation], 1)
+      // w2c = np.concatenate([w2c, np.array([[0, 0, 0, 1]])], 0)
+      // c2w = np.linalg.inv(w2c)
+      // # Convert from COLMAP's camera coordinate system (OpenCV) to ours (OpenGL)
+      // c2w[0:3, 1:3] *= -1
+      // c2w = c2w[np.array([1, 0, 2, 3]), :]
+      // c2w[2, :] *= -1
       const auto cam = view->Camera();
-      Eigen::Matrix4d T_c_w = Eigen::Matrix4d::Identity();
-      T_c_w.block<3,3>(0,0) = cam.GetOrientationAsRotationMatrix();;
-      T_c_w.block<3,1>(0,3) = -T_c_w.block<3,3>(0,0) * view->Camera().GetPosition();
-      const Eigen::Matrix4d T = T_c_w * cv_to_ogl;
-      
+      Eigen::Matrix4d c2w = Eigen::Matrix4d::Identity();
+      c2w.block<3,3>(0,0) = cam.GetOrientationAsRotationMatrix().transpose();
+      c2w.block<3,1>(0,3) = view->Camera().GetPosition();
+      c2w.block<3,2>(0,1) *= -1;
+
+      Eigen::Matrix4d to_nerfstudio = Eigen::Matrix4d::Identity();
+      to_nerfstudio.block<1,4>(0,0) = c2w.row(1);
+      to_nerfstudio.block<1,4>(1,0) = c2w.row(0);
+      to_nerfstudio.block<1,4>(2,0) = c2w.row(2);
+      to_nerfstudio.block<1,4>(3,0) = c2w.row(3);
+      to_nerfstudio.block<1,4>(2,0) *= -1;
+
+
       writer.Key("transform_matrix");
       writer.StartArray();
       // create transform matrix
-      //rapidjson::Value T_json(rapidjson::kArrayType);
       for (int r = 0; r < 4; ++r) {
         writer.StartArray();
         for (int i = 0; i < 4; ++i) {
-          writer.Double(T(r,i));
+          writer.Double(to_nerfstudio(r,i));
         }
         writer.EndArray();
       }
