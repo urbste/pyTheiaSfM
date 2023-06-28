@@ -162,8 +162,8 @@ LinearPositionEstimator::LinearPositionEstimator(
 
 bool LinearPositionEstimator::EstimatePositions(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-    const std::unordered_map<ViewId, Vector3d>& orientations,
-    std::unordered_map<ViewId, Vector3d>* positions) {
+    const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
+    std::unordered_map<ViewId, Eigen::Vector3d>* positions) {
   CHECK_NOTNULL(positions)->clear();
   view_pairs_ = &view_pairs;
   orientations_ = &orientations;
