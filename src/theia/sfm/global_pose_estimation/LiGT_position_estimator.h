@@ -81,11 +81,11 @@ class LiGTPositionEstimator : public PositionEstimator {
   LiGTPositionEstimator(const Options& options,
                         const Reconstruction& reconstruction);
 
-  // Estimate the positions given view pairs and global orientation estimates.
+  // Estimate the positions
   bool EstimatePositions(
-      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation,
-      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
+    std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
   // python
   std::unordered_map<ViewId, Eigen::Vector3d> EstimatePositionsWrapper(
@@ -93,18 +93,8 @@ class LiGTPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
 
  private:
-  // Store the triplet.
-  void AddTripletConstraint(const ViewIdTriplet& view_triplet);
-
   // Sets up the linear system with the constraints that each triplet adds.
-  void CreateLinearSystem(Eigen::SparseMatrix<double>* constraint_matrix);
-
-  //void CreateLinearSystem(Eigen::MatrixXd& constraint_matrix);
-  void AddTripletConstraintToSparseMatrix(const ViewId view_id1,
-      const ViewId view_id2,
-      const ViewId view_id3,
-      const std::tuple<Matrix3d, Matrix3d, Matrix3d> &BCD,
-      std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries);
+  Eigen::MatrixXd CreateLinearSystem(Eigen::MatrixXd* A_lr);
 
   void CalculateBCDForTrack(
       const theia::ViewId view1_id,
@@ -113,39 +103,15 @@ class LiGTPositionEstimator : public PositionEstimator {
       const TrackId& track_id,
       std::tuple<Eigen::Matrix3d, Eigen::Matrix3d, Eigen::Matrix3d>& BCD);
 
-  void FindTripletsForTracks();
-
-  // A helper method to compute the relative rotations between translation
-  // directions.
-  void ComputeRotatedRelativeTranslationRotations(const ViewId view_id0,
-                                                  const ViewId view_id1,
-                                                  const ViewId view_id2,
-                                                  Eigen::Matrix3d* r012,
-                                                  Eigen::Matrix3d* r201,
-                                                  Eigen::Matrix3d* r120);
-  // Positions are estimated from an eigenvector that is unit-norm with an
-  // ambiguous sign. To ensure that the sign of the camera positions is correct,
-  // we measure the relative translations from estimated camera positions and
-  // compare that to the relative positions. If the sign is incorrect, we flip
-  // the sign of all camera positions.
-  void FlipSignOfPositionsIfNecessary(
-      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
-
   const Options options_;
   const theia::Reconstruction& reconstruction_;
   const std::unordered_map<ViewIdPair, TwoViewInfo>* view_pairs_;
   const std::unordered_map<ViewId, Eigen::Vector3d>* orientations_;
 
-  // save a view triplet for each track, eq. 29
-  std::unordered_map<TrackId, std::vector<ViewIdTriplet>> triplets_for_tracks_;
-  std::unordered_map<TrackId,
-                     std::vector<std::tuple<Matrix3d, Matrix3d, Matrix3d>>> BCDs_;
-
   // We keep one of the positions as constant to remove the ambiguity of the
   // origin of the linear system.
-  static const int kConstantPositionIndex = -1;
+  static const int kConstantPositionIndex = -3;
 
-  std::unordered_map<ViewId, int> num_triplets_for_view_;
   std::unordered_map<ViewId, int> linear_system_index_;
 
   DISALLOW_COPY_AND_ASSIGN(LiGTPositionEstimator);
