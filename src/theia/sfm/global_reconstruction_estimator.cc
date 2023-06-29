@@ -226,6 +226,10 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
   SetReconstructionFromEstimatedPoses(
       orientations_, positions_, reconstruction_);
 
+  // write reconstruction
+    WritePlyFile("test.ply", *reconstruction_, Eigen::Vector3i(255,0,0), 0);
+  
+
   // Always triangulate once, then retriangulate and remove outliers depending
   // on the reconstruciton estimator options.
   for (int i = 0; i < options_.num_retriangulation_iterations + 1; i++) {

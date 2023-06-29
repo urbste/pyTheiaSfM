@@ -107,9 +107,9 @@ class LiGTPositionEstimator : public PositionEstimator {
       std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries);
 
   void CalculateBCDForTrack(
-      const theia::View* view1,
-      const theia::View* view2,
-      const theia::View* view3,
+      const theia::ViewId view1_id,
+      const theia::ViewId view2_id,
+      const theia::ViewId view3_id,
       const TrackId& track_id,
       std::tuple<Eigen::Matrix3d, Eigen::Matrix3d, Eigen::Matrix3d>& BCD);
 

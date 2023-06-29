@@ -47,6 +47,7 @@ def match_image_pair(img_i_data, img_j_data):
     options.ransac_type = pt.sfm.RansacType(0) # pt.sfm.RansacType(1): prosac, pt.sfm.RansacType(2): lmed
     options.use_lo = True # Local Optimization Ransac
     options.use_mle = True 
+    options.max_sampson_error_pixels = 1.0
 
     success, twoview_info, inlier_indices = pt.sfm.EstimateTwoViewInfo(
         options, prior, prior, correspondences)
@@ -96,7 +97,7 @@ if __name__ == "__main__":
 
     view_graph = pt.sfm.ViewGraph()
     recon = pt.sfm.Reconstruction()
-    track_builder = pt.sfm.TrackBuilder(3, 30)
+    track_builder = pt.sfm.TrackBuilder(4, 30)
 
     prior = pt.sfm.CameraIntrinsicsPrior()
     prior.focal_length.value = [2759.48]
@@ -155,14 +156,14 @@ if __name__ == "__main__":
     track_builder.BuildTracks(recon)
     options = pt.sfm.ReconstructionEstimatorOptions()
     options.num_threads = 7
-    options.rotation_filtering_max_difference_degrees = 10.0
+    options.rotation_filtering_max_difference_degrees = 15.0
     options.bundle_adjustment_robust_loss_width = 3.0
     options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
     options.subsample_tracks_for_bundle_adjustment = False
     options.filter_relative_translations_with_1dsfm = True
 
     if reconstructiontype == 'global':
-        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LEAST_UNSQUARED_DEVIATION
+        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LIGT
         options.global_rotation_estimator_type = pt.sfm.GlobalRotationEstimatorType.HYBRID  
         reconstruction_estimator = pt.sfm.GlobalReconstructionEstimator(options)
     elif reconstructiontype == 'incremental':
