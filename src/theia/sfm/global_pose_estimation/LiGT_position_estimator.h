@@ -76,6 +76,9 @@ class LiGTPositionEstimator : public PositionEstimator {
     // The threshold at which to the iterative eigensolver method is considered
     // to be converged.
     double eigensolver_threshold = 1e-8;
+
+    // threshold for using sparse solver instead of SVD
+    int max_num_views_svd = 500;
   };
 
   LiGTPositionEstimator(const Options& options,
@@ -118,6 +121,8 @@ class LiGTPositionEstimator : public PositionEstimator {
 
   void FindTripletsForTracks();
 
+  Eigen::Vector3d GetNormalizedHomFeature(
+    const ViewId& view_id, const TrackId& track_id) const;
   // Positions are estimated from an eigenvector that is unit-norm with an
   // ambiguous sign. To ensure that the sign of the camera positions is correct,
   // we measure the relative translations from estimated camera positions and
@@ -129,8 +134,8 @@ class LiGTPositionEstimator : public PositionEstimator {
   const Options options_;
   const theia::Reconstruction& reconstruction_;
   const std::unordered_map<ViewIdPair, TwoViewInfo>* view_pairs_;
-  const std::unordered_map<ViewId, Eigen::Vector3d>* orientations_;
-
+  std::unordered_map<ViewId, Eigen::Matrix3d> orientations_;
+  
   // save a view triplet for each track, eq. 29
   std::unordered_map<TrackId, std::vector<ViewIdTriplet>> triplets_for_tracks_;
   std::unordered_map<TrackId,

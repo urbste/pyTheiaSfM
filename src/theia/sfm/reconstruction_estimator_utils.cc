@@ -193,7 +193,7 @@ void SetReconstructionFromEstimatedPoses(
         FindOrNull(orientations, position.first);
     if (orientation == nullptr) {
       LOG(WARNING) << "Cannot add View " << position.first
-                   << " to the reconstruction because it does nto contain an "
+                   << " to the reconstruction because it does not contain an "
                       "orientation estimation.";
       continue;
     }

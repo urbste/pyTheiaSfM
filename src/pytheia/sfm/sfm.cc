@@ -1612,7 +1612,9 @@ void pytheia_sfm_classes(py::module& m) {
     .def_readwrite("max_power_iterations", 
           &theia::LiGTPositionEstimator::Options::max_power_iterations)
     .def_readwrite("eigensolver_threshold", 
-          &theia::LiGTPositionEstimator::Options::eigensolver_threshold);
+          &theia::LiGTPositionEstimator::Options::eigensolver_threshold)
+    .def_readwrite("max_num_views_svd", 
+          &theia::LiGTPositionEstimator::Options::max_num_views_svd);
 
   py::class_<theia::LiGTPositionEstimator, theia::PositionEstimator>(
       m, "LiGTPositionEstimator")

@@ -58,6 +58,7 @@
 #include "theia/io/write_colmap_files.h"
 #include "theia/io/write_keypoints_and_descriptors.h"
 #include "theia/io/write_nerfstudio.h"
+#include "theia/io/write_sdfstudio.h"
 #include "theia/io/write_nvm_file.h"
 #include "theia/io/write_ply_file.h"
 
@@ -120,6 +121,8 @@ void pytheia_io_classes(py::module& m) {
   m.def("WriteNVMFile", theia::WriteNVMFile);
   m.def("WritePlyFile", theia::WritePlyFile);
   m.def("WriteNerfStudio", theia::WriteNerfStudio);
+  m.def("WriteSdfStudio", theia::WriteSdfStudio);
+
 }
 
 void pytheia_io(py::module& m) {

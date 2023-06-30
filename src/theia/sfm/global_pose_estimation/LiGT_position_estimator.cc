@@ -90,31 +90,12 @@ Vector3d Get_aij(const Matrix3d& Rij,
   return (GetSkew(Rij * Xi) * Xj).transpose() * GetSkew(Xj);
 }
 
-// Adds the constraint from the triplet to the symmetric matrix. Our standard
-// constraint matrix A is a 3M x 3N matrix with M triplet constraints and N
-// cameras. We seek to construct A^t * A directly. For each triplet constraint
-// in our matrix A (i.e. a 3-row block), we can compute the corresponding
-// entries in A^t * A with the following summation:
-//
-//   A^t * A += Row(i)^t * Row(i)
-//
-// for each triplet constraint i.
+
 void AddTripletConstraintToSymmetricMatrix(
     const std::vector<Matrix3d>& constraints,
     const std::vector<int>& view_indices,
     std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries) {
-  // Construct Row(i)^t * Row(i). If we denote the row as a block matrix:
-  //
-  //   Row(i) = [A | B | C]
-  //
-  // then we have:
-  //
-  //   Row(i)^t * Row(i) = [A | B | C]^t * [A | B | C]
-  //                     = [ A^t * A  |  A^t * B  |  A^t * C]
-  //                       [ B^t * A  |  B^t * B  |  B^t * C]
-  //                       [ C^t * A  |  C^t * B  |  C^t * C]
-  //
-  // Since A^t * A is symmetric, we only store the upper triangular portion.
+
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       // Skip any block entries that correspond to the lower triangular portion
@@ -139,7 +120,7 @@ void AddTripletConstraintToSymmetricMatrix(
   }
 }
 
-inline Matrix3d AngleAxisToRotationMatrix(const Vector3d angle_axis) {
+Matrix3d AngleAxisToRotationMatrix(const Vector3d angle_axis) {
   Matrix3d rotation_matrix;
   ceres::AngleAxisToRotationMatrix(angle_axis.data(), rotation_matrix.data());
   return rotation_matrix;
@@ -148,14 +129,12 @@ inline Matrix3d AngleAxisToRotationMatrix(const Vector3d angle_axis) {
 // Returns true if the vector R1 * (c2 - c1) is in the same direction as t_12.
 bool VectorsAreSameDirection(const Vector3d& position1,
                              const Vector3d& position2,
-                             const Vector3d& rotation1,
+                             const Matrix3d& rotation1,
                              const Vector3d& relative_position12) {
   const Vector3d global_relative_position =
       (position2 - position1).normalized();
-  Vector3d rotated_relative_position;
-  ceres::AngleAxisRotatePoint(rotation1.data(),
-                              global_relative_position.data(),
-                              rotated_relative_position.data());
+  Vector3d rotated_relative_position = rotation1 * global_relative_position;
+
   return rotated_relative_position.dot(relative_position12) > 0;
 }
 
@@ -190,53 +169,43 @@ bool LiGTPositionEstimator::EstimatePositions(
   triplets_for_tracks_.clear();
 
   view_pairs_ = &view_pairs;
-  orientations_ = &orientations;
+  // convert orientations to matrices
+  for (const auto& ori : orientations) {
+    orientations_[ori.first] = AngleAxisToRotationMatrix(ori.second);
+  }
 
   VLOG(2) << "Extracting triplets from tracks and calculating BCDs for tracks.";
   FindTripletsForTracks();
-
-//  VLOG(2) << "Calculating BCD for tracks.";
-//  for (const auto& t : triplets_for_tracks_) {
-//    auto t_id = t.first;
-//    auto view_ids = t.second;
-//    for (const auto& vids : view_ids) {
-//      const auto view1 = reconstruction_.View(std::get<0>(vids));
-//      const auto view2 = reconstruction_.View(std::get<1>(vids));
-//      const auto view3 = reconstruction_.View(std::get<2>(vids));
-//      std::tuple<Matrix3d, Matrix3d, Matrix3d> BCD;
-//      CalculateBCDForTrack(view1, view2, view3, t_id, BCD);
-
-////      Vector3d shouldnull = std::get<1>(BCD)*view1->Camera().GetPosition() +
-////              std::get<0>(BCD)*view2->Camera().GetPosition() +
-////              std::get<2>(BCD)*view3->Camera().GetPosition();
-////      std::cout<<"shouldnull: "<<shouldnull<<"\n";
-
-//      BCDs_[t_id].push_back(BCD);
-//    }
-//  }
+  std::cout<<"Finished extracting triplets from tracks and calculating BCDs for tracks.\n";
 
   VLOG(2) << "Building the constraint matrix...";
   // Create the linear system based on triplet constraints.
   Eigen::SparseMatrix<double> constraint_matrix;
   CreateLinearSystem(&constraint_matrix);
-
   // Solve for positions by examining the smallest eigenvalues. Since we have
   // set one position constant at the origin, we only need to solve for the
   // eigenvector corresponding to the smallest eigenvalue. This can be done
   // efficiently with inverse power iterations.
-  VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
-  // SparseSymShiftSolveLLT op(constraint_matrix);
-  // Spectra::SymEigsShiftSolver<double, Spectra::LARGEST_MAGN,
-  //                             SparseSymShiftSolveLLT>
-  // eigs(&op, 1, 6, 0.0);
-  // eigs.init();
-  // eigs.compute();
-  // const Eigen::VectorXd solution = eigs.eigenvectors().col(0);
 
-  // jacovi svd based solving
-  Eigen::MatrixXd constraint_matrix_dense(constraint_matrix);
-  Eigen::BDCSVD<Eigen::MatrixXd> svd(constraint_matrix_dense, Eigen::ComputeThinU | Eigen::ComputeThinV);
-  const Eigen::VectorXd solution = svd.matrixV().col(svd.matrixV().cols()-1);
+  Eigen::VectorXd solution;
+  if (orientations.size() > options_.max_num_views_svd) {
+    VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
+    std::shared_ptr<SparseCholeskyLLt> linear_solver =
+      std::make_shared<SparseCholeskyLLt>();
+    SparseSymShiftSolveLLT<double> op(linear_solver, constraint_matrix);
+    Spectra::
+        SymEigsShiftSolver<SparseSymShiftSolveLLT<double>>
+            eigs(op, 1, 6, 0.0);
+    eigs.init();
+    eigs.compute(Spectra::SortRule::LargestMagn, 1000, 1e-4);
+    solution = eigs.eigenvectors().col(0);
+  } else {
+    VLOG(2) << "Solving for positions from the eigenvalue problem using BDCSVD...";
+    Eigen::MatrixXd constraint_matrix_dense(constraint_matrix);
+    Eigen::BDCSVD<Eigen::MatrixXd> svd(constraint_matrix_dense, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    solution = svd.matrixV().col(svd.matrixV().cols()-1);
+  }
+
 
   // Compute with power iterations.
   // Add the solutions to the output. Set the position with an index of -1 to
@@ -265,18 +234,15 @@ std::pair<ViewId, ViewId> LiGTPositionEstimator::GetBestBaseViews(
     for (size_t i = 0; i < view_ids.size(); ++i) {     
       ViewId id1 = view_ids[i];
       const View* view1 = reconstruction_.View(id1);
-      const Vector3d feature1 =
-            GetNormalizedFeature(*view1, track_id).point_.homogeneous();
-        const Matrix3d R1 = AngleAxisToRotationMatrix(orientations_->at(id1));
+      const Vector3d feature1 = GetNormalizedFeature(*view1, track_id).point_.homogeneous();; 
+      const Matrix3d R1 = orientations_.at(id1);
 
       for (size_t j = i+1; j < view_ids.size(); ++j) {
         ViewId id2 = view_ids[j];
         const View* view2 = reconstruction_.View(id2);
+        const Vector3d feature2 = GetNormalizedFeature(*view2, track_id).point_.homogeneous();; 
 
-        const Vector3d feature2 =
-            GetNormalizedFeature(*view2, track_id).point_.homogeneous();
-
-        const Matrix3d R2 = AngleAxisToRotationMatrix(orientations_->at(id2));
+        const Matrix3d R2 = orientations_.at(id2);
         const Matrix3d R12 = GetRij(R1, R2);
         const double theta = GetThetaSq(feature1, feature2, R12);
         if (theta > theta_max) {
@@ -299,16 +265,13 @@ void LiGTPositionEstimator::CalculateBCDForTrack(
   const auto view2 = reconstruction_.View(vid_2);
   const auto view3 = reconstruction_.View(vid_3);
 
-  const Vector3d feature1 =
-      GetNormalizedFeature(*view1, track_id).point_.homogeneous();
-  const Vector3d feature2 =
-      GetNormalizedFeature(*view2, track_id).point_.homogeneous();
-  const Vector3d feature3 =
-      GetNormalizedFeature(*view3, track_id).point_.homogeneous();
+  const Vector3d feature1 = GetNormalizedFeature(*view1, track_id).point_.homogeneous();
+  const Vector3d feature2 = GetNormalizedFeature(*view2, track_id).point_.homogeneous();
+  const Vector3d feature3 = GetNormalizedFeature(*view3, track_id).point_.homogeneous();
 
-  const Matrix3d R1 = AngleAxisToRotationMatrix(orientations_->at(vid_1));
-  const Matrix3d R2 = AngleAxisToRotationMatrix(orientations_->at(vid_2));
-  const Matrix3d R3 = AngleAxisToRotationMatrix(orientations_->at(vid_3));
+  const Matrix3d R1 = orientations_.at(vid_1);
+  const Matrix3d R2 = orientations_.at(vid_2);
+  const Matrix3d R3 = orientations_.at(vid_3);
 
   const Matrix3d R31 = GetRij(R3, R1);
   const Matrix3d R32 = GetRij(R3, R2);
@@ -328,8 +291,11 @@ void LiGTPositionEstimator::CalculateBCDForTrack(
 void LiGTPositionEstimator::FindTripletsForTracks() {
   auto track_ids = reconstruction_.TrackIds();
   uint32_t total_nr_triplets = 0;
+
+  #pragma omp parallel for shared(num_triplets_for_view_, linear_system_index_, triplets_for_tracks_, BCDs_)
   for (size_t t = 0; t < track_ids.size(); ++t) {
-    auto t_id = track_ids[t];
+    // parallelize this loop
+    const auto t_id = track_ids[t];
 
     auto view_ids_for_track = reconstruction_.Track(t_id)->ViewIds();
     if (view_ids_for_track.size() < 3) {
@@ -344,53 +310,48 @@ void LiGTPositionEstimator::FindTripletsForTracks() {
       if (cur_id == base_views.first) {
           continue;
       }
-      //std::cout<<"Track: "<<t_id<<" triplet: (base l, central, base r) ("<<base_views.first<<", "<<cur_id<<", "<<base_views.second<<")\n";
 
-      ViewIdTriplet triplet = std::make_tuple(base_views.first, cur_id, base_views.second);
-      AddTripletConstraint(triplet);
-
-      const auto view1 = reconstruction_.View(base_views.first);
-      const auto view2 = reconstruction_.View(cur_id);
-      const auto view3 = reconstruction_.View(base_views.second);
       std::tuple<Matrix3d, Matrix3d, Matrix3d> BCD;
       CalculateBCDForTrack(base_views.first, cur_id, base_views.second, t_id, BCD);
 
+      // const auto view1 = reconstruction_.View(base_views.first);
+      // const auto view2 = reconstruction_.View(cur_id);
+      // const auto view3 = reconstruction_.View(base_views.second);
 //      Vector3d shouldbezero = std::get<1>(BCD)*view1->Camera().GetPosition() +
 //              std::get<0>(BCD)*view2->Camera().GetPosition() +
 //              std::get<2>(BCD)*view3->Camera().GetPosition();
 //      std::cout<<"shouldbezero: "<<shouldbezero<<"\n";
 
-      triplets_for_tracks_[t_id].push_back(triplet);
-      BCDs_[t_id].push_back(BCD);
-      total_nr_triplets++;
+      
+      #pragma omp critical
+      {
+        const ViewIdTriplet triplet = std::make_tuple(base_views.first, cur_id, base_views.second);
+
+        num_triplets_for_view_[std::get<0>(triplet)] += 1;
+        num_triplets_for_view_[std::get<1>(triplet)] += 1;
+        num_triplets_for_view_[std::get<2>(triplet)] += 1;
+
+        // Determine the order of the views in the linear system. We subtract 1 from
+        // the linear system index so that the first position added to the system
+        // will be set constant (index of -1 is intentionally not evaluated later).
+        InsertIfNotPresent(&linear_system_index_,
+                          std::get<0>(triplet),
+                          linear_system_index_.size() - 1);
+        InsertIfNotPresent(&linear_system_index_,
+                          std::get<1>(triplet),
+                          linear_system_index_.size() - 1);
+        InsertIfNotPresent(&linear_system_index_,
+                          std::get<2>(triplet),
+                          linear_system_index_.size() - 1);
+                          
+
+        triplets_for_tracks_[t_id].push_back(triplet);
+        BCDs_[t_id].push_back(BCD);
+      }
     }
   }
-
-  std::cout<<"Total number of triplets: "<<total_nr_triplets<<" for "<< track_ids.size()<<" tracks and "<<reconstruction_.ViewIds().size()<<" views.\n";
 }
 
-// An alternative interface is to instead add triplets one by one to linear
-// estimator. This allows for adding redundant observations of triplets, which
-// may be useful if there are multiple estimates of the data.
-void LiGTPositionEstimator::AddTripletConstraint(
-    const ViewIdTriplet& view_triplet) {
-  num_triplets_for_view_[std::get<0>(view_triplet)] += 1;
-  num_triplets_for_view_[std::get<1>(view_triplet)] += 1;
-  num_triplets_for_view_[std::get<2>(view_triplet)] += 1;
-
-  // Determine the order of the views in the linear system. We subtract 1 from
-  // the linear system index so that the first position added to the system
-  // will be set constant (index of -1 is intentionally not evaluated later).
-  InsertIfNotPresent(&linear_system_index_,
-                     std::get<0>(view_triplet),
-                     linear_system_index_.size() - 1);
-  InsertIfNotPresent(&linear_system_index_,
-                     std::get<1>(view_triplet),
-                     linear_system_index_.size() - 1);
-  InsertIfNotPresent(&linear_system_index_,
-                     std::get<2>(view_triplet),
-                     linear_system_index_.size() - 1);
-}
 
 // Sets up the linear system with the constraints that each triplet adds.
 void LiGTPositionEstimator::CreateLinearSystem(
@@ -399,6 +360,7 @@ void LiGTPositionEstimator::CreateLinearSystem(
 
     std::unordered_map<std::pair<int, int>, double> sparse_matrix_entries;
     sparse_matrix_entries.reserve(27 * num_triplets_for_view_.size());
+    
     for (const auto& triplet_vector : triplets_for_tracks_) {
         const TrackId t_id = triplet_vector.first;
         const std::vector<ViewIdTriplet> triplet_v = triplet_vector.second;
@@ -434,8 +396,8 @@ void LiGTPositionEstimator::CreateLinearSystem(
     // camera, corresponding to the camera position entries).
 
     constraint_matrix->resize((num_views - 1) * 3, (num_views - 1) * 3);
-    constraint_matrix->setFromTriplets(triplet_list.begin(),
-    triplet_list.end());
+    constraint_matrix->setFromTriplets(triplet_list.begin(), triplet_list.end());
+    triplet_list.clear();
 }
 
 // Adds a triplet constraint to the linear system. The weight of the constraint
@@ -484,7 +446,7 @@ void LiGTPositionEstimator::FlipSignOfPositionsIfNecessary(
     if (VectorsAreSameDirection(
             *position1,
             *position2,
-            FindOrDieNoPrint(*orientations_, view_pair.first.first),
+            FindOrDieNoPrint(orientations_, view_pair.first.first),
             view_pair.second.position_2)) {
       correct_sign_votes += 1;
     } else {

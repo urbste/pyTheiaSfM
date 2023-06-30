@@ -68,7 +68,6 @@
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/random.h"
 #include "theia/util/timer.h"
-#include "theia/io/write_ply_file.h"
 
 namespace theia {
 
@@ -188,20 +187,23 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
   global_estimator_timings.rotation_filtering_time =
       timer.ElapsedTimeInSeconds();
 
-  // Step 5. Optimize relative translations.
-  LOG(INFO) << "Optimizing the pairwise translation estimations.";
-  timer.Reset();
-  OptimizePairwiseTranslations();
-  global_estimator_timings.relative_translation_optimization_time =
-      timer.ElapsedTimeInSeconds();
+  if (options_.global_position_estimator_type == GlobalPositionEstimatorType::LIGT) {
+    LOG(INFO) << "LIGT selected. Skipping pairwise translation estimation and filtering.";
+  } else {
+    // Step 5. Optimize relative translations.
+    LOG(INFO) << "Optimizing the pairwise translation estimations.";
+    timer.Reset();
+    OptimizePairwiseTranslations();
+    global_estimator_timings.relative_translation_optimization_time =
+        timer.ElapsedTimeInSeconds();
 
-  // Step 6. Filter bad relative translations.
-  LOG(INFO) << "Filtering any bad relative translations.";
-  timer.Reset();
-  FilterRelativeTranslation();
-  global_estimator_timings.relative_translation_filtering_time =
-      timer.ElapsedTimeInSeconds();
-
+    // Step 6. Filter bad relative translations.
+    LOG(INFO) << "Filtering any bad relative translations.";
+    timer.Reset();
+    FilterRelativeTranslation();
+    global_estimator_timings.relative_translation_filtering_time =
+        timer.ElapsedTimeInSeconds();
+  }
   // Step 7. Estimate global positions.
   LOG(INFO) << "Estimating the positions of all cameras.";
   timer.Reset();
@@ -221,14 +223,15 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
       global_estimator_timings.relative_translation_optimization_time +
       global_estimator_timings.relative_translation_filtering_time +
       global_estimator_timings.position_estimation_time;
+  
+  // plot all positions
+  for (const auto& position : positions_) {
+    std::cout << " pos: "<< position.second.transpose() << std::endl;
+  }
 
   // Set the poses in the reconstruction object.
   SetReconstructionFromEstimatedPoses(
       orientations_, positions_, reconstruction_);
-
-  // write reconstruction
-    WritePlyFile("test.ply", *reconstruction_, Eigen::Vector3i(255,0,0), 0);
-  
 
   // Always triangulate once, then retriangulate and remove outliers depending
   // on the reconstruciton estimator options.

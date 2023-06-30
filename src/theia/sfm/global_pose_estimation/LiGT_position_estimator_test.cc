@@ -315,4 +315,21 @@ TEST(EstimatePositionsLiGTTest4, TestWithNoise) {
                               kTolerance);
 }
 
+TEST(EstimatePositionsLiGTTest4, TestWithNoiseLarges) {
+  static const double kTolerance = 0.5;
+  static const int kNumViews = 2000;
+  static const int kNumTracksPerView = 150;
+  static const int kNumViewPairs = 5000;
+
+  static const double kPoseNoiseDegrees = 1.00;
+  static const double kImageNoiseDegrees = 0.5;
+  EstimatePositionsLiGTTest test_class(kNumViews,
+                              kNumTracksPerView,
+                              kNumViewPairs,
+                              kPoseNoiseDegrees,
+                              kImageNoiseDegrees,
+                              kTolerance);
+}
+
+
 }  // namespace theia
