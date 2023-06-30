@@ -93,25 +93,54 @@ class LiGTPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
 
  private:
+   // Store the triplet.
+  void AddTripletConstraint(const ViewIdTriplet& view_triplet);
+  
   // Sets up the linear system with the constraints that each triplet adds.
-  Eigen::MatrixXd CreateLinearSystem(Eigen::MatrixXd* A_lr);
+  void CreateLinearSystem(Eigen::SparseMatrix<double>* constraint_matrix);
+
+  // Implements equation 29 from the paper. Get base views for point
+  std::pair<ViewId, ViewId> GetBestBaseViews(const TrackId& track_id);
 
   void CalculateBCDForTrack(
-      const theia::ViewId view1_id,
-      const theia::ViewId view2_id,
-      const theia::ViewId view3_id,
+      const theia::ViewId& vid_1,
+      const theia::ViewId& vid_2,
+      const theia::ViewId& vid_3,
       const TrackId& track_id,
       std::tuple<Eigen::Matrix3d, Eigen::Matrix3d, Eigen::Matrix3d>& BCD);
+
+  //void CreateLinearSystem(Eigen::MatrixXd& constraint_matrix);
+  void AddTripletConstraintToSparseMatrix(const ViewId view_id1,
+      const ViewId view_id2,
+      const ViewId view_id3,
+      const std::tuple<Matrix3d, Matrix3d, Matrix3d> &BCD,
+      std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries);
+
+  void FindTripletsForTracks();
+
+  // Positions are estimated from an eigenvector that is unit-norm with an
+  // ambiguous sign. To ensure that the sign of the camera positions is correct,
+  // we measure the relative translations from estimated camera positions and
+  // compare that to the relative positions. If the sign is incorrect, we flip
+  // the sign of all camera positions.
+  void FlipSignOfPositionsIfNecessary(
+      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
   const Options options_;
   const theia::Reconstruction& reconstruction_;
   const std::unordered_map<ViewIdPair, TwoViewInfo>* view_pairs_;
   const std::unordered_map<ViewId, Eigen::Vector3d>* orientations_;
 
+  // save a view triplet for each track, eq. 29
+  std::unordered_map<TrackId, std::vector<ViewIdTriplet>> triplets_for_tracks_;
+  std::unordered_map<TrackId,
+                     std::vector<std::tuple<Matrix3d, Matrix3d, Matrix3d>>> BCDs_;
+
   // We keep one of the positions as constant to remove the ambiguity of the
   // origin of the linear system.
-  static const int kConstantPositionIndex = -3;
+  static const int kConstantPositionIndex = -1;
 
+  std::unordered_map<ViewId, int> num_triplets_for_view_;
   std::unordered_map<ViewId, int> linear_system_index_;
 
   DISALLOW_COPY_AND_ASSIGN(LiGTPositionEstimator);

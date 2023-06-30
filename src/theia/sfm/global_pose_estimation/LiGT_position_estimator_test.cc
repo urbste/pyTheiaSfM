@@ -152,8 +152,8 @@ class EstimatePositionsLiGTTest { // : public ::testing::Test {
     for (const auto& position : positions_) {
       const Vector3d& estimated_position =
           FindOrDie(estimated_positions, position.first);
-      std::cout<< "\ng.t. position      = " << position.second.transpose()
-        << "\nestimated position = " << estimated_position.transpose() <<"\n";
+      // std::cout<< "\ng.t. position      = " << position.second.transpose()
+      //   << "\nestimated position = " << estimated_position.transpose() <<"\n";
       const double position_error =
           (position.second - estimated_position).norm();
       // EXPECT_LT(position_error, position_tolerance)
