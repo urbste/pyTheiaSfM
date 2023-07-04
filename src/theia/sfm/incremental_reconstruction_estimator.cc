@@ -212,7 +212,7 @@ ReconstructionEstimatorSummary IncrementalReconstructionEstimator::Estimate(
     timer.Reset();
     FindViewsToLocalize(&views_to_localize);
     summary_.pose_estimation_time += timer.ElapsedTimeInSeconds();
-
+    std::cout<<"Will try to localize "<<views_to_localize.size()<<" views."<<std::endl;
     // Attempt to localize all candidate views and estimate new 3D
     // points. Bundle Adjustment is run as either partial or full BA depending
     // on the current state of the reconstruction.
@@ -340,7 +340,7 @@ bool IncrementalReconstructionEstimator::ChooseInitialViewPair() {
     // Set all values as unestimated and try to use the next candidate pair.
     SetReconstructionAsUnestimated(reconstruction_);
 
-    // Initialize the camera poses of the intiial views and set the two views to
+    // Initialize the camera poses of the initial views and set the two views to
     // estimated.
     InitializeCamerasFromTwoViewInfo(view_id_pair);
 

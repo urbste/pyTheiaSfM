@@ -43,5 +43,5 @@ namespace matching {
 
 void pytheia_matching(py::module& m);
 
-}
+} // namespace matching
 }  // namespace pytheia

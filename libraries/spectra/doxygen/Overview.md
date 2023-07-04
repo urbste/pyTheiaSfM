@@ -17,11 +17,12 @@ The development page of **Spectra** is at
 [ARPACK](http://www.caam.rice.edu/software/ARPACK/) is a software written in
 FORTRAN for solving large scale eigenvalue problems. The development of
 **Spectra** is much inspired by ARPACK, and as the whole name indicates,
-**Spectra** is a redesign of the ARPACK library using C++ language.
+**Spectra** is a redesign of the ARPACK library using the C++ language.
 
-In fact, **Spectra** is based on the algorithms described in the
+In fact, **Spectra** is based on the algorithm described in the
 [ARPACK Users' Guide](http://www.caam.rice.edu/software/ARPACK/UG/ug.html),
-but it does not use the ARPACK code, and it is **NOT** a clone of ARPACK for C++.
+the implicitly restarted Arnoldi/Lanczos method. However,
+it does not use the ARPACK code, and it is **NOT** a clone of ARPACK for C++.
 In short, **Spectra** implements the major algorithms in ARPACK,
 but **Spectra** provides a completely different interface, and it does not
 depend on ARPACK.
@@ -29,16 +30,16 @@ depend on ARPACK.
 ## Common Usage
 
 **Spectra** is designed to calculate a specified number (\f$k\f$) of eigenvalues
-of a large square matrix (\f$A\f$). Usually \f$k\f$ is much less than the size of matrix
+of a large square matrix (\f$A\f$). Usually \f$k\f$ is much smaller than the size of matrix
 (\f$n\f$), so that only a few eigenvalues and eigenvectors are computed, which
 in general is more efficient than calculating the whole spectral decomposition.
-Users can choose eigenvalue selection rules to pick up the eigenvalues of interest,
+Users can choose eigenvalue selection rules to pick the eigenvalues of interest,
 such as the largest \f$k\f$ eigenvalues, or eigenvalues with largest real parts,
 etc.
 
 To use the eigen solvers in this library, the user does not need to directly
 provide the whole matrix, but instead, the algorithm only requires certain operations
-defined on \f$A\f$, and in the basic setting, it is simply the matrix-vector
+defined on \f$A\f$. In the basic setting, it is simply the matrix-vector
 multiplication. Therefore, if the matrix-vector product \f$Ax\f$ can be computed
 efficiently, which is the case when \f$A\f$ is sparse, **Spectra**
 will be very powerful for large scale eigenvalue problems.
@@ -56,14 +57,22 @@ for general matrices. Member functions of this object can then be called to
 conduct the computation and retrieve the eigenvalues and/or eigenvectors.
 
 Below is a list of the available eigen solvers in **Spectra**:
-- \link Spectra::SymEigsSolver SymEigsSolver \endlink: For real symmetric matrices
-- \link Spectra::GenEigsSolver GenEigsSolver \endlink: For general real matrices
-- \link Spectra::SymEigsShiftSolver SymEigsShiftSolver \endlink: For real symmetric matrices using the shift-and-invert mode
-- \link Spectra::GenEigsRealShiftSolver GenEigsRealShiftSolver \endlink: For general real matrices using the shift-and-invert mode,
-with a real-valued shift
-- \link Spectra::GenEigsComplexShiftSolver GenEigsComplexShiftSolver \endlink: For general real matrices using the shift-and-invert mode,
-with a complex-valued shift
-- \link Spectra::SymGEigsSolver SymGEigsSolver \endlink: For generalized eigen solver for real symmetric matrices
+- \link Spectra::SymEigsSolver SymEigsSolver\endlink:
+  For real symmetric matrices
+- \link Spectra::GenEigsSolver GenEigsSolver\endlink:
+  For general real matrices
+- \link Spectra::SymEigsShiftSolver SymEigsShiftSolver\endlink:
+  For real symmetric matrices using the shift-and-invert mode
+- \link Spectra::GenEigsRealShiftSolver GenEigsRealShiftSolver\endlink:
+  For general real matrices using the shift-and-invert mode, with a real-valued shift
+- \link Spectra::GenEigsComplexShiftSolver GenEigsComplexShiftSolver\endlink:
+  For general real matrices using the shift-and-invert mode, with a complex-valued shift
+- \link Spectra::SymGEigsSolver SymGEigsSolver\endlink:
+  For generalized eigen solver with real symmetric matrices
+- \link Spectra::SymGEigsShiftSolver SymGEigsShiftSolver\endlink:
+  For generalized eigen solver with real symmetric matrices, using the shift-and-invert mode
+- \link Spectra::DavidsonSymEigsSolver DavidsonSymEigsSolver\endlink:
+  Jacobi-Davidson eigen solver for real symmetric matrices, with the DPR correction method
 
 ## Examples
 
@@ -72,7 +81,8 @@ matrices.
 
 ~~~~~~~~~~{.cpp}
 #include <Eigen/Core>
-#include <SymEigsSolver.h>  // Also includes <MatOp/DenseSymMatProd.h>
+#include <Spectra/SymEigsSolver.h>
+// <Spectra/MatOp/DenseSymMatProd.h> is implicitly included
 #include <iostream>
 
 using namespace Spectra;
@@ -83,19 +93,19 @@ int main()
     Eigen::MatrixXd A = Eigen::MatrixXd::Random(10, 10);
     Eigen::MatrixXd M = A + A.transpose();
 
-    // Construct matrix operation object using the wrapper class DenseGenMatProd
+    // Construct matrix operation object using the wrapper class DenseSymMatProd
     DenseSymMatProd<double> op(M);
 
     // Construct eigen solver object, requesting the largest three eigenvalues
-    SymEigsSolver< double, LARGEST_ALGE, DenseSymMatProd<double> > eigs(&op, 3, 6);
+    SymEigsSolver<DenseSymMatProd<double>> eigs(op, 3, 6);
 
     // Initialize and compute
     eigs.init();
-    int nconv = eigs.compute();
+    int nconv = eigs.compute(SortRule::LargestAlge);
 
     // Retrieve results
     Eigen::VectorXd evalues;
-    if(eigs.info() == SUCCESSFUL)
+    if(eigs.info() == CompInfo::Successful)
         evalues = eigs.eigenvalues();
 
     std::cout << "Eigenvalues found:\n" << evalues << std::endl;
@@ -109,8 +119,8 @@ Sparse matrix is supported via classes such as Spectra::SparseGenMatProd and Spe
 ~~~~~~~~~~{.cpp}
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
-#include <GenEigsSolver.h>
-#include <MatOp/SparseGenMatProd.h>
+#include <Spectra/GenEigsSolver.h>
+#include <Spectra/MatOp/SparseGenMatProd.h>
 #include <iostream>
 
 using namespace Spectra;
@@ -135,15 +145,15 @@ int main()
     SparseGenMatProd<double> op(M);
 
     // Construct eigen solver object, requesting the largest three eigenvalues
-    GenEigsSolver< double, LARGEST_MAGN, SparseGenMatProd<double> > eigs(&op, 3, 6);
+    GenEigsSolver<SparseGenMatProd<double>> eigs(op, 3, 6);
 
     // Initialize and compute
     eigs.init();
-    int nconv = eigs.compute();
+    int nconv = eigs.compute(SortRule::LargestMagn);
 
     // Retrieve results
     Eigen::VectorXcd evalues;
-    if(eigs.info() == SUCCESSFUL)
+    if(eigs.info() == CompInfo::Successful)
         evalues = eigs.eigenvalues();
 
     std::cout << "Eigenvalues found:\n" << evalues << std::endl;
@@ -156,7 +166,7 @@ And here is an example for user-supplied matrix operation class.
 
 ~~~~~~~~~~{.cpp}
 #include <Eigen/Core>
-#include <SymEigsSolver.h>
+#include <Spectra/SymEigsSolver.h>
 #include <iostream>
 
 using namespace Spectra;
@@ -165,10 +175,11 @@ using namespace Spectra;
 class MyDiagonalTen
 {
 public:
-    int rows() { return 10; }
-    int cols() { return 10; }
+    using Scalar = double;  // A typedef named "Scalar" is required
+    int rows() const { return 10; }
+    int cols() const { return 10; }
     // y_out = M * x_in
-    void perform_op(double *x_in, double *y_out)
+    void perform_op(const double *x_in, double *y_out) const
     {
         for(int i = 0; i < rows(); i++)
         {
@@ -180,10 +191,10 @@ public:
 int main()
 {
     MyDiagonalTen op;
-    SymEigsSolver<double, LARGEST_ALGE, MyDiagonalTen> eigs(&op, 3, 6);
+    SymEigsSolver<MyDiagonalTen> eigs(op, 3, 6);
     eigs.init();
-    eigs.compute();
-    if(eigs.info() == SUCCESSFUL)
+    eigs.compute(SortRule::LargestAlge);
+    if(eigs.info() == CompInfo::Successful)
     {
         Eigen::VectorXd evalues = eigs.eigenvalues();
         std::cout << "Eigenvalues found:\n" << evalues << std::endl;

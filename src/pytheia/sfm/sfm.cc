@@ -753,7 +753,9 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::EstimateTwoViewInfoOptions::max_ransac_iterations)
       .def_readwrite("use_mle", &theia::EstimateTwoViewInfoOptions::use_mle)
       .def_readwrite("use_lo", &theia::EstimateTwoViewInfoOptions::use_lo)
-      .def_readwrite("lo_start_iterations", &theia::EstimateTwoViewInfoOptions::lo_start_iterations);
+      .def_readwrite("lo_start_iterations", &theia::EstimateTwoViewInfoOptions::lo_start_iterations)
+      .def_readwrite("min_focal_length", &theia::EstimateTwoViewInfoOptions::min_focal_length)
+      .def_readwrite("max_focal_length", &theia::EstimateTwoViewInfoOptions::max_focal_length);
 
   py::class_<theia::FilterViewPairsFromRelativeTranslationOptions>(
       m, "FilterViewPairsFromRelativeTranslationOptions")
@@ -985,7 +987,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("orthographic_camera",
                      &theia::BundleAdjustmentOptions::orthographic_camera)
       .def_readwrite("use_homogeneous_point_parametrization",
-                     &theia::BundleAdjustmentOptions::use_homogeneous_point_parametrization);
+                     &theia::BundleAdjustmentOptions::use_homogeneous_point_parametrization)
+      .def_readwrite("use_inverse_depth_parametrization",
+                     &theia::BundleAdjustmentOptions::use_inverse_depth_parametrization);
 
   // Reconstruction Options
   py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
@@ -1308,7 +1312,10 @@ void pytheia_sfm_classes(py::module& m) {
                          track_selection_image_grid_cell_size_pixels)
       .def_readwrite("min_num_optimized_tracks_per_view",
                      &theia::ReconstructionEstimatorOptions::
-                         min_num_optimized_tracks_per_view);
+                         min_num_optimized_tracks_per_view)
+      .def_readwrite("track_parametrization_type",
+                     &theia::ReconstructionEstimatorOptions::
+                         track_parametrization_type);
 
   // Reconstruction class
   py::class_<theia::Reconstruction>(m, "Reconstruction")
@@ -1446,6 +1453,8 @@ void pytheia_sfm_classes(py::module& m) {
       .value("TANGENTIAL_DISTORTION",
              theia::OptimizeIntrinsicsType::TANGENTIAL_DISTORTION)
       .value("DISTORTION", theia::OptimizeIntrinsicsType::DISTORTION)
+      .value("FOCAL_LENGTH_DISTORTION", theia::OptimizeIntrinsicsType::FOCAL_LENGTH_DISTORTION)
+      .value("FOCAL_LENGTH_RADIAL_DISTORTION", theia::OptimizeIntrinsicsType::FOCAL_LENGTH_RADIAL_DISTORTION)
       .value("ALL", theia::OptimizeIntrinsicsType::ALL)
       .export_values();
 
@@ -1456,6 +1465,12 @@ void pytheia_sfm_classes(py::module& m) {
       .value("CAUCHY", theia::LossFunctionType::CAUCHY)
       .value("ARCTAN", theia::LossFunctionType::ARCTAN)
       .value("TUKEY", theia::LossFunctionType::TUKEY)
+      .export_values();
+
+  py::enum_<theia::TrackParametrizationType>(m, "TrackParametrizationType")
+      .value("XYZW", theia::TrackParametrizationType::XYZW)
+      .value("XYZW_MANIFOLD", theia::TrackParametrizationType::XYZW_MANIFOLD)
+      .value("INVERSE_DEPTH", theia::TrackParametrizationType::INVERSE_DEPTH)
       .export_values();
 
   // TwoViewBundleAdjustmentOptions
@@ -1597,7 +1612,9 @@ void pytheia_sfm_classes(py::module& m) {
     .def_readwrite("max_power_iterations", 
           &theia::LiGTPositionEstimator::Options::max_power_iterations)
     .def_readwrite("eigensolver_threshold", 
-          &theia::LiGTPositionEstimator::Options::eigensolver_threshold);
+          &theia::LiGTPositionEstimator::Options::eigensolver_threshold)
+    .def_readwrite("max_num_views_svd", 
+          &theia::LiGTPositionEstimator::Options::max_num_views_svd);
 
   py::class_<theia::LiGTPositionEstimator, theia::PositionEstimator>(
       m, "LiGTPositionEstimator")

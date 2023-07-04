@@ -240,6 +240,7 @@ add_subdirectory(libraries)
 include_directories(
   libraries
   libraries/spectra
+  libraries/Sophus
   ${akaze_SOURCE_DIR}
   ${akaze_INCLUDE_DIR}
   ${cereal_SOURCE_DIR}

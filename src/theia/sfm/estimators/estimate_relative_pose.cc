@@ -66,6 +66,9 @@ class RelativePoseEstimator
  public:
   RelativePoseEstimator() {
     ba_opts_.max_num_iterations = 2;
+    ba_opts_.linear_solver_type = ceres::CGNR;
+    ba_opts_.preconditioner_type = ceres::JACOBI;
+    ba_opts_.verbose = false;
   }
 
   // 5 correspondences are needed to determine an essential matrix and thus a

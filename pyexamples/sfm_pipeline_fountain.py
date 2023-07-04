@@ -8,6 +8,8 @@ import numpy as np
 import cv2, os, glob, argparse
 import pytheia as pt
 
+min_num_inlier_matches = 30
+
 # create correspondences of keypoints locations from indexed feature matches
 def correspondence_from_indexed_matches(filtered_matches, pts1, pts2):
     correspondences = []
@@ -45,6 +47,7 @@ def match_image_pair(img_i_data, img_j_data):
     options.ransac_type = pt.sfm.RansacType(0) # pt.sfm.RansacType(1): prosac, pt.sfm.RansacType(2): lmed
     options.use_lo = True # Local Optimization Ransac
     options.use_mle = True 
+    options.max_sampson_error_pixels = 1.0
 
     success, twoview_info, inlier_indices = pt.sfm.EstimateTwoViewInfo(
         options, prior, prior, correspondences)
@@ -70,14 +73,11 @@ def match_image_pair(img_i_data, img_j_data):
         
         return True, twoview_info
 
-min_num_inlier_matches = 30
-
-
 def extract_features(img, featuretype):
     if featuretype == 'akaze':
-        feature = cv2.AKAZE_create()
+        feature = cv2.AKAZE_create(cv2.AKAZE_DESCRIPTOR_KAZE_UPRIGHT, 0, 3, 1e-3)
     elif featuretype == 'sift':
-        feature = cv2.SIFT_create()
+        feature = cv2.SIFT_create(3000)
     
     kpts, desc = feature.detectAndCompute(img, None)
 
@@ -86,7 +86,7 @@ def extract_features(img, featuretype):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for sfm pipeline')
     parser.add_argument('--path_fountain_dataset', type=str, required=True)
-    parser.add_argument('--feature', type=str, default='sift',
+    parser.add_argument('--feature', type=str, default='akaze',
                     help='feature descriptor type: sift or akaze')
     parser.add_argument('--reconstruction', type=str, default='global',
                     help='reconstruction type: global, incremental or hybrid')
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     view_graph = pt.sfm.ViewGraph()
     recon = pt.sfm.Reconstruction()
-    track_builder = pt.sfm.TrackBuilder(3, 30)
+    track_builder = pt.sfm.TrackBuilder(4, 30)
 
     prior = pt.sfm.CameraIntrinsicsPrior()
     prior.focal_length.value = [2759.48]
@@ -123,12 +123,13 @@ if __name__ == "__main__":
     # add views and extract feature
     img_data = {}
     for idx, image_name in enumerate(image_names):
-        vid = recon.AddView(image_name, 0, idx)
+        img_name_ext = image_name+"."+args.img_ext
+        vid = recon.AddView(img_name_ext, 0, idx)
         v = recon.MutableView(vid)
         v.SetCameraIntrinsicsPrior(prior)
-        image = cv2.imread(os.path.join(img_path,image_name+"."+args.img_ext))
+        image = cv2.imread(os.path.join(img_path,img_name_ext))
         kpts, desc = extract_features(image, featuretype)
-        img_data[image_name] = {"view_id": vid, "kpts": kpts, "desc": desc}
+        img_data[img_name_ext] = {"view_id": vid, "kpts": kpts, "desc": desc}
     
     # make sure the intrinsics are all initialized fromt he priors
     pt.sfm.SetCameraIntrinsicsFromPriors(recon) 
@@ -151,17 +152,19 @@ if __name__ == "__main__":
             else:
                 print("No match between image {} and image {}. ".format(img_i_name, img_j_name))
     
-    print('{} edges were added to the view graph.'.format(view_graph.NumEdges))
+    print('{} edges were added to the view graph.'.format(view_graph.NumEdges()))
     track_builder.BuildTracks(recon)
     options = pt.sfm.ReconstructionEstimatorOptions()
     options.num_threads = 7
-    options.rotation_filtering_max_difference_degrees = 10.0
+    options.rotation_filtering_max_difference_degrees = 15.0
     options.bundle_adjustment_robust_loss_width = 3.0
     options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
-    options.subsample_tracks_for_bundle_adjustment = True
+    options.subsample_tracks_for_bundle_adjustment = False
     options.filter_relative_translations_with_1dsfm = True
 
     if reconstructiontype == 'global':
+        options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LIGT
+        options.global_rotation_estimator_type = pt.sfm.GlobalRotationEstimatorType.HYBRID  
         reconstruction_estimator = pt.sfm.GlobalReconstructionEstimator(options)
     elif reconstructiontype == 'incremental':
         reconstruction_estimator = pt.sfm.IncrementalReconstructionEstimator(options)

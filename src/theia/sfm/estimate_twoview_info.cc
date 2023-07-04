@@ -276,18 +276,14 @@ bool EstimateTwoViewInfo(
                                          inlier_indices);
   }
 
+  Eigen::Vector2d min_max_focal_length(
+    options.min_focal_length,options.max_focal_length);
+
   // Only one of the focal lengths is set.
   if (intrinsics1.focal_length.is_set || intrinsics2.focal_length.is_set) {
     LOG(WARNING) << "Solving for two view infos when exactly one view is "
                     "calibrated has not been implemented yet. Treating both "
                     "views as uncalibrated instead.";
-    
-    // we are assuming similar cameras if focal length of one camera is set
-    Eigen::Vector2d min_max_focal_length(0.0,0.0);
-    const double focal_guess = intrinsics1.focal_length.is_set ?
-                intrinsics1.focal_length.value[0] : intrinsics2.focal_length.value[0];
-    min_max_focal_length[0] = focal_guess*0.5;
-    min_max_focal_length[1] = focal_guess*2.0;
     
     return EstimateTwoViewInfoUncalibrated(options,
                                            intrinsics1,
@@ -299,7 +295,6 @@ bool EstimateTwoViewInfo(
   }
 
   // Assume both views are uncalibrated.
-  Eigen::Vector2d min_max_focal_length(0.0,0.0);
   return EstimateTwoViewInfoUncalibrated(options,
                                          intrinsics1,
                                          intrinsics2,

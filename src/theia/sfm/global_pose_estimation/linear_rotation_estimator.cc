@@ -168,12 +168,14 @@ bool LinearRotationEstimator::EstimateRotations(
 
   // Compute the 3 eigenvectors corresponding to the smallest eigenvalues. These
   // orthogonal vectors will contain the solution rotation matrices.
-  SparseSymShiftSolveLLT op(constraint_matrix);
+  std::shared_ptr<SparseCholeskyLLt> linear_solver =
+      std::make_shared<SparseCholeskyLLt>();
+  SparseSymShiftSolveLLT<double> op(linear_solver, constraint_matrix);
   Spectra::
-      SymEigsShiftSolver<double, Spectra::LARGEST_MAGN, SparseSymShiftSolveLLT>
-          eigs(&op, 3, 6, 0.0);
+      SymEigsShiftSolver<SparseSymShiftSolveLLT<double>>
+          eigs(op, 3, 6, 0.0);
   eigs.init();
-  eigs.compute();
+  eigs.compute(Spectra::SortRule::LargestMagn, 1000, 1e-4);
 
   // The solution appears in the first three eigenvectors.
   const Eigen::MatrixXd solution =

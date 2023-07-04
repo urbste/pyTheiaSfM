@@ -37,6 +37,7 @@
 #include "pytheia/io/io.h"
 #include "pytheia/matching/matching.h"
 #include "pytheia/math/math.h"
+#include "pytheia/mvs/mvs.h"
 #include "pytheia/sfm/sfm.h"
 #include "pytheia/solvers/solvers.h"
 
@@ -49,6 +50,7 @@ PYBIND11_MODULE(pytheia, m) {
   io::pytheia_io(m);
   matching::pytheia_matching(m);
   math::pytheia_math(m);
+  mvs::pytheia_mvs(m);
   sfm::pytheia_sfm(m);
   solvers::pytheia_solvers(m);
 }

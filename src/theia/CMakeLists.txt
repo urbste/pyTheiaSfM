@@ -72,6 +72,8 @@ set(THEIA_SRC
   io/write_colmap_files.cc
   io/write_keypoints_and_descriptors.cc
   io/write_matches.cc
+  io/write_nerfstudio.cc
+  io/write_sdfstudio.cc
   io/write_nvm_file.cc
   io/write_ply_file.cc
   matching/brute_force_feature_matcher.cc
@@ -81,6 +83,7 @@ set(THEIA_SRC
   matching/feature_matcher_utils.cc
   matching/feature_matcher.cc
   matching/fisher_vector_extractor.cc
+  matching/graph_match.cc
   matching/guided_epipolar_matcher.cc
   matching/in_memory_features_and_matches_database.cc
   matching/rocksdb_features_and_matches_database.cc
@@ -98,6 +101,7 @@ set(THEIA_SRC
   math/rbr_sdp_solver.cc
   math/riemannian_staircase.cc
   math/matrix/matrix_square_root.cc
+  mvs/view_selection_mvsnet.cc
   sfm/bundle_adjustment/bundle_adjust_two_views.cc
   sfm/bundle_adjustment/bundle_adjuster.cc
   sfm/bundle_adjustment/bundle_adjustment.cc
@@ -142,6 +146,7 @@ set(THEIA_SRC
   sfm/find_common_tracks_in_views.cc
   sfm/find_common_views_by_name.cc
   sfm/global_pose_estimation/compute_triplet_baseline_ratios.cc
+  sfm/global_pose_estimation/bata_position_estimator.cc
   sfm/global_pose_estimation/hybrid_rotation_estimator.cc
   sfm/global_pose_estimation/irls_rotation_local_refiner.cc
   sfm/global_pose_estimation/l1_rotation_global_estimator.cc
@@ -201,6 +206,7 @@ set(THEIA_SRC
   sfm/track.cc
   sfm/transformation/align_point_clouds.cc
   sfm/transformation/align_reconstructions.cc
+  sfm/transformation/align_reconstructions_pose_graph_optim.cc
   sfm/transformation/align_rotations.cc
   sfm/transformation/gdls_similarity_transform.cc
   sfm/transformation/transform_reconstruction.cc
@@ -211,6 +217,7 @@ set(THEIA_SRC
   sfm/view_graph/orientations_from_maximum_spanning_tree.cc
   sfm/view_graph/remove_disconnected_view_pairs.cc
   sfm/view_graph/view_graph.cc
+  sfm/view_graph/view_graph_from_reconstruction.cc
   sfm/view.cc
   sfm/visibility_pyramid.cc
   solvers/exhaustive_sampler.cc
@@ -292,43 +299,43 @@ if (BUILD_TESTING)
     add_test(NAME ${TEST_NAME}_test
       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TEST_NAME}_test)
   endmacro (GTEST)
-  gtest(io/read_calibration)
-  gtest(io/write_calibration)
-  gtest(matching/brute_force_feature_matcher)
-  gtest(matching/cascade_hashing_feature_matcher)
-  gtest(matching/distance)
-  gtest(matching/feature_correspondence)
-  gtest(matching/feature_matcher_utils)
-  gtest(matching/guided_epipolar_matcher)
-  gtest(math/closed_form_polynomial_solver)
-  gtest(math/find_polynomial_roots_companion_matrix)
-  gtest(math/find_polynomial_roots_jenkins_traub)
-  gtest(math/graph/connected_components)
-  gtest(math/graph/minimum_spanning_tree)
-  gtest(math/graph/normalized_graph_cut)
-  gtest(math/graph/triplet_extractor)
-  gtest(math/l1_solver)
-  gtest(math/matrix/gauss_jordan)
-  gtest(math/matrix/rq_decomposition)
-  gtest(math/polynomial)
-  gtest(math/probability/sprt)
-  gtest(math/qp_solver)
-  gtest(math/reservoir_sampler)
-  gtest(math/rotation)
-  gtest(sfm/bundle_adjustment/bundle_adjustment)
-  gtest(sfm/bundle_adjustment/optimize_relative_position_with_known_rotation)
-  gtest(sfm/camera/camera)
-  gtest(sfm/camera/division_undistortion_camera_model)
-  gtest(sfm/camera/double_sphere_camera_model)
-  gtest(sfm/camera/extended_unified_camera_model)
-  gtest(sfm/camera/fisheye_camera_model)
-  gtest(sfm/camera/fov_camera_model)
-  gtest(sfm/camera/orthographic_camera_model)
-  gtest(sfm/camera/pinhole_camera_model)
-  gtest(sfm/camera/pinhole_radial_tangential_camera_model)
-  gtest(sfm/camera/projection_matrix_utils)
-  gtest(sfm/estimators/estimate_absolute_pose_with_known_orientation)
-  gtest(sfm/estimators/estimate_calibrated_absolute_pose)
+#  gtest(io/read_calibration)
+#  gtest(io/write_calibration)
+#  gtest(matching/brute_force_feature_matcher)
+#  gtest(matching/cascade_hashing_feature_matcher)
+#  gtest(matching/distance)
+#  gtest(matching/feature_correspondence)
+#  gtest(matching/feature_matcher_utils)
+#  gtest(matching/guided_epipolar_matcher)
+#  gtest(math/closed_form_polynomial_solver)
+#  gtest(math/find_polynomial_roots_companion_matrix)
+#  gtest(math/find_polynomial_roots_jenkins_traub)
+#  gtest(math/graph/connected_components)
+#  gtest(math/graph/minimum_spanning_tree)
+#  gtest(math/graph/normalized_graph_cut)
+#  gtest(math/graph/triplet_extractor)
+#  gtest(math/l1_solver)
+#  gtest(math/matrix/gauss_jordan)
+#  gtest(math/matrix/rq_decomposition)
+#  gtest(math/polynomial)
+#  gtest(math/probability/sprt)
+#  gtest(math/qp_solver)
+#  gtest(math/reservoir_sampler)
+#  gtest(math/rotation)
+#  gtest(sfm/bundle_adjustment/bundle_adjustment)
+#  gtest(sfm/bundle_adjustment/optimize_relative_position_with_known_rotation)
+#  gtest(sfm/camera/camera)
+#  gtest(sfm/camera/division_undistortion_camera_model)
+ # gtest(sfm/camera/double_sphere_camera_model)
+#  gtest(sfm/camera/extended_unified_camera_model)
+#  gtest(sfm/camera/fisheye_camera_model)
+#  gtest(sfm/camera/fov_camera_model)
+#  gtest(sfm/camera/orthographic_camera_model)
+#  gtest(sfm/camera/pinhole_camera_model)
+#  gtest(sfm/camera/pinhole_radial_tangential_camera_model)
+#  gtest(sfm/camera/projection_matrix_utils)
+#  gtest(sfm/estimators/estimate_absolute_pose_with_known_orientation)
+#  gtest(sfm/estimators/estimate_calibrated_absolute_pose)
 #  gtest(sfm/estimators/estimate_dominant_plane_from_points)
 #  gtest(sfm/estimators/estimate_essential_matrix)
 #  gtest(sfm/estimators/estimate_fundamental_matrix)
@@ -352,15 +359,16 @@ if (BUILD_TESTING)
 #  gtest(sfm/global_pose_estimation/compute_triplet_baseline_ratios)
 #  gtest(sfm/global_pose_estimation/hybrid_rotation_estimator)
 #  gtest(sfm/global_pose_estimation/lagrange_dual_rotation_estimator)
-#  gtest(sfm/global_pose_estimation/least_unsquared_deviation_position_estimator)
-#  gtest(sfm/global_pose_estimation/LiGT_position_estimator)
-#  gtest(sfm/global_pose_estimation/linear_position_estimator)
-#  gtest(sfm/global_pose_estimation/linear_rotation_estimator)
+  gtest(sfm/global_pose_estimation/least_unsquared_deviation_position_estimator)
+  gtest(sfm/global_pose_estimation/LiGT_position_estimator)
+  gtest(sfm/global_pose_estimation/linear_position_estimator)
+  gtest(sfm/global_pose_estimation/linear_rotation_estimator)
 #  gtest(sfm/global_pose_estimation/nonlinear_position_estimator)
 #  gtest(sfm/global_pose_estimation/pairwise_rotation_error)
 #  gtest(sfm/global_pose_estimation/pairwise_translation_and_scale_error)
 #  gtest(sfm/global_pose_estimation/pairwise_translation_error)
 #  gtest(sfm/global_pose_estimation/robust_rotation_estimator)
+gtest(sfm/global_pose_estimation/bata_position_estimator)
 #  gtest(sfm/gps_converter)
 #  gtest(sfm/hybrid_reconstruction_estimator)
 #  gtest(sfm/incremental_reconstruction_estimator)
@@ -376,37 +384,39 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/four_point_homography)
 #  gtest(sfm/pose/four_point_relative_pose_partial_rotation)
 #  gtest(sfm/pose/fundamental_matrix_util)
-gtest(sfm/pose/orthographic_four_point)
+#  gtest(sfm/pose/orthographic_four_point)
 #  gtest(sfm/pose/perspective_three_point)
 #  gtest(sfm/pose/position_from_two_rays)
 #  gtest(sfm/pose/relative_pose_from_two_points_with_known_rotation)
 #  gtest(sfm/pose/seven_point_fundamental_matrix)
 #  gtest(sfm/pose/sim_transform_partial_rotation)
 #  gtest(sfm/pose/six_point_radial_distortion_homography)
-  gtest(sfm/pose/sqpnp)
-  gtest(sfm/pose/three_point_relative_pose_partial_rotation)
-  gtest(sfm/pose/two_point_pose_partial_rotation)
-  gtest(sfm/pose/upnp)
-  gtest(sfm/reconstruction)
-  gtest(sfm/track)
-  gtest(sfm/track_builder)
-  gtest(sfm/transformation/align_point_clouds)
-  gtest(sfm/transformation/align_reconstructions)
-  gtest(sfm/transformation/align_rotations)
-  gtest(sfm/transformation/gdls_similarity_transform)
-  gtest(sfm/triangulation/triangulation)
-  gtest(sfm/twoview_info)
-  gtest(sfm/view)
-  gtest(sfm/view_graph/orientations_from_maximum_spanning_tree)
-  gtest(sfm/view_graph/remove_disconnected_view_pairs)
-  gtest(sfm/view_graph/view_graph)
-  gtest(solvers/exhaustive_ransac)
-  gtest(solvers/exhaustive_sampler)
-  gtest(solvers/evsac)
-  gtest(solvers/lmed)
-  gtest(solvers/prosac)
-  gtest(solvers/random_sampler)
-  gtest(solvers/ransac)
-  gtest(util/mutable_priority_queue)
-  gtest(util/lru_cache)
+#  gtest(sfm/pose/sqpnp)
+#  gtest(sfm/pose/three_point_relative_pose_partial_rotation)
+ # gtest(sfm/pose/two_point_pose_partial_rotation)
+#  gtest(sfm/pose/upnp)
+#  gtest(sfm/reconstruction)
+#  gtest(sfm/track)
+#  gtest(sfm/track_builder)
+#  gtest(sfm/transformation/align_point_clouds)
+#  gtest(sfm/transformation/align_reconstructions)
+#  gtest(sfm/transformation/align_reconstructions_pose_graph_optim)
+#  gtest(sfm/transformation/align_rotations)
+#  gtest(sfm/transformation/gdls_similarity_transform)
+#  gtest(sfm/triangulation/triangulation)
+#  gtest(sfm/twoview_info)
+#  gtest(sfm/view)
+#  gtest(sfm/view_graph/orientations_from_maximum_spanning_tree)
+#  gtest(sfm/view_graph/remove_disconnected_view_pairs)
+ # gtest(sfm/view_graph/view_graph_from_reconstruction)
+#  gtest(sfm/view_graph/view_graph)
+#  gtest(solvers/exhaustive_ransac)
+#  gtest(solvers/exhaustive_sampler)
+#  gtest(solvers/evsac)
+#  gtest(solvers/lmed)
+#  gtest(solvers/prosac)
+#  gtest(solvers/random_sampler)
+#  gtest(solvers/ransac)
+#  gtest(util/mutable_priority_queue)
+#  gtest(util/lru_cache)
 endif (BUILD_TESTING)

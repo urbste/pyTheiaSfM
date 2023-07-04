@@ -57,13 +57,13 @@ namespace {
 
 void GetObservationsFromTrackViews(
     const TrackId track_id,
-    const Reconstruction& reconstruction,
+    Reconstruction& reconstruction,
     std::vector<ViewId>* view_ids,
     std::vector<Eigen::Vector2d>* features,
     std::vector<Eigen::Vector3d>* origins,
     std::vector<Matrix3x4d>* proj_matrices,
     std::vector<Eigen::Vector3d>* ray_directions) {
-  const Track* track = reconstruction.Track(track_id);
+  Track* track = reconstruction.MutableTrack(track_id);
   for (const ViewId view_id : track->ViewIds()) {
     const View* view = reconstruction.View(view_id);
 
@@ -75,7 +75,7 @@ void GetObservationsFromTrackViews(
     // If the feature is not in the view then we have an ill-formed
     // reconstruction.
     const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
-    const Eigen::Vector3d image_ray =
+    const Eigen::Vector3d ray_dir =
         view->Camera().PixelToUnitDepthRay((*feature).point_).normalized();
 
     features->emplace_back((*feature).point_);
@@ -84,7 +84,7 @@ void GetObservationsFromTrackViews(
     Matrix3x4d proj_mat;
     view->Camera().GetProjectionMatrix(&proj_mat);
     proj_matrices->emplace_back(proj_mat);
-    ray_directions->emplace_back(image_ray);
+    ray_directions->emplace_back(ray_dir);
   }
 }
 
@@ -258,12 +258,39 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
         return false;
       }
   }
+
+  // Set the inverse depth of the track
+  if (options_.ba_options.use_inverse_depth_parametrization) {
+    const ViewId ref_view_id = track->ReferenceViewId();
+    if (ref_view_id == kInvalidViewId) {
+      track->SetEstimated(false);
+      return false;
+    }
+    const View* ref_view = reconstruction_->View(ref_view_id);
+    if (ref_view == nullptr || !ref_view->IsEstimated()) {
+      track->SetEstimated(false);
+      return false;
+    }
+    const Camera ref_cam = ref_view->Camera();
+    Eigen::Vector2d point_i;
+    const double depth = ref_cam.ProjectPoint(track->Point(), &point_i);
+    track->SetInverseDepth(1./depth);
+    track->SetReferenceBearingVector(
+      ref_cam.PixelToNormalizedCoordinates(ref_view->GetFeature(track_id)->point_));
+  }
+
   // Bundle adjust the track.
   if (options_.bundle_adjustment) {
     track->SetEstimated(true);
     const BundleAdjustmentSummary summary =
         BundleAdjustTrack(options_.ba_options, track_id, reconstruction_);
     track->SetEstimated(false);
+    if (options_.ba_options.use_inverse_depth_parametrization) {
+      if (track->InverseDepth() <= 0.0) {
+        track->SetEstimated(false);
+        return false;
+      }
+    }
     if (!summary.success) {
       return false;
     }
@@ -284,6 +311,7 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
   }
 
   track->SetEstimated(true);
+
   return true;
 }
 

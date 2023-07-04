@@ -69,6 +69,9 @@ bool CreateNewDirectory(const std::string& directory);
 bool CopyFile(const std::string& filepath_to_copy_from,
               const std::string& filepath_to_copy_to);
 
+// Joins two strings to a path with the correct OS separator
+std::string JoinPath(const std::string& path1,
+                     const std::string& path2);
 }  // namespace theia
 
 #endif  // THEIA_UTIL_FILESYSTEM_H_
