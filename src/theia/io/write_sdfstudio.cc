@@ -1,3 +1,4 @@
+
 // Copyright (C) 2023, Steffen Urban
 // All rights reserved.
 //
@@ -29,7 +30,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "theia/io/write_nerfstudio.h"
+#include "theia/io/write_sdfstudio.h"
 
 #include <fstream>  // NOLINT
 #include <glog/logging.h>
@@ -43,12 +44,13 @@
 
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
-#include "theia/sfm/camera/fisheye_camera_model.h"
 #include "theia/util/filesystem.h"
 
 using namespace cereal;
 
 namespace theia {
+
+namespace {
 
 void AddDoubleKey(
   const std::string& key, const double value, 
@@ -64,11 +66,63 @@ void AddIntKey(
   writer.Int(value);
 }
 
-bool WriteNerfStudio(const std::string& path_to_images,
+void AddStrKey(
+  const std::string& key, const std::string value, 
+  rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+  writer.Key(key.c_str());
+  writer.String(value.c_str());
+}
+
+void AddMat4Key(
+  const std::string& key,
+  const Eigen::Matrix4d& matrix, 
+  rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+   writer.Key(key.c_str());
+   writer.StartArray();
+   // create transform matrix
+   for (int r = 0; r < 4; ++r) {
+   writer.StartArray();
+   for (int i = 0; i < 4; ++i) {
+      writer.Double(matrix(r,i));
+    }
+    writer.EndArray();
+  }
+  writer.EndArray();
+}
+
+
+void WriteAllSfmPoints(
+    const Reconstruction& recon,
+    const std::string& out_path) {  
+  std::ofstream file;
+  file.open(out_path);
+  for (const auto& track_id : recon.TrackIds()) {
+    const auto track = recon.Track(track_id);
+    const auto& point = track->Point().hnormalized();
+    file << point(0) << " " << point(1) << " " << point(2) << "\n";
+  }
+  file.close();
+}
+
+void WriteViewSfmPoints(const Reconstruction& recon,
+                    const ViewId& view_id,
+                    const std::string& out_path) {  
+  std::ofstream file;
+  file.open(out_path);
+  for (const auto& track_id : recon.View(view_id)->TrackIds()) {
+    const auto track = recon.Track(track_id);
+    const auto& point = track->Point().hnormalized();
+    file << point(0) << " " << point(1) << " " << point(2) << "\n";
+  }
+  file.close();
+}
+
+} // namespace
+
+bool WriteSdfStudio(const std::string& path_to_images,
                   const Reconstruction& reconstruction,
-                  const int aabb_scale,
-                  const std::string& out_json_nerfstudio_file) {
-  CHECK_GT(out_json_nerfstudio_file.length(), 0);
+                  const std::pair<double, double>& nearfar,
+                  const double radius) {
   CHECK_GT(path_to_images.length(), 0);
 
   rapidjson::Value frames_array(rapidjson::kObjectType);
@@ -84,6 +138,46 @@ bool WriteNerfStudio(const std::string& path_to_images,
 
   writer.StartObject();
 
+  AddStrKey("camera_model", "OPENCV", writer);
+  const auto cam = reconstruction.View(0)->Camera();
+  AddIntKey("height", cam.ImageHeight(), writer);
+  AddIntKey("width", cam.ImageWidth(), writer);
+
+  const std::string sparse_sfm_points_path = 
+    JoinPath(path_to_images, "sparse_sfm_points.txt");
+  WriteAllSfmPoints(reconstruction, sparse_sfm_points_path);
+  AddStrKey("sparse_sfm_points", "sparse_sfm_points.txt", writer);
+  AddStrKey("has_mono_prior", "false", writer);
+  AddStrKey("has_foreground_mask", "false", writer);
+  AddStrKey("has_sparse_sfm_points", "true", writer);
+
+  Eigen::Matrix4d worldtogt = Eigen::Matrix4d::Identity();
+  AddMat4Key("worldtogt", worldtogt, writer);
+
+  writer.Key("scene_box");
+  writer.StartObject();
+  writer.Key("aabb");
+  writer.StartArray();
+
+  writer.StartArray();
+  writer.Int(-1);
+  writer.Int(-1);
+  writer.Int(-1);
+  writer.EndArray();
+
+  writer.StartArray();
+  writer.Int(1);
+  writer.Int(1);
+  writer.Int(1);
+  writer.EndArray();
+
+  writer.EndArray();
+  AddDoubleKey("near", nearfar.first, writer);
+  AddDoubleKey("far", nearfar.second, writer);
+  AddDoubleKey("radius", radius, writer);
+  AddStrKey("collider_type", "near_far", writer);
+  writer.EndObject();
+
   writer.Key("frames");
   writer.StartArray();
   for (const auto& vid : reconstruction.ViewIds()) {
@@ -91,98 +185,44 @@ bool WriteNerfStudio(const std::string& path_to_images,
       if (!view->IsEstimated()) {
           continue;
       }
+    
+      std::string sfm_pt_name = view->Name() + "_sfm_points.txt";
+      std::string out_sfm_points_path = 
+        JoinPath(path_to_images, sfm_pt_name);
+      WriteViewSfmPoints(reconstruction, vid, out_sfm_points_path);
+
       writer.StartObject();
+      
+      AddStrKey("rgb_path", view->Name().c_str(), writer);
+      AddStrKey("sfm_sparse_points_view", sfm_pt_name, writer);
 
-      writer.Key("file_path");
-      const std::string img_path = JoinPath(path_to_images, view->Name());
-      writer.String(img_path.c_str());
-
-      rapidjson::Value file_path;
       // name should be filename, e.g. image001.png
 
-      // https://github.com/nerfstudio-project/nerfstudio/blob/6486c00d4d717ee437198d08930a86f5cced5359/nerfstudio/process_data/colmap_utils.py#L422
-      // w2c = np.concatenate([rotation, translation], 1)
-      // w2c = np.concatenate([w2c, np.array([[0, 0, 0, 1]])], 0)
-      // c2w = np.linalg.inv(w2c)
-      // # Convert from COLMAP's camera coordinate system (OpenCV) to ours (OpenGL)
-      // c2w[0:3, 1:3] *= -1
-      // c2w = c2w[np.array([1, 0, 2, 3]), :]
-      // c2w[2, :] *= -1
       const auto cam = view->Camera();
       Eigen::Matrix4d c2w = Eigen::Matrix4d::Identity();
       c2w.block<3,3>(0,0) = cam.GetOrientationAsRotationMatrix().transpose();
       c2w.block<3,1>(0,3) = view->Camera().GetPosition();
-      c2w.block<3,2>(0,1) *= -1;
 
-      Eigen::Matrix4d to_nerfstudio = Eigen::Matrix4d::Identity();
-      to_nerfstudio.block<1,4>(0,0) = c2w.row(1);
-      to_nerfstudio.block<1,4>(1,0) = c2w.row(0);
-      to_nerfstudio.block<1,4>(2,0) = c2w.row(2);
-      to_nerfstudio.block<1,4>(3,0) = c2w.row(3);
-      to_nerfstudio.block<1,4>(2,0) *= -1;
+      AddMat4Key("camtoworld", c2w, writer);
 
+      Eigen::Matrix4d K = Eigen::Matrix4d::Identity();
+      K(0,0) = cam.FocalLength();
+      K(1,1) = cam.FocalLength();
+      K(0,2) = cam.PrincipalPointX();
+      K(1,2) = cam.PrincipalPointY();
+  
+      AddMat4Key("intrinsics", K, writer);
 
-      writer.Key("transform_matrix");
-      writer.StartArray();
-      // create transform matrix
-      for (int r = 0; r < 4; ++r) {
-        writer.StartArray();
-        for (int i = 0; i < 4; ++i) {
-          writer.Double(to_nerfstudio(r,i));
-        }
-        writer.EndArray();
-      }
-      writer.EndArray();
-
-      // now get the intrinsics
-      Eigen::Matrix3d K;
-      cam.GetCalibrationMatrix(&K);
-      AddDoubleKey("fl_x", K(0,0), writer);
-      AddDoubleKey("fl_y", K(1,1), writer);
-      AddDoubleKey("cx", K(0,2), writer);
-      AddDoubleKey("cy", K(1,2), writer);
-
-      AddIntKey("w", cam.ImageWidth(), writer);
-      AddIntKey("h", cam.ImageHeight(), writer);
-
-
-      const double* cam_params = cam.parameters();
-      if (cam.GetCameraIntrinsicsModelType() == theia::CameraIntrinsicsModelType::PINHOLE) {
-        AddDoubleKey("k1",
-          cam_params[theia::PinholeCameraModel::InternalParametersIndex::RADIAL_DISTORTION_1],
-          writer);
-        AddDoubleKey("k2",
-          cam_params[theia::PinholeCameraModel::InternalParametersIndex::RADIAL_DISTORTION_2],
-          writer);
-        AddDoubleKey("p1", 0.0, writer);
-        AddDoubleKey("p2", 0.0, writer);
-      } else if (cam.GetCameraIntrinsicsModelType() == theia::CameraIntrinsicsModelType::FISHEYE) {
-        AddDoubleKey("k1",
-          cam_params[theia::FisheyeCameraModel::InternalParametersIndex::RADIAL_DISTORTION_1],
-          writer);
-        AddDoubleKey("k2",
-          cam_params[theia::FisheyeCameraModel::InternalParametersIndex::RADIAL_DISTORTION_2],
-          writer);
-        AddDoubleKey("k3",
-          cam_params[theia::FisheyeCameraModel::InternalParametersIndex::RADIAL_DISTORTION_3],
-          writer);
-        AddDoubleKey("k4",
-          cam_params[theia::FisheyeCameraModel::InternalParametersIndex::RADIAL_DISTORTION_4],
-          writer);
-      } else {
-        LOG(ERROR) << "Camera Model not supported. Currently only PINHOLE and FISHEYE are supported models.";
-        return false;
-        exit(-1);
-      }
       writer.EndObject();
   }
   writer.EndArray();
   writer.EndObject();
 
   // Return false if the file cannot be opened for writing.
-  std::ofstream json_writer(out_json_nerfstudio_file, std::ofstream::out);
+  const std::string out_json = JoinPath(path_to_images, "meta_data.json");
+  std::ofstream json_writer(out_json, std::ofstream::out);
   if (!json_writer.is_open()) {
-    LOG(ERROR) << "Could not open the file: " << out_json_nerfstudio_file
+    LOG(ERROR) << "Could not open the file: " << out_json
                << " for writing a nerfstudio file.";
     return false;
   }

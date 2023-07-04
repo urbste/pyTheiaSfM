@@ -128,26 +128,23 @@ bool RevisedLeastUnsquaredDeviationPositionEstimator::EstimatePositions(
   beq.insert(0,0) = view_pairs.size();
   std::cout<<"beq"<<beq<<"\n";
 
-  // Eigen::VectorXd Svec = Eigen::VectorXd::Random(num_view_pairs).array().abs();
-  // Svec *= num_view_pairs / Svec.sum();
-  // Eigen::MatrixXd S = Svec.replicate(1,3).reshaped<Eigen::RowMajor>();
+  Eigen::VectorXd Svec = Eigen::VectorXd::Random(num_view_pairs).array().abs();
+  Svec *= num_view_pairs / Svec.sum();
+  Eigen::MatrixXd S = Svec.replicate(1,3).reshaped<Eigen::RowMajor>();
 
-  // Eigen::VectorXd W = Eigen::VectorXd::Ones(3 * num_view_pairs);
-  // W = W.array().sqrt();
+  Eigen::VectorXd W = Eigen::VectorXd::Ones(3 * num_view_pairs);
+  W = W.array().sqrt();
   Eigen::VectorXd t;
 
   for(int iter = 0; iter < options_.num_inner_iterations; ++iter)
   {
     Eigen::SparseMatrix<double> A(3 * num_view_pairs, 3 * num_view_pairs);
     A.setIdentity();
-    //A = A * W.asDiagonal() * At0_full_;
-    A = A * At0_full_;
+    A = A * W.asDiagonal() * At0_full_;
     Eigen::SparseMatrix<double> At = A.adjoint();
-    //Eigen::MatrixXd B = W.array() * S.array() * tij_all_.reshaped<Eigen::ColMajor>().array();
-    Eigen::MatrixXd B = tij_all_.reshaped<Eigen::ColMajor>().array();
+    Eigen::MatrixXd B = W.array() * S.array() * tij_all_.reshaped<Eigen::ColMajor>().array();
     Eigen::SparseMatrix<double> A_full(A.cols() + 4, A.cols() + 4);
     A_full = SpliceMatrix(2 * At * A, Aeq_transpose, Aeq, Eigen::SparseMatrix<double>(4,4));
-    std::cout<<"A_full"<<A_full<<"\n";
     Eigen::SparseMatrix<double> b = SpliceMatrix(
       2 * At * Eigen::SparseMatrix<double>(B.sparseView()), 
       Eigen::SparseMatrix<double>(0,0), beq, Eigen::SparseMatrix<double>(0,0));
@@ -164,19 +161,17 @@ bool RevisedLeastUnsquaredDeviationPositionEstimator::EstimatePositions(
 
     t = X.head(3 * num_views);
     Eigen::MatrixXd Aij = (At0_full_ * t).reshaped(3, num_view_pairs);
-    std::cout<<"Aij: "<<Aij<<std::endl;
-    std::cout<<"tij_all_.array()): "<<tij_all_<<std::endl;
-    // Svec = (Aij.array() * tij_all_.array()).colwise().sum();
-    // Svec = Svec.array() / tij_sq_sum.array();  
-    // S = Svec.replicate(1,3).reshaped<Eigen::RowMajor>();
+    Svec = (Aij.array() * tij_all_.array()).colwise().sum();
+    Svec = Svec.array() / tij_sq_sum.array();  
+    S = Svec.replicate(1,3).reshaped<Eigen::RowMajor>();
 
-    // Eigen::MatrixXd tmp = At0_full_ * t;
-    // tmp = (tmp.array() - S.array() * tij_all_.reshaped<Eigen::ColMajor>().array()).reshaped(3, num_view_pairs);
-    // tmp = tmp.array().square();
-    // Eigen::MatrixXd tmp_col_sum = tmp.colwise().sum();
-    // Eigen::MatrixXd Wvec = (tmp_col_sum.array() + options_.delta).pow(-0.5);
-    // W = Wvec.replicate(3,1).reshaped<Eigen::ColMajor>();
-    // W = W.array().sqrt();
+    Eigen::MatrixXd tmp = At0_full_ * t;
+    tmp = (tmp.array() - S.array() * tij_all_.reshaped<Eigen::ColMajor>().array()).reshaped(3, num_view_pairs);
+    tmp = tmp.array().square();
+    Eigen::MatrixXd tmp_col_sum = tmp.colwise().sum();
+    Eigen::MatrixXd Wvec = (tmp_col_sum.array() + options_.delta).pow(-0.5);
+    W = Wvec.replicate(3,1).reshaped<Eigen::ColMajor>();
+    W = W.array().sqrt();
   }
   Eigen::MatrixXd pose = t.reshaped(3, num_views);
 

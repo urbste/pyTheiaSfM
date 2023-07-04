@@ -122,15 +122,13 @@ class NormalizedGraphCut {
     const Eigen::SparseMatrix<double> lhs = node_weight_ - edge_weight_;
     Spectra::SparseSymMatProd<double> lhs_op(lhs);
     Spectra::SparseCholesky<double> rhs_op(node_weight_);
-    Spectra::SymGEigsSolver<double,
-                            Spectra::SMALLEST_MAGN,
-                            Spectra::SparseSymMatProd<double>,
+    Spectra::SymGEigsSolver<Spectra::SparseSymMatProd<double>,
                             Spectra::SparseCholesky<double>,
-                            Spectra::GEIGS_CHOLESKY>
-        eigs(&lhs_op, &rhs_op, 2, 10);
+                            Spectra::GEigsMode::Cholesky>
+        eigs(lhs_op, rhs_op, 2, 10);
     eigs.init();
-    eigs.compute();
-    if (eigs.info() != Spectra::SUCCESSFUL) {
+    eigs.compute(Spectra::SortRule::SmallestMagn);
+    if (eigs.info() != Spectra::CompInfo::Successful) {
       return false;
     }
 

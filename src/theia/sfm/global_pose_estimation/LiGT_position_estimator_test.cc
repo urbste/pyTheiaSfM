@@ -152,8 +152,8 @@ class EstimatePositionsLiGTTest { // : public ::testing::Test {
     for (const auto& position : positions_) {
       const Vector3d& estimated_position =
           FindOrDie(estimated_positions, position.first);
-      std::cout<< "\ng.t. position      = " << position.second.transpose()
-        << "\nestimated position = " << estimated_position.transpose() <<"\n";
+      // std::cout<< "\ng.t. position      = " << position.second.transpose()
+      //   << "\nestimated position = " << estimated_position.transpose() <<"\n";
       const double position_error =
           (position.second - estimated_position).norm();
       // EXPECT_LT(position_error, position_tolerance)
@@ -259,39 +259,39 @@ class EstimatePositionsLiGTTest { // : public ::testing::Test {
   Reconstruction reconstruction_;
 };
 
-// TEST(EstimatePositionsLiGTTest1, MinimalTestNoNoise) {
-//   static const double kTolerance = 1e-2;
-//   static const int kNumViews = 4;
-//   static const int kNumTracksPerView = 10;
-//   static const int kNumViewPairs = 8;
-//   EstimatePositionsLiGTTest test_class(kNumViews,
-//                               kNumTracksPerView,
-//                               kNumViewPairs,
-//                               0.0,
-//                               0.0,
-//                               kTolerance);
-// }
+TEST(EstimatePositionsLiGTTest1, MinimalTestNoNoise) {
+  static const double kTolerance = 1e-4;
+  static const int kNumViews = 3;
+  static const int kNumTracksPerView = 5;
+  static const int kNumViewPairs = 3;
+  EstimatePositionsLiGTTest test_class(kNumViews,
+                              kNumTracksPerView,
+                              kNumViewPairs,
+                              0.0,
+                              0.0,
+                              kTolerance);
+}
 
-// TEST(EstimatePositionsLiGTTest2, MinimalTestWithNoise) {
-//   static const double kTolerance = 0.25;
-//   static const int kNumViews = 3;
-//   static const int kNumTracksPerView = 5;
-//   static const int kNumViewPairs = 3;
-//   static const double kPoseNoiseDegrees = 1.00;
-//   static const double kImageNoiseDegrees = 0.5;
-//   EstimatePositionsLiGTTest test_class(kNumViews,
-//                               kNumTracksPerView,
-//                               kNumViewPairs,
-//                               kPoseNoiseDegrees,
-//                               kImageNoiseDegrees,
-//                               kTolerance);
-// }
+TEST(EstimatePositionsLiGTTest2, MinimalTestWithNoise) {
+  static const double kTolerance = 0.5;
+  static const int kNumViews = 3;
+  static const int kNumTracksPerView = 5;
+  static const int kNumViewPairs = 3;
+  static const double kPoseNoiseDegrees = 1.00;
+  static const double kImageNoiseDegrees = 0.5;
+  EstimatePositionsLiGTTest test_class(kNumViews,
+                              kNumTracksPerView,
+                              kNumViewPairs,
+                              kPoseNoiseDegrees,
+                              kImageNoiseDegrees,
+                              kTolerance);
+}
 
 TEST(EstimatePositionsLiGTTest3, TestNoNoise) {
-  static const double kTolerance = 0.25;
-  static const int kNumViews = 30;
-  static const int kNumTracksPerView = 30;
-  static const int kNumViewPairs = 60;
+  static const double kTolerance = 1e-4;
+  static const int kNumViews = 200;
+  static const int kNumTracksPerView = 100;
+  static const int kNumViewPairs = 500;
   EstimatePositionsLiGTTest test_class(kNumViews,
                               kNumTracksPerView,
                               kNumViewPairs,
@@ -299,20 +299,37 @@ TEST(EstimatePositionsLiGTTest3, TestNoNoise) {
                               kTolerance);
 }
 
-// TEST(EstimatePositionsLiGTTest4, TestWithNoise) {
-//   static const double kTolerance = 0.5;
-//   static const int kNumViews = 200;
-//   static const int kNumTracksPerView = 100;
-//   static const int kNumViewPairs = 500;
+TEST(EstimatePositionsLiGTTest4, TestWithNoise) {
+  static const double kTolerance = 0.5;
+  static const int kNumViews = 200;
+  static const int kNumTracksPerView = 100;
+  static const int kNumViewPairs = 500;
 
-//   static const double kPoseNoiseDegrees = 1.00;
-//   static const double kImageNoiseDegrees = 1.0;
-//   EstimatePositionsLiGTTest test_class(kNumViews,
-//                               kNumTracksPerView,
-//                               kNumViewPairs,
-//                               kPoseNoiseDegrees,
-//                               kImageNoiseDegrees,
-//                               kTolerance);
-// }
+  static const double kPoseNoiseDegrees = 1.00;
+  static const double kImageNoiseDegrees = 0.5;
+  EstimatePositionsLiGTTest test_class(kNumViews,
+                              kNumTracksPerView,
+                              kNumViewPairs,
+                              kPoseNoiseDegrees,
+                              kImageNoiseDegrees,
+                              kTolerance);
+}
+
+TEST(EstimatePositionsLiGTTest4, TestWithNoiseLarges) {
+  static const double kTolerance = 0.5;
+  static const int kNumViews = 2000;
+  static const int kNumTracksPerView = 150;
+  static const int kNumViewPairs = 5000;
+
+  static const double kPoseNoiseDegrees = 1.00;
+  static const double kImageNoiseDegrees = 0.5;
+  EstimatePositionsLiGTTest test_class(kNumViews,
+                              kNumTracksPerView,
+                              kNumViewPairs,
+                              kPoseNoiseDegrees,
+                              kImageNoiseDegrees,
+                              kTolerance);
+}
+
 
 }  // namespace theia
