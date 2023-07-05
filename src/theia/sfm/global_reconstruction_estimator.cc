@@ -223,11 +223,6 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
       global_estimator_timings.relative_translation_optimization_time +
       global_estimator_timings.relative_translation_filtering_time +
       global_estimator_timings.position_estimation_time;
-  
-  // plot all positions
-  for (const auto& position : positions_) {
-    std::cout << " pos: "<< position.second.transpose() << std::endl;
-  }
 
   // Set the poses in the reconstruction object.
   SetReconstructionFromEstimatedPoses(
