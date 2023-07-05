@@ -72,7 +72,13 @@ class BundleAdjuster {
 
   // Add a track to be optimized with bundle adjustment. A residual is created
   // for each estimated view that observes the track.
-  void AddTrack(const TrackId track_id, const bool use_homogeneous = true);
+  void AddTrack(const TrackId track_id);
+  
+  // Add a inverse depth parametrization track to be optimized with bundle adjustment. 
+  // A residual is created for each estimated view that observes the track.
+  void AddInvTrack(const TrackId track_id, const bool views_constant);
+
+  void AddViewPriors();
 
   // After AddView and AddTrack have been called, optimize the provided views
   // and tracks with bundle adjustment.
@@ -122,6 +128,14 @@ class BundleAdjuster {
   virtual void AddReprojectionErrorResidual(const Feature& feature,
                                             Camera* camera,
                                             Track* track);
+                                        
+  // Add the inverse depth reprojection error residual to the problem.
+  virtual void AddInvReprojectionErrorResidual(const Feature& feature,
+                                               const Eigen::Vector3d& ref_bearing,
+                                               Camera* camera_anch,
+                                               Camera* camera_other,
+                                               Track* track);
+
   // Add a position prior residual. This can for example be a GPS position.
   virtual void AddPositionPriorErrorResidual(View* view, Camera* camera);
 

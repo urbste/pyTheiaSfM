@@ -205,7 +205,7 @@ cd LIBS
 
 # eigen
 git clone https://gitlab.com/libeigen/eigen
-cd eigen && git checkout 3.3.9
+cd eigen && git checkout 3.4.0
 mkdir -p build && cd build && cmake .. && sudo make install
 
 # libgflags libglog libatlas-base-dev
@@ -231,12 +231,12 @@ cd /home/LIBS
 
 # eigen
 git clone https://gitlab.com/libeigen/eigen
-cd eigen && git checkout 3.3.9
+cd eigen && git checkout 3.4.0
 mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/home/LIBS/eigen/build && make -j install
 
 cd /home/LIBS
 git clone https://ceres-solver.googlesource.com/ceres-solver
-cd ceres-solver && git checkout 2.0.0 && mkdir build && cd build
+cd ceres-solver && git checkout 2.1.0 && mkdir build && cd build
 cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DEXPORT_BUILD_DIR=ON
 make -j
 
@@ -248,18 +248,23 @@ make -j
 
 ## How to build Python wheels
 ### Local build with sudo installed ceres-solver and Eigen
-Tested on Ubuntu. In your Python >= 3.5 environment of choice run:
+Tested on Ubuntu. In your Python >= 3.6 environment of choice run:
 ```bash
 sh build_and_install.sh
 ```
 
+If you have problems like **/lib/libstdc++.so.6: version `GLIBCXX_3.4.30' not found** on Ubuntu 22.04 in an Anaconda environment try:
+```bash
+conda install -c conda-forge libstdcxx-ng
+```
+
 ### With Docker
-The docker build will actually build manylinux wheels for Linux (Python 3.5-3.9).
+The docker build will actually build manylinux wheels for Linux (Python 3.6-3.12).
 There are two ways to do that. One will clutter the source directory, but you will have the wheel file directly available (./wheelhouse/).
 Another drawback of this approach is that the files will have been created with docker sudo rights and are diffcult to delete:
 ```bash
 # e.g. for python 3.9
-docker run --rm -e PYTHON_VERSION="cp39-cp39" -v `pwd`:/home urbste/pytheia_base:1.1.0 /home/pypackage/build-wheel-linux.sh
+docker run --rm -e PYTHON_VERSION="cp39-cp39" -v `pwd`:/home urbste/pytheia_base:1.2.0 /home/pypackage/build-wheel-linux.sh
 ```
 
 The other one is cleaner but you will have to copy the wheels out of the docker container afterwards:

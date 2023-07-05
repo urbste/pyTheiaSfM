@@ -42,50 +42,22 @@
 namespace theia {
 namespace math {
 
-SMinusLambdaProdFunctor::SMinusLambdaProdFunctor(
-    std::shared_ptr<RankRestrictedSDPSolver> sdp_solver, double sigma)
-    : sdp_solver_(sdp_solver), dim_(sdp_solver->Dimension()), sigma_(sigma) {
-  rows_ = sdp_solver_->Dimension() * sdp_solver_->NumUnknowns();
-  cols_ = sdp_solver_->Dimension() * sdp_solver_->NumUnknowns();
-
-  // Compute and cache this on construction
-  Lambda_ = sdp_solver_->ComputeLambdaMatrix();
-}
-
-void SMinusLambdaProdFunctor::perform_op(double* x, double* y) const {
-  Eigen::Map<Eigen::VectorXd> X(x, cols_);
-  Eigen::Map<Eigen::VectorXd> Y(y, rows_);
-
-  Y = sdp_solver_->ComputeQYt(X.transpose());
-
-#pragma omp parallel for
-  for (size_t i = 0; i < sdp_solver_->NumUnknowns(); ++i) {
-    Y.segment(i * dim_, dim_) -=
-        Lambda_.block(0, i * dim_, dim_, dim_) * X.segment(i * dim_, dim_);
-  }
-
-  if (sigma_ != 0) {
-    Y += sigma_ * X;
-  }
-}
-
 RiemannianStaircase::RiemannianStaircase(const size_t n, const size_t block_dim)
-    : RiemannianStaircase(n, block_dim, math::SDPSolverOptions()) {}
+  : RiemannianStaircase(n, block_dim, math::SDPSolverOptions()) {}
 
-RiemannianStaircase::RiemannianStaircase(const size_t n,
-                                         const size_t block_dim,
-                                         const math::SDPSolverOptions& options)
-    : SDPSolver(n, block_dim, options),
-      n_(n),
-      dim_(block_dim),
-      sdp_options_(options),
-      sdp_solver_(new RankRestrictedSDPSolver(n, block_dim, options)) {}
+RiemannianStaircase::RiemannianStaircase(
+    const size_t n, const size_t block_dim,
+    const math::SDPSolverOptions& options)
+  : SDPSolver(n, block_dim, options),
+    n_(n),
+    dim_(block_dim),
+    sdp_options_(options),
+    sdp_solver_(new RankRestrictedSDPSolver(n, block_dim, options)) {}
 
 void RiemannianStaircase::Solve(math::Summary& summary) {
   const RiemannianStaircaseOptions& riemannian_options =
       sdp_options_.riemannian_staircase_options;
-  for (size_t i = riemannian_options.min_rank; i <= riemannian_options.max_rank;
-       ++i) {
+  for (size_t i = riemannian_options.min_rank; i <= riemannian_options.max_rank; ++i) {
     LOG(INFO) << "Current rank: " << i;
     // Local search for the second critical point.
     summary = Summary();
@@ -103,10 +75,9 @@ void RiemannianStaircase::Solve(math::Summary& summary) {
       break;
     }
 
-    if (min_eigenvalue >
-        -riemannian_options.min_eigenvalue_nonnegativity_tolerance) {
+    if (min_eigenvalue > -riemannian_options.min_eigenvalue_nonnegativity_tolerance) {
       LOG(INFO) << "Found second order critical point!";
-
+      
       break;
     }
 
@@ -117,11 +88,9 @@ void RiemannianStaircase::Solve(math::Summary& summary) {
     LOG(INFO) << "Current solution is not second order critical point,"
               << " escaping saddle point!";
     Eigen::MatrixXd Yplus;
-    if (EscapeSaddle(min_eigenvalue,
-                     min_eigenvector,
-                     riemannian_options.gradient_tolerance,
-                     riemannian_options.preconditioned_gradient_tolerance,
-                     &Yplus)) {
+    if (EscapeSaddle(min_eigenvalue, min_eigenvector,
+        riemannian_options.gradient_tolerance,
+        riemannian_options.preconditioned_gradient_tolerance, &Yplus)) {
       sdp_solver_->SetOptimalY(Yplus);
     } else {
       LOG(WARNING) << "Escape saddle point failed!";
@@ -137,27 +106,26 @@ void RiemannianStaircase::Solve(math::Summary& summary) {
   }
 }
 
-bool RiemannianStaircase::KKTVerification(double* min_eigenvalue,
-                                          Eigen::VectorXd* min_eigenvector,
-                                          size_t* num_iterations) {
+bool RiemannianStaircase::KKTVerification(
+    double* min_eigenvalue,
+    Eigen::VectorXd* min_eigenvector,
+    size_t* num_iterations) {
   // First, compute the largest-magnitude eigenvalue of this matrix
   const Eigen::MatrixXd& Y = sdp_solver_->GetYStar();
   const auto& riemannian_options = sdp_options_.riemannian_staircase_options;
+  
+  SMinusLambdaProdFunctor<double> lm_op(sdp_solver_);
 
-  SMinusLambdaProdFunctor lm_op(sdp_solver_);
-  Spectra::SymEigsSolver<double,
-                         Spectra::SELECT_EIGENVALUE::LARGEST_MAGN,
-                         SMinusLambdaProdFunctor>
+  Spectra::SymEigsSolver<SMinusLambdaProdFunctor<double>>
       largest_magnitude_eigensolver(
-          &lm_op,
-          1,
+          lm_op, 1,
           std::min(riemannian_options.num_Lanczos_vectors, n_ * dim_));
 
   largest_magnitude_eigensolver.init();
   int num_converged = largest_magnitude_eigensolver.compute(
-      riemannian_options.max_eigen_solver_iterations,
-      1e-4,
-      Spectra::SELECT_EIGENVALUE::LARGEST_MAGN);
+      Spectra::SortRule::LargestMagn,
+      riemannian_options.max_eigen_solver_iterations, 1e-4,
+      Spectra::SortRule::LargestMagn);
 
   // Check convergence and bail out if necessary
   if (num_converged != 1) {
@@ -173,7 +141,7 @@ bool RiemannianStaircase::KKTVerification(double* min_eigenvalue,
     // minimum eigenvalue, so just return this solution
     *min_eigenvalue = lambda_lm;
     *min_eigenvector = largest_magnitude_eigensolver.eigenvectors(1);
-    (*min_eigenvector).normalize();  // Ensure that this is a unit vector
+    (*min_eigenvector).normalize(); // Ensure that this is a unit vector
     return true;
   }
 
@@ -186,14 +154,11 @@ bool RiemannianStaircase::KKTVerification(double* min_eigenvalue,
   // eigenvector v_min; furthermore, the condition number sigma of S - Lambda
   // -2*lambda_max is then upper-bounded by 2 :-).
 
-  SMinusLambdaProdFunctor min_shifted_op(sdp_solver_, -2 * lambda_lm);
+  SMinusLambdaProdFunctor<double> min_shifted_op(sdp_solver_, -2 * lambda_lm);
 
-  Spectra::SymEigsSolver<double,
-                         Spectra::SELECT_EIGENVALUE::LARGEST_MAGN,
-                         SMinusLambdaProdFunctor>
+  Spectra::SymEigsSolver<SMinusLambdaProdFunctor<double>>
       min_eigensolver(
-          &min_shifted_op,
-          1,
+          min_shifted_op, 1,
           std::min(riemannian_options.num_Lanczos_vectors, n_ * dim_));
 
   // If Y is a critical point of F, then Y^T is also in the null space of S -
@@ -213,8 +178,7 @@ bool RiemannianStaircase::KKTVerification(double* min_eigenvalue,
   Eigen::VectorXd perturbation(v0.size());
   perturbation.setRandom();
   perturbation.normalize();
-  Eigen::VectorXd xinit =
-      v0 + (.03 * v0.norm()) * perturbation;  // Perturb v0 by ~3%
+  Eigen::VectorXd xinit = v0 + (.03 * v0.norm()) * perturbation; // Perturb v0 by ~3%
 
   // Use this to initialize the eigensolver.
   min_eigensolver.init(xinit.data());
@@ -223,16 +187,17 @@ bool RiemannianStaircase::KKTVerification(double* min_eigenvalue,
   // order to be able to estimate the smallest eigenvalue within an *absolute*
   // tolerance of 'min_eigenvalue_nonnegativity_tolerance'.
   num_converged = min_eigensolver.compute(
+      Spectra::SortRule::LargestMagn,
       riemannian_options.max_eigen_solver_iterations,
       riemannian_options.min_eigenvalue_nonnegativity_tolerance / lambda_lm,
-      Spectra::SELECT_EIGENVALUE::LARGEST_MAGN);
+      Spectra::SortRule::LargestMagn);
 
   if (num_converged != 1) {
     return false;
   }
 
   *min_eigenvector = min_eigensolver.eigenvectors(1);
-  (*min_eigenvector).normalize();  // Ensure that this is a unit vector
+  (*min_eigenvector).normalize(); // Ensure that this is a unit vector
   *min_eigenvalue = min_eigensolver.eigenvalues()(0) + 2 * lambda_lm;
   *num_iterations = min_eigensolver.num_iterations();
 
@@ -241,11 +206,10 @@ bool RiemannianStaircase::KKTVerification(double* min_eigenvalue,
   return true;
 }
 
-bool RiemannianStaircase::EscapeSaddle(const double lambda_min,
-                                       const Eigen::VectorXd& vector_min,
-                                       double gradient_tolerance,
-                                       double preconditioned_gradient_tolerance,
-                                       Eigen::MatrixXd* Yplus) {
+bool RiemannianStaircase::EscapeSaddle(
+    const double lambda_min, const Eigen::VectorXd& vector_min,
+    double gradient_tolerance, double preconditioned_gradient_tolerance,
+    Eigen::MatrixXd* Yplus) {
   // v_min is an eigenvector corresponding to a negative eigenvalue of Q -
   // Lambda, so the KKT conditions for the semidefinite relaxation are not
   // satisfied; this implies that Y is a saddle point of the rank-restricted
@@ -275,7 +239,7 @@ bool RiemannianStaircase::EscapeSaddle(const double lambda_min,
   // triggering the gradient norm tolerance stopping condition (according to the
   // local second-order model), or at least 2^4 times the minimum admissible.
   // steplength,
-  double alpha_min = 1e-6;  // Minimum stepsize
+  double alpha_min = 1e-6; // Minimum stepsize
   double alpha =
       std::max(16 * alpha_min, 10 * gradient_tolerance / fabs(lambda_min));
 
@@ -346,7 +310,9 @@ void RiemannianStaircase::RoundSolution() {
   }
 }
 
-Eigen::MatrixXd RiemannianStaircase::GetSolution() const { return R_; }
+Eigen::MatrixXd RiemannianStaircase::GetSolution() const {
+  return R_;
+}
 
 double RiemannianStaircase::EvaluateFuncVal() const {
   return sdp_solver_->EvaluateFuncVal();

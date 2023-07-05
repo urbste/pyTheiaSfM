@@ -78,6 +78,7 @@ enum class OptimizeIntrinsicsType {
   TANGENTIAL_DISTORTION = 0x20,
   DISTORTION = RADIAL_DISTORTION | TANGENTIAL_DISTORTION,
   FOCAL_LENGTH_DISTORTION = RADIAL_DISTORTION | TANGENTIAL_DISTORTION | FOCAL_LENGTH,
+  FOCAL_LENGTH_RADIAL_DISTORTION = RADIAL_DISTORTION | FOCAL_LENGTH,
   ALL = FOCAL_LENGTH | ASPECT_RATIO | SKEW | PRINCIPAL_POINTS |
         RADIAL_DISTORTION | TANGENTIAL_DISTORTION,
 };
@@ -110,6 +111,10 @@ struct BundleAdjustmentOptions {
   // use local parametrization for points. Apply increments in local tangent
   // space. Reduce from dim 4 -> 3
   bool use_homogeneous_point_parametrization = true;
+
+  // if inverse depth parametrization should be used
+  // if this is set to true use_homogeneous_point_parametrization is ignored
+  bool use_inverse_depth_parametrization = false;
 
   // Indicates which intrinsics should be optimized as part of bundle
   // adjustment. Default to NONE!

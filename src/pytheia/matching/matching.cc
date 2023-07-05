@@ -53,12 +53,14 @@
 #include "theia/matching/global_descriptor_extractor.h"
 #include "theia/matching/indexed_feature_match.h"
 #include "theia/matching/keypoints_and_descriptors.h"
+#include "theia/matching/graph_match.h"
 #include "theia/sfm/feature.h"
 #include "theia/sfm/two_view_match_geometric_verification.h"
 // #include "theia/matching/rocksdb_features_and_matches_database.h"
 // #include "theia/matching/local_features_and_matches_database.h"
 #include "theia/matching/create_feature_matcher.h"
 #include "theia/matching/in_memory_features_and_matches_database.h"
+
 namespace py = pybind11;
 
 namespace pytheia {
@@ -107,8 +109,9 @@ void pytheia_matching_classes(py::module& m) {
 
   // ;
 
-  // InMemoryFeaturesAndMatchesDatabase
+  m.def("GraphMatch", &theia::GraphMatch);
 
+  // InMemoryFeaturesAndMatchesDatabase
   py::class_<theia::InMemoryFeaturesAndMatchesDatabase,
              theia::FeaturesAndMatchesDatabase>(
       m, "InMemoryFeaturesAndMatchesDatabase")

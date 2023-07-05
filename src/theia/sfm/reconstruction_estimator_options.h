@@ -81,6 +81,16 @@ enum class GlobalPositionEstimatorType {
   LIGT = 3
 };
 
+// Track parametrization type:
+//   XYZW: 4D point --> optimization over homogeneous 4 vector
+//   XYZ_MANIFOLD: 4D point --> optimization over ceres::SphereManifold<4>() manifol
+//   INVERSE_DEPTH: optimization of track using inverse depth parametrization
+enum class TrackParametrizationType{
+  XYZW = 0,
+  XYZW_MANIFOLD = 1,
+  INVERSE_DEPTH = 2
+};
+
 // Options for the reconstruction estimation.
 struct ReconstructionEstimatorOptions {
   // Type of reconstruction estimation to use.
@@ -264,6 +274,11 @@ struct ReconstructionEstimatorOptions {
   OptimizeIntrinsicsType intrinsics_to_optimize =
       OptimizeIntrinsicsType::FOCAL_LENGTH |
       OptimizeIntrinsicsType::RADIAL_DISTORTION;
+
+  // The track parametrizeation type to use for bundle adjustment.
+  // Standard is XYZW which will optimize a homogeneous vector, but on a euclidean manifold
+  TrackParametrizationType track_parametrization_type = 
+      TrackParametrizationType::XYZW_MANIFOLD;
 
   // --------------- Track Subsampling Options --------------- //
 

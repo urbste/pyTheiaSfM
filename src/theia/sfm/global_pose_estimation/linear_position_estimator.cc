@@ -162,8 +162,8 @@ LinearPositionEstimator::LinearPositionEstimator(
 
 bool LinearPositionEstimator::EstimatePositions(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-    const std::unordered_map<ViewId, Vector3d>& orientations,
-    std::unordered_map<ViewId, Vector3d>* positions) {
+    const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
+    std::unordered_map<ViewId, Eigen::Vector3d>* positions) {
   CHECK_NOTNULL(positions)->clear();
   view_pairs_ = &view_pairs;
   orientations_ = &orientations;
@@ -197,12 +197,14 @@ bool LinearPositionEstimator::EstimatePositions(
   // eigenvector corresponding to the smallest eigenvalue. This can be done
   // efficiently with inverse power iterations.
   VLOG(2) << "Solving for positions from the sparse eigenvalue problem...";
-  SparseSymShiftSolveLLT op(constraint_matrix);
+  std::shared_ptr<SparseCholeskyLLt> linear_solver =
+      std::make_shared<SparseCholeskyLLt>();
+  SparseSymShiftSolveLLT<double> op(linear_solver, constraint_matrix);
   Spectra::
-      SymEigsShiftSolver<double, Spectra::LARGEST_MAGN, SparseSymShiftSolveLLT>
-          eigs(&op, 1, 6, 0.0);
+      SymEigsShiftSolver<SparseSymShiftSolveLLT<double>>
+          eigs(op, 1, 6, 0.0);
   eigs.init();
-  eigs.compute();
+  eigs.compute(Spectra::SortRule::LargestMagn, 1000, 1e-6);
 
   // Compute with power iterations.
   const Eigen::VectorXd solution = eigs.eigenvectors().col(0);

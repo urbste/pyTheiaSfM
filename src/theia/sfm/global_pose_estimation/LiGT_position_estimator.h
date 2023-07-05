@@ -76,16 +76,19 @@ class LiGTPositionEstimator : public PositionEstimator {
     // The threshold at which to the iterative eigensolver method is considered
     // to be converged.
     double eigensolver_threshold = 1e-8;
+
+    // threshold for using sparse solver instead of SVD
+    int max_num_views_svd = 500;
   };
 
   LiGTPositionEstimator(const Options& options,
                         const Reconstruction& reconstruction);
 
-  // Estimate the positions given view pairs and global orientation estimates.
+  // Estimate the positions
   bool EstimatePositions(
-      const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation,
-      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
+    std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
   // python
   std::unordered_map<ViewId, Eigen::Vector3d> EstimatePositionsWrapper(
@@ -93,11 +96,21 @@ class LiGTPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation);
 
  private:
-  // Store the triplet.
+   // Store the triplet.
   void AddTripletConstraint(const ViewIdTriplet& view_triplet);
-
+  
   // Sets up the linear system with the constraints that each triplet adds.
   void CreateLinearSystem(Eigen::SparseMatrix<double>* constraint_matrix);
+
+  // Implements equation 29 from the paper. Get base views for point
+  std::pair<ViewId, ViewId> GetBestBaseViews(const TrackId& track_id);
+
+  void CalculateBCDForTrack(
+      const theia::ViewId& vid_1,
+      const theia::ViewId& vid_2,
+      const theia::ViewId& vid_3,
+      const TrackId& track_id,
+      std::tuple<Eigen::Matrix3d, Eigen::Matrix3d, Eigen::Matrix3d>& BCD);
 
   //void CreateLinearSystem(Eigen::MatrixXd& constraint_matrix);
   void AddTripletConstraintToSparseMatrix(const ViewId view_id1,
@@ -106,23 +119,10 @@ class LiGTPositionEstimator : public PositionEstimator {
       const std::tuple<Matrix3d, Matrix3d, Matrix3d> &BCD,
       std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries);
 
-  void CalculateBCDForTrack(
-      const theia::View* view1,
-      const theia::View* view2,
-      const theia::View* view3,
-      const TrackId& track_id,
-      std::tuple<Eigen::Matrix3d, Eigen::Matrix3d, Eigen::Matrix3d>& BCD);
-
   void FindTripletsForTracks();
 
-  // A helper method to compute the relative rotations between translation
-  // directions.
-  void ComputeRotatedRelativeTranslationRotations(const ViewId view_id0,
-                                                  const ViewId view_id1,
-                                                  const ViewId view_id2,
-                                                  Eigen::Matrix3d* r012,
-                                                  Eigen::Matrix3d* r201,
-                                                  Eigen::Matrix3d* r120);
+  Eigen::Vector3d GetNormalizedHomFeature(
+    const ViewId& view_id, const TrackId& track_id) const;
   // Positions are estimated from an eigenvector that is unit-norm with an
   // ambiguous sign. To ensure that the sign of the camera positions is correct,
   // we measure the relative translations from estimated camera positions and
@@ -134,8 +134,8 @@ class LiGTPositionEstimator : public PositionEstimator {
   const Options options_;
   const theia::Reconstruction& reconstruction_;
   const std::unordered_map<ViewIdPair, TwoViewInfo>* view_pairs_;
-  const std::unordered_map<ViewId, Eigen::Vector3d>* orientations_;
-
+  std::unordered_map<ViewId, Eigen::Matrix3d> orientations_;
+  
   // save a view triplet for each track, eq. 29
   std::unordered_map<TrackId, std::vector<ViewIdTriplet>> triplets_for_tracks_;
   std::unordered_map<TrackId,

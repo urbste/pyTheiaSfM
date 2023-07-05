@@ -232,4 +232,22 @@ TEST_F(EstimatePositionsLeastUnsquaredDeviationTest, SmallTestWithNoise) {
       kNumViews, kNumViewPairs, kPoseNoiseDegrees, kTolerance);
 }
 
+TEST_F(EstimatePositionsLeastUnsquaredDeviationTest, TestNoNoise) {
+  static const double kTolerance = 0.5;
+  static const int kNumViews = 200;
+  static const int kNumViewPairs = 500;
+  static const double kPoseNoiseDegrees = 0.0;
+  TestLeastUnsquaredDeviationPositionEstimator(
+      kNumViews, kNumViewPairs, kPoseNoiseDegrees, kTolerance);
+}
+
+TEST_F(EstimatePositionsLeastUnsquaredDeviationTest, TestWithNoise) {
+  static const double kTolerance = 1.0;
+  static const int kNumViews = 200;
+  static const int kNumViewPairs = 500;
+  static const double kPoseNoiseDegrees = 1.0;
+  TestLeastUnsquaredDeviationPositionEstimator(
+      kNumViews, kNumViewPairs, kPoseNoiseDegrees, kTolerance);
+}
+
 }  // namespace theia
