@@ -6,7 +6,7 @@ function repair_wheel {
         echo "Skipping non-platform wheel $wheel"
     else
          #auditwheel repair "$wheel" --plat "$PLAT" -w /wheelhouse/
-         auditwheel repair "$wheel" -w /home/wheelhouse/ --no-update-tags
+         auditwheel repair "$wheel" -w /home/wheelhouse/
     fi
 }
 
@@ -16,8 +16,8 @@ cat /etc/centos-release
 
 set -e -u -x
 
-cd home
-mkdir -p /home/wheelhouse
+cd /home
+mkdir -p wheelhouse
 
 # we cannot simply use `pip` or `python`, since points to old 2.7 version
 PYBIN="/opt/python/$PYTHON_VERSION/bin"
@@ -32,10 +32,13 @@ export PATH=$PYBIN:$PATH
 
 ${PYBIN}/pip install auditwheel
 
-PLAT=manylinux_2_17_x86_64
-"${PYBIN}/python" setup.py bdist_wheel --plat-name=$PLAT
+#PLAT=manylinux2014_x86_64
+"${PYBIN}/python" setup.py bdist_wheel #--plat-name=$PLAT
+
+cp /home/dist/*.whl /home/wheelhouse
+rm -rf /home/dist
 
 # Bundle external shared libraries into the wheels
-for whl in /home/dist/*.whl; do
+for whl in /home/wheelhouse/*.whl; do
     repair_wheel "$whl"
 done

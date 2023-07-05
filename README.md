@@ -248,7 +248,7 @@ make -j
 
 ## How to build Python wheels
 ### Local build with sudo installed ceres-solver and Eigen
-Tested on Ubuntu. In your Python >= 3.5 environment of choice run:
+Tested on Ubuntu. In your Python >= 3.6 environment of choice run:
 ```bash
 sh build_and_install.sh
 ```
@@ -259,12 +259,12 @@ conda install -c conda-forge libstdcxx-ng
 ```
 
 ### With Docker
-The docker build will actually build manylinux wheels for Linux (Python 3.5-3.9).
+The docker build will actually build manylinux wheels for Linux (Python 3.6-3.12).
 There are two ways to do that. One will clutter the source directory, but you will have the wheel file directly available (./wheelhouse/).
 Another drawback of this approach is that the files will have been created with docker sudo rights and are diffcult to delete:
 ```bash
 # e.g. for python 3.9
-docker run --rm -e PYTHON_VERSION="cp39-cp39" -v `pwd`:/home urbste/pytheia_base:1.1.0 /home/pypackage/build-wheel-linux.sh
+docker run --rm -e PYTHON_VERSION="cp39-cp39" -v `pwd`:/home urbste/pytheia_base:1.2.0 /home/pypackage/build-wheel-linux.sh
 ```
 
 The other one is cleaner but you will have to copy the wheels out of the docker container afterwards:

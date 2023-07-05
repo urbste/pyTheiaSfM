@@ -65,7 +65,7 @@ create_package()
 
 setuptools.setup(
     name='pytheia',
-    version='0.1.24',
+    version='0.1.25',
     description='A performant Structure from Motion library for Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
