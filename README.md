@@ -205,7 +205,7 @@ cd LIBS
 
 # eigen
 git clone https://gitlab.com/libeigen/eigen
-cd eigen && git checkout 3.3.9
+cd eigen && git checkout 3.4.0
 mkdir -p build && cd build && cmake .. && sudo make install
 
 # libgflags libglog libatlas-base-dev
@@ -231,12 +231,12 @@ cd /home/LIBS
 
 # eigen
 git clone https://gitlab.com/libeigen/eigen
-cd eigen && git checkout 3.3.9
+cd eigen && git checkout 3.4.0
 mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/home/LIBS/eigen/build && make -j install
 
 cd /home/LIBS
 git clone https://ceres-solver.googlesource.com/ceres-solver
-cd ceres-solver && git checkout 2.0.0 && mkdir build && cd build
+cd ceres-solver && git checkout 2.1.0 && mkdir build && cd build
 cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DEXPORT_BUILD_DIR=ON
 make -j
 
