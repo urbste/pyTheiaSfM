@@ -32,8 +32,8 @@ export PATH=$PYBIN:$PATH
 
 ${PYBIN}/pip install auditwheel
 
-#PLAT=manylinux2014_x86_64
-"${PYBIN}/python" setup.py bdist_wheel #--plat-name=$PLAT
+PLAT=manylinux_2_17_x86_64
+"${PYBIN}/python" setup.py bdist_wheel --plat-name=$PLAT
 
 cp /home/dist/*.whl /home/wheelhouse
 rm -rf /home/dist
