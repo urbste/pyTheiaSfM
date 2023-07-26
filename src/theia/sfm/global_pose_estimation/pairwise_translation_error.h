@@ -47,17 +47,19 @@ namespace theia {
 // from two positions such that (c_j - c_i) - scalar * t_ij is minimized.
 struct PairwiseTranslationError {
   PairwiseTranslationError(const Eigen::Vector3d& translation_direction,
-                           const double weight);
+                           const double weight, 
+                           const double scale_estimate = -1.0);
 
   // The error is given by the position error described above.
   template <typename T>
   bool operator()(const T* position1, const T* position2, T* residuals) const;
 
   static ceres::CostFunction* Create(
-      const Eigen::Vector3d& translation_direction, const double weight);
+      const Eigen::Vector3d& translation_direction, const double weight, const double scale_estimate);
 
   const Eigen::Vector3d translation_direction_;
   const double weight_;
+  const double scale_estimate_;
 };
 
 template <typename T>
@@ -70,21 +72,31 @@ bool PairwiseTranslationError::operator()(const T* position1,
   translation[0] = position2[0] - position1[0];
   translation[1] = position2[1] - position1[1];
   translation[2] = position2[2] - position1[2];
-  T norm =
-      sqrt(translation[0] * translation[0] + translation[1] * translation[1] +
-           translation[2] * translation[2]);
 
-  // If the norm is very small then the positions are very close together. In
-  // this case, avoid dividing by a tiny number which will cause the weight of
-  // the residual term to potentially skyrocket.
-  if (T(norm) < kNormTolerance) {
-    norm = T(1.0);
+  if (scale_estimate_ > 0.0) {
+    // if we have a scale estimate, then we want to estimate the positions directlry
+    residuals[0] = weight_ * (translation[0] - scale_estimate_ * translation_direction_[0]);
+    residuals[1] = weight_ * (translation[1] - scale_estimate_ * translation_direction_[1]);
+    residuals[2] = weight_ * (translation[2] - scale_estimate_ * translation_direction_[2]);
+    return true;
   }
+  else {
+    T norm =
+        sqrt(translation[0] * translation[0] + translation[1] * translation[1] +
+            translation[2] * translation[2]);
 
-  residuals[0] = weight_ * (translation[0] / norm - translation_direction_[0]);
-  residuals[1] = weight_ * (translation[1] / norm - translation_direction_[1]);
-  residuals[2] = weight_ * (translation[2] / norm - translation_direction_[2]);
-  return true;
+    // If the norm is very small then the positions are very close together. In
+    // this case, avoid dividing by a tiny number which will cause the weight of
+    // the residual term to potentially skyrocket.
+    if (T(norm) < kNormTolerance) {
+      norm = T(1.0);
+    }
+
+    residuals[0] = weight_ * (translation[0] / norm - translation_direction_[0]);
+    residuals[1] = weight_ * (translation[1] / norm - translation_direction_[1]);
+    residuals[2] = weight_ * (translation[2] / norm - translation_direction_[2]);
+    return true;
+  }
 }
 
 }  // namespace theia

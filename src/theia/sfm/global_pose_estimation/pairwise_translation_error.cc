@@ -40,15 +40,15 @@
 namespace theia {
 
 PairwiseTranslationError::PairwiseTranslationError(
-    const Eigen::Vector3d& translation_direction, const double weight)
-    : translation_direction_(translation_direction), weight_(weight) {
+    const Eigen::Vector3d& translation_direction, const double weight, const double scale_estimate)
+    : translation_direction_(translation_direction), weight_(weight), scale_estimate_(scale_estimate) {
   CHECK_GT(weight_, 0);
 }
 
 ceres::CostFunction* PairwiseTranslationError::Create(
-    const Eigen::Vector3d& translation_direction, const double weight) {
+    const Eigen::Vector3d& translation_direction, const double weight, const double scale_estimate) {
   return (new ceres::AutoDiffCostFunction<PairwiseTranslationError, 3, 3, 3>(
-      new PairwiseTranslationError(translation_direction, weight)));
+      new PairwiseTranslationError(translation_direction, weight, scale_estimate)));
 }
 
 }  // namespace theia

@@ -46,6 +46,7 @@
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/pairwise_translation_error.h"
+#include "theia/sfm/twoview_info.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/track.h"
 #include "theia/sfm/transformation/align_point_clouds.h"
@@ -75,7 +76,7 @@ Camera RandomCamera() {
 
 Camera SequentialCamera(const Eigen::Vector3d dir, const double step_size) {
   Camera camera;
-  const Eigen::Vector3d pos = dir * step_size + rng.RandVector3d(-0.01,0.01);
+  const Eigen::Vector3d pos = dir * step_size + rng.RandVector3d(-0.1,0.1);
   camera.SetPosition(pos);
   camera.SetOrientationFromAngleAxis(0.01* rng.RandVector3d());
   camera.SetImageSize(1000, 1000);
@@ -103,11 +104,13 @@ Vector3d RelativeRotationFromTwoRotations(const Vector3d& rotation1,
 Vector3d RelativeTranslationFromTwoPositions(const Vector3d& position1,
                                              const Vector3d& position2,
                                              const Vector3d& rotation1,
-                                             const double noise) {
+                                             const double noise,
+                                             double* scale_estimate) {
   const Eigen::AngleAxisd noisy_translation(DegToRad(noise),
                                             rng.RandVector3d().normalized());
   Eigen::Matrix3d rotation_matrix1;
   ceres::AngleAxisToRotationMatrix(rotation1.data(), rotation_matrix1.data());
+  *scale_estimate = (position2 - position1).norm();
   const Vector3d relative_translation =
       rotation_matrix1 * (position2 - position1).normalized();
   return noisy_translation * relative_translation;
@@ -129,7 +132,7 @@ void AlignPositions(const std::unordered_map<ViewId, Vector3d>& gt_positions,
   Vector3d translation;
   double scale;
   AlignPointCloudsUmeyama(pos, gt_pos, &rotation, &translation, &scale);
-
+  std::cout<<"alignment scale: "<<scale<<std::endl;
   // Apply the similarity transformation.
   for (auto& position : *positions) {
     position.second = scale * (rotation * position.second) + translation;
@@ -147,10 +150,11 @@ class EstimatePositionsNonlinearTest : public ::testing::Test {
                                       const double position_tolerance,
                                       std::set<ViewId> fixed_views,
                                       const bool sequential_camera_trajectory=false,
-                                      const int min_nr_pts_per_view = 0) {
+                                      const int min_nr_pts_per_view = 0,
+                                      const bool use_scale = false) {
     // Set up the camera.
     SetupReconstruction(num_views, num_tracks, sequential_camera_trajectory);
-    GetTwoViewInfos(num_view_pairs, pose_noise);
+    GetTwoViewInfos(num_view_pairs, pose_noise, use_scale);
 
     // Estimate the positions.
     options_.rng = std::make_shared<RandomNumberGenerator>(rng);
@@ -233,13 +237,13 @@ class EstimatePositionsNonlinearTest : public ::testing::Test {
     }
   }
 
-  void GetTwoViewInfos(const size_t num_view_pairs, const double pose_noise) {
+  void GetTwoViewInfos(const size_t num_view_pairs, const double pose_noise, const bool use_scale = false) {
     // Create a single connected component.
     std::vector<ViewId> view_ids;
     view_ids.push_back(0);
     for (size_t i = 1; i < positions_.size(); i++) {
       const ViewIdPair view_id_pair(i - 1, i);
-      view_pairs_[view_id_pair] = CreateTwoViewInfo(view_id_pair, pose_noise);
+      view_pairs_[view_id_pair] = CreateTwoViewInfo(view_id_pair, pose_noise, use_scale);
       view_ids.push_back(i);
     }
 
@@ -252,12 +256,13 @@ class EstimatePositionsNonlinearTest : public ::testing::Test {
         continue;
       }
 
-      view_pairs_[view_id_pair] = CreateTwoViewInfo(view_id_pair, pose_noise);
+      view_pairs_[view_id_pair] = CreateTwoViewInfo(view_id_pair, pose_noise, use_scale);
     }
   }
 
   TwoViewInfo CreateTwoViewInfo(const ViewIdPair& view_id_pair,
-                                const double pose_noise) {
+                                const double pose_noise,
+                                const bool use_scale = false) {
     CHECK_LT(view_id_pair.first, view_id_pair.second);
     TwoViewInfo info;
     info.focal_length_1 = 800.0;
@@ -273,11 +278,23 @@ class EstimatePositionsNonlinearTest : public ::testing::Test {
         noise(0));
 
     // Determine the relative position and add noise.
+    double scale_estimate = -1.;
     info.position_2 = RelativeTranslationFromTwoPositions(
         FindOrDie(positions_, view_id_pair.first),
         FindOrDie(positions_, view_id_pair.second),
         FindOrDie(orientations_, view_id_pair.first),
-        noise(1));
+        noise(1),
+        &scale_estimate);
+    
+    if (use_scale) {
+        info.scale_estimate = scale_estimate;
+        if (pose_noise > 0.0) {
+            info.scale_estimate += rng.RandDouble(-pose_noise/2, pose_noise/2);
+        }
+    } else {
+        info.scale_estimate = -1.0;
+    }
+
 
     return info;
   }
@@ -300,6 +317,18 @@ TEST_F(EstimatePositionsNonlinearTest, SmallTestNoNoise) {
       0.0, kTolerance, fixed_views);
 }
 
+TEST_F(EstimatePositionsNonlinearTest, SmallTestNoNoiseWScale) {
+  static const double kTolerance = 1e-4;
+  static const int kNumViews = 4;
+  static const int kNumTracksPerView = 10;
+  static const int kNumViewPairs = 6;
+  static const bool kUseScale = true;
+  std::set<ViewId> fixed_views;
+  TestNonlinearPositionEstimator(
+      kNumViews, kNumTracksPerView, kNumViewPairs,
+      0.0, kTolerance, fixed_views, false, 0, kUseScale);
+}
+
 TEST_F(EstimatePositionsNonlinearTest, SmallTestWithNoise) {
   static const double kTolerance = 0.1;
   static const int kNumViews = 4;
@@ -313,6 +342,24 @@ TEST_F(EstimatePositionsNonlinearTest, SmallTestWithNoise) {
                                  kPoseNoiseDegrees,
                                  kTolerance,
                                  fixed_views);
+}
+
+TEST_F(EstimatePositionsNonlinearTest, SmallTestWithNoiseWScale) {
+  static const double kTolerance = 0.1;
+  static const int kNumViews = 4;
+  static const int kNumTracksPerView = 10;
+  static const int kNumViewPairs = 6;
+  static const double kPoseNoiseDegrees = 1.0;
+  static const bool kUseScale = true;
+  std::set<ViewId> fixed_views;
+  TestNonlinearPositionEstimator(kNumViews,
+                                 kNumTracksPerView,
+                                 kNumViewPairs,
+                                 kPoseNoiseDegrees,
+                                 kTolerance,
+                                 fixed_views,
+                                 false, 0,
+                                 kUseScale);
 }
 
 TEST_F(EstimatePositionsNonlinearTest, SmallTestNoNoiseFixedCamsSequential) {
@@ -329,6 +376,24 @@ TEST_F(EstimatePositionsNonlinearTest, SmallTestNoNoiseFixedCamsSequential) {
                                  kTolerance,
                                  fixed_views,
                                  true);
+}
+
+TEST_F(EstimatePositionsNonlinearTest, SmallTestNoiseCamsSequentialWScale) {
+  static const double kTolerance = 0.1;
+  static const int kNumViews = 4;
+  static const int kNumTracksPerView = 10;
+  static const int kNumViewPairs = 6;
+  static const double kPoseNoiseDegrees = 0.1;
+  static const bool kUseScale = true;
+  std::set<ViewId> fixed_views;
+  TestNonlinearPositionEstimator(kNumViews,
+                                 kNumTracksPerView,
+                                 kNumViewPairs,
+                                 kPoseNoiseDegrees,
+                                 kTolerance,
+                                 fixed_views,
+                                 true, 0, 
+                                 kUseScale);
 }
 
 TEST_F(EstimatePositionsNonlinearTest, SmallTestNoiseFixedCamsSequential) {
@@ -365,6 +430,46 @@ TEST_F(EstimatePositionsNonlinearTest, LargeTestNoiseFixedCamsSequential) {
                                  fixed_views,
                                  true,
                                  kNrPointsPerView);
+}
+
+TEST_F(EstimatePositionsNonlinearTest, LargeTestNoiseWScale) {
+  static const double kTolerance = 0.5;
+  static const int kNumViews = 1000;
+  static const int kNumTracksPerView = 10;
+  static const int kNumViewPairs = 3000;
+  static const double kPoseNoiseDegrees = 0.5;
+  static const bool kUseScale = true;
+  std::set<ViewId> fixed_views;
+  static const int kNrPointsPerView = 10;
+  TestNonlinearPositionEstimator(kNumViews,
+                                 kNumTracksPerView,
+                                 kNumViewPairs,
+                                 kPoseNoiseDegrees,
+                                 kTolerance,
+                                 fixed_views,
+                                 false,
+                                 kNrPointsPerView,
+                                 kUseScale);
+}
+
+TEST_F(EstimatePositionsNonlinearTest, LargeTestNoiseFixedCamsSequentialWScale) {
+  static const double kTolerance = 0.5;
+  static const int kNumViews = 1000;
+  static const int kNumTracksPerView = 10;
+  static const int kNumViewPairs = 3000;
+  static const double kPoseNoiseDegrees = 0.5;
+  static const bool kUseScale = true;
+  std::set<ViewId> fixed_views = {0,1,2,3,4,5};
+  static const int kNrPointsPerView = 10;
+  TestNonlinearPositionEstimator(kNumViews,
+                                 kNumTracksPerView,
+                                 kNumViewPairs,
+                                 kPoseNoiseDegrees,
+                                 kTolerance,
+                                 fixed_views,
+                                 true,
+                                 kNrPointsPerView,
+                                 kUseScale);
 }
 
 }  // namespace theia
