@@ -237,13 +237,14 @@ void NonlinearPositionEstimator::AddCameraToCameraConstraints(
       continue;
     }
 
+
     // Rotate the relative translation so that it is aligned to the global
     // orientation frame.
     const Vector3d translation_direction = GetRotatedTranslation(
         FindOrDie(orientations, view_id1), view_pair.second.position_2);
 
     ceres::CostFunction* cost_function =
-        PairwiseTranslationError::Create(translation_direction, 1.0);
+        PairwiseTranslationError::Create(translation_direction, 1.0, view_pair.second.scale_estimate);
 
     problem_->AddResidualBlock(cost_function,
                                new ceres::HuberLoss(options_.robust_loss_width),
@@ -400,7 +401,7 @@ void NonlinearPositionEstimator::AddTrackToProblem(
     // Rotate the relative translation so that it is aligned to the global
     // orientation frame.
     ceres::CostFunction* cost_function =
-        PairwiseTranslationError::Create(feature_ray, point_to_camera_weight);
+        PairwiseTranslationError::Create(feature_ray, point_to_camera_weight, -1.0);
 
     // Add the residual block
     problem_->AddResidualBlock(cost_function,

@@ -1402,7 +1402,8 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::TwoViewInfo::num_verified_matches)
       .def_readwrite("num_homography_inliers",
                      &theia::TwoViewInfo::num_homography_inliers)
-      .def_readwrite("visibility_score", &theia::TwoViewInfo::visibility_score);
+      .def_readwrite("visibility_score", &theia::TwoViewInfo::visibility_score)
+      .def_readwrite("scale_estimate", &theia::TwoViewInfo::scale_estimate); 
 
   m.def("SwapCameras", &theia::SwapCameras);
 

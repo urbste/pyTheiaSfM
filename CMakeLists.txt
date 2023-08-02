@@ -114,8 +114,6 @@ set(THEIA_ABI_VERSION 0.7.0)
 
 # THEIA data directory
 add_definitions(-DTHEIA_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
-#add_definitions(-DEIGEN_MAX_ALIGN_BYTES=0)
-#add_definitions(-DEIGEN_MALLOC_ALREADY_ALIGNED=0)
 
 #if (PYTHON_BUILD)
   # fPIC
@@ -123,7 +121,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 #endif (PYTHON_BUILD)
 
 # Eigen
-set(MIN_EIGEN_VERSION 3.3)
+set(MIN_EIGEN_VERSION 3.4)
 find_package(Eigen ${MIN_EIGEN_VERSION} REQUIRED)
 if (EIGEN_FOUND)
   message("-- Found Eigen version ${EIGEN_VERSION}: ${EIGEN_INCLUDE_DIRS}")
@@ -198,15 +196,6 @@ if (NOT PYTHON_BUILD AND WITH_ROCKSDB)
       message(FATAL_ERROR "Can't find RocksDB. Please set ROCKSDB_INCLUDE_DIR & ROCKSDB_LIBRARY to use RocksDB.")
     endif (ROCKSDB_FOUND)
 endif (NOT PYTHON_BUILD AND WITH_ROCKSDB)
-
-# RapidJSON.
-#message("-- Check for RapidJSON")
-#find_package(RapidJSON REQUIRED)
-#if (RapidJSON_FOUND)
-#  message("-- Found RapidJSON: ${RAPIDJSON_INCLUDE_DIRS}")
-#else (RapidJSON_FOUND)
-#  message(FATAL_ERROR "Can't find RapidJSON. Please set RAPIDJSON_INCLUDE_DIRS to use RapidJSON.")
-#endif (RapidJSON_FOUND)
 
 include_directories(
   include
@@ -345,7 +334,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TheiaConfig.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindEigen.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGlog.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGflags.cmake"
-              #"${CMAKE_SOURCE_DIR}/cmake/FindOpenImageIO.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindRocksDB.cmake"
               #"${CMAKE_SOURCE_DIR}/cmake/FindSuiteSparse.cmake"
               DESTINATION ${CMAKECONFIG_INSTALL_DIR})
