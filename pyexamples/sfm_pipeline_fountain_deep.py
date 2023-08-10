@@ -3,18 +3,14 @@
 # This simple example demonstrates the use of pytheia to reconstruct the 
 # Fountain dataset scene
 # In this case, we are using deep feature detection and matching 
-# based on the DISK detector and the Lightglue matcher
-# Check https://github.com/cvg/LightGlue
-# Installation:
-# git clone https://github.com/cvg/LightGlue.git && cd LightGlue
-# python -m pip install -e .
+# based on the DISK detector and the Lightglue matcher from Kornia
+
 
 import numpy as np
-import cv2, os, glob, argparse
+import os, glob, argparse, time
 import pytheia as pt
-import torch
-from lightglue import LightGlue, DISK
-from lightglue.utils import load_image, match_pair
+import torch, kornia
+from image_utils import load_image
 
 min_num_inlier_matches = 30
 
@@ -30,38 +26,62 @@ def correspondence_from_indexed_matches(match_indices, pts1, pts2):
 
 def match_image_pair(img_i_data, img_j_data, matcher, min_conf):
 
-    scales0, scales1 = img_i_data["scales"], img_j_data["scales"]
+    with torch.no_grad():
+        scales0, scales1 = img_i_data["scales"].to(device), img_j_data["scales"].to(device)
 
-    data = {'image0': img_i_data["image"], 'image1': img_i_data["image"]}
-    pred = {**{k+'0': v for k, v in img_i_data["feats"].items()},
-            **{k+'1': v for k, v in img_j_data["feats"].items()},
-            **data}
-    pred = {**pred, **matcher(pred)}
-    pred = {k: v.to(device).detach()[0] if
-            isinstance(v, torch.Tensor) else v for k, v in pred.items()}
+        data = {'image0': img_i_data["image"], 
+                'image1': img_j_data["image"]}
+        pred = {**{k+'0': torch.from_numpy(v).to(device) for k, v in img_i_data["feats"].items()},
+                **{k+'1': torch.from_numpy(v).to(device) for k, v in img_j_data["feats"].items()},
+                **data}
+
+        input_dict = {
+            "image0": {
+                "keypoints": pred["keypoints0"],
+                "descriptors": pred["descriptors0"],
+                "image_size": torch.tensor(img_i_data["image"].shape[2:]).flip(0).reshape(-1, 2),
+            },
+            "image1": {
+                "keypoints": pred["keypoints1"],
+                "descriptors": pred["descriptors1"],
+                "image_size":  torch.tensor(img_j_data["image"].shape[2:]).flip(0).reshape(-1, 2),
+            },
+        }
+
+        start = time.perf_counter()
+        result = matcher(input_dict)
+        end = time.perf_counter()
+        print("Matching took {}s".format((end-start)))
+
+        if scales0 is not None:
+            pred['keypoints0'] = (pred['keypoints0'] + 0.5) / scales0[None] - 0.5
+        if scales1 is not None:
+            pred['keypoints1'] = (pred['keypoints1'] + 0.5) / scales1[None] - 0.5
+        torch.cuda.empty_cache()
+
     if scales0 is not None:
         pred['keypoints0'] = (pred['keypoints0'] + 0.5) / scales0[None] - 0.5
     if scales1 is not None:
         pred['keypoints1'] = (pred['keypoints1'] + 0.5) / scales1[None] - 0.5
     torch.cuda.empty_cache()
 
-    if pred['keypoints1'].shape[0] < min_num_inlier_matches:
-        print('Number of putative matches too low!')
-        return False, None
-
     # create match indices
-    kpts1, kpts2 = pred['keypoints0'], pred['keypoints1']
-    matches0, mscores0, mscores1 = pred['matches0'], pred['matching_scores0'], pred['matching_scores1']
+    kpts0, kpts1 = pred['keypoints0'][0], pred['keypoints1'][0]
+    matches0, mscores0, mscores1 = result['matches0'][0], result['matching_scores0'][0], result['matching_scores1'][0]
     valid = matches0 > -1
     matches = torch.stack([torch.where(valid)[0], matches0[valid]], -1)
+
+    if matches.shape[0] < min_num_inlier_matches:
+        print('Number of putative matches too low!')
+        return False, None
 
     mscores0 = mscores0.cpu().numpy()
     mscores1 = mscores1.cpu().numpy()
     
+    kpts0 = kpts0.cpu().numpy()
     kpts1 = kpts1.cpu().numpy()
-    kpts2 = kpts2.cpu().numpy()
 
-    correspondences = correspondence_from_indexed_matches(matches, kpts1, kpts2)
+    correspondences = correspondence_from_indexed_matches(matches, kpts0, kpts1)
 
     options = pt.sfm.EstimateTwoViewInfoOptions()
     options.ransac_type = pt.sfm.RansacType(0) # pt.sfm.RansacType(1): prosac, pt.sfm.RansacType(2): lmed
@@ -72,8 +92,12 @@ def match_image_pair(img_i_data, img_j_data, matcher, min_conf):
     success, twoview_info, inlier_indices = pt.sfm.EstimateTwoViewInfo(
         options, prior, prior, correspondences)
 
-    print('Only {} matches survived after geometric verification'.format(len(inlier_indices)))
-    if len(inlier_indices) < min_num_inlier_matches:
+
+    if not success:
+        print('TwoViewInfo estimation failed!')
+        return False, None
+
+    if len(inlier_indices) < min_num_inlier_matches or not success:
         print('Number of putative matches after geometric verification are too low!')
         return False, None
     else:
@@ -88,13 +112,30 @@ def match_image_pair(img_i_data, img_j_data, matcher, min_conf):
         
         return True, twoview_info
 
-def extract_features(img, extractor):
-    feats0 = extractor({'image': img})
-    return feats0
+def extract_features(image, extractor):
+
+    features = extractor(image, n = 2048, 
+        score_threshold = 0.0, 
+        window_size = 1, 
+        pad_if_not_divisible=True)
+
+    keypoints = [f.keypoints for f in features]
+    scores = [f.detection_scores for f in features]
+    descriptors = [f.descriptors for f in features]
+    del features
+
+    keypoints = torch.stack(keypoints, 0)
+    scores = torch.stack(scores, 0)
+    descriptors = torch.stack(descriptors, 0)
+
+    return {'keypoints': keypoints.to(image),
+            'keypoint_scores': scores.to(image),
+            'descriptors': descriptors.to(image)}
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for sfm pipeline')
-    parser.add_argument('--path_fountain_dataset', type=str, default="/home/zosurban/Downloads/fountain/")
+    parser.add_argument('--path_fountain_dataset', type=str, default=" /home/zosurban/Downloads/fountain/")
     parser.add_argument('--reconstruction', type=str, default='global',
                     help='reconstruction type: global, incremental or hybrid')
     parser.add_argument('--img_ext', default='png')
@@ -103,8 +144,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     reconstructiontype = args.reconstruction
 
-    matcher = LightGlue(pretrained='disk').eval()  # load the matcher
-    extractor = DISK(max_num_keypoints=2048).eval()  # load the extractor
+    extractor = kornia.feature.DISK.from_pretrained("depth").eval()
+    matcher = kornia.feature.LightGlue(features="disk").eval()
 
     device = "cpu"
     dtype = torch.float32
@@ -144,18 +185,27 @@ if __name__ == "__main__":
 
     # add views and extract features
     img_data = {}
+    
     for idx, image_name in enumerate(image_names):
         img_name_ext = image_name+"."+args.img_ext
         vid = recon.AddView(img_name_ext, 0, idx)
         v = recon.MutableView(vid)
         v.SetCameraIntrinsicsPrior(prior)
         # load images to torch and resize to max_edge=1024
-        image, scale = load_image(os.path.join(img_path,img_name_ext), resize=1024)
+        image, scale = load_image(os.path.join(img_path, img_name_ext), resize=None)
         image = image.unsqueeze(0) # add batch dimension [b, 3, x, 1024]
-        feats = extract_features(image.to(device).to(dtype), extractor)
+        with torch.no_grad():
+            start_t = time.perf_counter()
+            img_t = image.to(device).to(dtype)
+            tmp = extract_features(img_t, extractor)
+            print("Feature extraction took {}s".format(time.perf_counter() - start_t))
+
+        feats = {"keypoints": tmp["keypoints"].cpu().numpy(), 
+                 "keypoint_scores": tmp["keypoint_scores"].cpu().numpy(), 
+                 "descriptors": tmp["descriptors"].cpu().numpy()}
+
         img_data[img_name_ext] = {
             "view_id": vid, "image" : image, "feats": feats, "scales": scale.to(device).to(dtype)}
-    
     # make sure the intrinsics are all initialized fromt he priors
     pt.sfm.SetCameraIntrinsicsFromPriors(recon) 
 
@@ -170,13 +220,16 @@ if __name__ == "__main__":
             success, twoview_info = match_image_pair( 
                 img_data[img_i_name], img_data[img_j_name], matcher, 0.8)
             
+            nr_matches = twoview_info.num_verified_matches
             if success == True:
                 view_id1 = recon.ViewIdFromName(img_i_name)
                 view_id2 = recon.ViewIdFromName(img_j_name)
                 view_graph.AddEdge(view_id1, view_id2, twoview_info)
-                print("Match between image {} and image {}. ".format(img_i_name, img_j_name))
+                print("{} Matches  between image {} and image {}. ".format(
+                    nr_matches, img_i_name, img_j_name))
             else:
-                print("No match between image {} and image {}. ".format(img_i_name, img_j_name))
+                print("Only {} matches between image {} and image {}. Removing from view graph.".format(
+                    nr_matches, img_i_name, img_j_name))
     
     print('{} edges were added to the view graph.'.format(view_graph.NumEdges()))
     track_builder.BuildTracks(recon)
