@@ -106,6 +106,10 @@ class TwoViewMatchGeometricVerification {
   bool VerifyMatches(std::vector<FeatureCorrespondence>* verified_matches,
                      TwoViewInfo* twoview_info);
 
+  // We keep a local copy of the matches so that we may add and remove matches
+  // to it.
+  std::vector<IndexedFeatureMatch> matches_;
+
  private:
   // A helper method that creates a vector of FeatureCorrespondence from the
   // matches_ vector of match indices.
@@ -130,9 +134,6 @@ class TwoViewMatchGeometricVerification {
   const KeypointsAndDescriptors &features1_, features2_;
 
   Camera camera1_, camera2_;
-  // We keep a local copy of the matches so that we may add and remove matches
-  // to it.
-  std::vector<IndexedFeatureMatch> matches_;
 
   DISALLOW_COPY_AND_ASSIGN(TwoViewMatchGeometricVerification);
 };

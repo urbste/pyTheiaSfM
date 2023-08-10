@@ -3,6 +3,7 @@
 #include "theia/sfm/colorize_reconstruction.h"
 #include "theia/sfm/estimate_twoview_info.h"
 #include "theia/sfm/extract_maximally_parallel_rigid_subgraph.h"
+#include "theia/sfm/two_view_match_geometric_verification.h"
 
 #include "theia/sfm/filter_view_graph_cycles_by_rotation.h"
 #include "theia/sfm/filter_view_pairs_from_orientation.h"
@@ -28,7 +29,15 @@ std::tuple<bool, TwoViewInfo, std::vector<int>> EstimateTwoViewInfoWrapper(
     const CameraIntrinsicsPrior& intrinsics1,
     const CameraIntrinsicsPrior& intrinsics2,
     const std::vector<FeatureCorrespondence>& correspondences);
-    
+
+std::tuple<bool, TwoViewInfo, std::vector<IndexedFeatureMatch>>
+VerifyMatchesWrapper(const TwoViewMatchGeometricVerification::Options& options,
+                     const CameraIntrinsicsPrior& intrinsics1,
+                     const CameraIntrinsicsPrior& intrinsics2,
+                     const KeypointsAndDescriptors& features1,
+                     const KeypointsAndDescriptors& features2,
+                     const std::vector<IndexedFeatureMatch>& matches);
+
 std::tuple<bool, std::unordered_set<TrackId>>
 SelectGoodTracksForBundleAdjustmentWrapper(
     const Reconstruction& reconstruction,
@@ -42,6 +51,5 @@ int SetOutlierTracksToUnestimatedWrapper(
     const double max_inlier_reprojection_error,
     const double min_triangulation_angle_degrees,
     Reconstruction& reconstruction);
-
 
 }  // namespace theia
