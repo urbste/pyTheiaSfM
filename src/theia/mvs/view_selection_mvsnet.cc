@@ -31,35 +31,35 @@
 
 #include "theia/mvs/view_selection_mvsnet.h"
 #include "theia/math/util.h"
-#include "theia/sfm/view_graph/view_graph_from_reconstruction.h"
 #include "theia/sfm/reconstruction.h"
+#include "theia/sfm/view_graph/view_graph_from_reconstruction.h"
 
 namespace theia {
 
 double ComputeAngleBetweenRays(const Eigen::Vector3d& ci,
-                                const Eigen::Vector3d& cj,
-                                const Eigen::Vector3d& p) {
+                               const Eigen::Vector3d& cj,
+                               const Eigen::Vector3d& p) {
   const Eigen::Vector3d ray1 = (p - ci).normalized();
   const Eigen::Vector3d ray2 = (p - cj).normalized();
   const double cos_angle = ray1.dot(ray2);
-  return 180./M_PI*std::acos(cos_angle);
+  return 180. / M_PI * std::acos(cos_angle);
 }
 
 double ScoreFun(const double theta, const double theta0, const double sigma) {
-  return std::exp(-std::pow(theta - theta0, 2) / (2*std::pow(sigma, 2)));
+  return std::exp(-std::pow(theta - theta0, 2) / (2 * std::pow(sigma, 2)));
 }
 
-std::unordered_map<ViewId, std::map<double, ViewId, std::greater<double>>> ViewSelectionMVSNet(
-    const Reconstruction& reconstruction,
-    const int num_neighbors,
-    const double theta0,
-    const double sigma1,
-    const double sigma2) {
-
-  std::unordered_map<ViewId, std::map<double,ViewId, std::greater<double>>> view_selection;
+std::unordered_map<ViewId, std::map<double, ViewId, std::greater<double>>>
+ViewSelectionMVSNet(const Reconstruction& reconstruction,
+                    const int num_neighbors,
+                    const double theta0,
+                    const double sigma1,
+                    const double sigma2) {
+  std::unordered_map<ViewId, std::map<double, ViewId, std::greater<double>>>
+      view_selection;
   // get all view ids
   const std::vector<ViewId> view_ids = reconstruction.ViewIds();
-  
+
   ViewGraph view_graph;
   ViewGraphFromReconstruction(reconstruction, 10, &view_graph);
 
@@ -87,16 +87,18 @@ std::unordered_map<ViewId, std::map<double, ViewId, std::greater<double>>> ViewS
       const auto& track_ids_j = reconstruction.View(view_j_id)->TrackIds();
       // get intersection of track_ids (same tracks in both views)
       std::vector<TrackId> intersection;
-      std::set_intersection(track_ids_i.begin(), track_ids_i.end(),
-                            track_ids_j.begin(), track_ids_j.end(),
+      std::set_intersection(track_ids_i.begin(),
+                            track_ids_i.end(),
+                            track_ids_j.begin(),
+                            track_ids_j.end(),
                             std::back_inserter(intersection));
-      // now 
+      // now
       double score = 0.0;
       for (const auto& t_id : intersection) {
         const auto track = reconstruction.Track(t_id);
         const Eigen::Vector3d p = track->Point().hnormalized();
         const double theta = ComputeAngleBetweenRays(ci, cj, p);
-        
+
         if (theta <= theta0) {
           score += ScoreFun(theta, theta0, sigma1);
         } else {
@@ -104,7 +106,7 @@ std::unordered_map<ViewId, std::map<double, ViewId, std::greater<double>>> ViewS
         }
       }
       all_view_scores[score] = view_j_id;
-    } // end loop over neighbors
+    }  // end loop over neighbors
 
     // get only the top view scores from the map
     std::map<double, ViewId, std::greater<double>> best_view_scores;
@@ -114,14 +116,15 @@ std::unordered_map<ViewId, std::map<double, ViewId, std::greater<double>>> ViewS
       num_neighbors_max = all_view_scores.size();
     }
     for (int i = 0; i < num_neighbors_max; ++i) {
-      best_view_scores[all_view_scores.begin()->first] = all_view_scores.begin()->second;
+      best_view_scores[all_view_scores.begin()->first] =
+          all_view_scores.begin()->second;
       all_view_scores.erase(all_view_scores.begin());
     }
 
     view_selection[view_i_id] = best_view_scores;
-  } // end loop over views
+  }  // end loop over views
 
   return view_selection;
 }
 
-} // namespace theia
+}  // namespace theia

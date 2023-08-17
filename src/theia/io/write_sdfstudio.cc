@@ -32,18 +32,18 @@
 
 #include "theia/io/write_sdfstudio.h"
 
+#include <Eigen/Core>
+#include <cereal/external/rapidjson/document.h>
+#include <cereal/external/rapidjson/prettywriter.h>
+#include <cereal/external/rapidjson/rapidjson.h>
+#include <cereal/external/rapidjson/stringbuffer.h>
 #include <fstream>  // NOLINT
 #include <glog/logging.h>
 #include <string>
 #include <vector>
-#include <cereal/external/rapidjson/rapidjson.h>
-#include <cereal/external/rapidjson/prettywriter.h>
-#include <cereal/external/rapidjson/document.h>
-#include <cereal/external/rapidjson/stringbuffer.h>
-#include <Eigen/Core>
 
-#include "theia/sfm/reconstruction.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
+#include "theia/sfm/reconstruction.h"
 #include "theia/util/filesystem.h"
 
 using namespace cereal;
@@ -52,48 +52,45 @@ namespace theia {
 
 namespace {
 
-void AddDoubleKey(
-  const std::string& key, const double value, 
-  rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+void AddDoubleKey(const std::string& key,
+                  const double value,
+                  rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
   writer.Key(key.c_str());
   writer.Double(value);
 }
 
-void AddIntKey(
-  const std::string& key, const int value, 
-  rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+void AddIntKey(const std::string& key,
+               const int value,
+               rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
   writer.Key(key.c_str());
   writer.Int(value);
 }
 
-void AddStrKey(
-  const std::string& key, const std::string value, 
-  rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+void AddStrKey(const std::string& key,
+               const std::string value,
+               rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
   writer.Key(key.c_str());
   writer.String(value.c_str());
 }
 
-void AddMat4Key(
-  const std::string& key,
-  const Eigen::Matrix4d& matrix, 
-  rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
-   writer.Key(key.c_str());
-   writer.StartArray();
-   // create transform matrix
-   for (int r = 0; r < 4; ++r) {
-   writer.StartArray();
-   for (int i = 0; i < 4; ++i) {
-      writer.Double(matrix(r,i));
+void AddMat4Key(const std::string& key,
+                const Eigen::Matrix4d& matrix,
+                rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
+  writer.Key(key.c_str());
+  writer.StartArray();
+  // create transform matrix
+  for (int r = 0; r < 4; ++r) {
+    writer.StartArray();
+    for (int i = 0; i < 4; ++i) {
+      writer.Double(matrix(r, i));
     }
     writer.EndArray();
   }
   writer.EndArray();
 }
 
-
-void WriteAllSfmPoints(
-    const Reconstruction& recon,
-    const std::string& out_path) {  
+void WriteAllSfmPoints(const Reconstruction& recon,
+                       const std::string& out_path) {
   std::ofstream file;
   file.open(out_path);
   for (const auto& track_id : recon.TrackIds()) {
@@ -105,8 +102,8 @@ void WriteAllSfmPoints(
 }
 
 void WriteViewSfmPoints(const Reconstruction& recon,
-                    const ViewId& view_id,
-                    const std::string& out_path) {  
+                        const ViewId& view_id,
+                        const std::string& out_path) {
   std::ofstream file;
   file.open(out_path);
   for (const auto& track_id : recon.View(view_id)->TrackIds()) {
@@ -117,16 +114,16 @@ void WriteViewSfmPoints(const Reconstruction& recon,
   file.close();
 }
 
-} // namespace
+}  // namespace
 
 bool WriteSdfStudio(const std::string& path_to_images,
-                  const Reconstruction& reconstruction,
-                  const std::pair<double, double>& nearfar,
-                  const double radius) {
+                    const Reconstruction& reconstruction,
+                    const std::pair<double, double>& nearfar,
+                    const double radius) {
   CHECK_GT(path_to_images.length(), 0);
 
   rapidjson::Value frames_array(rapidjson::kObjectType);
-  
+
   const auto view_ids = reconstruction.ViewIds();
   if (view_ids.size() <= 0) {
     LOG(INFO) << "Reconstruction seems to be empty.";
@@ -134,7 +131,7 @@ bool WriteSdfStudio(const std::string& path_to_images,
   }
 
   rapidjson::StringBuffer strbuf;
-	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(strbuf);
+  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(strbuf);
 
   writer.StartObject();
 
@@ -143,8 +140,8 @@ bool WriteSdfStudio(const std::string& path_to_images,
   AddIntKey("height", cam.ImageHeight(), writer);
   AddIntKey("width", cam.ImageWidth(), writer);
 
-  const std::string sparse_sfm_points_path = 
-    JoinPath(path_to_images, "sparse_sfm_points.txt");
+  const std::string sparse_sfm_points_path =
+      JoinPath(path_to_images, "sparse_sfm_points.txt");
   WriteAllSfmPoints(reconstruction, sparse_sfm_points_path);
   AddStrKey("sparse_sfm_points", "sparse_sfm_points.txt", writer);
   AddStrKey("has_mono_prior", "false", writer);
@@ -181,39 +178,38 @@ bool WriteSdfStudio(const std::string& path_to_images,
   writer.Key("frames");
   writer.StartArray();
   for (const auto& vid : reconstruction.ViewIds()) {
-      const auto view = reconstruction.View(vid);
-      if (!view->IsEstimated()) {
-          continue;
-      }
-    
-      std::string sfm_pt_name = view->Name() + "_sfm_points.txt";
-      std::string out_sfm_points_path = 
-        JoinPath(path_to_images, sfm_pt_name);
-      WriteViewSfmPoints(reconstruction, vid, out_sfm_points_path);
+    const auto view = reconstruction.View(vid);
+    if (!view->IsEstimated()) {
+      continue;
+    }
 
-      writer.StartObject();
-      
-      AddStrKey("rgb_path", view->Name().c_str(), writer);
-      AddStrKey("sfm_sparse_points_view", sfm_pt_name, writer);
+    std::string sfm_pt_name = view->Name() + "_sfm_points.txt";
+    std::string out_sfm_points_path = JoinPath(path_to_images, sfm_pt_name);
+    WriteViewSfmPoints(reconstruction, vid, out_sfm_points_path);
 
-      // name should be filename, e.g. image001.png
+    writer.StartObject();
 
-      const auto cam = view->Camera();
-      Eigen::Matrix4d c2w = Eigen::Matrix4d::Identity();
-      c2w.block<3,3>(0,0) = cam.GetOrientationAsRotationMatrix().transpose();
-      c2w.block<3,1>(0,3) = view->Camera().GetPosition();
+    AddStrKey("rgb_path", view->Name().c_str(), writer);
+    AddStrKey("sfm_sparse_points_view", sfm_pt_name, writer);
 
-      AddMat4Key("camtoworld", c2w, writer);
+    // name should be filename, e.g. image001.png
 
-      Eigen::Matrix4d K = Eigen::Matrix4d::Identity();
-      K(0,0) = cam.FocalLength();
-      K(1,1) = cam.FocalLength();
-      K(0,2) = cam.PrincipalPointX();
-      K(1,2) = cam.PrincipalPointY();
-  
-      AddMat4Key("intrinsics", K, writer);
+    const auto cam = view->Camera();
+    Eigen::Matrix4d c2w = Eigen::Matrix4d::Identity();
+    c2w.block<3, 3>(0, 0) = cam.GetOrientationAsRotationMatrix().transpose();
+    c2w.block<3, 1>(0, 3) = view->Camera().GetPosition();
 
-      writer.EndObject();
+    AddMat4Key("camtoworld", c2w, writer);
+
+    Eigen::Matrix4d K = Eigen::Matrix4d::Identity();
+    K(0, 0) = cam.FocalLength();
+    K(1, 1) = cam.FocalLength();
+    K(0, 2) = cam.PrincipalPointX();
+    K(1, 2) = cam.PrincipalPointY();
+
+    AddMat4Key("intrinsics", K, writer);
+
+    writer.EndObject();
   }
   writer.EndArray();
   writer.EndObject();

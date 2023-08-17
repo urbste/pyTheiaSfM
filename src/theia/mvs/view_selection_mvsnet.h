@@ -32,28 +32,29 @@
 #ifndef THEIA_MVS_VIEW_SELECTION_MVSNET_H_
 #define THEIA_MVS_VIEW_SELECTION_MVSNET_H_
 
-#include <vector>
-#include <map>
 #include <algorithm>
+#include <map>
 #include <unordered_map>
+#include <vector>
 
-#include "theia/sfm/types.h"
 #include "theia/sfm/reconstruction.h"
+#include "theia/sfm/types.h"
 
 namespace theia {
 
 // Selects the views that are most likely to be useful for MVSNet.
 // View selection is performed according to the slection criteria described in
-//      Yao, Yao, et al. "Mvsnet: Depth inference for unstructured multi-view stereo." 
-//      Proceedings of the European conference on computer vision (ECCV). 2018.
-// A score is calculated for each view pair (i, j) based on the covisibilty and angles
-// between observations of scene points
-std::unordered_map<ViewId, std::map<double, ViewId, std::greater<double>>> ViewSelectionMVSNet(
-    const Reconstruction& reconstruction,
-    const int num_neighbors,
-    const double theta0 = 5.0,
-    const double sigma1 = 1.0,
-    const double sigma2 = 10.0);
+//      Yao, Yao, et al. "Mvsnet: Depth inference for unstructured multi-view
+//      stereo." Proceedings of the European conference on computer vision
+//      (ECCV). 2018.
+// A score is calculated for each view pair (i, j) based on the covisibilty and
+// angles between observations of scene points
+std::unordered_map<ViewId, std::map<double, ViewId, std::greater<double>>>
+ViewSelectionMVSNet(const Reconstruction& reconstruction,
+                    const int num_neighbors,
+                    const double theta0 = 5.0,
+                    const double sigma1 = 1.0,
+                    const double sigma2 = 10.0);
 
 }  // namespace theia
 

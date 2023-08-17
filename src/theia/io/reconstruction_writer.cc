@@ -59,8 +59,9 @@ bool WriteReconstruction(const Reconstruction& reconstruction,
     return false;
   }
 
-  //Reconstruction estimated_reconstruction;
-  //CreateEstimatedSubreconstruction(reconstruction, &estimated_reconstruction);
+  // Reconstruction estimated_reconstruction;
+  // CreateEstimatedSubreconstruction(reconstruction,
+  // &estimated_reconstruction);
 
   // Make sure that Cereal is able to finish executing before returning.
   {

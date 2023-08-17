@@ -49,5 +49,5 @@ void pytheia_mvs(py::module& m) {
   pytheia_mvs_classes(m_submodule);
 }
 
-} // namespace matching
+}  // namespace mvs
 }  // namespace pytheia

@@ -2305,12 +2305,12 @@ JSON_HEDLEY_DIAGNOSTIC_POP
   JSON_HEDLEY_DIAGNOSTIC_PUSH                               \
   _Pragma("clang diagnostic ignored \"-Wgcc-compat\"")      \
       __attribute__((diagnose_if(!(expr), #expr, "error"))) \
-          JSON_HEDLEY_DIAGNOSTIC_POP
+      JSON_HEDLEY_DIAGNOSTIC_POP
 #define JSON_HEDLEY_REQUIRE_MSG(expr, msg)                \
   JSON_HEDLEY_DIAGNOSTIC_PUSH                             \
   _Pragma("clang diagnostic ignored \"-Wgcc-compat\"")    \
       __attribute__((diagnose_if(!(expr), msg, "error"))) \
-          JSON_HEDLEY_DIAGNOSTIC_POP
+      JSON_HEDLEY_DIAGNOSTIC_POP
 #else
 #define JSON_HEDLEY_REQUIRE(expr) \
   __attribute__((diagnose_if(!(expr), #expr, "error")))
@@ -8247,10 +8247,10 @@ template <typename BasicJsonType,
 auto from_json_array_impl(const BasicJsonType& j,
                           ConstructibleArrayType& arr,
                           priority_tag<1> /*unused*/)
-    -> decltype(
-        arr.reserve(std::declval<typename ConstructibleArrayType::size_type>()),
-        j.template get<typename ConstructibleArrayType::value_type>(),
-        void()) {
+    -> decltype(arr.reserve(
+                    std::declval<typename ConstructibleArrayType::size_type>()),
+                j.template get<typename ConstructibleArrayType::value_type>(),
+                void()) {
   using std::end;
 
   ConstructibleArrayType ret;
@@ -8591,9 +8591,8 @@ class iteration_proxy_value {
   using pointer = value_type*;
   using reference = value_type&;
   using iterator_category = std::input_iterator_tag;
-  using string_type =
-      typename std::remove_cv<typename std::remove_reference<decltype(
-          std::declval<IteratorType>().key())>::type>::type;
+  using string_type = typename std::remove_cv<typename std::remove_reference<
+      decltype(std::declval<IteratorType>().key())>::type>::type;
 
  private:
   /// the iterator
@@ -9461,9 +9460,10 @@ std::size_t hash(const BasicJsonType& j) {
       return seed;
     }
 
-    default:               // LCOV_EXCL_LINE
-      JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                           // LCOV_EXCL_LINE
+    default:  // LCOV_EXCL_LINE
+      JSON_ASSERT(
+          false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                   // LCOV_EXCL_LINE
       return 0;  // LCOV_EXCL_LINE
   }
 }
@@ -9878,8 +9878,8 @@ inline input_stream_adapter input_adapter(std::istream&& stream) {
 }
 #endif  // JSON_NO_IO
 
-using contiguous_bytes_input_adapter = decltype(
-    input_adapter(std::declval<const char*>(), std::declval<const char*>()));
+using contiguous_bytes_input_adapter = decltype(input_adapter(
+    std::declval<const char*>(), std::declval<const char*>()));
 
 // Null-delimited strings, and the like.
 template <typename CharT,
@@ -11580,9 +11580,10 @@ class lexer : public lexer_base<BasicJsonType> {
       }
 
       // all other characters are rejected outside scan_number()
-      default:               // LCOV_EXCL_LINE
-        JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                             // LCOV_EXCL_LINE
+      default:  // LCOV_EXCL_LINE
+        JSON_ASSERT(
+            false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                     // LCOV_EXCL_LINE
     }
 
   scan_number_minus:
@@ -12414,9 +12415,10 @@ class binary_reader {
         result = parse_ubjson_internal();
         break;
 
-      default:               // LCOV_EXCL_LINE
-        JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                             // LCOV_EXCL_LINE
+      default:  // LCOV_EXCL_LINE
+        JSON_ASSERT(
+            false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                     // LCOV_EXCL_LINE
     }
 
     // strict mode: next byte must be EOF
@@ -13098,8 +13100,9 @@ class binary_reader {
           }
 
           default:  // LCOV_EXCL_LINE
-            JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                                 // LCOV_EXCL_LINE
+            JSON_ASSERT(
+                false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                         // LCOV_EXCL_LINE
             return false;  // LCOV_EXCL_LINE
         }
       }
@@ -14229,8 +14232,9 @@ class binary_reader {
         if (JSON_HEDLEY_UNLIKELY(!get_number(input_format_t::ubjson, number))) {
           return false;
         }
-        result = static_cast<std::size_t>(number);  // NOLINT(bugprone-signed-char-misuse,cert-str34-c):
-                                                    // number is not a char
+        result = static_cast<std::size_t>(
+            number);  // NOLINT(bugprone-signed-char-misuse,cert-str34-c):
+                      // number is not a char
         return true;
       }
 
@@ -14808,9 +14812,10 @@ class binary_reader {
         error_msg += "BSON";
         break;
 
-      default:               // LCOV_EXCL_LINE
-        JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                             // LCOV_EXCL_LINE
+      default:  // LCOV_EXCL_LINE
+        JSON_ASSERT(
+            false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                     // LCOV_EXCL_LINE
     }
 
     return error_msg + " " + context + ": " + detail;
@@ -20054,9 +20059,10 @@ class serializer {
         return;
       }
 
-      default:               // LCOV_EXCL_LINE
-        JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                             // LCOV_EXCL_LINE
+      default:  // LCOV_EXCL_LINE
+        JSON_ASSERT(
+            false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                     // LCOV_EXCL_LINE
     }
   }
 
@@ -20254,8 +20260,9 @@ class serializer {
             }
 
             default:  // LCOV_EXCL_LINE
-              JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                                   // LCOV_EXCL_LINE
+              JSON_ASSERT(
+                  false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                           // LCOV_EXCL_LINE
           }
           break;
         }
@@ -20310,9 +20317,10 @@ class serializer {
           break;
         }
 
-        default:               // LCOV_EXCL_LINE
-          JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                               // LCOV_EXCL_LINE
+        default:  // LCOV_EXCL_LINE
+          JSON_ASSERT(
+              false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                       // LCOV_EXCL_LINE
       }
     }
   }
@@ -20612,9 +20620,10 @@ class serializer {
    * Must never be called.
    */
   number_unsigned_t remove_sign(number_unsigned_t x) {
-    JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                         // LCOV_EXCL_LINE
-    return x;  // LCOV_EXCL_LINE
+    JSON_ASSERT(
+        false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                 // LCOV_EXCL_LINE
+    return x;    // LCOV_EXCL_LINE
   }
 
   /*
@@ -22315,9 +22324,10 @@ class
       case value_t::discarded:
         m_type = value_t::discarded;
         break;
-      default:               // LCOV_EXCL_LINE
-        JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                             // LCOV_EXCL_LINE
+      default:  // LCOV_EXCL_LINE
+        JSON_ASSERT(
+            false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                     // LCOV_EXCL_LINE
     }
     set_parents();
     assert_invariant();
@@ -23609,8 +23619,9 @@ class
   template <typename PointerType,
             typename std::enable_if<std::is_pointer<PointerType>::value,
                                     int>::type = 0>
-  auto get_ptr() noexcept -> decltype(
-      std::declval<basic_json_t&>().get_impl_ptr(std::declval<PointerType>())) {
+  auto get_ptr() noexcept
+      -> decltype(std::declval<basic_json_t&>().get_impl_ptr(
+          std::declval<PointerType>())) {
     // delegate the call to get_impl_ptr<>()
     return get_impl_ptr(static_cast<PointerType>(nullptr));
   }
@@ -23780,8 +23791,8 @@ class
   template <typename PointerType,
             detail::enable_if_t<std::is_pointer<PointerType>::value, int> = 0>
   constexpr auto get_impl(detail::priority_tag<4> /*unused*/) const noexcept
-      -> decltype(
-          std::declval<const basic_json_t&>().template get_ptr<PointerType>()) {
+      -> decltype(std::declval<const basic_json_t&>()
+                      .template get_ptr<PointerType>()) {
     // delegate the call to get_ptr
     return get_ptr<PointerType>();
   }
@@ -23821,9 +23832,9 @@ class
       get() const noexcept(noexcept(
           std::declval<const basic_json_t&>().template get_impl<ValueType>(
               detail::priority_tag<4>{})))
-          -> decltype(
-              std::declval<const basic_json_t&>().template get_impl<ValueType>(
-                  detail::priority_tag<4>{})) {
+          -> decltype(std::declval<const basic_json_t&>()
+                          .template get_impl<ValueType>(
+                              detail::priority_tag<4>{})) {
     // we cannot static_assert on ValueTypeCV being non-const, because
     // there is support for get<const basic_json_t>(), which is why we
     // still need the uncvref
@@ -23863,8 +23874,8 @@ class
   template <typename PointerType,
             typename std::enable_if<std::is_pointer<PointerType>::value,
                                     int>::type = 0>
-  auto get() noexcept -> decltype(
-      std::declval<basic_json_t&>().template get_ptr<PointerType>()) {
+  auto get() noexcept -> decltype(std::declval<basic_json_t&>()
+                                      .template get_ptr<PointerType>()) {
     // delegate the call to get_ptr
     return get_ptr<PointerType>();
   }
@@ -28997,9 +29008,10 @@ class
         }
 
         // if there exists a parent it cannot be primitive
-        default:               // LCOV_EXCL_LINE
-          JSON_ASSERT(false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
-                               // LCOV_EXCL_LINE
+        default:  // LCOV_EXCL_LINE
+          JSON_ASSERT(
+              false);  // NOLINT(cert-dcl03-c,hicpp-static-assert,misc-static-assert)
+                       // LCOV_EXCL_LINE
       }
     };
 

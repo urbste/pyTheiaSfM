@@ -190,8 +190,12 @@ bool EstimateCameraPose(const bool known_intrinsics,
         resolution_scaled_reprojection_error_threshold_pixels /
         (camera->FocalLength() * camera->FocalLength());
     CalibratedAbsolutePose pose;
-    if (EstimateCalibratedAbsolutePose(
-            ransac_parameters, RansacType::RANSAC, PnPType::KNEIP, matches, &pose, summary)) {
+    if (EstimateCalibratedAbsolutePose(ransac_parameters,
+                                       RansacType::RANSAC,
+                                       PnPType::KNEIP,
+                                       matches,
+                                       &pose,
+                                       summary)) {
       camera->SetOrientationFromRotationMatrix(pose.rotation);
       camera->SetPosition(pose.position);
       return true;
