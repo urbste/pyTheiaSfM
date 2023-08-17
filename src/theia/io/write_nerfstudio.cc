@@ -114,21 +114,20 @@ bool WriteNerfStudio(const std::string& path_to_images,
       c2w.block<3,1>(0,3) = view->Camera().GetPosition();
       c2w.block<3,2>(0,1) *= -1;
 
-      Eigen::Matrix4d to_nerfstudio = Eigen::Matrix4d::Identity();
-      to_nerfstudio.block<1,4>(0,0) = c2w.row(1);
-      to_nerfstudio.block<1,4>(1,0) = c2w.row(0);
-      to_nerfstudio.block<1,4>(2,0) = c2w.row(2);
-      to_nerfstudio.block<1,4>(3,0) = c2w.row(3);
-      to_nerfstudio.block<1,4>(2,0) *= -1;
-
+      Eigen::Matrix4d c2w_ns = Eigen::Matrix4d::Identity();
+      c2w_ns.block<1,4>(0,0) = c2w.row(1);
+      c2w_ns.block<1,4>(1,0) = c2w.row(0);
+      c2w_ns.block<1,4>(2,0) = c2w.row(2);
+      c2w_ns.block<1,4>(3,0) = c2w.row(3);
+      c2w_ns.block<1,4>(2,0) *= -1;
 
       writer.Key("transform_matrix");
       writer.StartArray();
       // create transform matrix
       for (int r = 0; r < 4; ++r) {
         writer.StartArray();
-        for (int i = 0; i < 4; ++i) {
-          writer.Double(to_nerfstudio(r,i));
+        for (int c = 0; c < 4; ++c) {
+          writer.Double(c2w_ns(r,c));
         }
         writer.EndArray();
       }
@@ -145,8 +144,7 @@ bool WriteNerfStudio(const std::string& path_to_images,
       AddIntKey("w", cam.ImageWidth(), writer);
       AddIntKey("h", cam.ImageHeight(), writer);
 
-
-      const double* cam_params = cam.parameters();
+      const double* cam_params = cam.intrinsics();
       if (cam.GetCameraIntrinsicsModelType() == theia::CameraIntrinsicsModelType::PINHOLE) {
         AddDoubleKey("k1",
           cam_params[theia::PinholeCameraModel::InternalParametersIndex::RADIAL_DISTORTION_1],

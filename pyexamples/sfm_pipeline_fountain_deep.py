@@ -59,12 +59,6 @@ def match_image_pair(img_i_data, img_j_data, matcher, min_conf):
             pred['keypoints1'] = (pred['keypoints1'] + 0.5) / scales1[None] - 0.5
         torch.cuda.empty_cache()
 
-    if scales0 is not None:
-        pred['keypoints0'] = (pred['keypoints0'] + 0.5) / scales0[None] - 0.5
-    if scales1 is not None:
-        pred['keypoints1'] = (pred['keypoints1'] + 0.5) / scales1[None] - 0.5
-    torch.cuda.empty_cache()
-
     # create match indices
     kpts0, kpts1 = pred['keypoints0'][0], pred['keypoints1'][0]
     matches0, mscores0, mscores1 = result['matches0'][0], result['matching_scores0'][0], result['matching_scores1'][0]

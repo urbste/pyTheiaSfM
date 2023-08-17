@@ -8,6 +8,7 @@ def read_image(path, grayscale: bool = False) -> np.ndarray:
         raise FileNotFoundError(f'No image at path {path}.')
     mode = cv2.IMREAD_GRAYSCALE if grayscale else cv2.IMREAD_COLOR
     image = cv2.imread(str(path), mode)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if image is None:
         raise IOError(f'Could not read image at {path}.')
     if not grayscale:
