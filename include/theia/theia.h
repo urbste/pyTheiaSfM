@@ -104,6 +104,7 @@
 #include "theia/math/matrix/sparse_cholesky_llt.h"
 #include "theia/math/matrix/sparse_matrix.h"
 #include "theia/math/matrix/spectra_linear_operator.h"
+#include "theia/math/nullspace.h"
 #include "theia/math/polynomial.h"
 #include "theia/math/probability/sequential_probability_ratio.h"
 #include "theia/math/qp_solver.h"
