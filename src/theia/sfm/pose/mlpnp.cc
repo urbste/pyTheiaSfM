@@ -35,6 +35,7 @@
 #include "theia/sfm/pose/mlpnp.h"
 
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 #include <algorithm>
 #include <complex>
 #include <glog/logging.h>
@@ -44,13 +45,17 @@
 
 #include <ceres/rotation.h>
 
+#include <iostream>
+
 namespace theia {
 
 using Eigen::Map;
 using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
-
+using Eigen::MatrixXd;
+using Eigen::Matrix2d;
+using Eigen::Matrix4d;
 
 bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
            const std::vector<Eigen::Matrix3d>& feature_covariances,
@@ -62,36 +67,37 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
   const size_t num_points = norm_feature_points.size();
   // compute the nullspace of all vectors
   std::vector<Eigen::Matrix<double, 3, 2>> nullspaces(num_points);
-  Eigen::MatrixXd points3(3, num_points);
+  MatrixXd points3(3, num_points);
 
   for (int i = 0; i < num_points; i++) {
     points3.col(i) = world_points[i];
-    nullS_3x2_templated(norm_feature_points[i], nullspaces[i]);
+    nullS_3x2_templated<double>(
+      norm_feature_points[i].homogeneous().normalized(), nullspaces[i]);
   }
   
 
   //////////////////////////////////////
   // 1. test if we have a planar scene
   //////////////////////////////////////
-  Eigen::Matrix3d planarTest = points3*points3.transpose();
-  Eigen::FullPivHouseholderQR<Matrix3d> rankTest(planarTest);
-  //int r, c;
-  //double minEigenVal = abs(eigen_solver.eigenvalues().real().minCoeff(&r, &c));
-  Eigen::Matrix3d eigenRot;
+  const Eigen::VectorXd mean_vector = points3.rowwise().mean();
+  const Eigen::MatrixXd deviation_matrix = points3.colwise() - mean_vector;
+  const Eigen::Matrix3d covariance_matrix = (deviation_matrix * deviation_matrix.transpose()) / (points3.cols() - 1);
+
+  // now check if any 
+  Eigen::FullPivHouseholderQR<Matrix3d> rankTest(covariance_matrix);
+  Matrix3d eigenRot;
   eigenRot.setIdentity();
 
   // if yes -> transform points to new eigen frame
-  //if (minEigenVal < 1e-3 || minEigenVal == 0.0)
-  //rankTest.setThreshold(1e-10);
   if (rankTest.rank() == 2) {
     planar = true;
     // self adjoint is faster and more accurate than general eigen solvers
     // in addition this solver sorts the eigenvalues in increasing order
-    Eigen::SelfAdjointEigenSolver<Matrix3d> eigen_solver(planarTest);
+    Eigen::SelfAdjointEigenSolver<Matrix3d> eigen_solver(covariance_matrix);
     eigenRot = eigen_solver.eigenvectors().real();
     eigenRot.transposeInPlace();
-    for (size_t i = 0; i < numberCorrespondences; i++) {
-      points3.col(i) = eigenRot * points3.col(i);
+    for (size_t i = 0; i < num_points; i++) {
+      points3.col(i) = eigenRot * world_points[i];
     }
   }
 
@@ -105,12 +111,12 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 
   // if we do have covariance information 
   // -> fill covariance matrix
-  if (covMats.size() == num_points) {
+  if (feature_covariances.size() == num_points) {
     use_cov = true;
     int l = 0;
     for (size_t i = 0; i < num_points; ++i){
       // invert matrix
-      cov2_mat_t temp = (nullspaces[i].transpose() * covMats[i] * nullspaces[i]).inverse();
+      Matrix2d temp = (nullspaces[i].transpose() * feature_covariances[i] * nullspaces[i]).inverse();
       P.coeffRef(l, l) = temp(0, 0);
       P.coeffRef(l, l + 1) = temp(0, 1);
       P.coeffRef(l + 1, l) = temp(1, 0);
@@ -124,7 +130,7 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
   //////////////////////////////////////
   const int rowsA = 2 * num_points;
   int colsA = 12;
-  Eigen::MatrixXd A;
+  MatrixXd A;
   if (planar) {
     colsA = 9;
     A = MatrixXd(rowsA, 9);
@@ -138,7 +144,7 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
   if (planar) {
     for (size_t i = 0; i < num_points; i++)
     {
-        point_t pt3_current = points3.col(i);
+        const Vector3d pt3_current = points3.col(i);
 
         // r12
         A(2 * i, 0) = nullspaces[i](0, 0) * pt3_current[1];
@@ -168,10 +174,9 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
         A(2 * i, 8) = nullspaces[i](2, 0);
         A(2 * i + 1, 8) = nullspaces[i](2, 1);
     }
-  }
-  else {
+  } else {
     for (size_t i = 0; i < num_points; i++) {
-        point_t pt3_current = points3.col(i);
+        const Vector3d pt3_current = points3.col(i);
         // r11
         A(2 * i, 0) = nullspaces[i](0, 0) * pt3_current[0];
         A(2 * i + 1, 0) = nullspaces[i](0, 1) * pt3_current[0];
@@ -214,7 +219,7 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 	//////////////////////////////////////
 	// 4. solve least squares
 	//////////////////////////////////////
-	Eigen::MatrixXd AtPA;
+	MatrixXd AtPA;
 	if (use_cov) {
     AtPA = A.transpose() * P * A;
   }	
@@ -223,29 +228,30 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
   }
 
 	Eigen::JacobiSVD<Eigen::MatrixXd> svd_A(AtPA, Eigen::ComputeFullV);
-	Eigen::MatrixXd result1 = svd_A.matrixV().col(colsA - 1);
-	Eigen::Matrix3d Rout;
-	Eigen::Vector3d tout;
+	MatrixXd result1 = svd_A.matrixV().col(colsA - 1);
+	Matrix3d Rout;
+	Vector3d tout;
 	////////////////////////////////
 	// now we treat the results differently,
 	// depending on the scene (planar or not)
 	////////////////////////////////
 	if (planar) { // planar case
-		Eigen::Matrix3d tmp;
+		Matrix3d tmp;
 		// until now, we only estimated 
 		// row one and two of the transposed rotation matrix
 		tmp << 0.0, result1(0, 0), result1(1, 0),
 			   0.0, result1(2, 0), result1(3, 0),
 			   0.0, result1(4, 0), result1(5, 0);
-		//double scale = 1 / sqrt(tmp.col(1).norm() * tmp.col(2).norm());
+		double scale = 1 / sqrt(tmp.col(1).norm() * tmp.col(2).norm());
 		// row 3
 		tmp.col(0) = tmp.col(1).cross(tmp.col(2));
 		tmp.transposeInPlace();
 
-		double scale = 1.0 / std::sqrt(std::abs(tmp.col(1).norm()* tmp.col(2).norm()));
 		// find best rotation matrix in frobenius sense
 		Eigen::JacobiSVD<Eigen::MatrixXd> svd_R_frob(tmp, Eigen::ComputeFullU | Eigen::ComputeFullV);
-		Eigen::Matrix3d Rout1 = svd_R_frob.matrixU() * svd_R_frob.matrixV().transpose();
+    //double scale = svd_R_frob.singularValues()(2);
+
+		Matrix3d Rout1 = svd_R_frob.matrixU() * svd_R_frob.matrixV().transpose();
 		// test if we found a good rotation matrix
 		if (Rout1.determinant() < 0) {
 			Rout1 *= -1.0;
@@ -253,19 +259,19 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 		// rotate this matrix back using the eigen frame
 		Rout1 = eigenRot.transpose() * Rout1;
 
-		translation_t t = scale *
-			translation_t(result1(6, 0), result1(7, 0), result1(8, 0));
+		Vector3d t = scale *
+			Vector3d(result1(6, 0), result1(7, 0), result1(8, 0));
 		Rout1.transposeInPlace();
 		Rout1 *= -1;
 		if (Rout1.determinant() < 0.0) {
 			Rout1.col(2) *= -1;
-        }
+    }
 		// now we have to find the best out of 4 combinations
 		Eigen::Matrix3d R1, R2;
 		R1.col(0) = Rout1.col(0); R1.col(1) = Rout1.col(1); R1.col(2) = Rout1.col(2);
 		R2.col(0) = -Rout1.col(0); R2.col(1) = -Rout1.col(1); R2.col(2) = Rout1.col(2);
 
-		std::vector<Eigen::Matrix<double, 3, 4> Ts(4);
+		std::vector<Eigen::Matrix<double, 3, 4>> Ts(4);
 		Ts[0].block<3, 3>(0, 0) = R1; Ts[0].block<3, 1>(0, 3) = t;
 		Ts[1].block<3, 3>(0, 0) = R1; Ts[1].block<3, 1>(0, 3) = -t;
 		Ts[2].block<3, 3>(0, 0) = R2; Ts[2].block<3, 1>(0, 3) = t;
@@ -273,13 +279,12 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 
 		std::vector<double> normVal(4);
 		for (int i = 0; i < 4; ++i) {
-			point_t reproPt;
+			Vector3d reproPt;
 			double norms = 0.0;
-			for (int p = 0; p < 6; ++p)
-			{
-				reproPt = Ts[i].block<3, 3>(0, 0)*points3v[p] + Ts[i].block<3, 1>(0, 3);
+			for (int p = 0; p < 6; ++p) {
+				reproPt = Ts[i].block<3, 3>(0, 0) * points3.col(p) + Ts[i].block<3, 1>(0, 3);
 				reproPt = reproPt / reproPt.norm();
-				norms += 1.0 - reproPt.transpose()*f[indices[p]];
+				norms += 1.0 - reproPt.transpose() * norm_feature_points[p].homogeneous().normalized();
 			}
 			normVal[i] = norms;
 		}
@@ -290,71 +295,76 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 		tout = Ts[idx].block<3, 1>(0, 3);
 	}
 	else { // non-planar case
-		Eigen::Matrix3d tmp;
+		Matrix3d tmp;
 		// until now, we only estimated 
 		// row one and two of the transposed rotation matrix
 		tmp << result1(0, 0), result1(3, 0), result1(6, 0),
 			   result1(1, 0), result1(4, 0), result1(7, 0),
 			   result1(2, 0), result1(5, 0), result1(8, 0);
 		// get the scale
-		double scale = 1.0 / 
-			std::pow(std::abs(tmp.col(0).norm() * tmp.col(1).norm()* tmp.col(2).norm()), 1.0 / 3.0);
+		//double scale = 1.0 / 
+		//	std::pow(std::abs(tmp.col(0).norm() * tmp.col(1).norm()* tmp.col(2).norm()), 1.0 / 3.0);
 		// find best rotation matrix in frobenius sense
-		Eigen::JacobiSVD<Eigen::MatrixXd> svd_R_frob(tmp, Eigen::ComputeFullU | Eigen::ComputeFullV);
+		Eigen::JacobiSVD<MatrixXd> svd_R_frob(tmp, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    double scale = svd_R_frob.singularValues()(2);
+
 		Rout = svd_R_frob.matrixU() * svd_R_frob.matrixV().transpose();
 		// test if we found a good rotation matrix
 		if (Rout.determinant() < 0) {
 			Rout *= -1.0;
-        }
+    }
 		// scale translation
-		tout = Rout * (scale * translation_t(result1(9, 0), result1(10, 0), result1(11, 0)));
+		tout = Rout * (Vector3d(result1(9, 0), result1(10, 0), result1(11, 0)) / scale);
 		// find correct direction in terms of reprojection error, just take the first 6 correspondences
-		//Rout.transposeInPlace();
 		std::vector<double> error(2);
-		std::vector<Eigen::Matrix4d> Ts(2);
+		std::vector<Matrix4d> Ts(2);
 
 		for (int s = 0; s < 2; ++s) {
 			error[s] = 0.0;
-			Ts[s] = Eigen::Matrix4d::Identity();
+			Ts[s] = Matrix4d::Identity();
 			Ts[s].block<3, 3>(0, 0) = Rout;
 			if (s == 0) {
-                Ts[s].block<3, 1>(0, 3) = tout;
-            }
-            else {
-                Ts[s].block<3, 1>(0, 3) = -tout;
-            }
+          Ts[s].block<3, 1>(0, 3) = tout;
+      }
+      else {
+          Ts[s].block<3, 1>(0, 3) = -tout;
+      }
 
 			Ts[s] = Ts[s].inverse();
 			for (int p = 0; p < 6; ++p) {
-				bearingVector_t v = Ts[s].block<3, 3>(0, 0)* points3v[p] + Ts[s].block<3, 1>(0, 3);
+				Vector3d v = Ts[s].block<3, 3>(0, 0) * points3.col(p) + Ts[s].block<3, 1>(0, 3);
 				v = v / v.norm();
-				error[s] += 1.0 - v.transpose() * f[indices[p]];
+				error[s] += 1.0 - v.transpose() * norm_feature_points[p].homogeneous().normalized();
 			}
 		}
-		if (error[0] < error[1])
+		if (error[0] < error[1]) {
 			tout = Ts[0].block<3, 1>(0, 3);
-		else
+    } else {
 			tout = Ts[1].block<3, 1>(0, 3);
+    }
 		Rout = Ts[0].block<3, 3>(0, 0);
 	}
 
-	//////////////////////////////////////
-	// 5. gauss newton
-	//////////////////////////////////////
-	Eigen::Vector3d omega; 
-    ceres::RotationMatrixToAngleAxis(Rout.data(), omega.data());
-	Eigen::VectorXd minx(6);
-	minx[0] = omega[0];
-	minx[1] = omega[1];
-	minx[2] = omega[2];
-	minx[3] = tout[0];
-	minx[4] = tout[1];
-	minx[5] = tout[2];
+  *(solution_rotation) = Rout;
+  *solution_translation = tout;
+	// //////////////////////////////////////
+	// // 5. gauss newton
+	// //////////////////////////////////////
+	// Eigen::Vector3d omega; 
+  //   ceres::RotationMatrixToAngleAxis(Rout.data(), omega.data());
+	// Eigen::VectorXd minx(6);
+	// minx[0] = omega[0];
+	// minx[1] = omega[1];
+	// minx[2] = omega[2];
+	// minx[3] = tout[0];
+	// minx[4] = tout[1];
+	// minx[5] = tout[2];
 
-	modules::mlpnp::mlpnp_gn(minx,
-		points3v, nullspaces, P, use_cov);
+	// // modules::mlpnp::mlpnp_gn(minx,
+	// // 	points3v, nullspaces, P, use_cov);
 
-    Eigen::Vector3d omega_opt = Eigen::Vector3d(minx[0], minx[1], minx[2]);
-	ceres::AngleAxisToRotationMatrix(omega_opt.data(), solution_rotation->data());
+  // Eigen::Vector3d omega_opt = Eigen::Vector3d(minx[0], minx[1], minx[2]);
+	// ceres::AngleAxisToRotationMatrix(omega_opt.data(), solution_rotation->data());
+  return true;
 }
 } // namespace theia

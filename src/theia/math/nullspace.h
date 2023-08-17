@@ -111,7 +111,7 @@ void nullS_3x4_templated(const Eigen::Matrix<T, 4, 1>& vector,
   const Eigen::Matrix<T, 3, 1> x_0(vector(0), vector(1), vector(2));
   const Eigen::Matrix<T, 3, 3> I_3 = Eigen::Matrix<T, 3, 3>::Identity();
 
-    const Eigen::Matrix<T, 3, 3> outer_prod = (x_0  * x_0.transpose();
+    const Eigen::Matrix<T, 3, 3> outer_prod = x_0  * x_0.transpose();
     if (x_n > T(0))
     {
     const Eigen::Matrix<T, 3, 3> tmp = I_3 - outer_prod / (T(1) + x_n);
