@@ -46,11 +46,7 @@
 namespace theia {
 class Reconstruction;
 
-enum class TriangulationMethodType {
-    MIDPOINT,
-    SVD,
-    L2_MINIMIZATION
-};
+enum class TriangulationMethodType { MIDPOINT, SVD, L2_MINIMIZATION };
 
 // Estimates the 3D point of a track by using all estimated views to compute a
 // (potentially nonminimal) triangulation of track. The the angle between all
@@ -83,7 +79,8 @@ class TrackEstimator {
     int multithreaded_step_size = 100;
 
     // Triangulation method
-    TriangulationMethodType triangulation_method = TriangulationMethodType::MIDPOINT;
+    TriangulationMethodType triangulation_method =
+        TriangulationMethodType::MIDPOINT;
   };
 
   struct Summary {

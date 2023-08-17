@@ -46,7 +46,7 @@ const std::vector<Feature> features = {
 
 TEST(Reconstruction, ViewIdFromNameValid) {
   Reconstruction reconstruction;
-  const ViewId gt_view_id = reconstruction.AddView(view_names[0],0.);
+  const ViewId gt_view_id = reconstruction.AddView(view_names[0], 0.);
 
   const ViewId view_id = reconstruction.ViewIdFromName(view_names[0]);
   EXPECT_EQ(gt_view_id, view_id);
@@ -59,7 +59,7 @@ TEST(Reconstruction, ViewIdFromNameInvalid) {
 
 TEST(Reconstruction, AddView) {
   Reconstruction reconstruction;
-  const ViewId view_id = reconstruction.AddView(view_names[0],0.0);
+  const ViewId view_id = reconstruction.AddView(view_names[0], 0.0);
   EXPECT_NE(view_id, kInvalidViewId);
   EXPECT_EQ(reconstruction.NumViews(), 1);
   EXPECT_EQ(reconstruction.NumTracks(), 0);

@@ -53,7 +53,7 @@ namespace math {
 template <typename Scalar_>
 struct SMinusLambdaProdFunctor {
   using Scalar = Scalar_;
-  
+
   std::shared_ptr<RankRestrictedSDPSolver> sdp_solver_;
 
   // Diagonal blocks of the matrix Lambda
@@ -69,9 +69,8 @@ struct SMinusLambdaProdFunctor {
   double sigma_;
 
   // Constructor
-  SMinusLambdaProdFunctor(
-      std::shared_ptr<RankRestrictedSDPSolver> sdp_solver,
-      double sigma = 0);
+  SMinusLambdaProdFunctor(std::shared_ptr<RankRestrictedSDPSolver> sdp_solver,
+                          double sigma = 0);
 
   size_t rows() const { return rows_; }
   size_t cols() const { return cols_; }
@@ -82,8 +81,7 @@ struct SMinusLambdaProdFunctor {
 
 template <typename Scalar_>
 SMinusLambdaProdFunctor<Scalar_>::SMinusLambdaProdFunctor(
-    std::shared_ptr<RankRestrictedSDPSolver> sdp_solver,
-    double sigma)
+    std::shared_ptr<RankRestrictedSDPSolver> sdp_solver, double sigma)
     : sdp_solver_(sdp_solver), dim_(sdp_solver->Dimension()), sigma_(sigma) {
   rows_ = sdp_solver_->Dimension() * sdp_solver_->NumUnknowns();
   cols_ = sdp_solver_->Dimension() * sdp_solver_->NumUnknowns();
@@ -93,8 +91,8 @@ SMinusLambdaProdFunctor<Scalar_>::SMinusLambdaProdFunctor(
 }
 
 template <typename Scalar_>
-void SMinusLambdaProdFunctor<Scalar_>::perform_op(
-    const double* x, double* y) const {
+void SMinusLambdaProdFunctor<Scalar_>::perform_op(const double* x,
+                                                  double* y) const {
   Eigen::Map<Eigen::VectorXd> X(const_cast<double*>(x), cols_);
   Eigen::Map<Eigen::VectorXd> Y(y, rows_);
 
@@ -103,8 +101,7 @@ void SMinusLambdaProdFunctor<Scalar_>::perform_op(
 #pragma omp parallel for
   for (size_t i = 0; i < sdp_solver_->NumUnknowns(); ++i) {
     Y.segment(i * dim_, dim_) -=
-        Lambda_.block(0, i * dim_, dim_, dim_) *
-        X.segment(i * dim_, dim_);
+        Lambda_.block(0, i * dim_, dim_, dim_) * X.segment(i * dim_, dim_);
   }
 
   if (sigma_ != 0) {
@@ -112,10 +109,11 @@ void SMinusLambdaProdFunctor<Scalar_>::perform_op(
   }
 }
 
-class RiemannianStaircase : public SDPSolver{
+class RiemannianStaircase : public SDPSolver {
  public:
   RiemannianStaircase(const size_t n, const size_t block_dim);
-  RiemannianStaircase(const size_t n, const size_t block_dim,
+  RiemannianStaircase(const size_t n,
+                      const size_t block_dim,
                       const math::SDPSolverOptions& options);
 
   void Solve(math::Summary& summary) override;
@@ -126,19 +124,19 @@ class RiemannianStaircase : public SDPSolver{
   double EvaluateFuncVal(const Eigen::MatrixXd& Y) const override;
 
   void SetCovariance(const Eigen::SparseMatrix<double>& Q) override;
-  void SetAdjacentEdges(
-      const std::unordered_map<size_t, std::vector<size_t>>& adj_edges) override;
+  void SetAdjacentEdges(const std::unordered_map<size_t, std::vector<size_t>>&
+                            adj_edges) override;
 
  private:
+  bool KKTVerification(double* min_eigenvalue,
+                       Eigen::VectorXd* min_eigenvector,
+                       size_t* num_iterations);
 
-  bool KKTVerification(
-      double* min_eigenvalue, Eigen::VectorXd* min_eigenvector,
-      size_t* num_iterations);
-  
-  bool EscapeSaddle(
-      const double lambda_min, const Eigen::VectorXd& vector_min,
-      double gradient_tolerance, double preconditioned_gradient_tolerance,
-      Eigen::MatrixXd* Yplus);
+  bool EscapeSaddle(const double lambda_min,
+                    const Eigen::VectorXd& vector_min,
+                    double gradient_tolerance,
+                    double preconditioned_gradient_tolerance,
+                    Eigen::MatrixXd* Yplus);
 
   void RoundSolution();
 

@@ -74,6 +74,7 @@ class TrackBuilder {
   // This function can be called incrementally for sequential reconstructions
   // It checks if connected components already exist
   void BuildTracksIncremental(Reconstruction* reconstruction);
+
  private:
   uint64_t FindOrInsert(const std::pair<ViewId, Feature>& image_feature);
 

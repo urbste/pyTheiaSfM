@@ -38,11 +38,11 @@
 #include <memory>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
+#include "theia/sfm/estimate_track.h"
 #include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
-#include "theia/sfm/estimate_track.h"
 #include "theia/util/random.h"
 
 namespace theia {
@@ -83,9 +83,10 @@ enum class GlobalPositionEstimatorType {
 
 // Track parametrization type:
 //   XYZW: 4D point --> optimization over homogeneous 4 vector
-//   XYZ_MANIFOLD: 4D point --> optimization over ceres::SphereManifold<4>() manifol
-//   INVERSE_DEPTH: optimization of track using inverse depth parametrization
-enum class TrackParametrizationType{
+//   XYZ_MANIFOLD: 4D point --> optimization over ceres::SphereManifold<4>()
+//   manifol INVERSE_DEPTH: optimization of track using inverse depth
+//   parametrization
+enum class TrackParametrizationType {
   XYZW = 0,
   XYZW_MANIFOLD = 1,
   INVERSE_DEPTH = 2
@@ -237,7 +238,8 @@ struct ReconstructionEstimatorOptions {
   bool bundle_adjust_tracks = true;
 
   // Bundle adjust a track immediately after estimating it.
-  TriangulationMethodType triangulation_method = TriangulationMethodType::MIDPOINT;
+  TriangulationMethodType triangulation_method =
+      TriangulationMethodType::MIDPOINT;
 
   // --------------- Bundle Adjustment Options --------------- //
 
@@ -276,8 +278,9 @@ struct ReconstructionEstimatorOptions {
       OptimizeIntrinsicsType::RADIAL_DISTORTION;
 
   // The track parametrizeation type to use for bundle adjustment.
-  // Standard is XYZW which will optimize a homogeneous vector, but on a euclidean manifold
-  TrackParametrizationType track_parametrization_type = 
+  // Standard is XYZW which will optimize a homogeneous vector, but on a
+  // euclidean manifold
+  TrackParametrizationType track_parametrization_type =
       TrackParametrizationType::XYZW_MANIFOLD;
 
   // --------------- Track Subsampling Options --------------- //

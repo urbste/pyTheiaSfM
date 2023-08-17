@@ -28,7 +28,7 @@ std::tuple<bool, TwoViewInfo, std::vector<int>> EstimateTwoViewInfoWrapper(
     const CameraIntrinsicsPrior& intrinsics1,
     const CameraIntrinsicsPrior& intrinsics2,
     const std::vector<FeatureCorrespondence>& correspondences);
-    
+
 std::tuple<bool, std::unordered_set<TrackId>>
 SelectGoodTracksForBundleAdjustmentWrapper(
     const Reconstruction& reconstruction,
@@ -42,6 +42,5 @@ int SetOutlierTracksToUnestimatedWrapper(
     const double max_inlier_reprojection_error,
     const double min_triangulation_angle_degrees,
     Reconstruction& reconstruction);
-
 
 }  // namespace theia

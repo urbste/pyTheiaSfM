@@ -47,9 +47,9 @@ class Reconstruction;
 // Currently only 1 type of camera models is supported: PINHOLE
 // All images need to be undistorted! No distortion in the settings.
 bool WriteSdfStudio(const std::string& path_to_images,
-                  const Reconstruction& reconstruction,
-                  const std::pair<double, double>& nearfar,
-                  const double radius);
+                    const Reconstruction& reconstruction,
+                    const std::pair<double, double>& nearfar,
+                    const double radius);
 
 }  // namespace theia
 

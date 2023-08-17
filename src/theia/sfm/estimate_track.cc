@@ -212,7 +212,7 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
   Track* track = reconstruction_->MutableTrack(track_id);
   if (track->IsEstimated()) {
     return true;
-  }      
+  }
 
   // Gather projection matrices and features.
   std::vector<ViewId> view_ids;
@@ -237,26 +237,29 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
 
   // Triangulate the track
   if (options_.triangulation_method == TriangulationMethodType::SVD) {
-    if (!TriangulateNViewSVD(norm_proj_matrices, features,
-    track->MutablePoint())) {
+    if (!TriangulateNViewSVD(
+            norm_proj_matrices, features, track->MutablePoint())) {
       ++num_failed_triangulations_;
       return false;
     }
-  } else if (options_.triangulation_method == TriangulationMethodType::MIDPOINT) {
-      if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
-        ++num_failed_triangulations_;
-        return false;
-      }
-  } else if (options_.triangulation_method == TriangulationMethodType::L2_MINIMIZATION) {
-      if (!TriangulateNView(norm_proj_matrices, features, track->MutablePoint())) {
-        ++num_failed_triangulations_;
-        return false;
-      }
+  } else if (options_.triangulation_method ==
+             TriangulationMethodType::MIDPOINT) {
+    if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
+      ++num_failed_triangulations_;
+      return false;
+    }
+  } else if (options_.triangulation_method ==
+             TriangulationMethodType::L2_MINIMIZATION) {
+    if (!TriangulateNView(
+            norm_proj_matrices, features, track->MutablePoint())) {
+      ++num_failed_triangulations_;
+      return false;
+    }
   } else {
-      if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
-        ++num_failed_triangulations_;
-        return false;
-      }
+    if (!TriangulateMidpoint(origins, ray_directions, track->MutablePoint())) {
+      ++num_failed_triangulations_;
+      return false;
+    }
   }
 
   // Set the inverse depth of the track
@@ -274,9 +277,9 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
     const Camera ref_cam = ref_view->Camera();
     Eigen::Vector2d point_i;
     const double depth = ref_cam.ProjectPoint(track->Point(), &point_i);
-    track->SetInverseDepth(1./depth);
-    track->SetReferenceBearingVector(
-      ref_cam.PixelToNormalizedCoordinates(ref_view->GetFeature(track_id)->point_));
+    track->SetInverseDepth(1. / depth);
+    track->SetReferenceBearingVector(ref_cam.PixelToNormalizedCoordinates(
+        ref_view->GetFeature(track_id)->point_));
   }
 
   // Bundle adjust the track.

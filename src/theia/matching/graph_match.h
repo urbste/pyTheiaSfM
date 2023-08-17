@@ -30,16 +30,16 @@
 #ifndef THEIA_MATCHING_GRAPH_MATCH_H_
 #define THEIA_MATCHING_GRAPH_MATCH_H_
 
-#include <vector>
-#include <string>
 #include <Eigen/Core>
+#include <string>
+#include <vector>
 
 namespace theia {
 
 std::vector<std::pair<std::string, std::string>> GraphMatch(
-  const std::vector<std::string>& image_names,
-  const std::vector<Eigen::VectorXf>& global_descriptors,
-  const int num_nearest_neighbors_for_global_descriptor_matching);
+    const std::vector<std::string>& image_names,
+    const std::vector<Eigen::VectorXf>& global_descriptors,
+    const int num_nearest_neighbors_for_global_descriptor_matching);
 
 }  // namespace theia
 

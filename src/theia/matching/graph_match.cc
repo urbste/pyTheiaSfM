@@ -27,17 +27,16 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-
 #include "theia/matching/graph_match.h"
 
 #include <Eigen/Core>
 #include <algorithm>
+#include <glog/logging.h>
 #include <limits>
 #include <stdint.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <glog/logging.h>
 
 namespace theia {
 
@@ -47,10 +46,9 @@ struct MatchedImages {
 };
 
 std::vector<std::pair<std::string, std::string>> GraphMatch(
-  const std::vector<std::string>& image_names,
-  const std::vector<Eigen::VectorXf>& global_descriptors,
-  const int num_nearest_neighbors_for_global_descriptor_matching) {
-
+    const std::vector<std::string>& image_names,
+    const std::vector<Eigen::VectorXf>& global_descriptors,
+    const int num_nearest_neighbors_for_global_descriptor_matching) {
   VLOG(2) << "Computing image-to-image similarity scores with global "
              "descriptors...";
 
@@ -131,4 +129,4 @@ std::vector<std::pair<std::string, std::string>> GraphMatch(
   return image_names_to_match;
 }
 
-} // theia
+}  // namespace theia

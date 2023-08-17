@@ -53,10 +53,10 @@ TEST(FindCommonTracksInViews, NoCommonTracks) {
                                                            {3, feature}};
 
   Reconstruction reconstruction;
-  reconstruction.AddView("0",0.);
-  reconstruction.AddView("1",1.);
-  reconstruction.AddView("2",2.);
-  reconstruction.AddView("3",3.);
+  reconstruction.AddView("0", 0.);
+  reconstruction.AddView("1", 1.);
+  reconstruction.AddView("2", 2.);
+  reconstruction.AddView("3", 3.);
   reconstruction.AddTrack(track1);
   reconstruction.AddTrack(track2);
   reconstruction.AddTrack(track3);
@@ -77,10 +77,10 @@ TEST(FindCommonTracksInViews, CommonTracks) {
                                                            {3, feature}};
 
   Reconstruction reconstruction;
-  reconstruction.AddView("0",0.);
-  reconstruction.AddView("1",1.);
-  reconstruction.AddView("2",2.);
-  reconstruction.AddView("3",3.);
+  reconstruction.AddView("0", 0.);
+  reconstruction.AddView("1", 1.);
+  reconstruction.AddView("2", 2.);
+  reconstruction.AddView("3", 3.);
   reconstruction.AddTrack(track1);
   reconstruction.AddTrack(track2);
   reconstruction.AddTrack(track3);

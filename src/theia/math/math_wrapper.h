@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Eigen/Core>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "theia/math/rotation.h"
 

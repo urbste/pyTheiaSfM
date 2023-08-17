@@ -101,46 +101,47 @@ void TrackBuilder::BuildTracksIncremental(Reconstruction* reconstruction) {
     }
 
     // connected component already has a track in the reconstruction
-    const auto track_component = connected_component_to_track_id_.find(component.first);
+    const auto track_component =
+        connected_component_to_track_id_.find(component.first);
     if (track_component != connected_component_to_track_id_.end()) {
-
-        auto track = reconstruction->Track(track_component->second);
-        auto view_ids = track->ViewIds();
-        for (const auto& feature_id : component.second) {
-            const auto& feature_to_add = *FindOrDie(id_to_feature, feature_id);
-            const ViewId v_id = feature_to_add.first;
-            // if this feature already is an observation of a track
-            if (view_ids.find(v_id) == view_ids.end()) {
-                //std::cout<<"Adding an observation to an already existing track "<<track_component->second<<" vid: "<<v_id<<"\n";
-                reconstruction->AddObservation(v_id, track_component->second, feature_to_add.second);
-            }
+      auto track = reconstruction->Track(track_component->second);
+      auto view_ids = track->ViewIds();
+      for (const auto& feature_id : component.second) {
+        const auto& feature_to_add = *FindOrDie(id_to_feature, feature_id);
+        const ViewId v_id = feature_to_add.first;
+        // if this feature already is an observation of a track
+        if (view_ids.find(v_id) == view_ids.end()) {
+          // std::cout<<"Adding an observation to an already existing track
+          // "<<track_component->second<<" vid: "<<v_id<<"\n";
+          reconstruction->AddObservation(
+              v_id, track_component->second, feature_to_add.second);
         }
+      }
     }
     // initialize a new track
     else {
-        std::vector<std::pair<ViewId, Feature> > track;
-        track.reserve(component.second.size());
+      std::vector<std::pair<ViewId, Feature> > track;
+      track.reserve(component.second.size());
 
-        // Add all features in the connected component to the track.
-        std::unordered_set<ViewId> view_ids;
-        for (const auto& feature_id : component.second) {
-          const auto& feature_to_add = *FindOrDie(id_to_feature, feature_id);
+      // Add all features in the connected component to the track.
+      std::unordered_set<ViewId> view_ids;
+      for (const auto& feature_id : component.second) {
+        const auto& feature_to_add = *FindOrDie(id_to_feature, feature_id);
 
-          // Do not add the feature if the track already contains a feature from the
-          // same image.
-          if (!InsertIfNotPresent(&view_ids, feature_to_add.first)) {
-            ++num_inconsistent_features;
-            continue;
-          }
-
-          track.emplace_back(feature_to_add);
+        // Do not add the feature if the track already contains a feature from
+        // the same image.
+        if (!InsertIfNotPresent(&view_ids, feature_to_add.first)) {
+          ++num_inconsistent_features;
+          continue;
         }
 
-        TrackId new_track_id = reconstruction->AddTrack(track);
-        CHECK_NE(new_track_id, kInvalidTrackId)
-            << "Could not build tracks.";
-        connected_component_to_track_id_[component.first] = new_track_id;
+        track.emplace_back(feature_to_add);
       }
+
+      TrackId new_track_id = reconstruction->AddTrack(track);
+      CHECK_NE(new_track_id, kInvalidTrackId) << "Could not build tracks.";
+      connected_component_to_track_id_[component.first] = new_track_id;
+    }
   }
 
   LOG(INFO)

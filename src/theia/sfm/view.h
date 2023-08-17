@@ -138,7 +138,8 @@ class View {
   Eigen::Matrix3d position_prior_sqrt_information_;
   bool has_position_prior_;
 
-  // A prior on gravity (in the image coordinate system, z-forward, y-down, x-right)
+  // A prior on gravity (in the image coordinate system, z-forward, y-down,
+  // x-right)
   Eigen::Vector3d gravity_prior_;
   Eigen::Matrix3d gravity_prior_sqrt_information_;
   bool has_gravity_prior_;

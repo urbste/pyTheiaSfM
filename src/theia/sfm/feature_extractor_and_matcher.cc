@@ -52,8 +52,8 @@
 #include "theia/matching/features_and_matches_database.h"
 #include "theia/matching/fisher_vector_extractor.h"
 #include "theia/matching/global_descriptor_extractor.h"
-#include "theia/matching/image_pair_match.h"
 #include "theia/matching/graph_match.h"
+#include "theia/matching/image_pair_match.h"
 #include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/estimate_twoview_info.h"
 //#include "theia/sfm/exif_reader.h"
@@ -371,8 +371,10 @@ void FeatureExtractorAndMatcher::
              "descriptors...";
 
   std::vector<std::pair<std::string, std::string>> image_names_to_match;
-  image_names_to_match = GraphMatch(image_names, global_descriptors, 
-    options_.num_nearest_neighbors_for_global_descriptor_matching);
+  image_names_to_match =
+      GraphMatch(image_names,
+                 global_descriptors,
+                 options_.num_nearest_neighbors_for_global_descriptor_matching);
 
   // Tell the matcher which pairs to match.
   matcher_->SetImagePairsToMatch(image_names_to_match);
