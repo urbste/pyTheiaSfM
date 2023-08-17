@@ -37,11 +37,11 @@
 
 #include <glog/logging.h>
 
+#include "theia/solvers/evsac.h"
 #include "theia/solvers/exhaustive_ransac.h"
 #include "theia/solvers/lmed.h"
 #include "theia/solvers/prosac.h"
 #include "theia/solvers/ransac.h"
-#include "theia/solvers/evsac.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 
 namespace theia {
@@ -49,12 +49,7 @@ namespace theia {
 // NOTE: Prosac requires correspondences to be sorted by the descriptor
 // distances with the best match first. See theia/solvers for more information
 // on the various types.
-enum class RansacType {
-  RANSAC = 0,
-  PROSAC = 1,
-  LMED = 2,
-  EXHAUSTIVE = 3
-};
+enum class RansacType { RANSAC = 0, PROSAC = 1, LMED = 2, EXHAUSTIVE = 3 };
 
 // Factory method to create a ransac variant based on the specified options. The
 // variante is then initialized and fails if initialization is not successful.
@@ -78,9 +73,9 @@ CreateAndInitializeRansacVariant(const RansacType& ransac_type,
       ransac_variant.reset(
           new ExhaustiveRansac<Estimator>(ransac_options, estimator));
       break;
-//    case RansacType::EVSAC:
-//      ransac_variant.reset(new Evsac<Estimator>(ransac_options, estimator));
-//      break;
+      //    case RansacType::EVSAC:
+      //      ransac_variant.reset(new Evsac<Estimator>(ransac_options,
+      //      estimator)); break;
     default:
       ransac_variant.reset(new Ransac<Estimator>(ransac_options, estimator));
       break;

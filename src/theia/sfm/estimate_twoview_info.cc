@@ -212,7 +212,7 @@ bool EstimateTwoViewInfoUncalibrated(
   ransac_options.max_iterations = options.max_ransac_iterations;
   ransac_options.use_lo = options.use_lo;
   ransac_options.lo_start_iterations = options.lo_start_iterations;
-  
+
   // Compute the sampson error threshold to account for the resolution of the
   // images.
   const double max_sampson_error_pixels1 =
@@ -276,15 +276,15 @@ bool EstimateTwoViewInfo(
                                          inlier_indices);
   }
 
-  Eigen::Vector2d min_max_focal_length(
-    options.min_focal_length,options.max_focal_length);
+  Eigen::Vector2d min_max_focal_length(options.min_focal_length,
+                                       options.max_focal_length);
 
   // Only one of the focal lengths is set.
   if (intrinsics1.focal_length.is_set || intrinsics2.focal_length.is_set) {
     LOG(WARNING) << "Solving for two view infos when exactly one view is "
                     "calibrated has not been implemented yet. Treating both "
                     "views as uncalibrated instead.";
-    
+
     return EstimateTwoViewInfoUncalibrated(options,
                                            intrinsics1,
                                            intrinsics2,

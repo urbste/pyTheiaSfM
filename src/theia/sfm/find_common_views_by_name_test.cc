@@ -52,21 +52,21 @@ void TestFindCommonViewsByName(const int num_views1,
   // Add the views with the same name first.
   for (int i = 0; i < num_common_views; i++) {
     const std::string name = StringPrintf("%d", i);
-    CHECK_NE(reconstruction1.AddView(name,i), kInvalidViewId);
-    CHECK_NE(reconstruction2.AddView(name,i), kInvalidViewId);
+    CHECK_NE(reconstruction1.AddView(name, i), kInvalidViewId);
+    CHECK_NE(reconstruction2.AddView(name, i), kInvalidViewId);
   }
 
   // Add unique views for reconstruction1.
   for (int i = 0; i < num_views1 - num_common_views; i++) {
     const std::string name = StringPrintf("%d", reconstruction1.NumViews());
-    CHECK_NE(reconstruction1.AddView(name,i), kInvalidViewId);
+    CHECK_NE(reconstruction1.AddView(name, i), kInvalidViewId);
   }
 
   // Add unique views for reconstruction2.
   for (int i = 0; i < num_views2 - num_common_views; i++) {
     const std::string name = StringPrintf(
         "%d", reconstruction1.NumViews() + reconstruction2.NumViews());
-    CHECK_NE(reconstruction2.AddView(name,i), kInvalidViewId);
+    CHECK_NE(reconstruction2.AddView(name, i), kInvalidViewId);
   }
 
   // Validate the result.

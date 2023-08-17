@@ -39,7 +39,7 @@ namespace theia {
 class Reconstruction;
 
 // Converts a theia reconstruction to a nerfstudio json file
-// The json format is documented here: 
+// The json format is documented here:
 // https://docs.nerf.studio/en/latest/quickstart/data_conventions.html
 // It is assumed, that the Views in the reconstruction have the same
 // name than the image filename, e.g. image001.png with extension
@@ -54,9 +54,9 @@ class Reconstruction;
 // OPENCV is not mapped to PINHOLE_RADIAL_TANGENTIAL as pytheia uses
 // 3 radial distortion parameteres (k1,k2,k3) and nerfstudio only 2 (k1,k2)
 bool WriteNerfStudio(const std::string& path_to_images,
-                  const Reconstruction& reconstruction,
-                  const int aabb_scale,
-                  const std::string& out_json_nerfstudio_file);
+                     const Reconstruction& reconstruction,
+                     const int aabb_scale,
+                     const std::string& out_json_nerfstudio_file);
 
 }  // namespace theia
 

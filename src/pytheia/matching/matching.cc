@@ -51,9 +51,9 @@
 #include "theia/matching/features_and_matches_database.h"
 #include "theia/matching/fisher_vector_extractor.h"
 #include "theia/matching/global_descriptor_extractor.h"
+#include "theia/matching/graph_match.h"
 #include "theia/matching/indexed_feature_match.h"
 #include "theia/matching/keypoints_and_descriptors.h"
-#include "theia/matching/graph_match.h"
 #include "theia/sfm/feature.h"
 #include "theia/sfm/two_view_match_geometric_verification.h"
 //#include "theia/matching/rocksdb_features_and_matches_database.h"
@@ -260,11 +260,11 @@ void pytheia_matching_classes(py::module& m) {
       //.def(py::init<theia::FeatureMatcherOptions,
       //&theia::FeaturesAndMatchesDatabase>())
       .def("AddImages",
-           (void (theia::FeatureMatcher::*)(const std::vector<std::string>&)) &
+           (void(theia::FeatureMatcher::*)(const std::vector<std::string>&)) &
                theia::FeatureMatcher::AddImages,
            py::return_value_policy::reference_internal)
       .def("AddImage",
-           (void (theia::FeatureMatcher::*)(const std::string&)) &
+           (void(theia::FeatureMatcher::*)(const std::string&)) &
                theia::FeatureMatcher::AddImage,
            py::return_value_policy::reference_internal)
       .def("MatchImages", &theia::FeatureMatcher::MatchImages)
@@ -279,7 +279,7 @@ void pytheia_matching_classes(py::module& m) {
                     theia::FeaturesAndMatchesDatabase*>())
       // abstract class in the constructor
       //.def(py::init<theia::FeatureMatcherOptions,
-      //theia::FeaturesAndMatchesDatabase>())
+      // theia::FeaturesAndMatchesDatabase>())
 
       ;
 
@@ -290,12 +290,12 @@ void pytheia_matching_classes(py::module& m) {
       .def(py::init<theia::FeatureMatcherOptions,
                     theia::FeaturesAndMatchesDatabase*>())
       .def("AddImages",
-           (void (theia::CascadeHashingFeatureMatcher::*)(
+           (void(theia::CascadeHashingFeatureMatcher::*)(
                const std::vector<std::string>&)) &
                theia::CascadeHashingFeatureMatcher::AddImages,
            py::return_value_policy::reference_internal)
       .def("AddImage",
-           (void (theia::CascadeHashingFeatureMatcher::*)(const std::string&)) &
+           (void(theia::CascadeHashingFeatureMatcher::*)(const std::string&)) &
                theia::CascadeHashingFeatureMatcher::AddImage,
            py::return_value_policy::reference_internal)
 

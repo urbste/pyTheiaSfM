@@ -120,13 +120,16 @@ BundleAdjustmentOptions SetBundleAdjustmentOptions(
   ba_options.robust_loss_width = options.bundle_adjustment_robust_loss_width;
   ba_options.use_inner_iterations = true;
   ba_options.intrinsics_to_optimize = options.intrinsics_to_optimize;
-  if (options.track_parametrization_type == TrackParametrizationType::XYZW_MANIFOLD) {
+  if (options.track_parametrization_type ==
+      TrackParametrizationType::XYZW_MANIFOLD) {
     ba_options.use_homogeneous_point_parametrization = true;
     ba_options.use_inverse_depth_parametrization = false;
-  } else if (options.track_parametrization_type == TrackParametrizationType::INVERSE_DEPTH) {
+  } else if (options.track_parametrization_type ==
+             TrackParametrizationType::INVERSE_DEPTH) {
     ba_options.use_homogeneous_point_parametrization = false;
     ba_options.use_inverse_depth_parametrization = true;
-  } else if(options.track_parametrization_type == TrackParametrizationType::XYZW) {
+  } else if (options.track_parametrization_type ==
+             TrackParametrizationType::XYZW) {
     ba_options.use_homogeneous_point_parametrization = false;
     ba_options.use_inverse_depth_parametrization = false;
   } else {

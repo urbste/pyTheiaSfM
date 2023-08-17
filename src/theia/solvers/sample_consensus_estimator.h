@@ -185,7 +185,7 @@ class SampleConsensusEstimator {
 
   // Get inlier datum points (for LO)
   void GetInlierDatum(const std::vector<Datum>& data,
-                      std::vector<Datum>& inlier_datum, 
+                      std::vector<Datum>& inlier_datum,
                       std::vector<int> inlier_indices);
 
   // The sampling strategy.
@@ -335,7 +335,6 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
           continue;
         }
 
-
         if (summary->num_iterations >= ransac_params_.lo_start_iterations &&
             ransac_params_.use_lo) {
           std::vector<Datum> inliers;
@@ -357,7 +356,6 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
                 << " and max number of iterations = " << max_iterations;
       }
     }
-
   }
 
   // Compute the final inliers for the best model.
@@ -383,13 +381,13 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
 
 template <class ModelEstimator>
 void SampleConsensusEstimator<ModelEstimator>::GetInlierDatum(
-  const std::vector<Datum>& data,
-  std::vector<Datum>& inlier_datum, 
-  std::vector<int> inlier_indices) {
-    inlier_datum.resize(inlier_indices.size());
-    for (int i = 0; i < inlier_indices.size(); i++) {
-      inlier_datum[i] = data[inlier_indices[i]];
-    }
+    const std::vector<Datum>& data,
+    std::vector<Datum>& inlier_datum,
+    std::vector<int> inlier_indices) {
+  inlier_datum.resize(inlier_indices.size());
+  for (int i = 0; i < inlier_indices.size(); i++) {
+    inlier_datum[i] = data[inlier_indices[i]];
+  }
 }
 
 }  // namespace theia

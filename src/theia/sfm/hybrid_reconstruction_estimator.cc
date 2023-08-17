@@ -50,11 +50,11 @@
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
 #include "theia/sfm/estimators/estimate_relative_pose_with_known_orientation.h"
 #include "theia/sfm/find_common_tracks_in_views.h"
+#include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
+#include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/robust_rotation_estimator.h"
-#include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
-#include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/rotation_estimator.h"
 #include "theia/sfm/localize_view_to_reconstruction.h"
 #include "theia/sfm/reconstruction.h"
@@ -331,8 +331,7 @@ bool HybridReconstructionEstimator::EstimateCameraOrientations() {
       CHECK(OrientationsFromMaximumSpanningTree(*view_graph_, &orientations_))
           << "Could not estimate orientations from a spanning tree.";
       HybridRotationEstimator::HybridRotationEstimatorOptions options;
-      rotation_estimator.reset(
-          new HybridRotationEstimator(options));
+      rotation_estimator.reset(new HybridRotationEstimator(options));
       break;
     }
     case GlobalRotationEstimatorType::LAGRANGE_DUAL: {
@@ -340,8 +339,7 @@ bool HybridReconstructionEstimator::EstimateCameraOrientations() {
       // spanning tree.
       CHECK(OrientationsFromMaximumSpanningTree(*view_graph_, &orientations_))
           << "Could not estimate orientations from a spanning tree.";
-      rotation_estimator.reset(
-          new LagrangeDualRotationEstimator());
+      rotation_estimator.reset(new LagrangeDualRotationEstimator());
       break;
     }
     case GlobalRotationEstimatorType::NONLINEAR: {

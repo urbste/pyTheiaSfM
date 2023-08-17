@@ -35,9 +35,9 @@
 #include "theia/sfm/global_reconstruction_estimator.h"
 
 #include <Eigen/Core>
+#include <iostream>
 #include <memory>
 #include <sstream>  // NOLINT
-#include <iostream>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/estimate_track.h"
@@ -45,10 +45,10 @@
 #include "theia/sfm/filter_view_graph_cycles_by_rotation.h"
 #include "theia/sfm/filter_view_pairs_from_orientation.h"
 #include "theia/sfm/filter_view_pairs_from_relative_translation.h"
+#include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
-#include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
@@ -187,8 +187,10 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
   global_estimator_timings.rotation_filtering_time =
       timer.ElapsedTimeInSeconds();
 
-  if (options_.global_position_estimator_type == GlobalPositionEstimatorType::LIGT) {
-    LOG(INFO) << "LIGT selected. Skipping pairwise translation estimation and filtering.";
+  if (options_.global_position_estimator_type ==
+      GlobalPositionEstimatorType::LIGT) {
+    LOG(INFO) << "LIGT selected. Skipping pairwise translation estimation and "
+                 "filtering.";
   } else {
     // Step 5. Optimize relative translations.
     LOG(INFO) << "Optimizing the pairwise translation estimations.";
@@ -438,10 +440,9 @@ bool GlobalReconstructionEstimator::EstimatePosition() {
     }
     case GlobalPositionEstimatorType::LIGT: {
       position_estimator.reset(new LiGTPositionEstimator(
-          options_.ligt_position_estimator_options,
-          *reconstruction_));
+          options_.ligt_position_estimator_options, *reconstruction_));
       break;
-  }
+    }
     default: {
       LOG(FATAL) << "Invalid type of global position estimation chosen.";
       break;
