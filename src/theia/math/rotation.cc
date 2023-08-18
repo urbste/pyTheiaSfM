@@ -50,6 +50,12 @@
 
 namespace {
 
+Eigen::Matrix3d GetSkew(const Eigen::Vector3d& f) {
+  Matrix3d skew_mat;
+  skew_mat << 0.0, -f(2), f(1), f(2), 0.0, -f(0), -f(1), f(0), 0.0;
+  return skew_mat;
+}
+
 // A cost function whose error is the difference in rotations after the current
 // alignment is applied. That is,
 //    error = unaligned_rotation * rotation_alignment - gt_rotation.

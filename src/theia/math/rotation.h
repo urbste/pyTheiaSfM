@@ -46,6 +46,8 @@
 
 namespace theia {
 
+Eigen::Matrix3d GetSkew(const Eigen::Vector3d& f);
+
 Eigen::MatrixXd ProjectToSOd(const Eigen::MatrixXd& M);
 
 // Rotates the "rotation" set of orientations such that the orientations are

@@ -39,14 +39,6 @@
 #include <vector>
 
 namespace theia
-{
-void mlpnpJacs(const point_t& pt,
-		const Eigen::Vector3d& nullspace_r,
-		const Eigen::Vector3d& nullspace_s,
-		const rodrigues_t& c,
-		const translation_t& t,
-		Eigen::MatrixXd& jacs);
-
 
 void mlpnp_residuals_and_jacs(
 	const Eigen::VectorXd& x, 

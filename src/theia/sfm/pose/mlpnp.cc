@@ -349,21 +349,10 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 	//////////////////////////////////////
 	// 5. gauss newton refinement
 	//////////////////////////////////////
-	Eigen::Vector3d omega; 
-    ceres::RotationMatrixToAngleAxis(Rout.data(), omega.data());
-	Eigen::VectorXd pose_min(6);
-	pose_min[0] = omega[0];
-	pose_min[1] = omega[1];
-	pose_min[2] = omega[2];
-	pose_min[3] = tout[0];
-	pose_min[4] = tout[1];
-	pose_min[5] = tout[2];
+	mlpnp_gn(Rout, tout, world_points, nullspaces, P, use_cov));
 
-	mlpnp_gn(pose_min, world_points, nullspaces, P, use_cov);
-
-  Eigen::Vector3d omega_opt = Eigen::Vector3d(pose_min[0], pose_min[1], pose_min[2]);
-	ceres::AngleAxisToRotationMatrix(omega_opt.data(), solution_rotation->data());
-  *(tout) = pose_min.tail<3>();
+  *(solution_rotation) = Rout;
+  *(solution_translation) tout;
 
   return true;
 }

@@ -60,6 +60,7 @@
 #include "theia/sfm/view_triplet.h"
 #include "theia/util/map_util.h"
 #include "theia/util/threadpool.h"
+#include "theia/math/util.h"
 
 namespace theia {
 
@@ -67,12 +68,6 @@ using Matrix3d = Eigen::Matrix3d;
 using Vector3d = Eigen::Vector3d;
 
 namespace {
-
-Matrix3d GetSkew(const Vector3d& f) {
-  Matrix3d skew_mat;
-  skew_mat << 0.0, -f(2), f(1), f(2), 0.0, -f(0), -f(1), f(0), 0.0;
-  return skew_mat;
-}
 
 Matrix3d GetRij(const Matrix3d& i, const Matrix3d& j) {
   return j * i.transpose();
