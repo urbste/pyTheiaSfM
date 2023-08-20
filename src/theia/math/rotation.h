@@ -46,6 +46,7 @@
 
 namespace theia {
 
+// Return the 3x3 skew symmetric matrix of the input 3-vector
 Eigen::Matrix3d GetSkew(const Eigen::Vector3d& f);
 
 Eigen::MatrixXd ProjectToSOd(const Eigen::MatrixXd& M);

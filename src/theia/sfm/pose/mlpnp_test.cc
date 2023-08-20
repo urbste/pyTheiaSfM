@@ -60,7 +60,9 @@ void TestMLPnPWithNoise(const std::vector<Vector3d>& world_points,
                          const Vector3d& expected_translation,
                          const double max_reprojection_error,
                          const double max_rotation_difference,
-                         const double max_translation_difference) {
+                         const double max_translation_difference,
+                         const bool use_covariance,
+                         const Matrix3d K) {
   const int num_points = world_points.size();
 
   Matrix3x4d expected_transform;
@@ -83,26 +85,41 @@ void TestMLPnPWithNoise(const std::vector<Vector3d>& world_points,
       AddNoiseToProjection(projection_noise_std_dev, &rng, &feature_points[i]);
     }
   }
+  std::vector<Eigen::Matrix3d> feature_covariances;
+  if (use_covariance) {
+    const double noise_var = projection_noise_std_dev * projection_noise_std_dev;
+    feature_covariances.reserve(num_points);
+    const Eigen::Matrix3d cam_jac = K.inverse();
+    const Eigen::Matrix3d feat_cov = Eigen::DiagonalMatrix<double, 3>(
+      noise_var, noise_var, 0.0);
+    for (int i = 0; i < num_points; i++) {
+      const Eigen::Matrix3d Exx = cam_jac * feat_cov * cam_jac.transpose();
+      feature_covariances.push_back(Exx);
+    }
+  }
 
-  // Run DLS PnP.
+  // Run MLPnP.
   Matrix3d soln_rotation;
   Vector3d soln_translation;
-  MLPnP(feature_points, {}, world_points, &soln_rotation, &soln_translation);
+  MLPnP(feature_points, feature_covariances, world_points, &soln_rotation, &soln_translation);
 
   // Check solutions and verify at least one is close to the actual solution.
   bool matched_transform = false;
 
   Matrix3x4d soln_transform;
   soln_transform << soln_rotation, soln_translation;
-  std::cout<<expected_transform<<std::endl;
-  std::cout<<soln_transform<<std::endl;
+
+  double sum_reprojection_error = 0.0;
   for (int j = 0; j < num_points; j++) {
     const Vector2d reprojected_point =
             (soln_transform * world_points[j].homogeneous()).eval().hnormalized();
     const double reprojection_error =
             (feature_points[j] - reprojected_point).squaredNorm();
     ASSERT_LE(reprojection_error, max_reprojection_error);
+    sum_reprojection_error += reprojection_error;
   }
+  std::cout << "Average reprojection error: "
+            << sum_reprojection_error / num_points * K(0,0) << std::endl;
 }
 
 TEST(MLPnP, NoNoiseTest) {
@@ -117,10 +134,13 @@ TEST(MLPnP, NoNoiseTest) {
   const Eigen::Matrix3d soln_rotation =
       Eigen::AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)).toRotationMatrix();
   const Vector3d soln_translation(1.0, 1.0, 1.0);
-  const double kNoise = 0.0 / 512.0;
+  const double focal_length = 512.0;
+  const double kNoise = 0.0 / focal_length;
   const double kMaxReprojectionError = 5e-3;
   const double kMaxAllowedRotationDifference = DegToRad(0.25);
   const double kMaxAllowedTranslationDifference = 1e-2;
+
+  const Eigen::Matrix3d K = Eigen::DiagonalMatrix<double, 3>(focal_length, focal_length, 1.0);
 
   TestMLPnPWithNoise(points_3d,
                       kNoise,
@@ -128,34 +148,38 @@ TEST(MLPnP, NoNoiseTest) {
                       soln_translation,
                       kMaxReprojectionError,
                       kMaxAllowedRotationDifference,
-                      kMaxAllowedTranslationDifference);
+                      kMaxAllowedTranslationDifference,
+                      false, K);
 }
 
-// TEST(MLPnP, NoNoisePlanarTest) {
-//   const std::vector<Eigen::Vector3d> points_3d = {Vector3d(-1.0, 3.0, 5.0),
-//                                            Vector3d(1.0, -1.0, 5.0),
-//                                            Vector3d(-1.0, 1.0, 5.0),
-//                                            Vector3d(2.0, 1.0, 5.0),
-//                                            Vector3d(-1.0, -3.0, 5.0),
-//                                            Vector3d(1.0, -2.0, 5.0),
-//                                            Vector3d(-1.0, 4.0, 5.0),
-//                                            Vector3d(-2.0, 2.0, 5.0)};
-//   const Eigen::Matrix3d soln_rotation =
-//       Eigen::AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)).toRotationMatrix();
-//   const Vector3d soln_translation(1.0, 1.0, 1.0);
-//   const double kNoise = 0.0 / 512.0;
-//   const double kMaxReprojectionError = 5e-3;
-//   const double kMaxAllowedRotationDifference = DegToRad(0.25);
-//   const double kMaxAllowedTranslationDifference = 1e-2;
+TEST(MLPnP, NoNoisePlanarTest) {
+  const std::vector<Eigen::Vector3d> points_3d = {Vector3d(-1.0, 3.0, 5.0),
+                                           Vector3d(1.0, -1.0, 5.0),
+                                           Vector3d(-1.0, 1.0, 5.0),
+                                           Vector3d(2.0, 1.0, 5.0),
+                                           Vector3d(-1.0, -3.0, 5.0),
+                                           Vector3d(1.0, -2.0, 5.0),
+                                           Vector3d(-1.0, 4.0, 5.0),
+                                           Vector3d(-2.0, 2.0, 5.0)};
+  const Eigen::Matrix3d soln_rotation =
+      Eigen::AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)).toRotationMatrix();
+  const Vector3d soln_translation(1.0, 1.0, -1.0);
+  const double focal_length = 512.0;
+  const double kNoise = 0.0 / focal_length;
+  const double kMaxReprojectionError = 5e-3;
+  const double kMaxAllowedRotationDifference = DegToRad(0.25);
+  const double kMaxAllowedTranslationDifference = 1e-2;
+  const Eigen::Matrix3d K = Eigen::DiagonalMatrix<double, 3>(focal_length, focal_length, 1.0);
 
-//   TestMLPnPWithNoise(points_3d,
-//                       kNoise,
-//                       soln_rotation,
-//                       soln_translation,
-//                       kMaxReprojectionError,
-//                       kMaxAllowedRotationDifference,
-//                       kMaxAllowedTranslationDifference);
-// }
+  TestMLPnPWithNoise(points_3d,
+                      kNoise,
+                      soln_rotation,
+                      soln_translation,
+                      kMaxReprojectionError,
+                      kMaxAllowedRotationDifference,
+                      kMaxAllowedTranslationDifference,
+                      false, K);
+}
 
 TEST(MLPnP, NoiseTest) {
   const std::vector<Eigen::Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
@@ -169,10 +193,12 @@ TEST(MLPnP, NoiseTest) {
   const Eigen::Matrix3d soln_rotation =
       Eigen::AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)).toRotationMatrix();
   const Vector3d soln_translation(1.0, 1.0, 1.0);
-  const double kNoise = 0.5 / 512.0;
+  const double focal_length = 512.0;
+  const double kNoise = 4.5 / focal_length;
   const double kMaxReprojectionError = 5e-3;
   const double kMaxAllowedRotationDifference = DegToRad(0.25);
   const double kMaxAllowedTranslationDifference = 1e-2;
+  const Eigen::Matrix3d K = Eigen::DiagonalMatrix<double, 3>(focal_length, focal_length, 1.0);
 
   TestMLPnPWithNoise(points_3d,
                       kNoise,
@@ -180,7 +206,38 @@ TEST(MLPnP, NoiseTest) {
                       soln_translation,
                       kMaxReprojectionError,
                       kMaxAllowedRotationDifference,
-                      kMaxAllowedTranslationDifference);
+                      kMaxAllowedTranslationDifference,
+                      false, K);
+}
+
+TEST(MLPnP, NoiseCovTest) {
+  const std::vector<Eigen::Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
+                                           Vector3d(1.0, -1.0, 2.0),
+                                           Vector3d(-1.0, 1.0, 2.0),
+                                           Vector3d(2.0, 1.0, 3.0),
+                                           Vector3d(-1.0, -3.0, 2.0),
+                                           Vector3d(1.0, -2.0, 1.0),
+                                           Vector3d(-1.0, 4.0, 2.0),
+                                           Vector3d(-2.0, 2.0, 3.0)};
+  const Eigen::Matrix3d soln_rotation =
+      Eigen::AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)).toRotationMatrix();
+  const Vector3d soln_translation(1.0, 1.0, 1.0);
+  const double focal_length = 512.0;
+  const double kNoise = 4.5 / focal_length;
+  const double kMaxReprojectionError = 5e-3;
+  const double kMaxAllowedRotationDifference = DegToRad(0.25);
+  const double kMaxAllowedTranslationDifference = 1e-2;
+
+  const Eigen::Matrix3d K = Eigen::DiagonalMatrix<double, 3>(focal_length, focal_length, 1.0);
+
+  TestMLPnPWithNoise(points_3d,
+                      kNoise,
+                      soln_rotation,
+                      soln_translation,
+                      kMaxReprojectionError,
+                      kMaxAllowedRotationDifference,
+                      kMaxAllowedTranslationDifference,
+                      true, K);
 }
 
 }  // namespace theia

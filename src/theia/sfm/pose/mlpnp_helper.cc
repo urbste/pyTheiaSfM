@@ -33,8 +33,11 @@
 // Author: Steffen Urban (urbste@gmail.com)
 
 #include "theia/sfm/pose/mlpnp_helper.h"
+#include "theia/math/rotation.h"
 
 #include <ceres/rotation.h>
+
+#include <Eigen/Dense>
 
 namespace theia {
 
@@ -47,36 +50,39 @@ using Eigen::Matrix4d;
 using Eigen::VectorXd;
 
 void mlpnp_residuals_and_jacs(
-	const Eigen::Matrix3d& x, 
+	const Eigen::Matrix3d& R, 
 	const Eigen::Vector3d& t,
 	const std::vector<Eigen::Vector3d>& pts,
-	const std::vector<Eigen::MatrixXd>& nullspaces,
+	const std::vector<Eigen::Matrix<double, 3, 2>>& nullspaces,
 	Eigen::VectorXd& r, 
 	Eigen::MatrixXd& fjac,
-	bool getJacs) {
+	bool get_jacs) {
 
 	int ii = 0;
 
 	Eigen::Matrix<double, 2, 6> jacs;
 
-       err(2*i-1,1) = r(:,i)'*res1(:,i);
-        err(2*i,1) = s(:,i)'*res1(:,i);
+    //    err(2*i-1,1) = r(:,i)'*res1(:,i);
+    //     err(2*i,1) = s(:,i)'*res1(:,i);
 
-        J(2*i-1,:) = [-r(:,i)'*skew(res1(:,i)) r(:,i)'];
-        J(2*i,:) = [-s(:,i)'*skew(res1(:,i)) s(:,i)'];
+    //     J(2*i-1,:) = [-r(:,i)'*skew(res1(:,i)) r(:,i)'];
+    //     J(2*i,:) = [-s(:,i)'*skew(res1(:,i)) s(:,i)'];
 
 	for (int i = 0; i < pts.size(); ++i) {
-		const Vector3d ptCam = R*pts[i] + T;
+		const Vector3d ptCam = R*pts[i] + t;
 
-		r[ii] = nullspaces[i].col(0).transpose() * ptCam;
-		r[ii + 1] = nullspaces[i].col(1).transpose() * ptCam;
-		if (getJacs) {
+		const auto& rt = nullspaces[i].col(0).transpose();
+		const auto& st = nullspaces[i].col(1).transpose();
+
+		r[ii] = rt * ptCam;
+		r[ii + 1] = st * ptCam;
+		if (get_jacs) {
 			// jacs
-			fjac.block<1,3>(ii,0) = -nullspaces[i].col(0) * GetSkew(ptCam);
-			fjac.block<1,3>(ii+1,0) = -nullspaces[i].col(1) * GetSkew(ptCam);
+			fjac.block<1,3>(ii,0) = -rt * GetSkew(ptCam);
+			fjac.block<1,3>(ii+1,0) = -st * GetSkew(ptCam);
 
-			fjac.block<1,3>(ii,3) = nullspaces[i].col(0).transpose();
-			fjac.block<1,3>(ii+1,3) = nullspaces[i].col(1).transpose(); 
+			fjac.block<1,3>(ii,3) = rt;
+			fjac.block<1,3>(ii+1,3) = st; 
 		}
 		ii += 2;
 	}
@@ -86,7 +92,7 @@ void mlpnp_gn(
 	Eigen::Matrix3d& R,
 	Eigen::Vector3d& t,
 	const std::vector<Eigen::Vector3d>& pts,
-	const std::vector<Eigen::MatrixXd>& nullspaces,
+	const std::vector<Eigen::Matrix<double, 3, 2>>& nullspaces,
 	const Eigen::SparseMatrix<double> Kll,
 	bool use_cov) {
 	const int num_pts = pts.size();
@@ -133,7 +139,7 @@ void mlpnp_gn(
 		g = JacTSKll * r;
 
 		// solve
-		Eigen::LDLT<Eigen::MatrixXd> chol(A);
+		Eigen::LDLT<MatrixXd> chol(A);
 		dx = chol.solve(g);
 		//dx = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(g);
 		// this is to prevent the solution from falling into a wrong minimum
@@ -142,22 +148,18 @@ void mlpnp_gn(
 			break;
         }
 		// observation update
-		Eigen::MatrixXd dl = Jac * dx;
+		MatrixXd dl = Jac * dx;
 		Matrix3d dR;
-		ceres::AngleAxisToRotationMatrix(-dx.head<3>().data(), dR);
+		const Vector3d& dr = -dx.head<3>();
+		ceres::AngleAxisToRotationMatrix(dr.data(), dR.data());
+		    R = dR * R;
+        	t = dR * t - dx.tail<3>();
 		if (dl.array().abs().maxCoeff() < epsP) {
-        	R = dR * R;
-        	t = dR * t - dx.tail<3>().data();
 			stop = true;
 			break;
-		} else {
-        	R = dR * R;
-        	t = dR * t - dx.tail<3>().data();
-        }
+		}
 		++it_cnt;
-	}//while
-
-	return true;
+	} // while
 }
 
 } // namespace theia

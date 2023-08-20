@@ -50,12 +50,6 @@
 
 namespace {
 
-Eigen::Matrix3d GetSkew(const Eigen::Vector3d& f) {
-  Matrix3d skew_mat;
-  skew_mat << 0.0, -f(2), f(1), f(2), 0.0, -f(0), -f(1), f(0), 0.0;
-  return skew_mat;
-}
-
 // A cost function whose error is the difference in rotations after the current
 // alignment is applied. That is,
 //    error = unaligned_rotation * rotation_alignment - gt_rotation.
@@ -282,6 +276,14 @@ Eigen::Vector3d ApplyRelativeRotation(
   ceres::RotationMatrixToAngleAxis(
       ceres::ColumnMajorAdapter3x3(rotation2_matrix.data()), rotation2.data());
   return rotation2;
+}
+
+
+// Return the 3x3 skew symmetric matrix of vector f
+Eigen::Matrix3d GetSkew(const Eigen::Vector3d& f) {
+  Eigen::Matrix3d skew_mat;
+  skew_mat << 0.0, -f(2), f(1), f(2), 0.0, -f(0), -f(1), f(0), 0.0;
+  return skew_mat;
 }
 
 }  // namespace theia

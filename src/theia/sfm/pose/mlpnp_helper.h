@@ -36,34 +36,37 @@
 #define THEIA_SFM_POSE_MLPNP_HELPER_H_
 
 #include <Eigen/Core>
+#include <Eigen/Sparse>
 #include <vector>
 
-namespace theia
+namespace theia {
 
 void mlpnp_residuals_and_jacs(
-	const Eigen::VectorXd& x, 
-	const points_t& pts,
-	const std::vector<Eigen::MatrixXd>& nullspaces,
+	const Eigen::Matrix3d& R, 
+	const Eigen::Vector3d& t,
+	const std::vector<Eigen::Vector3d>& pts,
+	const std::vector<Eigen::Matrix<double, 3, 2>>& nullspaces,
 	Eigen::VectorXd& r, 
 	Eigen::MatrixXd& fjac,
 	bool getJacs);
 
 
 void mlpnp_gn(
-	Eigen::VectorXd& x,
+	Eigen::Matrix3d& R,
+	Eigen::Vector3d& t,
 	const std::vector<Eigen::Vector3d>& pts,
-	const std::vector<Eigen::MatrixXd>& nullspaces,
+	const std::vector<Eigen::Matrix<double, 3, 2>>& nullspaces,
 	const Eigen::SparseMatrix<double> Kll,
 	bool use_cov);
 
-void mlpnp_gn(
-	Eigen::VectorXd& x,
-	const std::vector<Eigen::Vector3d>& pts,
-	const std::vector<Eigen::MatrixXd>& nullspaces,
-	const Eigen::SparseMatrix<double> Kll,
-	Eigen::MatrixXd& Qldld,
-	Eigen::MatrixXd& Qxx,
-	bool use_cov);
+// void mlpnp_gn(
+// 	Eigen::VectorXd& x,
+// 	const std::vector<Eigen::Vector3d>& pts,
+// 	const std::vector<Eigen::MatrixXd>& nullspaces,
+// 	const Eigen::SparseMatrix<double> Kll,
+// 	Eigen::MatrixXd& Qldld,
+// 	Eigen::MatrixXd& Qxx,
+// 	bool use_cov);
 
 } // namespace theia
 #endif
