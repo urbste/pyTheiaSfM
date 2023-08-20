@@ -44,6 +44,7 @@
 #include "theia/sfm/pose/perspective_three_point.h"
 #include "theia/sfm/pose/sqpnp.h"
 #include "theia/sfm/pose/dls_pnp.h"
+#include "theia/sfm/pose/mlpnp.h"
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
@@ -71,7 +72,14 @@ class CalibratedAbsolutePoseEstimator
 
   CalibratedAbsolutePoseEstimator(const PnPType& pnp_type) : pnp_type_(pnp_type) {}
   // 3 correspondences are needed to determine the absolute pose.
-  double SampleSize() const { return 3; }
+  double SampleSize() const { 
+    if (pnp_type_ == PnPType::MLPnP) {
+      return 6;
+    } 
+    else {
+      return 3;
+    }
+  }
 
   // Estimates candidate absolute poses from correspondences.
   bool EstimateModel(
@@ -107,6 +115,14 @@ class CalibratedAbsolutePoseEstimator
       for (const auto& q : quats) {
           rotations.push_back(q.matrix());
       }
+    } else if (pnp_type_ == PnPType::MLPnP) {
+      rotations.resize(1);
+      translations.resize(1);
+      if (!MLPnP(features, {}, world_points, &rotations[0], &translations[0])) {
+          return false;
+      }
+    } else {
+      LOG(FATAL) << "Unknown PnP type.";
     }
 
     for (size_t i = 0; i < rotations.size(); i++) {

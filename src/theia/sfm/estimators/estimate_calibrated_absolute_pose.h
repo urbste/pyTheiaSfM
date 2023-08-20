@@ -51,7 +51,7 @@ struct CalibratedAbsolutePose {
   Eigen::Vector3d position;
 };
 
-enum class PnPType {KNEIP, SQPnP, DLS};
+enum class PnPType {KNEIP, SQPnP, DLS, MLPnP};
 
 // Estimates the calibrated absolute pose using the ransac variant of choice
 // (e.g. Ransac, Prosac, etc.). Correspondences must be normalized by the camera
