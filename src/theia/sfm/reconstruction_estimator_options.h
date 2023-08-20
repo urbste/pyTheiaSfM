@@ -43,6 +43,7 @@
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
+#include "theia/sfm/estimators/estimate_calibrated_absolute_pose.h"
 #include "theia/util/random.h"
 
 namespace theia {
@@ -121,6 +122,9 @@ struct ReconstructionEstimatorOptions {
   // Any edges in the view graph with fewer than min_num_two_view_inliers will
   // be removed as an initial filtering step.
   int min_num_two_view_inliers = 30;
+
+  // PnP type
+  PnPType pnp_type = PnPType::KNEIP;
 
   // --------------- RANSAC Options --------------- //
   double ransac_confidence = 0.9999;

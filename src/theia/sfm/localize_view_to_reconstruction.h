@@ -38,6 +38,7 @@
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/types.h"
 #include "theia/solvers/sample_consensus_estimator.h"
+#include "theia/sfm/estimators/estimate_calibrated_absolute_pose.h"
 
 namespace theia {
 
@@ -72,6 +73,9 @@ struct LocalizeViewToReconstructionOptions {
   // The minimum number of inliers found from RANSAC in order to be considered
   // successful localization.
   int min_num_inliers = 30;
+
+  // PnP Type
+  PnPType pnp_type = PnPType::KNEIP;
 };
 
 // Localizes a view to the reconstruction using 2D-3D correspondences to

@@ -706,6 +706,7 @@ void pytheia_sfm_classes(py::module& m) {
       .value("KNEIP", theia::PnPType::KNEIP)
       .value("DLS", theia::PnPType::DLS)
       .value("SQPnP", theia::PnPType::SQPnP)
+      .value("MLPNP", theia::PnPType::MLPNP)
       .export_values();
 
   m.def("EstimateAbsolutePoseWithKnownOrientation",

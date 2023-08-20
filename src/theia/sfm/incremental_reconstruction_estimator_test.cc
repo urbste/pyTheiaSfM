@@ -206,7 +206,7 @@ TEST(IncrementalReconstructionEstimator, InitializedReconstruction) {
   options.reconstruction_estimator_type =
       ReconstructionEstimatorType::INCREMENTAL;
   options.intrinsics_to_optimize = OptimizeIntrinsicsType::NONE;
-
+  
   ViewGraph view_graph;
   Reconstruction gt_reconstruction, reconstruction;
   ReadInput(&gt_reconstruction, &reconstruction, &view_graph);
