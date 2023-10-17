@@ -51,6 +51,7 @@
 #include "theia/util/util.h"
 #include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
 #include "theia/sfm/twoview_info.h"
+#include <ceres/types.h>
 
 namespace theia {
 namespace {
@@ -64,12 +65,7 @@ using Eigen::Vector3d;
 class RelativePoseEstimator
     : public Estimator<FeatureCorrespondence, RelativePose> {
  public:
-  RelativePoseEstimator() {
-    ba_opts_.max_num_iterations = 2;
-    ba_opts_.linear_solver_type = ceres::CGNR;
-    ba_opts_.preconditioner_type = ceres::JACOBI;
-    ba_opts_.verbose = false;
-  }
+  RelativePoseEstimator() {}
 
   // 5 correspondences are needed to determine an essential matrix and thus a
   // relative pose..
@@ -112,14 +108,26 @@ class RelativePoseEstimator
     return relative_poses->size() > 0;
   }
 
-  bool RefineModel(const std::vector<FeatureCorrespondence>& correspondences,
-      RelativePose* relative_pose) const {
+  bool RefineModel(
+    const std::vector<FeatureCorrespondence>& correspondences,
+    const double error_thresh,
+    RelativePose* relative_pose) const {
+    
     theia::TwoViewInfo two_view_info;
     Eigen::AngleAxisd rotvec(relative_pose->rotation);
     two_view_info.rotation_2 = rotvec.angle() * rotvec.axis();
     two_view_info.position_2 = relative_pose->position;
+
+    theia::BundleAdjustmentOptions ba_opts;
+    ba_opts.max_num_iterations = 5;
+    ba_opts.linear_solver_type = ceres::CGNR;
+    ba_opts.preconditioner_type = ceres::JACOBI;
+    ba_opts.loss_function_type = LossFunctionType::CAUCHY;
+    ba_opts.verbose = false;
+    ba_opts.robust_loss_width = error_thresh*1.5;
+
     const auto ba_summary = theia::BundleAdjustTwoViewsAngular(
-      ba_opts_, correspondences, &two_view_info);
+      ba_opts, correspondences, &two_view_info);
 
     relative_pose->position = two_view_info.position_2;
     Eigen::AngleAxisd rot_vec_out;
@@ -143,7 +151,6 @@ class RelativePoseEstimator
   }
 
  private:
-  theia::BundleAdjustmentOptions ba_opts_;
   DISALLOW_COPY_AND_ASSIGN(RelativePoseEstimator);
 };
 

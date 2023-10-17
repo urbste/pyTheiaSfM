@@ -102,8 +102,9 @@ class AbsolutePoseWithKnownOrientationEstimator
   }
 
   bool RefineModel(const std::vector<FeatureCorrespondence2D3D>& correspondences,
+    const double error_threshold,
     Eigen::Vector3d* absolute_position) const {
-      return true;
+    return true;
   }
 
   // The error for a correspondences given an absolute position. This is the

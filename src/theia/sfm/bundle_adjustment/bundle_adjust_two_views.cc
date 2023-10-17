@@ -36,6 +36,7 @@
 
 #include <Eigen/Core>
 #include <ceres/ceres.h>
+#include <ceres/sphere_manifold.h>
 #include <vector>
 
 #include "theia/matching/feature_correspondence.h"
@@ -197,11 +198,11 @@ BundleAdjustmentSummary BundleAdjustTwoViewsAngular(
 
   // Set problem options.
   ceres::Problem::Options problem_options;
-
+  problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
   ceres::Problem problem(problem_options);
 
   // Set solver options.
-  ceres::Solver::Options solver_options;
+  ceres::Solver::Options solver_options;  
   SetSolverOptions(options, &solver_options);
   // Allow Ceres to determine the ordering.
   solver_options.linear_solver_ordering.reset();
@@ -210,16 +211,17 @@ BundleAdjustmentSummary BundleAdjustTwoViewsAngular(
   const int kParameterBlockSize = 3;
   problem.AddParameterBlock(info->rotation_2.data(), kParameterBlockSize);
   // Add the position as a parameter block, ensuring that the norm is 1.
-  ceres::Manifold* position_parameterization = new ceres::
-      AutoDiffManifold<UnitNormThreeVectorParameterization, 3, 3>;
+  ceres::Manifold* position_parameterization = new ceres::SphereManifold<3>();
   problem.AddParameterBlock(
       info->position_2.data(), kParameterBlockSize, position_parameterization);
 
   // Add all the epipolar constraints from feature matches.
+  std::unique_ptr<ceres::LossFunction> loss = 
+      CreateLossFunction(options.loss_function_type, options.robust_loss_width);
   for (const FeatureCorrespondence& match : correspondences) {
     problem.AddResidualBlock(AngularEpipolarError::Create(
                                  match.feature1.point_, match.feature2.point_),
-                             NULL,
+                             loss.get(),
                              info->rotation_2.data(),
                              info->position_2.data());
   }

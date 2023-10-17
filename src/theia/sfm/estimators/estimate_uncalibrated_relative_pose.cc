@@ -70,7 +70,6 @@ class UncalibratedRelativePoseEstimator
     : public Estimator<FeatureCorrespondence, UncalibratedRelativePose> {
  public:
   UncalibratedRelativePoseEstimator(const Eigen::Vector2d& min_max_focal_length) {
-      ba_opts_.max_num_iterations = 10;
       min_max_f_ = min_max_focal_length;
   }
 
@@ -141,7 +140,8 @@ class UncalibratedRelativePoseEstimator
   }
 
   bool RefineModel(const std::vector<FeatureCorrespondence>& centered_correspondences,
-                   UncalibratedRelativePose* relative_pose) const {
+    const double error_thresh,
+    UncalibratedRelativePose* relative_pose) const {
       // Normalize the centered_correspondences.
       std::vector<FeatureCorrespondence> normalized_correspondences(
           centered_correspondences.size());
@@ -158,8 +158,14 @@ class UncalibratedRelativePoseEstimator
       Eigen::AngleAxisd rotvec(relative_pose->rotation);
       two_view_info.rotation_2 = rotvec.angle() * rotvec.axis();
       two_view_info.position_2 = relative_pose->position;
+
+      theia::BundleAdjustmentOptions ba_opts;
+      ba_opts.max_num_iterations = 10;
+      ba_opts.loss_function_type = LossFunctionType::HUBER;
+      ba_opts.robust_loss_width = error_thresh*1.5;
+
       const auto ba_summary = theia::BundleAdjustTwoViewsAngular(
-        ba_opts_, normalized_correspondences, &two_view_info);
+        ba_opts, normalized_correspondences, &two_view_info);
 
       relative_pose->position = two_view_info.position_2;
       Eigen::AngleAxisd rot_vec_out;
@@ -190,7 +196,6 @@ class UncalibratedRelativePoseEstimator
   }
 
  private:
-  theia::BundleAdjustmentOptions ba_opts_;
   // for sanity checks
   Eigen::Vector2d min_max_f_;
   DISALLOW_COPY_AND_ASSIGN(UncalibratedRelativePoseEstimator);

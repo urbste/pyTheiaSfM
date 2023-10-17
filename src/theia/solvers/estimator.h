@@ -81,7 +81,9 @@ class Estimator {
 
   // Refine the model based on an updated subset of data, and a pre-computed
   // model. Can be optionally implemented.
-  virtual bool RefineModel(const std::vector<Datum>& data, Model* model) const {
+  // The error_thresh parameter is used to set the width of the robust loss
+  // function
+  virtual bool RefineModel(const std::vector<Datum>& data, const double error_thresh, Model* model) const {
     return true;
   }
 

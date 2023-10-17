@@ -54,6 +54,7 @@ class FundamentalMatrixEstimator
  public:
   FundamentalMatrixEstimator() {
       ba_opts_.max_num_iterations = 2;
+      ba_opts_.loss_function_type = LossFunctionType::TRIVIAL;
   }
 
   // 8 correspondences are needed to determine an fundamental matrix.
@@ -79,7 +80,8 @@ class FundamentalMatrixEstimator
   }
 
   bool RefineModel(const std::vector<FeatureCorrespondence>& correspondences,
-                   Eigen::Matrix3d* fundamental_matrix) const {
+    const double error_thresh,
+    Eigen::Matrix3d* fundamental_matrix) const {
 
    theia::BundleAdjustmentSummary ba_summary =
         theia::OptimizeFundamentalMatrix(ba_opts_, correspondences, fundamental_matrix);
