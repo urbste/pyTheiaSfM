@@ -33,7 +33,7 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
-
+#include "theia/sfm/bundle_adjustment/loss_functions.h"
 #include <ceres/ceres.h>
 #include <memory>
 
@@ -61,6 +61,9 @@ std::unique_ptr<ceres::LossFunction> CreateLossFunction(
       break;
     case LossFunctionType::TUKEY:
       loss_function.reset(new ceres::TukeyLoss(robust_loss_width));
+      break;
+    case LossFunctionType::TRUNCATED:
+      loss_function.reset(new TruncatedLoss(robust_loss_width));
       break;
     default:
       LOG(FATAL) << "Invalid Loss Function chosen.";

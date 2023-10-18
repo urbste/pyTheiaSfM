@@ -119,12 +119,12 @@ class RelativePoseEstimator
     two_view_info.position_2 = relative_pose->position;
 
     theia::BundleAdjustmentOptions ba_opts;
-    ba_opts.max_num_iterations = 5;
+    ba_opts.max_num_iterations = 15;
     ba_opts.linear_solver_type = ceres::CGNR;
     ba_opts.preconditioner_type = ceres::JACOBI;
-    ba_opts.loss_function_type = LossFunctionType::CAUCHY;
+    ba_opts.loss_function_type = LossFunctionType::TRUNCATED;
     ba_opts.verbose = false;
-    ba_opts.robust_loss_width = error_thresh*1.5;
+    ba_opts.robust_loss_width = error_thresh;
 
     const auto ba_summary = theia::BundleAdjustTwoViewsAngular(
       ba_opts, correspondences, &two_view_info);

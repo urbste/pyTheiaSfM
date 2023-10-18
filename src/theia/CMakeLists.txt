@@ -106,6 +106,7 @@ set(THEIA_SRC
   sfm/bundle_adjustment/bundle_adjuster.cc
   sfm/bundle_adjustment/bundle_adjustment.cc
   sfm/bundle_adjustment/create_loss_function.cc
+  sfm/bundle_adjustment/loss_functions.cc
   sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.cc
   sfm/camera/camera_intrinsics_model.cc
   sfm/camera/camera.cc

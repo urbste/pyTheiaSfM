@@ -1,5 +1,4 @@
-// Copyright (C) 2015 The Regents of the University of California (Regents).
-// All rights reserved.
+// Copyright (C) 2023, Steffen Urban
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -30,38 +29,19 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 // Please contact the author of this library if you have any questions.
-// Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
+// Author: Steffen urban (urbste@googlemail.com), 2023
 
-#ifndef THEIA_SFM_BUNDLE_ADJUSTMENT_CREATE_LOSS_FUNCTION_H_
-#define THEIA_SFM_BUNDLE_ADJUSTMENT_CREATE_LOSS_FUNCTION_H_
-
-#include <memory>
-
-namespace ceres {
-class LossFunction;
-}  // namespace ceres
+#include <ceres/loss_function.h>
 
 namespace theia {
 
-// For bundle adjustment we can use a robust cost function to maintain
-// robustness to outliers. In particular, this function can help when feature
-// tracks have outliers so that bundle adjustment may still optimize 3D points
-// and camera poses properly without being catastrophically affected by
-// outliers.
-enum class LossFunctionType {
-  TRIVIAL = 0,
-  HUBER = 1,
-  SOFTLONE = 2,
-  CAUCHY = 3,
-  ARCTAN = 4,
-  TUKEY = 5,
-  TRUNCATED = 6,
+class CERES_EXPORT TruncatedLoss final : public ceres::LossFunction {
+ public:
+  explicit TruncatedLoss(double a) : squared_error_(a*a){}
+  void Evaluate(double, double*) const override;
+
+ private:
+  const double squared_error_;
 };
 
-// Creates a ceres LossFunction based on the enum type that is passed in.
-std::unique_ptr<ceres::LossFunction> CreateLossFunction(
-    const LossFunctionType& loss_function_type, const double robust_loss_width);
-
 }  // namespace theia
-
-#endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_CREATE_LOSS_FUNCTION_H_
