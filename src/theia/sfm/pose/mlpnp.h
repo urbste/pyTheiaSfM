@@ -1,4 +1,4 @@
-// Copyright (C) 2015 The Regents of the University of California (Regents).
+// Copyright (C) 2023, Steffen Urban
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,38 +30,22 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 // Please contact the author of this library if you have any questions.
-// Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
+// Author: Steffen Urban (urbste@gmail.com)
 
-#ifndef THEIA_SFM_BUNDLE_ADJUSTMENT_CREATE_LOSS_FUNCTION_H_
-#define THEIA_SFM_BUNDLE_ADJUSTMENT_CREATE_LOSS_FUNCTION_H_
+#ifndef THEIA_SFM_POSE_MLPNP_H_
+#define THEIA_SFM_POSE_MLPNP_H_
 
-#include <memory>
-
-namespace ceres {
-class LossFunction;
-}  // namespace ceres
+#include <Eigen/Core>
+#include <vector>
 
 namespace theia {
 
-// For bundle adjustment we can use a robust cost function to maintain
-// robustness to outliers. In particular, this function can help when feature
-// tracks have outliers so that bundle adjustment may still optimize 3D points
-// and camera poses properly without being catastrophically affected by
-// outliers.
-enum class LossFunctionType {
-  TRIVIAL = 0,
-  HUBER = 1,
-  SOFTLONE = 2,
-  CAUCHY = 3,
-  ARCTAN = 4,
-  TUKEY = 5,
-  TRUNCATED = 6,
-};
-
-// Creates a ceres LossFunction based on the enum type that is passed in.
-std::unique_ptr<ceres::LossFunction> CreateLossFunction(
-    const LossFunctionType& loss_function_type, const double robust_loss_width);
+bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
+           const std::vector<Eigen::Matrix3d>& feature_covariances,
+           const std::vector<Eigen::Vector3d>& world_points,
+           Eigen::Matrix3d* solution_rotations,
+           Eigen::Vector3d* solution_translations);
 
 }  // namespace theia
 
-#endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_CREATE_LOSS_FUNCTION_H_
+#endif  // THEIA_SFM_POSE_MLPNP_H_

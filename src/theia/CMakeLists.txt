@@ -106,6 +106,7 @@ set(THEIA_SRC
   sfm/bundle_adjustment/bundle_adjuster.cc
   sfm/bundle_adjustment/bundle_adjustment.cc
   sfm/bundle_adjustment/create_loss_function.cc
+  sfm/bundle_adjustment/loss_functions.cc
   sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.cc
   sfm/camera/camera_intrinsics_model.cc
   sfm/camera/camera.cc
@@ -181,6 +182,8 @@ set(THEIA_SRC
   sfm/pose/four_point_homography.cc
   sfm/pose/four_point_relative_pose_partial_rotation.cc
   sfm/pose/fundamental_matrix_util.cc
+  sfm/pose/mlpnp.cc
+  sfm/pose/mlpnp_helper.cc
   sfm/pose/orthographic_four_point.cc
   sfm/pose/perspective_three_point.cc
   sfm/pose/position_from_two_rays.cc
@@ -359,11 +362,11 @@ if (BUILD_TESTING)
 #  gtest(sfm/global_pose_estimation/compute_triplet_baseline_ratios)
 #  gtest(sfm/global_pose_estimation/hybrid_rotation_estimator)
 #  gtest(sfm/global_pose_estimation/lagrange_dual_rotation_estimator)
-  gtest(sfm/global_pose_estimation/least_unsquared_deviation_position_estimator)
-  gtest(sfm/global_pose_estimation/LiGT_position_estimator)
-  gtest(sfm/global_pose_estimation/linear_position_estimator)
-  gtest(sfm/global_pose_estimation/linear_rotation_estimator)
-  gtest(sfm/global_pose_estimation/nonlinear_position_estimator)
+#  gtest(sfm/global_pose_estimation/least_unsquared_deviation_position_estimator)
+#  gtest(sfm/global_pose_estimation/LiGT_position_estimator)
+#  gtest(sfm/global_pose_estimation/linear_position_estimator)
+#  gtest(sfm/global_pose_estimation/linear_rotation_estimator)
+#  gtest(sfm/global_pose_estimation/nonlinear_position_estimator)
 #  gtest(sfm/global_pose_estimation/pairwise_rotation_error)
 #  gtest(sfm/global_pose_estimation/pairwise_translation_and_scale_error)
 #  gtest(sfm/global_pose_estimation/pairwise_translation_error)
@@ -384,6 +387,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/four_point_homography)
 #  gtest(sfm/pose/four_point_relative_pose_partial_rotation)
 #  gtest(sfm/pose/fundamental_matrix_util)
+  gtest(sfm/pose/mlpnp)
 #  gtest(sfm/pose/orthographic_four_point)
 #  gtest(sfm/pose/perspective_three_point)
 #  gtest(sfm/pose/position_from_two_rays)

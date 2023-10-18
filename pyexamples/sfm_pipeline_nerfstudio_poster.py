@@ -14,7 +14,7 @@ from image_utils import load_image
 from tqdm import tqdm
 from utils import reprojection_error, plot_loftr_matches
 
-min_num_inlier_matches = 30
+min_num_inlier_matches = 50
 
 # create correspondences of keypoints locations from indexed feature matches
 def correspondence_from_indexed_matches(pts1, pts2):
@@ -99,12 +99,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for sfm pipeline')
     parser.add_argument('--path_poster_images', type=str, default="/home/steffen/Data/nerfstudio/poster/images")
     parser.add_argument('--output_path', type=str, default="/home/steffen/Data/nerfstudio/poster/pytheia/")
-    parser.add_argument('--reconstruction', type=str, default='global',
+    parser.add_argument('--reconstruction', type=str, default='incremental',
                     help='reconstruction type: global, incremental or hybrid')
     parser.add_argument('--img_ext', default='png')
     parser.add_argument('--device', default="cuda")
     parser.add_argument('--use_fp16', default=True)
-    parser.add_argument('--temporal_match_window', default=4)
+    parser.add_argument('--temporal_match_window', default=6)
 
     args = parser.parse_args()
     reconstructiontype = args.reconstruction

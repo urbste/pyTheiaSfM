@@ -89,6 +89,13 @@ BundleAdjustmentSummary OptimizeFundamentalMatrix(
     Eigen::Matrix3d* fundamental_matrix);
 
 
+// Optimizes a homography matrix. It uses the manifold presented in
+// ceres-solver/examples/libmv_homography.cc
+BundleAdjustmentSummary OptimizeHomography(
+    const BundleAdjustmentOptions& options,
+    const std::vector<FeatureCorrespondence>& correspondences,
+    Eigen::Matrix3d* homography);
+
 }  // namespace theia
 
 #endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_BUNDLE_ADJUST_TWO_VIEWS_H_

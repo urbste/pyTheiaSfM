@@ -42,6 +42,11 @@
 
 namespace theia {
 
+// As it happens quite often that this function will return false
+// due to large outliers in the features matches and a LO-Ransac optimizer
+// I changed the return value to be always true and set the error to a large
+// value. Hence, never use this function with TRIVIAL loss function, 
+// but add a robust loss to it!
 struct AngularEpipolarError {
  public:
   AngularEpipolarError(const Eigen::Vector2d& feature1,
@@ -65,6 +70,7 @@ struct AngularEpipolarError {
 
     // Compute values A and B (Eq. 11 in the paper).
     Eigen::Map<const Eigen::Matrix<T, 3, 1> > translation_map(translation);
+                                
     const Eigen::Matrix<T, 3, 3> translation_term =
         Eigen::Matrix<T, 3, 3>::Identity() -
         translation_map * translation_map.transpose();
@@ -76,9 +82,10 @@ struct AngularEpipolarError {
         feature1.cross(rotation_matrix.transpose() * feature2));
 
     // Ensure the square root is real.
-    const T sqrt_term = a * a / T(4.0) - b_sqrt * b_sqrt;
+    const T sqrt_term = (a * a) / T(4.0) - b_sqrt * b_sqrt;
     if (sqrt_term < T(0.0)) {
-      return false;
+      angular_epipolar_error[0] = T(1000);
+      return true;
     }
 
     angular_epipolar_error[0] = a / T(2.0) - sqrt(sqrt_term);

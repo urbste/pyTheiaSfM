@@ -36,6 +36,7 @@
 
 #include <Eigen/Core>
 #include <ceres/ceres.h>
+#include <ceres/sphere_manifold.h>
 #include <vector>
 
 #include "theia/matching/feature_correspondence.h"
@@ -43,6 +44,7 @@
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/bundle_adjustment/unit_norm_three_vector_parameterization.h"
 #include "theia/sfm/bundle_adjustment/fundamental_matrix_parameterization.h"
+#include "theia/sfm/bundle_adjustment/homography_error.h"
 #include "theia/sfm/bundle_adjustment/sampson_error.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/create_reprojection_error_cost_function.h"
@@ -197,11 +199,11 @@ BundleAdjustmentSummary BundleAdjustTwoViewsAngular(
 
   // Set problem options.
   ceres::Problem::Options problem_options;
-
+  problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
   ceres::Problem problem(problem_options);
 
   // Set solver options.
-  ceres::Solver::Options solver_options;
+  ceres::Solver::Options solver_options;  
   SetSolverOptions(options, &solver_options);
   // Allow Ceres to determine the ordering.
   solver_options.linear_solver_ordering.reset();
@@ -210,16 +212,17 @@ BundleAdjustmentSummary BundleAdjustTwoViewsAngular(
   const int kParameterBlockSize = 3;
   problem.AddParameterBlock(info->rotation_2.data(), kParameterBlockSize);
   // Add the position as a parameter block, ensuring that the norm is 1.
-  ceres::Manifold* position_parameterization = new ceres::
-      AutoDiffManifold<UnitNormThreeVectorParameterization, 3, 3>;
+  ceres::Manifold* position_parameterization = new ceres::SphereManifold<3>();
   problem.AddParameterBlock(
       info->position_2.data(), kParameterBlockSize, position_parameterization);
 
   // Add all the epipolar constraints from feature matches.
+  std::unique_ptr<ceres::LossFunction> loss = 
+      CreateLossFunction(options.loss_function_type, options.robust_loss_width);
   for (const FeatureCorrespondence& match : correspondences) {
     problem.AddResidualBlock(AngularEpipolarError::Create(
                                  match.feature1.point_, match.feature2.point_),
-                             NULL,
+                             loss.get(),
                              info->rotation_2.data(),
                              info->position_2.data());
   }
@@ -265,7 +268,6 @@ BundleAdjustmentSummary OptimizeFundamentalMatrix(
   solver_options.linear_solver_ordering.reset();
 
   // Add the fundamental matrix as a parameter block.
-
   ceres::LocalParameterization* fundamental_parametrization = new ceres::
       AutoDiffLocalParameterization<FundamentalMatrixParametrization, 9, 7>;
   problem.AddParameterBlock(
@@ -297,4 +299,62 @@ BundleAdjustmentSummary OptimizeFundamentalMatrix(
   return summary;
 }
 
+BundleAdjustmentSummary OptimizeHomography(
+    const BundleAdjustmentOptions& options,
+    const std::vector<FeatureCorrespondence>& correspondences,
+    Eigen::Matrix3d* homography) {
+  CHECK_NOTNULL(homography);
+
+  BundleAdjustmentSummary summary;
+
+  // Start setup timer.
+  Timer timer;
+
+  // Set problem options.
+  ceres::Problem::Options problem_options;
+  problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+  ceres::Problem problem(problem_options);
+
+  // Set solver options.
+  ceres::Solver::Options solver_options;
+  SetSolverOptions(options, &solver_options);
+  // Allow Ceres to determine the ordering.
+  solver_options.linear_solver_ordering.reset();
+
+  std::unique_ptr<ceres::LossFunction> loss = 
+      CreateLossFunction(options.loss_function_type, options.robust_loss_width);
+  for (const FeatureCorrespondence& match : correspondences) {
+    auto* homography_symmetric_geometric_cost_function =
+        new HomographySymmetricGeometricCostFunctor(
+          match.feature1.point_, match.feature2.point_);
+
+    problem.AddResidualBlock(
+        new ceres::AutoDiffCostFunction<HomographySymmetricGeometricCostFunctor,
+                                        4,  // num_residuals
+                                        9>(
+            homography_symmetric_geometric_cost_function),
+        loss.get(),
+        homography->data());
+  }
+
+  // End setup time.
+  summary.setup_time_in_seconds = timer.ElapsedTimeInSeconds();
+
+  // Solve the problem.
+  ceres::Solver::Summary solver_summary;
+  ceres::Solve(solver_options, &problem, &solver_summary);
+  LOG_IF(INFO, options.verbose) << solver_summary.FullReport();
+
+  // Set the BundleAdjustmentSummary.
+  summary.solve_time_in_seconds = solver_summary.total_time_in_seconds;
+  summary.initial_cost = solver_summary.initial_cost;
+  summary.final_cost = solver_summary.final_cost;
+
+  // This only indicates whether the optimization was successfully run and makes
+  // no guarantees on the quality or convergence.
+  summary.success = solver_summary.termination_type != ceres::FAILURE;
+  (*homography) /= (*homography)(2, 2);
+  return summary;
+
+}
 }  // namespace theia

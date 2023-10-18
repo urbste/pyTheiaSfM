@@ -48,6 +48,8 @@
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
 
+#include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
+
 namespace theia {
 namespace {
 
@@ -82,6 +84,23 @@ class HomographyEstimator
 
     homography->emplace_back(homography_matrix);
     return true;
+  }
+
+  bool RefineModel(
+    const std::vector<FeatureCorrespondence>& correspondences,
+    const double error_thresh,
+    Eigen::Matrix3d* homography) const {
+
+    theia::BundleAdjustmentOptions ba_opts;
+    ba_opts.max_num_iterations = 15;
+    ba_opts.loss_function_type = LossFunctionType::TRUNCATED;
+    ba_opts.verbose = false;
+    ba_opts.robust_loss_width = error_thresh;
+
+    const auto ba_summary = theia::OptimizeHomography(
+      ba_opts, correspondences, homography);
+
+    return ba_summary.final_cost < ba_summary.initial_cost;
   }
 
   // The error for a correspondences given a model. This is the asymmetric

@@ -64,9 +64,7 @@ class CalibratedAbsolutePoseEstimator
     : public Estimator<FeatureCorrespondence2D3D, CalibratedAbsolutePose> {
  public:
   CalibratedAbsolutePoseEstimator() : pnp_type_(PnPType::KNEIP) {
-    ba_opts_.max_num_iterations = 2;
-    ba_opts_.use_homogeneous_point_parametrization = false;
-    ba_opts_.intrinsics_to_optimize = theia::OptimizeIntrinsicsType::NONE;
+
   }
 
   CalibratedAbsolutePoseEstimator(const PnPType& pnp_type) : pnp_type_(pnp_type) {}
@@ -120,7 +118,16 @@ class CalibratedAbsolutePoseEstimator
   }
 
   bool RefineModel(const std::vector<FeatureCorrespondence2D3D>& correspondences,
+    const double error_thresh,
     CalibratedAbsolutePose* absolute_pose) const {
+
+    theia::BundleAdjustmentOptions ba_opts;
+    ba_opts.max_num_iterations = 2;
+    ba_opts.use_homogeneous_point_parametrization = false;
+    ba_opts.intrinsics_to_optimize = theia::OptimizeIntrinsicsType::NONE;
+    ba_opts.loss_function_type = LossFunctionType::HUBER;
+    ba_opts.robust_loss_width = error_thresh*1.5;
+
     Reconstruction reconstruction;
     const auto v_id = reconstruction.AddView("0", 0, 0.0);
     auto m_view = reconstruction.MutableView(v_id);
@@ -136,8 +143,9 @@ class CalibratedAbsolutePoseEstimator
         reconstruction.AddObservation(v_id, t_id, theia::Feature(correspondences[i].feature));
     }
     
+
     theia::BundleAdjustmentSummary ba_summary = theia::BundleAdjustView(
-        ba_opts_, v_id, &reconstruction);
+        ba_opts, v_id, &reconstruction);
 
     absolute_pose->position = m_cam->GetPosition();
     absolute_pose->rotation = m_cam->GetOrientationAsRotationMatrix();
@@ -160,7 +168,6 @@ class CalibratedAbsolutePoseEstimator
 
  private:
   PnPType pnp_type_;
-  theia::BundleAdjustmentOptions ba_opts_;
   DISALLOW_COPY_AND_ASSIGN(CalibratedAbsolutePoseEstimator);
 };
 
