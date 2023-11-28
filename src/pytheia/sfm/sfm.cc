@@ -1401,13 +1401,27 @@ void pytheia_sfm_classes(py::module& m) {
       //&theia::Reconstruction::GetSubReconstructionWrapper)
       ;
 
+  // Reconstruction Estimator Helpers
   m.def("SetUnderconstrainedTracksToUnestimated",
-        theia::SetUnderconstrainedTracksToUnestimated);
+        &theia::SetUnderconstrainedTracksToUnestimated);
   m.def("SetUnderconstrainedViewsToUnestimated",
-        theia::SetUnderconstrainedViewsToUnestimated);
-
+        &theia::SetUnderconstrainedViewsToUnestimated);
+  m.def("NumEstimatedViews",
+        &theia::NumEstimatedViews);
+  m.def("NumEstimatedTracks",
+        &theia::NumEstimatedTracks);
+  m.def("SetReconstructionFromEstimatedPoses",
+        &theia::SetReconstructionFromEstimatedPoses);
+  m.def("CreateEstimatedSubreconstruction",
+        &theia::CreateEstimatedSubreconstruction);
+  m.def("RelativeRotationsFromViewGraph",
+        &theia::RelativeRotationsFromViewGraph);
+  m.def("GetEstimatedViewsFromReconstruction",
+        &theia::GetEstimatedViewsFromReconstructionWrapper);    
+  m.def("GetEstimatedTracksFromReconstruction",
+        &theia::GetEstimatedTracksFromReconstructionWrapper);
+        
   // Reconstruction Estimator
-
   // TwoViewInfo
   py::class_<theia::TwoViewInfo>(m, "TwoViewInfo")
       .def(py::init<>())

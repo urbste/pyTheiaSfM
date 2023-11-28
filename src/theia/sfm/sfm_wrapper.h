@@ -14,6 +14,7 @@
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
 #include "theia/sfm/undistort_image.h"
+#include "theia/sfm/reconstruction_estimator_utils.h"
 
 namespace theia {
 
@@ -42,5 +43,13 @@ int SetOutlierTracksToUnestimatedWrapper(
     const double max_inlier_reprojection_error,
     const double min_triangulation_angle_degrees,
     Reconstruction& reconstruction);
+
+// Outputs the ViewId of all estimated views in the reconstruction.
+std::unordered_set<ViewId> GetEstimatedViewsFromReconstructionWrapper(
+    const Reconstruction& reconstruction);
+
+// Outputs the TrackId of all estimated tracks in the reconstruction.
+std::unordered_set<TrackId> GetEstimatedTracksFromReconstructionWrapper(
+    const Reconstruction& reconstruction);
 
 }  // namespace theia

@@ -55,4 +55,20 @@ int SetOutlierTracksToUnestimatedWrapper(
   return num_features_rm;
 }
 
+// Outputs the ViewId of all estimated views in the reconstruction.
+std::unordered_set<ViewId> GetEstimatedViewsFromReconstructionWrapper(
+    const Reconstruction& reconstruction) {
+  std::unordered_set<ViewId> estimated_views;
+  theia::GetEstimatedViewsFromReconstruction(reconstruction, &estimated_views);
+  return estimated_views;
+}
+
+// Outputs the TrackId of all estimated tracks in the reconstruction.
+std::unordered_set<TrackId> GetEstimatedTracksFromReconstructionWrapper(
+    const Reconstruction& reconstruction) {
+  std::unordered_set<TrackId> estimated_tracks;
+  theia::GetEstimatedTracksFromReconstruction(reconstruction, &estimated_tracks);
+  return estimated_tracks;
+}
+
 }  // namespace theia
