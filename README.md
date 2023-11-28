@@ -166,7 +166,7 @@ opts.loss_function_type = pt.sfm.LossFunctionType.HUBER
 
 res = BundleAdjustReconstruction(opts, recon)
 res = BundleAdjustPartialReconstruction(opts, {view_ids}, {track_ids}, recon)
-res = BundleAdjustPartialViewConstant(opts, {var_view_ids}, {const_view_ids}, recon)
+res = BundleAdjustPartialViewsConstant(opts, {var_view_ids}, {const_view_ids}, recon)
 
 # optimize absolute pose on normalized 2D 3D correspondences
 res = pt.sfm.OptimizeAbsolutePoseOnNormFeatures(
