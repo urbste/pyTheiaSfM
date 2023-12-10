@@ -14,6 +14,7 @@ debug_out*
 build*
 cmake_build
 *.csv
+*.recon
 
 *.ply
 *.json
