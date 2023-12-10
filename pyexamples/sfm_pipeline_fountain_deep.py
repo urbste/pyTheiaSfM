@@ -62,7 +62,8 @@ def match_image_pair(img_i_data, img_j_data, matcher, min_conf):
     # create match indices
     kpts0, kpts1 = pred['keypoints0'][0], pred['keypoints1'][0]
     matches0, mscores0, mscores1 = result['matches0'][0], result['matching_scores0'][0], result['matching_scores1'][0]
-    valid = matches0 > -1
+    # Assuming matches0, mscores0, mscores1 are PyTorch tensors and min_conf is a scalar or a tensor
+    valid = torch.logical_and(matches0 > -1, mscores0 > min_conf)
     matches = torch.stack([torch.where(valid)[0], matches0[valid]], -1)
 
     if matches.shape[0] < min_num_inlier_matches:
@@ -78,10 +79,10 @@ def match_image_pair(img_i_data, img_j_data, matcher, min_conf):
     correspondences = correspondence_from_indexed_matches(matches, kpts0, kpts1)
 
     options = pt.sfm.EstimateTwoViewInfoOptions()
-    options.ransac_type = pt.sfm.RansacType(0) # pt.sfm.RansacType(1): prosac, pt.sfm.RansacType(2): lmed
+    options.ransac_type = pt.sfm.RansacType(2) # pt.sfm.RansacType(1): prosac, pt.sfm.RansacType(2): lmed
     options.use_lo = True # Local Optimization Ransac
     options.use_mle = True 
-    options.max_sampson_error_pixels = 2.0
+    options.max_sampson_error_pixels = 1.0
 
     success, twoview_info, inlier_indices = pt.sfm.EstimateTwoViewInfo(
         options, prior, prior, correspondences)
@@ -154,7 +155,7 @@ if __name__ == "__main__":
     
     view_graph = pt.sfm.ViewGraph()
     recon = pt.sfm.Reconstruction()
-    track_builder = pt.sfm.TrackBuilder(3, 30)
+    track_builder = pt.sfm.TrackBuilder(3, 10)
 
     prior = pt.sfm.CameraIntrinsicsPrior()
     prior.focal_length.value = [2759.48]
@@ -228,7 +229,7 @@ if __name__ == "__main__":
     options = pt.sfm.ReconstructionEstimatorOptions()
     options.num_threads = 7
     options.rotation_filtering_max_difference_degrees = 10.0
-    options.bundle_adjustment_robust_loss_width = 3.0
+    options.bundle_adjustment_robust_loss_width = 1.345
     options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
     options.subsample_tracks_for_bundle_adjustment = False
     options.filter_relative_translations_with_1dsfm = True
