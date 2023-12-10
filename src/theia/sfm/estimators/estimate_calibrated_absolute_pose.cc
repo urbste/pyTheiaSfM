@@ -73,7 +73,7 @@ class CalibratedAbsolutePoseEstimator
   CalibratedAbsolutePoseEstimator(const PnPType& pnp_type) : pnp_type_(pnp_type) {}
   // 3 correspondences are needed to determine the absolute pose.
   double SampleSize() const { 
-    if (pnp_type_ == PnPType::MLPnP) {
+    if (pnp_type_ == PnPType::MLPNP) {
       return 6;
     } 
     else {
@@ -108,14 +108,14 @@ class CalibratedAbsolutePoseEstimator
         for (const auto& q : quats) {
             rotations.push_back(q.matrix());
         }
-    } else if (pnp_type_ == PnPType::SQPnP) {
+    } else if (pnp_type_ == PnPType::SQPNP) {
       if (!SQPnP(features, world_points, &quats, &translations)) {
           return false;
       }
       for (const auto& q : quats) {
           rotations.push_back(q.matrix());
       }
-    } else if (pnp_type_ == PnPType::MLPnP) {
+    } else if (pnp_type_ == PnPType::MLPNP) {
       rotations.resize(1);
       translations.resize(1);
       if (!MLPnP(features, {}, world_points, &rotations[0], &translations[0])) {

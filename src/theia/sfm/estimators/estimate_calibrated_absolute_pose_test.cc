@@ -224,7 +224,7 @@ TEST(EstimateCalibratedAbsolutePose, AllInliersWithNoiseSQPnP) {
   const double kInlierRatio = 1.0;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
-  const PnPType type = PnPType::SQPnP;
+  const PnPType type = PnPType::SQPNP;
 
   const std::vector<Matrix3d> rotations = {
       Matrix3d::Identity(),
@@ -257,7 +257,7 @@ TEST(EstimateCalibratedAbsolutePose, AllInliersWithNoiseMLPnP) {
   const double kInlierRatio = 1.0;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
-  const PnPType type = PnPType::MLPnP;
+  const PnPType type = PnPType::MLPNP;
 
   const std::vector<Matrix3d> rotations = {
       Matrix3d::Identity(),
@@ -380,7 +380,7 @@ TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseSQPNP) {
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
-  const PnPType type = PnPType::SQPnP;
+  const PnPType type = PnPType::SQPNP;
 
   const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
                                            RandomRotation(10.0, &rng)};
@@ -410,7 +410,7 @@ TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseMLPnP) {
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-2;
-  const PnPType type = PnPType::MLPnP;
+  const PnPType type = PnPType::MLPNP;
 
   const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
                                            RandomRotation(10.0, &rng)};
@@ -507,7 +507,7 @@ TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseSQPNP_LO) {
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-4;
-  const PnPType type = PnPType::SQPnP;
+  const PnPType type = PnPType::SQPNP;
 
   const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
                                            RandomRotation(10.0, &rng)};
@@ -539,7 +539,7 @@ TEST(EstimateCalibratedAbsolutePose, OutliersWithNoiseMLPnP_LO) {
   const double kInlierRatio = 0.7;
   const double kNoise = 1.0;
   const double kPoseTolerance = 1e-4;
-  const PnPType type = PnPType::MLPnP;
+  const PnPType type = PnPType::MLPNP;
 
   const std::vector<Matrix3d> rotations = {Matrix3d::Identity(),
                                            RandomRotation(10.0, &rng)};

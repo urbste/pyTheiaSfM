@@ -51,7 +51,7 @@ def match_image_pair(img_i_data, img_j_data, matcher, min_conf):
         start = time.perf_counter()
         result = matcher(input_dict)
         end = time.perf_counter()
-        print("Matching took {}s".format((end-start)))
+        print("Matching took {:.2f}s".format((end-start)))
 
         if scales0 is not None:
             pred['keypoints0'] = (pred['keypoints0'] + 0.5) / scales0[None] - 0.5
@@ -129,8 +129,8 @@ def extract_features(image, extractor):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for sfm pipeline')
-    parser.add_argument('--path_fountain_dataset', type=str, default=" /home/zosurban/Downloads/fountain/")
-    parser.add_argument('--reconstruction', type=str, default='global',
+    parser.add_argument('--path_fountain_dataset', type=str, default="")
+    parser.add_argument('--reconstruction', type=str, default='incremental',
                     help='reconstruction type: global, incremental or hybrid')
     parser.add_argument('--img_ext', default='png')
     parser.add_argument('--device', default="cuda")
@@ -186,13 +186,13 @@ if __name__ == "__main__":
         v = recon.MutableView(vid)
         v.SetCameraIntrinsicsPrior(prior)
         # load images to torch and resize to max_edge=1024
-        image, scale = load_image(os.path.join(img_path, img_name_ext), resize=None)
+        image, scale = load_image(os.path.join(img_path, img_name_ext), resize=960)
         image = image.unsqueeze(0) # add batch dimension [b, 3, x, 1024]
         with torch.no_grad():
             start_t = time.perf_counter()
             img_t = image.to(device).to(dtype)
             tmp = extract_features(img_t, extractor)
-            print("Feature extraction took {}s".format(time.perf_counter() - start_t))
+            print("Feature extraction took {:.2f}s".format(time.perf_counter() - start_t))
 
         feats = {"keypoints": tmp["keypoints"].cpu().numpy(), 
                  "keypoint_scores": tmp["keypoint_scores"].cpu().numpy(), 
@@ -214,15 +214,13 @@ if __name__ == "__main__":
             success, twoview_info = match_image_pair( 
                 img_data[img_i_name], img_data[img_j_name], matcher, 0.8)
             
-            nr_matches = twoview_info.num_verified_matches
             if success == True:
+                nr_matches = twoview_info.num_verified_matches
+
                 view_id1 = recon.ViewIdFromName(img_i_name)
                 view_id2 = recon.ViewIdFromName(img_j_name)
                 view_graph.AddEdge(view_id1, view_id2, twoview_info)
                 print("{} Matches  between image {} and image {}. ".format(
-                    nr_matches, img_i_name, img_j_name))
-            else:
-                print("Only {} matches between image {} and image {}. Removing from view graph.".format(
                     nr_matches, img_i_name, img_j_name))
     
     print('{} edges were added to the view graph.'.format(view_graph.NumEdges()))
@@ -234,6 +232,7 @@ if __name__ == "__main__":
     options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
     options.subsample_tracks_for_bundle_adjustment = False
     options.filter_relative_translations_with_1dsfm = True
+    options.pnp_type = pt.sfm.PnPType.MLPNP # for incremental reconstruction
 
     if reconstructiontype == 'global':
         options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LEAST_UNSQUARED_DEVIATION
@@ -248,3 +247,8 @@ if __name__ == "__main__":
     print('Reconstruction summary message: {}'.format(recon_sum.message))
     pt.io.WritePlyFile(os.path.join(img_path,"fountain.ply"), recon, (255,0,0), 2)
     pt.io.WriteReconstruction(recon, os.path.join(img_path,"fountain.recon"))
+    
+    from utils import reprojection_error
+    final_repr_err = reprojection_error(recon)
+    print("Final reprojection error: {:.3f}px".format(final_repr_err))   
+

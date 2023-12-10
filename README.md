@@ -47,6 +47,7 @@ Hence, we removed some libaries from the original TheiaSfM:
   * Added covariance_, depth_prior_, depth_prior_variance_ to **Feature** class
 * Absolute Pose solvers
   * SQPnP
+  * MLPNP
   * UncalibratedPlanarOrthographic Pose
 
 ## Usage Examples

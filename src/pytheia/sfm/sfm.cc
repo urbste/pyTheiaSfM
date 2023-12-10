@@ -705,7 +705,7 @@ void pytheia_sfm_classes(py::module& m) {
   py::enum_<theia::PnPType>(m, "PnPType")
       .value("KNEIP", theia::PnPType::KNEIP)
       .value("DLS", theia::PnPType::DLS)
-      .value("SQPnP", theia::PnPType::SQPnP)
+      .value("SQPNP", theia::PnPType::SQPNP)
       .value("MLPNP", theia::PnPType::MLPNP)
       .export_values();
 
@@ -1326,7 +1326,10 @@ void pytheia_sfm_classes(py::module& m) {
                          min_num_optimized_tracks_per_view)
       .def_readwrite(
           "track_parametrization_type",
-          &theia::ReconstructionEstimatorOptions::track_parametrization_type);
+          &theia::ReconstructionEstimatorOptions::track_parametrization_type)
+      .def_readwrite("pnp_type",
+                     &theia::ReconstructionEstimatorOptions::
+                         pnp_type);
 
   // Reconstruction class
   py::class_<theia::Reconstruction>(m, "Reconstruction")

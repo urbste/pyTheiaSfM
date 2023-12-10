@@ -153,14 +153,14 @@ TEST(MLPnP, NoNoiseTest) {
 }
 
 TEST(MLPnP, NoNoisePlanarTest) {
-  const std::vector<Eigen::Vector3d> points_3d = {Vector3d(-1.0, 3.0, 5.0),
-                                           Vector3d(1.0, -1.0, 5.0),
-                                           Vector3d(-1.0, 1.0, 5.0),
-                                           Vector3d(2.0, 1.0, 5.0),
-                                           Vector3d(-1.0, -3.0, 5.0),
-                                           Vector3d(1.0, -2.0, 5.0),
-                                           Vector3d(-1.0, 4.0, 5.0),
-                                           Vector3d(-2.0, 2.0, 5.0)};
+  const std::vector<Eigen::Vector3d> points_3d = {Vector3d(-1.0, 3.0, 0.0),
+                                           Vector3d(1.0, -1.0, 0.0),
+                                           Vector3d(-1.0, 1.0, 0.0),
+                                           Vector3d(2.0, 1.0, 0.0),
+                                           Vector3d(-1.0, -3.0, 0.0),
+                                           Vector3d(1.0, -2.0, 0.0),
+                                           Vector3d(-1.0, 4.0, 0.0),
+                                           Vector3d(-2.0, 2.0, 0.0)};
   const Eigen::Matrix3d soln_rotation =
       Eigen::AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)).toRotationMatrix();
   const Vector3d soln_translation(1.0, 1.0, -1.0);

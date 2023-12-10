@@ -75,6 +75,25 @@ Eigen::Matrix3d BearingJac(const Eigen::Vector3d& vec) {
   return (Eigen::Matrix3d::Identity() - vec * vec.transpose()) / vec.norm();
 }
 
+double get_reprojection_error(const Eigen::Matrix<double, 3, 4>& T,
+                              const Eigen::Vector3d& pt3, const Eigen::Vector2d& pt2) {
+  const Eigen::Vector3d pt3_repro = (T.block<3, 3>(0, 0) * pt3 + T.block<3, 1>(0, 3)).normalized();
+  return 1.0 - pt3_repro.transpose() * pt2.homogeneous().normalized();
+}
+
+Eigen::Matrix4d GetMat4(const Eigen::Matrix3d& R, const Eigen::Vector3d& t) {
+  Eigen::Matrix4d T;
+  T.setIdentity();
+  T.block<3, 3>(0, 0) = R;
+  T.block<3, 1>(0, 3) = t;
+  return T;
+}
+
+size_t GetMinId(const std::vector<double>& vec) {
+  auto min_it = std::min_element(vec.begin(), vec.end());
+  return std::distance(vec.begin(), min_it);
+}
+
 bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
            const std::vector<Eigen::Matrix3d>& feature_covariances,
            const std::vector<Eigen::Vector3d>& world_points,
@@ -142,90 +161,71 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
   // 3. fill the design matrix A
   //////////////////////////////////////
   const int rowsA = 2 * num_points;
-  int colsA = 12;
-  MatrixXd A;
-  if (is_planar) {
-    colsA = 9;
-    A = MatrixXd(rowsA, 9);
-  }
-  else {
-	  A = MatrixXd(rowsA, 12);
-  }
-  A.setZero();
+  const int colsA = is_planar ? 9 : 12;
+  MatrixXd A = MatrixXd::Zero(rowsA, colsA);
 
-  // fill design matrix
+  // fill the design matri
   if (is_planar) {
     for (size_t i = 0; i < num_points; i++) {
-        const Vector3d pt3_current = points3.col(i);
-        // r12
-        A(2 * i, 0) = nullspaces[i](0, 0) * pt3_current[1];
-        A(2 * i + 1, 0) = nullspaces[i](0, 1) * pt3_current[1];
-        // r13
-        A(2 * i, 1) = nullspaces[i](0, 0) * pt3_current[2];
-        A(2 * i + 1, 1) = nullspaces[i](0, 1) * pt3_current[2];
-        // r22
-        A(2 * i, 2) = nullspaces[i](1, 0) * pt3_current[1];
-        A(2 * i + 1, 2) = nullspaces[i](1, 1)* pt3_current[1];
-        // r23
-        A(2 * i, 3) = nullspaces[i](1, 0) * pt3_current[2];
-        A(2 * i + 1, 3) = nullspaces[i](1, 1) * pt3_current[2];
-        // r32
-        A(2 * i, 4) = nullspaces[i](2, 0) * pt3_current[1];
-        A(2 * i + 1, 4) = nullspaces[i](2, 1) * pt3_current[1];
-        // r33
-        A(2 * i, 5) = nullspaces[i](2, 0) * pt3_current[2];
-        A(2 * i + 1, 5) = nullspaces[i](2, 1) * pt3_current[2];
-        // t1
-        A(2 * i, 6) = nullspaces[i](0, 0);
-        A(2 * i + 1, 6) = nullspaces[i](0, 1);
-        // t2
-        A(2 * i, 7) = nullspaces[i](1, 0);
-        A(2 * i + 1, 7) = nullspaces[i](1, 1);
-        // t3
-        A(2 * i, 8) = nullspaces[i](2, 0);
-        A(2 * i + 1, 8) = nullspaces[i](2, 1);
+          const Vector3d pt3_current = points3.col(i);
+          const auto& ns = nullspaces[i];
+          // r12
+          A(2 * i, 0) = ns(0, 0) * pt3_current[1];
+          A(2 * i + 1, 0) = ns(0, 1) * pt3_current[1];
+          // r13
+          A(2 * i, 1) = ns(0, 0) * pt3_current[2];
+          A(2 * i + 1, 1) = ns(0, 1) * pt3_current[2];
+          // r22
+          A(2 * i, 2) = ns(1, 0) * pt3_current[1];
+          A(2 * i + 1, 2) = ns(1, 1)* pt3_current[1];
+          // r23
+          A(2 * i, 3) = ns(1, 0) * pt3_current[2];
+          A(2 * i + 1, 3) = ns(1, 1) * pt3_current[2];
+          // r32
+          A(2 * i, 4) = ns(2, 0) * pt3_current[1];
+          A(2 * i + 1, 4) = ns(2, 1) * pt3_current[1];
+          // r33
+          A(2 * i, 5) = ns(2, 0) * pt3_current[2];
+          A(2 * i + 1, 5) = ns(2, 1) * pt3_current[2];
+
+          // t1, t2, t3
+          A.block<2, 3>(2 * i, 6) = ns.transpose();
+      }
+    } else {
+      for (size_t i = 0; i < num_points; i++) {
+          const Vector3d pt3_current = points3.col(i);
+          const auto& ns = nullspaces[i];
+          // r11
+          A(2 * i, 0) = ns(0, 0) * pt3_current[0]; 
+          A(2 * i + 1, 0) = ns(0, 1) * pt3_current[0]; 
+          // r12
+          A(2 * i, 1) = ns(0, 0) * pt3_current[1];
+          A(2 * i + 1, 1) = ns(0, 1) * pt3_current[1];
+          // r13
+          A(2 * i, 2) = ns(0, 0) * pt3_current[2];
+          A(2 * i + 1, 2) = ns(0, 1) * pt3_current[2];
+          // r21
+          A(2 * i, 3) = ns(1, 0) * pt3_current[0];
+          A(2 * i + 1, 3) = ns(1, 1) * pt3_current[0];
+          // r22
+          A(2 * i, 4) = ns(1, 0) * pt3_current[1];
+          A(2 * i + 1, 4) = ns(1, 1)* pt3_current[1];
+          // r23
+          A(2 * i, 5) = ns(1, 0) * pt3_current[2];
+          A(2 * i + 1, 5) = ns(1, 1) * pt3_current[2];
+          // r31
+          A(2 * i, 6) = ns(2, 0) * pt3_current[0];
+          A(2 * i + 1, 6) = ns(2, 1) * pt3_current[0];
+          // r32
+          A(2 * i, 7) = ns(2, 0) * pt3_current[1];
+          A(2 * i + 1, 7) = ns(2, 1) * pt3_current[1];
+          // r33
+          A(2 * i, 8) = ns(2, 0) * pt3_current[2];
+          A(2 * i + 1, 8) = ns(2, 1) * pt3_current[2];
+          // t1, t2, t3
+          A.block<2, 3>(2 * i, 6) = ns.transpose();
+      }
     }
-  } else {
-    for (size_t i = 0; i < num_points; i++) {
-        const Vector3d pt3_current = points3.col(i);
-        // r11
-        A(2 * i, 0) = nullspaces[i](0, 0) * pt3_current[0];
-        A(2 * i + 1, 0) = nullspaces[i](0, 1) * pt3_current[0];
-        // r12
-        A(2 * i, 1) = nullspaces[i](0, 0) * pt3_current[1];
-        A(2 * i + 1, 1) = nullspaces[i](0, 1) * pt3_current[1];
-        // r13
-        A(2 * i, 2) = nullspaces[i](0, 0) * pt3_current[2];
-        A(2 * i + 1, 2) = nullspaces[i](0, 1) * pt3_current[2];
-        // r21
-        A(2 * i, 3) = nullspaces[i](1, 0) * pt3_current[0];
-        A(2 * i + 1, 3) = nullspaces[i](1, 1) * pt3_current[0];
-        // r22
-        A(2 * i, 4) = nullspaces[i](1, 0) * pt3_current[1];
-        A(2 * i + 1, 4) = nullspaces[i](1, 1)* pt3_current[1];
-        // r23
-        A(2 * i, 5) = nullspaces[i](1, 0) * pt3_current[2];
-        A(2 * i + 1, 5) = nullspaces[i](1, 1) * pt3_current[2];
-        // r31
-        A(2 * i, 6) = nullspaces[i](2, 0) * pt3_current[0];
-        A(2 * i + 1, 6) = nullspaces[i](2, 1) * pt3_current[0];
-        // r32
-        A(2 * i, 7) = nullspaces[i](2, 0) * pt3_current[1];
-        A(2 * i + 1, 7) = nullspaces[i](2, 1) * pt3_current[1];
-        // r33
-        A(2 * i, 8) = nullspaces[i](2, 0) * pt3_current[2];
-        A(2 * i + 1, 8) = nullspaces[i](2, 1) * pt3_current[2];
-        // t1
-        A(2 * i, 9) = nullspaces[i](0, 0);
-        A(2 * i + 1, 9) = nullspaces[i](0, 1);
-        // t2
-        A(2 * i, 10) = nullspaces[i](1, 0);
-        A(2 * i + 1, 10) = nullspaces[i](1, 1);
-        // t3
-        A(2 * i, 11) = nullspaces[i](2, 0);
-        A(2 * i + 1, 11) = nullspaces[i](2, 1);
-    }
-  }
 
 	//////////////////////////////////////
 	// 4. solve least squares
@@ -271,6 +271,7 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 
     // scale translation
     const Eigen::VectorXd sv_real = svd.singularValues().real();
+
 		const Vector3d t(result1(6, 0) / sv_real(0), 
          result1(7, 0) / sv_real(1), 
          result1(8, 0) / sv_real(2));
@@ -292,70 +293,50 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 		Ts[2].block<3, 3>(0, 0) = R2; Ts[2].block<3, 1>(0, 3) = t;
 		Ts[3].block<3, 3>(0, 0) = R2; Ts[3].block<3, 1>(0, 3) = -t;
 
-		std::vector<double> normVal(4);
-		for (int i = 0; i < 4; ++i) {
-			Vector3d reproPt;
-			double norms = 0.0;
+		std::vector<double> errors(4, 0.0);
+		for (size_t i = 0; i < errors.size(); ++i) {
 			for (int p = 0; p < 6; ++p) {
-				reproPt = Ts[i].block<3, 3>(0, 0) * points3.col(p) + Ts[i].block<3, 1>(0, 3);
-				reproPt = reproPt / reproPt.norm();
-				norms += 1.0 - reproPt.transpose() * norm_feature_points[p].homogeneous().normalized();
+        errors[i] += get_reprojection_error(Ts[i], points3.col(p), norm_feature_points[p]);
 			}
-			normVal[i] = norms;
-		}
-		std::vector<double>::iterator
-			findMinRepro = std::min_element(std::begin(normVal), std::end(normVal));
-		int idx = std::distance(std::begin(normVal), findMinRepro);
-		Rout = Ts[idx].block<3, 3>(0, 0);
-		tout = Ts[idx].block<3, 1>(0, 3);
-
+    }
+    const size_t min_repro_idx = GetMinId(errors);
+    Rout = Ts[min_repro_idx].block<3, 3>(0, 0);
+    tout = Ts[min_repro_idx].block<3, 1>(0, 3);
 	} else { // non-planar case
 		Matrix3d tmp;
 		// until now, we only estimated 
 		// row one and two of the transposed rotation matrix
-		tmp << result1(0, 0), result1(3, 0), result1(6, 0),
-			   result1(1, 0), result1(4, 0), result1(7, 0),
-			   result1(2, 0), result1(5, 0), result1(8, 0);
+		tmp << result1(0, 0), result1(1, 0), result1(2, 0),
+			   result1(3, 0), result1(4, 0), result1(5, 0),
+			   result1(6, 0), result1(7, 0), result1(8, 0);
 		// get the scale
 		// find best rotation matrix in frobenius sense
 		Eigen::JacobiSVD<MatrixXd> svd(tmp, Eigen::ComputeFullU | Eigen::ComputeFullV);
     double scale = svd.singularValues()(2);
 
 		Rout = svd.matrixU() * svd.matrixV().transpose();
+    Rout.transposeInPlace();
 		// test if we found a good rotation matrix
 		if (Rout.determinant() < 0) {
 			Rout *= -1.0;
     }
 		// scale translation
-		tout = Rout * (Vector3d(result1(9, 0), result1(10, 0), result1(11, 0)) / scale);
+		tout = Vector3d(result1(9, 0), result1(10, 0), result1(11, 0)) / scale;
 		// find correct direction in terms of reprojection error, just take the first 6 correspondences
-		std::vector<double> error(2);
+		std::vector<double> errors(2, 0.0);
 		std::vector<Matrix4d> Ts(2);
 
-		for (int s = 0; s < 2; ++s) {
-			error[s] = 0.0;
-			Ts[s] = Matrix4d::Identity();
-			Ts[s].block<3, 3>(0, 0) = Rout;
-			if (s == 0) {
-          Ts[s].block<3, 1>(0, 3) = tout;
-      }
-      else {
-          Ts[s].block<3, 1>(0, 3) = -tout;
-      }
+    Matrix4d T0 = GetMat4(Rout, tout);
+    Matrix4d T1 = GetMat4(Rout, -tout);
 
-			Ts[s] = Ts[s].inverse();
-			for (int p = 0; p < 6; ++p) {
-				Vector3d v = Ts[s].block<3, 3>(0, 0) * points3.col(p) + Ts[s].block<3, 1>(0, 3);
-				v = v / v.norm();
-				error[s] += 1.0 - v.transpose() * norm_feature_points[p].homogeneous().normalized();
-			}
-		}
-		if (error[0] < error[1]) {
-			tout = Ts[0].block<3, 1>(0, 3);
-    } else {
-			tout = Ts[1].block<3, 1>(0, 3);
+    for (int p = 0; p < 6; ++p) {
+      errors[0] += get_reprojection_error(T0.block<3,4>(0,0), points3.col(p), norm_feature_points[p]);
+      errors[1] += get_reprojection_error(T1.block<3,4>(0,0), points3.col(p), norm_feature_points[p]);
     }
-		Rout = Ts[0].block<3, 3>(0, 0);
+
+    size_t min_error_id = GetMinId(errors);    
+		tout = min_error_id == 0 ? tout : -tout;
+		Rout = T0.block<3, 3>(0, 0);
 	}
 
 	//////////////////////////////////////
