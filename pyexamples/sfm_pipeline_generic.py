@@ -12,105 +12,196 @@ import numpy as np
 import cv2, os, glob, argparse
 import pytheia as pt
 import torch
-import natsort
-from kornia.feature import LoFTR
-import kornia as K
-import kornia.feature as KF
+import natsort, time
+import kornia
 import yaml
 from yaml.loader import SafeLoader
 from tqdm import tqdm
 
+MIN_INLIER_MATCHES = 30
 
-def find_approx_focal_length_through_inlier_cnt():
-    # simple heuristic to find the approximate focal length
-    # based on the number of inliers fundamental matrix estimation
-    # we assume that the focal length is the same for all images
-    # and that the images are taken with the same camera
-    
-    pt.sfm.EstimateTwoViewInfoOptions()
+def colorize_reconstruction(recon, image_path):
 
-    
+    color_for_track_set = set()  # Changed from list to set for faster lookup
+    for idx, v_id in enumerate(recon.ViewIds()):
+        view = recon.View(v_id)
+        if not view.IsEstimated():
+            continue
 
+        image = cv2.imread(os.path.join(image_path, view.Name()))
+        image_height, image_width, _ = image.shape
+
+        for t_id in view.TrackIds():
+            if not recon.Track(t_id).IsEstimated() or t_id in color_for_track_set:
+                continue
+            pt_in_img = view.GetFeature(t_id).point
+            xy_int = [int(pt_in_img[0]), int(pt_in_img[1])]
+            if not (0 <= xy_int[0] < image_width and 0 <= xy_int[1] < image_height):
+                continue
+
+            img_clr = image[xy_int[1], xy_int[0], :]
+            recon.MutableTrack(t_id).SetColor(img_clr)
+            color_for_track_set.add(t_id)  # Use add for a set
+
+# create correspondences of keypoints locations from indexed feature matches
+def correspondence_from_indexed_matches(match_indices, pts1, pts2):
+    num_matches = match_indices.shape[0]
+    correspondences = [
+         pt.matching.FeatureCorrespondence(
+            pt.sfm.Feature(pts1[match_indices[m,0],:]), 
+            pt.sfm.Feature(pts2[match_indices[m,1],:])) for m in range(num_matches)]
+
+    return correspondences
+
+def draw_keypoints(img, kpts):
+    img_ = np.ascontiguousarray(img.astype(np.float32))
+    for id, pt in enumerate(kpts):
+        p = (int(round(pt[0])), int(round(pt[1])))
+        cv2.circle(img_, p, 2, (255,0,0))
+
+    return img_
 
 ########## some utility functions ##########
-def draw_float_matches(img1, img2, kpts1, kpts2, inliers):
+def draw_float_matches(img1, img2, inlier_corres, si, sj):
     img1_ = np.ascontiguousarray(img1.squeeze(0).astype(np.float32))
     img2_ = np.ascontiguousarray(img2.squeeze(0).astype(np.float32))
     concat = (np.concatenate([img1_,img2_], 1) * 255).astype(np.uint8)
-    if not inliers:
-        inliers = list(range(len(kpts1)))
-    for id, (pt1, pt2) in enumerate(zip(kpts1, kpts2)):
-        p1 = (int(round(pt1[0])), int(round(pt1[1])))
-        p2 = (int(round(pt2[0])), int(round(pt2[1])))
-        if id in inliers:
-            clr = (0,255,0)
-            cv2.line(concat, p1, (p2[0]+img2_.shape[1],p2[1]), clr, 1, lineType=16)
+
+    for corr in inlier_corres:
+        feat1 = corr.feature1.point / si
+        feat2 = corr.feature2.point / sj
+        p1 = (int(round(feat1[0])), int(round(feat1[1])))
+        p2 = (int(round(feat2[0])), int(round(feat2[1])))
+        clr = (0,255,0)
+        cv2.line(concat, p1, (p2[0]+img2_.shape[1],p2[1]), clr, 1, lineType=16)
     return concat
 
-def load_img_tensor(img_path, inf_shape_wh, device, dtype):
-    image = K.io.load_image(img_path, K.io.ImageLoadType.RGB32)[None, ...]
+def load_img_tensor(img_path, inf_shape_max, device, dtype):
+    image = kornia.io.load_image(img_path, kornia.io.ImageLoadType.RGB32)[None, ...]
 
     original_img_size = image.shape[3:1:-1]
-    image = K.geometry.resize(image, inf_shape_wh[::-1], antialias=True)
+    scaler = inf_shape_max / max(original_img_size)
+    inf_shape_wh = (int(original_img_size[1] * scaler), 
+                    int(original_img_size[0] * scaler))
+    image = kornia.geometry.resize(image, inf_shape_wh, antialias=True)
 
     return image.to(device).to(dtype), original_img_size
 
-########## loftr feature matching ##########
-def match_loftr(matcher, img_i, img_j, min_conf):
+def extract_disk_features(image, extractor, debug=False):
     with torch.no_grad():
-        input_dict = {
-            "image0": K.color.rgb_to_grayscale(img_i),  
-            "image1": K.color.rgb_to_grayscale(img_j),
-        }
+        features = extractor(image, n = 5000, 
+            score_threshold = 0.0, 
+            window_size = 1, 
+            pad_if_not_divisible=True)
 
-        correspondences = matcher(input_dict)
+    keypoints = [f.keypoints for f in features]
+    scores = [f.detection_scores for f in features]
+    descriptors = [f.descriptors for f in features]
+    del features
 
-        kp_i = (correspondences["keypoints0"]).cpu().numpy()
-        kp_j = (correspondences["keypoints1"]).cpu().numpy()
-        conf = correspondences["confidence"].cpu().numpy()
+    keypoints = torch.stack(keypoints, 0)
+    scores = torch.stack(scores, 0)
+    descriptors = torch.stack(descriptors, 0)
 
-    sorted_idx = np.argsort(conf)[::-1]
-    
-    conf_sorted = conf[sorted_idx]
-    kpi_sorted = kp_i[sorted_idx,:]
-    kpj_sorted = kp_j[sorted_idx,:]
+    if debug:
+        img_kpts = draw_keypoints(image.permute(0,2,3,1).cpu().numpy().squeeze(0),
+            keypoints.cpu().numpy().squeeze(0))
+        cv2.imshow("Detected DISK features", img_kpts)
+        cv2.waitKey(1)
 
-    conf_thresh = np.where(conf_sorted > min_conf)[0]
-    conf_sorted = conf_sorted[conf_thresh]
-    kpi_sorted = kpi_sorted[conf_thresh,:]
-    kpj_sorted = kpj_sorted[conf_thresh,:]
+    return {'lafs': kornia.feature.laf_from_center_scale_ori(keypoints).to(image),
+            'keypoint_scores': scores.to(image),
+            'descriptors': descriptors.to(image)}
 
-    return kpi_sorted, kpj_sorted, conf_thresh
+def extract_sift_features(image, extractor, debug=False):
+    with torch.no_grad():
+        lafs, scores, descriptors = extractor(kornia.color.rgb_to_grayscale(image))
+    if debug:
+        keypoints = kornia.feature.get_laf_center(lafs)
+        img_kpts = draw_keypoints(image.permute(0,2,3,1).cpu().numpy().squeeze(0),
+            keypoints.cpu().numpy().squeeze(0))
+        cv2.imshow("Detected DISK features", img_kpts)
+        cv2.waitKey(1)
 
-########## two view estimation ##########
-def estimate_two_view_geometry(kp_i, kp_j, cam_prior_i, cam_prior_j):
+    return {'lafs': lafs.to(image),
+            'descriptors': descriptors.to(image)}
 
-    correspondences = []
-    for idx in range(kp_i.shape[0]):
-        correspondences.append(pt.matching.FeatureCorrespondence(
-            pt.sfm.Feature(kp_i[idx]), pt.sfm.Feature(kp_j[idx])))
+
+def estimate_two_view_geometry(correspondences, cam_prior_i, cam_prior_j):
 
     options = pt.sfm.EstimateTwoViewInfoOptions()
     # pt.sfm.RansacType(1): prosac, pt.sfm.RansacType(2): lmed
-    options.ransac_type = pt.sfm.RansacType(2) 
-    options.use_lo = False # Local Optimization
+    options.ransac_type = pt.sfm.RansacType(0) 
+    options.use_lo = True # Local Optimization
     options.use_mle = True 
-    options.max_sampson_error_pixels = 1.0
+    options.max_sampson_error_pixels = 1.5
     options.expected_ransac_confidence = 0.999
     options.max_ransac_iterations = 5000
-    options.min_ransac_iterations = 100
+    options.min_ransac_iterations = 1000
 
     success, two_view_info, inliers = pt.sfm.EstimateTwoViewInfo(
         options, cam_prior_i, cam_prior_j, correspondences)
+
+    return success, two_view_info, inliers
+
+def match_image_pair(
+    image_i, image_j,
+    f_i, f_j, 
+    scale_i, scale_j,
+    matcher, 
+    cam_prior_i, cam_prior_j, min_conf, device):
+
+    with torch.no_grad():
+
+        #start = time.perf_counter()
+        scores, matches = matcher(
+            lafs1 = torch.from_numpy(f_i["lafs"]).to(device),
+            lafs2 = torch.from_numpy(f_j["lafs"]).to(device),
+            desc1 = torch.from_numpy(f_i["descriptors"]).to(device).squeeze(0),
+            desc2 = torch.from_numpy(f_j["descriptors"]).to(device).squeeze(0),
+            hw1 = torch.tensor(image_i.shape[2:]).to(device),
+            hw2 = torch.tensor(image_j.shape[2:]).to(device))
+        #end = time.perf_counter()
+        #print("Matching took {}s".format((end-start)))
+        torch.cuda.empty_cache()
+
+    # create match indices
+    if matches.shape[0] < MIN_INLIER_MATCHES:
+        print('Number of putative matches too low!')
+        return False, None, None
+
+    kpts0 = kornia.feature.get_laf_center(f_i["lafs"])[0] * scale_i
+    kpts1 = kornia.feature.get_laf_center(f_j["lafs"])[0] * scale_j
     
-    print("two_view_info: {}".format(two_view_info.focal_length_1))
-    print("two_view_info: {}".format(two_view_info.focal_length_2))
-    return success, two_view_info, inliers, correspondences
+    correspondences = correspondence_from_indexed_matches(matches, kpts0, kpts1)
+
+    success, two_view_info, inliers = estimate_two_view_geometry(
+        correspondences, cam_prior_i, cam_prior_j)
+
+    inlier_correspondences = [correspondences[inliers[i]] for i in range(len(inliers))]
+    
+    if args.debug:
+        img = draw_float_matches(image_i.permute(0,2,3,1).cpu().numpy(),
+                        image_j.permute(0,2,3,1).cpu().numpy(),
+                        inlier_correspondences, scale_i, scale_j)
+        cv2.imshow("matches", img)
+        cv2.waitKey(1)
+
+    if not success:
+        print('TwoViewInfo estimation failed!')
+        return False, None, None
+
+    if len(inliers) < MIN_INLIER_MATCHES or not success:
+        print('Number of putative matches after geometric verification are too low!')
+        return False, None, None
+    else:
+        return True, two_view_info, inlier_correspondences
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for sfm pipeline')
     parser.add_argument('--image_path', 
-                        default="/home/steffen/Data/Wildschwein/images/", 
+                        default="", 
                         type=str)
     parser.add_argument('--reconstruction_type', type=str, default='incremental', 
                         help='reconstruction type: global, incremental or hybrid')
@@ -120,9 +211,13 @@ if __name__ == "__main__":
     parser.add_argument('--place_recog_window_size', type=int, default=5)
     parser.add_argument('--camera_model', type=str, default='PINHOLE', 
                         choices=['PINHOLE', 'PINHOLE_RADIAL_TANGENTIAL', 'DIVISION_UNDISTORTION'])
-    parser.add_argument('--shared_intrinsics', action='store_true', default=False, help='same intrinsics for all views')
+    parser.add_argument('--shared_intrinsics', action='store_true', default=True, help='same intrinsics for all views')
     parser.add_argument('--approx_fov', type=float, default=-1.0, help='approximate field of view of the camera')
     parser.add_argument('--focal_length', type=float, default=-1.0, help='focal length of the camera')
+    parser.add_argument('--feature_type', type=str, default="disk", choices=["sift", "disk"])
+    parser.add_argument('--export_nerfstudio_json', type=str, default="", help="Export nerfstudio data.")
+    parser.add_argument('--export_sfm_depth', action="store_true", default=True)
+    parser.add_argument('--average_scene_depth_mm', default=1000, help="Specify an average scene depth if you know it.")
     args = parser.parse_args()
     reconstructiontype = args.reconstruction_type
 
@@ -130,37 +225,44 @@ if __name__ == "__main__":
     recon = pt.sfm.Reconstruction()
     track_builder = pt.sfm.TrackBuilder(3, 30)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     dtype = torch.float32
-    if device == "cuda":
-        if torch.cuda.is_bf16_supported():
-            dtype = torch.float16
+    # if device == "cuda":
+    #     if torch.cuda.is_bf16_supported():
+    #         dtype = torch.float16
 
     # load models (LOFTR and COSPLACE)
     place_recog = torch.hub.load("gmberton/cosplace", 
         "get_trained_model", backbone="ResNet18", fc_output_dim=128)
-    place_recog.to(device).to(dtype)
-    matcher = LoFTR(pretrained="outdoor").to(device).to(dtype)
-    matcher.eval()
-    place_recog.eval()
-    
+    place_recog.eval().to(device).to(dtype)
+
+    if args.feature_type == "disk":
+        extractor = kornia.feature.DISK.from_pretrained("depth").eval().to(device).to(dtype)
+    elif args.feature_type == "sift":
+        extractor = kornia.feature.SIFTFeature(num_features=2000, upright=False, device=device)
+
+    matcher = kornia.feature.LightGlueMatcher(feature_name=args.feature_type).to(device).to(dtype)
 
     images_files = glob.glob(os.path.join(args.image_path,'*.'+args.img_ext))
-    image_names = natsort.natsorted([os.path.splitext(os.path.split(f)[1])[0] for f in images_files])
+    image_names = natsort.natsorted([os.path.split(f)[1] for f in images_files])
 
     # check the size of one image
-    loftr_inf_shape = (640//2, 512//2)
+    inf_shape_max = 1920
     img_data = {"names": [], "data": [], 
-                "original_shapes": [], "feat_vec": []}
+                "original_shapes": [], "inference_shapes": [],
+                "feat_vec": [], "feats" : []}
 
-    # match all pairs of images
+    # load image, extract features and place recognition feature vectors
     for idx, image_name in enumerate(image_names):
         vid = recon.AddView(image_name, 0 if args.shared_intrinsics else idx, idx)
         v = recon.MutableView(vid)
-        path = os.path.join(args.image_path,image_name+"."+args.img_ext)
+        
+        ## Load image
+        path = os.path.join(args.image_path,image_name)
         img_tensor_rgb, original_img_shape = load_img_tensor(
-            path, loftr_inf_shape, device, dtype)
+            path, inf_shape_max, device, dtype)
 
+        ## initialize intrinsics
         prior = pt.sfm.CameraIntrinsicsPrior()
         prior.image_width = original_img_shape[0]
         prior.image_height = original_img_shape[1]
@@ -182,10 +284,21 @@ if __name__ == "__main__":
 
         v.SetCameraIntrinsicsPrior(prior)
 
+        # extract features
+        if args.feature_type == "disk":
+            features = extract_disk_features(img_tensor_rgb, extractor, args.debug)
+        elif args.feature_type == "sift":
+            features = extract_sift_features(img_tensor_rgb, extractor, args.debug)
+
         img_data["names"].append(image_name)
         img_data["data"].append(img_tensor_rgb)
         img_data["original_shapes"].append(original_img_shape)
+        img_data["inference_shapes"].append(img_tensor_rgb.shape[4:1:-1])
+        img_data["feats"].append({
+            "lafs" : features["lafs"].cpu().numpy(),
+            "descriptors" : features["descriptors"].cpu().numpy()})
 
+        # extract place features
         if args.place_recog_window_size > 0:
             with torch.no_grad():
                 feature = place_recog(img_tensor_rgb).cpu().numpy().astype(np.float32)
@@ -224,36 +337,29 @@ if __name__ == "__main__":
     med_focal_length = []
     for match_pair in tqdm(pairs_to_match):
         vi, vj = match_pair
-        scale_i = np.array(img_data["original_shapes"][vi]) / np.array(loftr_inf_shape)
-        scale_j = np.array(img_data["original_shapes"][vj]) / np.array(loftr_inf_shape)
-        kp_i, kp_j, conf = match_loftr(matcher, 
-            img_data["data"][vi], img_data["data"][vj], 0.8)
-        # estimate two view info
-        if len(kp_i) < 200:
-            continue
-        kp_i, kp_j = kp_i * scale_i, kp_j * scale_j
-        success, tvi, inliers, correspondences = estimate_two_view_geometry(
-                kp_i, kp_j, prior, prior)
-        med_focal_length.append(tvi.focal_length_1)
-        med_focal_length.append(tvi.focal_length_2)
-        if success == True and len(inliers) > 100:
-            if args.debug:
-                img = draw_float_matches(img_data["data"][vi].permute(0,2,3,1).cpu().numpy(),
-                                img_data["data"][vj].permute(0,2,3,1).cpu().numpy(),
-                                kp_i/scale_i, kp_j/scale_j, inliers)
-                cv2.imshow("matches", img.astype(np.uint8))
-                cv2.waitKey(1)
-            # add edge in view graph
+        scale_i = np.array(img_data["original_shapes"][vi]) / \
+            np.array(img_data["inference_shapes"][vi])
+        scale_j = np.array(img_data["original_shapes"][vj]) / \
+            np.array(img_data["inference_shapes"][vj])
+
+        success, tvi, inlier_correspondences = match_image_pair(
+            img_data["data"][vi], img_data["data"][vj],
+            img_data["feats"][vi], img_data["feats"][vj],
+            scale_i, scale_j,
+            matcher, prior, prior, 0.8, device)
+
+
+        if success:
             view_id1 = recon.ViewIdFromName(img_data["names"][vi])
             view_id2 = recon.ViewIdFromName(img_data["names"][vj])
             view_graph.AddEdge(view_id1, view_id2, tvi)
-            # add tracks
-            for i in range(len(inliers)):
+            for c in inlier_correspondences:
                 track_builder.AddFeatureCorrespondence(
-                    view_id1, correspondences[inliers[i]].feature1, 
-                    view_id2, correspondences[inliers[i]].feature2)
-            if args.debug:
-                print("Matched {} and {} with {} inliers".format(view_id1, view_id2, len(inliers)))
+                    vi, c.feature1, 
+                    vj, c.feature2)
+            if args.shared_intrinsics:
+                med_focal_length.append(tvi.focal_length_1)
+                med_focal_length.append(tvi.focal_length_2)
 
     if args.shared_intrinsics:
         median_focal_length = np.median(med_focal_length)
@@ -301,13 +407,16 @@ if __name__ == "__main__":
     pt.io.WriteReconstruction(recon, os.path.join(args.image_path,"recon_pre.recon"))
 
     # perform bundle adjustment and use gravity priors as well
-    pt.sfm.SetOutlierTracksToUnestimated(set(recon.TrackIds()), 0.003 * max(original_img_shape), 1.0, recon)
+    pt.sfm.SetOutlierTracksToUnestimated(set(recon.TrackIds()), 0.002 * max(original_img_shape), 1.0, recon)
     opts = pt.sfm.BundleAdjustmentOptions()
     opts.robust_loss_width = 0.001 * max(original_img_shape)
     opts.verbose = True
     opts.loss_function_type = pt.sfm.LossFunctionType.HUBER
     opts.use_homogeneous_point_parametrization = True
-    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.FOCAL_LENGTH_RADIAL_DISTORTION
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.FOCAL_LENGTH
+    ba_sum = pt.sfm.BundleAdjustReconstruction(opts, recon)
+
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.PRINCIPAL_POINTS
     ba_sum = pt.sfm.BundleAdjustReconstruction(opts, recon)
 
     print('Reconstruction summary message: {}'.format(recon_sum.message))
@@ -317,5 +426,63 @@ if __name__ == "__main__":
 
     if args.shared_intrinsics:
         print("Calibrated Focal length: {}".format(recon.View(0).Camera().FocalLength()))
+    
+    colorize_reconstruction(recon, args.image_path)
+
+    if args.export_nerfstudio_json != "":
+        # make colmap directory structure
+        colmap_sparse = os.path.join(args.image_path, "../", "sparse", "0")
+        os.makedirs(colmap_sparse, exist_ok=True)
+        pt.io.WriteColmapFiles(recon, colmap_sparse)
+        
+        res = pt.io.WriteNerfStudio(args.image_path, recon, 16, args.export_nerfstudio_json)
+        if not res:
+            print("Unable to write nerfstudio files.")
+
+        if args.export_sfm_depth:
+            import json
+            from utils import median_scene_depth_in_view, find_img_name_idx_in_transforms
+            with open(args.export_nerfstudio_json, "r") as f:
+                transforms = json.load(f)
+
+            depth_img_path = os.path.join(args.image_path, "sfm_depth")
+            os.makedirs(depth_img_path, exist_ok=True)
+
+            med_scene_depth = median_scene_depth_in_view(recon, 0)
+            scale_rec_to_mm = args.average_scene_depth_mm / med_scene_depth
+            
+            # now create depth images
+            for vid in recon.ViewIds():
+                W, H = original_img_shape
+                sfm_depth = np.zeros((H, W), dtype=np.float32)
+
+                view_names = []
+                for vid in recon.ViewIds():
+                    view = recon.View(vid)
+                    if not view.IsEstimated():
+                        continue
+
+                    for tid in view.TrackIds():
+                        if not recon.Track(tid).IsEstimated():
+                            continue
+                        depth, rep_pt2 = view.Camera().ProjectPoint(recon.Track(tid).Point())
+
+                        u, v = int(rep_pt2[0]), int(rep_pt2[1])
+
+                        depth *= scale_rec_to_mm
+                        if 0 <= v < W and 0 <= u <= H and depth > 0 and depth > 0.001 and depth < 10000:
+                            sfm_depth[v, u] = depth
+                    depth_img_name = view.Name().split(".")[0] + ".png"
+                    depth_file_path = os.path.join(depth_img_path, depth_img_name)
+                    cv2.imwrite(depth_file_path, sfm_depth.astype(np.uint16))
+
+                    frame_idx_in_json = find_img_name_idx_in_transforms(transforms, view.Name())
+                    transforms["frames"][frame_idx_in_json]["depth_file_path"] = depth_file_path
+                    transform_matrix = np.array(transforms["frames"][frame_idx_in_json]["transform_matrix"])
+                    transform_matrix[:3,3] *= scale_rec_to_mm
+                    transforms["frames"][frame_idx_in_json]["transform_matrix"] = transform_matrix.tolist()
+                    
+            with open(args.export_nerfstudio_json, "w") as f:
+                json.dump(transforms, f, indent=4)
 
     cv2.destroyAllWindows()

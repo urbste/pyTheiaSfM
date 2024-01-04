@@ -2,10 +2,12 @@
 import cv2, os
 import numpy as np
 
-def convert_image(img, size):
+def convert_image(img, max_size):
     if len(img.shape) > 2:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    return cv2.resize(img, size)
+    img_max_size = max(img.shape)
+    scale = max_size / img_max_size
+    return cv2.resize(img, (-1,-1), fx=scale, fy=scale)
 
 def extract_features(img):
     pts = cv2.goodFeaturesToTrack(img, 500, qualityLevel=0.05, minDistance=10)
@@ -19,7 +21,6 @@ def get_retrack_dist(p, p_back):
     dy = (p[:,0,1] - p_back[:,0,1])**2
     dist = np.sqrt(dx+dy)
     return dist
-
 
 if __name__ == "__main__":
     import argparse
@@ -35,8 +36,6 @@ if __name__ == "__main__":
     parser.add_argument('--min_framerate_to_extract', type=int, default=10, help="min framerate to extract images ( eg. 10 means at minimum every 10th frame is extracted)")
     parser.add_argument('--retrack_err_dist', type=float, default=10.)
     args = parser.parse_args()
-
-    img_size_track = (640,480)
     
     vid = cv2.VideoCapture(args.path_to_video)
     print("Video has {} frames and a framerate of {}".format(
@@ -49,7 +48,7 @@ if __name__ == "__main__":
 
     # get first image
     ret, prev_img = vid.read()
-    prev_img = convert_image(prev_img, img_size_track)
+    prev_img = convert_image(prev_img, 640)
     save_image(args.path_to_image_output, prev_img, 0, args.img_ext)
     p0, num_track_pts = extract_features(prev_img)
 
@@ -64,9 +63,8 @@ if __name__ == "__main__":
         if not ret:
             no_gp_img += 1
             continue
-    
         
-        img_gray = convert_image(img, img_size_track)
+        img_gray = convert_image(img, 640)
 
         # track re-track to check bad tracks
         p1, st, err = cv2.calcOpticalFlowPyrLK(prev_img, img_gray, p0, None, **lk_params)
@@ -81,7 +79,7 @@ if __name__ == "__main__":
         good_old = p0[st==1]
 
         if args.debug:    
-            img_small = cv2.resize(img, img_size_track)
+            img_small = cv2.resize(img, img_gray.shape[0:2][::-1])
             for i, (new, old) in enumerate(zip(good_new, good_old)):
                 a, b = new.astype(np.int32).ravel()
                 c, d = old.astype(np.int32).ravel()
@@ -92,7 +90,6 @@ if __name__ == "__main__":
             cv2.waitKey(1)
 
         # check if too many points are lost after tracking --> save image
-        print("total_img_id - prev_img_idx: {}".format(total_img_id - prev_img_idx))
         if np.sum(st) < (1.0 - args.percent_lost/100)*num_track_pts or total_img_id - prev_img_idx > args.min_framerate_to_extract:
             save_image(args.path_to_image_output, img, img_idx, args.img_ext)
             p0, num_track_pts = extract_features(prev_img)   

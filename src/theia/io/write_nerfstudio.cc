@@ -143,36 +143,30 @@ bool WriteNerfStudio(const std::string& path_to_images,
     AddIntKey("w", cam.ImageWidth(), writer);
     AddIntKey("h", cam.ImageHeight(), writer);
 
-    const double* cam_params = cam.intrinsics();
+    const CameraIntrinsicsModel& intrinsics = *cam.CameraIntrinsics();
     if (cam.GetCameraIntrinsicsModelType() ==
         theia::CameraIntrinsicsModelType::PINHOLE) {
-      AddDoubleKey("k1",
-                   cam_params[theia::PinholeCameraModel::
-                                  InternalParametersIndex::RADIAL_DISTORTION_1],
+      AddDoubleKey("k1", intrinsics.GetParameter(
+                  theia::PinholeCameraModel::RADIAL_DISTORTION_1),
                    writer);
-      AddDoubleKey("k2",
-                   cam_params[theia::PinholeCameraModel::
-                                  InternalParametersIndex::RADIAL_DISTORTION_2],
+      AddDoubleKey("k2", intrinsics.GetParameter(
+                  theia::PinholeCameraModel::RADIAL_DISTORTION_2),
                    writer);
       AddDoubleKey("p1", 0.0, writer);
       AddDoubleKey("p2", 0.0, writer);
     } else if (cam.GetCameraIntrinsicsModelType() ==
                theia::CameraIntrinsicsModelType::FISHEYE) {
-      AddDoubleKey("k1",
-                   cam_params[theia::FisheyeCameraModel::
-                                  InternalParametersIndex::RADIAL_DISTORTION_1],
+      AddDoubleKey("k1", intrinsics.GetParameter(
+                  theia::FisheyeCameraModel::RADIAL_DISTORTION_1),
                    writer);
-      AddDoubleKey("k2",
-                   cam_params[theia::FisheyeCameraModel::
-                                  InternalParametersIndex::RADIAL_DISTORTION_2],
+      AddDoubleKey("k2", intrinsics.GetParameter(
+                  theia::FisheyeCameraModel::RADIAL_DISTORTION_2),
                    writer);
-      AddDoubleKey("k3",
-                   cam_params[theia::FisheyeCameraModel::
-                                  InternalParametersIndex::RADIAL_DISTORTION_3],
+      AddDoubleKey("k3", intrinsics.GetParameter(
+                  theia::FisheyeCameraModel::RADIAL_DISTORTION_3),
                    writer);
-      AddDoubleKey("k4",
-                   cam_params[theia::FisheyeCameraModel::
-                                  InternalParametersIndex::RADIAL_DISTORTION_4],
+      AddDoubleKey("k4", intrinsics.GetParameter(
+                  theia::FisheyeCameraModel::RADIAL_DISTORTION_4),
                    writer);
     } else {
       LOG(ERROR) << "Camera Model not supported. Currently only PINHOLE and "

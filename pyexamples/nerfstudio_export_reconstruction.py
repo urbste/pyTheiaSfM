@@ -20,4 +20,4 @@ if __name__ == "__main__":
                           args.aabb_scale, args.path_out_nerfstudio_json)
     
     if not res:
-        print("Was not able to write nerfstudio files.")
+        print("Unable to write nerfstudio files.")

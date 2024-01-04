@@ -86,7 +86,7 @@ bool WriteCamerasFile(const Reconstruction& reconstruction,
         << camera.PrincipalPointX() << " " << camera.PrincipalPointY() << " "
         << intrinsics.GetParameter(PinholeCameraModel::RADIAL_DISTORTION_1)
         << " "
-        << intrinsics.GetParameter(PinholeCameraModel::RADIAL_DISTORTION_1)
+        << intrinsics.GetParameter(PinholeCameraModel::RADIAL_DISTORTION_2)
         << std::endl;
   }
   ofs_cameras.close();
