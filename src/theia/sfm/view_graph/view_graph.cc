@@ -178,6 +178,15 @@ const std::unordered_set<ViewId>* ViewGraph::GetNeighborIdsForView(
   return FindOrNull(vertices_, view_id);
 }
 
+const std::unordered_set<ViewId> ViewGraph::GetNeighborIdsForViewWrapper(
+    const ViewId view_id) const {
+  const std::unordered_set<ViewId>* neighbor_ids = GetNeighborIdsForView(view_id);
+  if (neighbor_ids == nullptr) {
+    return std::unordered_set<ViewId>();
+  }
+  return *neighbor_ids;
+}
+
 // Returns the edge value or NULL if it does not exist.
 const TwoViewInfo* ViewGraph::GetEdge(const ViewId view_id_1,
                                       const ViewId view_id_2) const {
@@ -264,4 +273,9 @@ void ViewGraph::GetLargestConnectedComponentIds(
   std::swap(*largest_cc, connected_components[largest_cc_id]);
 }
 
+std::unordered_set<ViewId> ViewGraph::GetLargestConnectedComponentIdsWrapper() const {
+  std::unordered_set<ViewId> largest_cc_ids;
+  GetLargestConnectedComponentIds(&largest_cc_ids);
+  return largest_cc_ids;
+}
 }  // namespace theia

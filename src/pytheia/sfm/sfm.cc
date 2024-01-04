@@ -1458,11 +1458,10 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::ViewGraph::GetEdge,
            py::return_value_policy::reference)
       .def("GetAllEdges", &theia::ViewGraph::GetAllEdges)
-
       // not sure pointer as input
       //.def("ExtractSubgraph", &theia::ViewGraph::ExtractSubgraph)
-      //.def("GetLargestConnectedComponentIds",
-      //&theia::ViewGraph::GetLargestConnectedComponentIds)
+      .def("GetLargestConnectedComponentIds",
+        &theia::ViewGraph::GetLargestConnectedComponentIdsWrapper)
 
       ;
 

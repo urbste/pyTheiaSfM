@@ -8,7 +8,7 @@ def convert_image(img, size):
     return cv2.resize(img, size)
 
 def extract_features(img):
-    pts = cv2.goodFeaturesToTrack(img, 200, qualityLevel=0.05, minDistance=10)
+    pts = cv2.goodFeaturesToTrack(img, 500, qualityLevel=0.05, minDistance=10)
     return pts, len(pts)
 
 def save_image(out_path, img, idx, img_ext):
@@ -32,6 +32,7 @@ if __name__ == "__main__":
     parser.add_argument('--percent_lost', 
                         help="we will insert a new frame after a certain percent of points are lost after LK tracking",
                         type=int, default=10) # for video sequences, if 0 no temporal window
+    parser.add_argument('--min_framerate_to_extract', type=int, default=10, help="min framerate to extract images ( eg. 10 means at minimum every 10th frame is extracted)")
     parser.add_argument('--retrack_err_dist', type=float, default=10.)
     args = parser.parse_args()
 
@@ -54,7 +55,7 @@ if __name__ == "__main__":
 
     # start main tracking loop
     line_image = cv2.cvtColor(np.zeros_like(prev_img), cv2.COLOR_GRAY2BGR)
-    img_idx, no_gp_img = 0, 0
+    img_idx, no_gp_img, prev_img_idx, total_img_id = 0, 0, 0, 0
     while True:
         ret, img = vid.read()
 
@@ -63,6 +64,7 @@ if __name__ == "__main__":
         if not ret:
             no_gp_img += 1
             continue
+    
         
         img_gray = convert_image(img, img_size_track)
 
@@ -90,14 +92,17 @@ if __name__ == "__main__":
             cv2.waitKey(1)
 
         # check if too many points are lost after tracking --> save image
-        if np.sum(st) < (1.0 - args.percent_lost/100)*num_track_pts:
+        print("total_img_id - prev_img_idx: {}".format(total_img_id - prev_img_idx))
+        if np.sum(st) < (1.0 - args.percent_lost/100)*num_track_pts or total_img_id - prev_img_idx > args.min_framerate_to_extract:
             save_image(args.path_to_image_output, img, img_idx, args.img_ext)
             p0, num_track_pts = extract_features(prev_img)   
             prev_img = img_gray.copy()     
             line_image = np.zeros_like(line_image)
             print("Saving image: {}.".format(img_idx))
+            prev_img_idx = total_img_id
             img_idx += 1
         else:
             prev_img = img_gray.copy()
             p0 = good_new.reshape(-1,1,2)
         
+        total_img_id += 1

@@ -98,6 +98,8 @@ class ViewGraph {
   // not exist.
   const std::unordered_set<ViewId>* GetNeighborIdsForView(
       const ViewId view_id) const;
+  const std::unordered_set<ViewId> GetNeighborIdsForViewWrapper(
+      const ViewId view_id) const;
 
   // Returns the edge value or NULL if it does not exist.
   const TwoViewInfo* GetEdge(const ViewId view_id_1,
@@ -120,6 +122,7 @@ class ViewGraph {
   // the view graph.
   void GetLargestConnectedComponentIds(
       std::unordered_set<ViewId>* largest_cc) const;
+  std::unordered_set<ViewId> GetLargestConnectedComponentIdsWrapper() const;
 
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
