@@ -18,7 +18,7 @@ import yaml
 from yaml.loader import SafeLoader
 from tqdm import tqdm
 
-MIN_INLIER_MATCHES = 30
+MIN_INLIER_MATCHES = 50
 
 def colorize_reconstruction(recon, image_path):
 
@@ -48,8 +48,8 @@ def correspondence_from_indexed_matches(match_indices, pts1, pts2):
     num_matches = match_indices.shape[0]
     correspondences = [
          pt.matching.FeatureCorrespondence(
-            pt.sfm.Feature(pts1[match_indices[m,0],:]), 
-            pt.sfm.Feature(pts2[match_indices[m,1],:])) for m in range(num_matches)]
+            pt.sfm.Feature(pts1[match_indices[m,0],:], 0.5*np.eye(2, dtype=np.float64)), 
+            pt.sfm.Feature(pts2[match_indices[m,1],:], 0.5*np.eye(2, dtype=np.float64))) for m in range(num_matches)]
 
     return correspondences
 
@@ -57,9 +57,9 @@ def draw_keypoints(img, kpts):
     img_ = np.ascontiguousarray(img.astype(np.float32))
     for id, pt in enumerate(kpts):
         p = (int(round(pt[0])), int(round(pt[1])))
-        cv2.circle(img_, p, 2, (255,0,0))
+        cv2.circle(img_, p, 4, (255,255,0))
 
-    return img_
+    return cv2.cvtColor(img_, cv2.COLOR_RGB2BGR)
 
 ########## some utility functions ##########
 def draw_float_matches(img1, img2, inlier_corres, si, sj):
@@ -74,7 +74,8 @@ def draw_float_matches(img1, img2, inlier_corres, si, sj):
         p2 = (int(round(feat2[0])), int(round(feat2[1])))
         clr = (0,255,0)
         cv2.line(concat, p1, (p2[0]+img2_.shape[1],p2[1]), clr, 1, lineType=16)
-    return concat
+    
+    return cv2.cvtColor(concat, cv2.COLOR_RGB2BGR)
 
 def load_img_tensor(img_path, inf_shape_max, device, dtype):
     image = kornia.io.load_image(img_path, kornia.io.ImageLoadType.RGB32)[None, ...]
@@ -89,7 +90,7 @@ def load_img_tensor(img_path, inf_shape_max, device, dtype):
 
 def extract_disk_features(image, extractor, debug=False):
     with torch.no_grad():
-        features = extractor(image, n = 5000, 
+        features = extractor(image, n = 2048, 
             score_threshold = 0.0, 
             window_size = 1, 
             pad_if_not_divisible=True)
@@ -134,10 +135,10 @@ def estimate_two_view_geometry(correspondences, cam_prior_i, cam_prior_j):
     options.ransac_type = pt.sfm.RansacType(0) 
     options.use_lo = True # Local Optimization
     options.use_mle = True 
-    options.max_sampson_error_pixels = 1.5
+    options.max_sampson_error_pixels = 1.0
     options.expected_ransac_confidence = 0.999
     options.max_ransac_iterations = 5000
-    options.min_ransac_iterations = 1000
+    options.min_ransac_iterations = 10
 
     success, two_view_info, inliers = pt.sfm.EstimateTwoViewInfo(
         options, cam_prior_i, cam_prior_j, correspondences)
@@ -152,8 +153,6 @@ def match_image_pair(
     cam_prior_i, cam_prior_j, min_conf, device):
 
     with torch.no_grad():
-
-        #start = time.perf_counter()
         scores, matches = matcher(
             lafs1 = torch.from_numpy(f_i["lafs"]).to(device),
             lafs2 = torch.from_numpy(f_j["lafs"]).to(device),
@@ -161,13 +160,11 @@ def match_image_pair(
             desc2 = torch.from_numpy(f_j["descriptors"]).to(device).squeeze(0),
             hw1 = torch.tensor(image_i.shape[2:]).to(device),
             hw2 = torch.tensor(image_j.shape[2:]).to(device))
-        #end = time.perf_counter()
-        #print("Matching took {}s".format((end-start)))
         torch.cuda.empty_cache()
 
     # create match indices
     if matches.shape[0] < MIN_INLIER_MATCHES:
-        print('Number of putative matches too low!')
+        # print('Number of putative matches too low!')
         return False, None, None
 
     kpts0 = kornia.feature.get_laf_center(f_i["lafs"])[0] * scale_i
@@ -192,7 +189,7 @@ def match_image_pair(
         return False, None, None
 
     if len(inliers) < MIN_INLIER_MATCHES or not success:
-        print('Number of putative matches after geometric verification are too low!')
+        # print('Number of putative matches after geometric verification are too low!')
         return False, None, None
     else:
         return True, two_view_info, inlier_correspondences
@@ -201,23 +198,23 @@ def match_image_pair(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for sfm pipeline')
     parser.add_argument('--image_path', 
-                        default="", 
+                        default="/home/steffen/Data/GaussianSplatting/baum_portrait/images", 
                         type=str)
     parser.add_argument('--reconstruction_type', type=str, default='incremental', 
                         help='reconstruction type: global, incremental or hybrid')
     parser.add_argument('--img_ext', default='jpg')
     parser.add_argument('--debug', type=int, default=0)
-    parser.add_argument('--temporal_match_window', type=int, default=3) # for video sequences, if 0 no temporal window
-    parser.add_argument('--place_recog_window_size', type=int, default=5)
+    parser.add_argument('--temporal_match_window', type=int, default=4) # for video sequences, if 0 no temporal window
+    parser.add_argument('--place_recog_window_size', type=int, default=3)
     parser.add_argument('--camera_model', type=str, default='PINHOLE', 
                         choices=['PINHOLE', 'PINHOLE_RADIAL_TANGENTIAL', 'DIVISION_UNDISTORTION'])
     parser.add_argument('--shared_intrinsics', action='store_true', default=True, help='same intrinsics for all views')
     parser.add_argument('--approx_fov', type=float, default=-1.0, help='approximate field of view of the camera')
-    parser.add_argument('--focal_length', type=float, default=-1.0, help='focal length of the camera')
+    parser.add_argument('--focal_length', type=float, default=1350, help='focal length of the camera')
     parser.add_argument('--feature_type', type=str, default="disk", choices=["sift", "disk"])
-    parser.add_argument('--export_nerfstudio_json', type=str, default="", help="Export nerfstudio data.")
+    parser.add_argument('--export_nerfstudio_json', type=str, default="trafo.json", help="Export nerfstudio data.")
     parser.add_argument('--export_sfm_depth', action="store_true", default=True)
-    parser.add_argument('--average_scene_depth_mm', default=1000, help="Specify an average scene depth if you know it.")
+    parser.add_argument('--average_scene_depth_m', default=1, type=float, help="Specify an average scene depth if you know it.")
     args = parser.parse_args()
     reconstructiontype = args.reconstruction_type
 
@@ -247,7 +244,7 @@ if __name__ == "__main__":
     image_names = natsort.natsorted([os.path.split(f)[1] for f in images_files])
 
     # check the size of one image
-    inf_shape_max = 1920
+    inf_shape_max = 960
     img_data = {"names": [], "data": [], 
                 "original_shapes": [], "inference_shapes": [],
                 "feat_vec": [], "feats" : []}
@@ -275,7 +272,6 @@ if __name__ == "__main__":
             prior.focal_length.value = [focal_ratio * max(original_img_shape)]
         else:
             print("WARNING: You did not set any focal length or FOV. Will try using fundamental matrix to estimate the focal length.")
-        print("Initializing focal length to {}".format(prior.focal_length.value[0]))
               
         prior.principal_point.value = [original_img_shape[0]/2, original_img_shape[1]/2]
         prior.aspect_ratio.value = [1.0]
@@ -348,7 +344,6 @@ if __name__ == "__main__":
             scale_i, scale_j,
             matcher, prior, prior, 0.8, device)
 
-
         if success:
             view_id1 = recon.ViewIdFromName(img_data["names"][vi])
             view_id2 = recon.ViewIdFromName(img_data["names"][vj])
@@ -378,9 +373,9 @@ if __name__ == "__main__":
     options = pt.sfm.ReconstructionEstimatorOptions()
     options.num_threads = 10
     options.rotation_filtering_max_difference_degrees = 15.0
-    options.bundle_adjustment_robust_loss_width = 0.004 * max(original_img_shape)
+    options.bundle_adjustment_robust_loss_width = 0.003 * max(original_img_shape)
     options.bundle_adjustment_loss_function_type = pt.sfm.LossFunctionType(1)
-    options.subsample_tracks_for_bundle_adjustment = False
+    options.subsample_tracks_for_bundle_adjustment = True
     options.filter_relative_translations_with_1dsfm = True
     options.min_triangulation_angle_degrees = 2.0
     options.num_retriangulation_iterations = 2
@@ -449,39 +444,39 @@ if __name__ == "__main__":
             os.makedirs(depth_img_path, exist_ok=True)
 
             med_scene_depth = median_scene_depth_in_view(recon, 0)
-            scale_rec_to_mm = args.average_scene_depth_mm / med_scene_depth
+            scale_rec_to_mm = args.average_scene_depth_m / med_scene_depth
+            print("Scaling reconstruction with factor {:3f}".format(scale_rec_to_mm))
             
             # now create depth images
+            print("Creating depth images. Will take some time...")
             for vid in recon.ViewIds():
                 W, H = original_img_shape
                 sfm_depth = np.zeros((H, W), dtype=np.float32)
 
-                view_names = []
-                for vid in recon.ViewIds():
-                    view = recon.View(vid)
-                    if not view.IsEstimated():
+                view = recon.View(vid)
+                if not view.IsEstimated():
+                    continue
+
+                for tid in view.TrackIds():
+                    if not recon.Track(tid).IsEstimated():
                         continue
+                    depth, rep_pt2 = view.Camera().ProjectPoint(recon.Track(tid).Point())
 
-                    for tid in view.TrackIds():
-                        if not recon.Track(tid).IsEstimated():
-                            continue
-                        depth, rep_pt2 = view.Camera().ProjectPoint(recon.Track(tid).Point())
+                    u, v = int(rep_pt2[0]), int(rep_pt2[1])
 
-                        u, v = int(rep_pt2[0]), int(rep_pt2[1])
+                    depth *= scale_rec_to_mm
+                    if 0 <= v < W and 0 <= u <= H and depth > 0 and depth > 0.001 and depth < 10000:
+                        sfm_depth[v, u] = depth
+                depth_img_name = view.Name().split(".")[0] + ".png"
+                depth_file_path = os.path.join(depth_img_path, depth_img_name)
+                cv2.imwrite(depth_file_path, sfm_depth.astype(np.uint16))
 
-                        depth *= scale_rec_to_mm
-                        if 0 <= v < W and 0 <= u <= H and depth > 0 and depth > 0.001 and depth < 10000:
-                            sfm_depth[v, u] = depth
-                    depth_img_name = view.Name().split(".")[0] + ".png"
-                    depth_file_path = os.path.join(depth_img_path, depth_img_name)
-                    cv2.imwrite(depth_file_path, sfm_depth.astype(np.uint16))
-
-                    frame_idx_in_json = find_img_name_idx_in_transforms(transforms, view.Name())
-                    transforms["frames"][frame_idx_in_json]["depth_file_path"] = depth_file_path
-                    transform_matrix = np.array(transforms["frames"][frame_idx_in_json]["transform_matrix"])
-                    transform_matrix[:3,3] *= scale_rec_to_mm
-                    transforms["frames"][frame_idx_in_json]["transform_matrix"] = transform_matrix.tolist()
-                    
+                frame_idx_in_json = find_img_name_idx_in_transforms(transforms, view.Name())
+                # transforms["frames"][frame_idx_in_json]["depth_file_path"] = depth_file_path
+                transform_matrix = np.array(transforms["frames"][frame_idx_in_json]["transform_matrix"])
+                transform_matrix[:3,3] = transform_matrix[:3,3]*scale_rec_to_mm
+                transforms["frames"][frame_idx_in_json]["transform_matrix"] = transform_matrix.tolist()
+                
             with open(args.export_nerfstudio_json, "w") as f:
                 json.dump(transforms, f, indent=4)
 
