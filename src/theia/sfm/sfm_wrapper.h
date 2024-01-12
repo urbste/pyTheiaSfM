@@ -52,4 +52,15 @@ std::unordered_set<ViewId> GetEstimatedViewsFromReconstructionWrapper(
 std::unordered_set<TrackId> GetEstimatedTracksFromReconstructionWrapper(
     const Reconstruction& reconstruction);
 
+Eigen::Vector4d FindUndistortedImageBoundaryWrapper(
+    const Camera& distorted_camera,
+    const Camera& undistorted_camera);
+
+std::vector<std::vector<Eigen::Vector2f>> ComputeUndistortionMap(
+    const Camera& distorted_camera,
+    const Camera& undistorted_camera);
+
+Camera UndistortCameraWrapper(const Camera& distored_camera,
+  const bool scale_intr_to_new_image_bounds);
+
 }  // namespace theia

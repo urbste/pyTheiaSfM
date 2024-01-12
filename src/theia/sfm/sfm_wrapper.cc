@@ -71,4 +71,41 @@ std::unordered_set<TrackId> GetEstimatedTracksFromReconstructionWrapper(
   return estimated_tracks;
 }
 
+std::vector<std::vector<Eigen::Vector2f>> ComputeUndistortionMap(
+    const Camera& distorted_camera,
+    const Camera& undistorted_camera) {
+
+  const int width = undistorted_camera.ImageWidth();
+  const int height = undistorted_camera.ImageHeight();
+  std::vector<std::vector<Eigen::Vector2f>> map(
+    height, std::vector<Eigen::Vector2f>(width));
+
+  const CameraIntrinsicsModel& undistorted_intrinsics =
+      *undistorted_camera.CameraIntrinsics();
+  const CameraIntrinsicsModel& distorted_intrinsics =
+      *distorted_camera.CameraIntrinsics();
+
+  for (int y = 0; y < height; ++y) {
+    for (int x = 0; x < width; ++x) {
+      const Eigen::Vector2d image_point(x, y);
+      const Eigen::Vector3d undistorted_point =
+        undistorted_intrinsics.ImageToCameraCoordinates(image_point);
+      const Eigen::Vector2d distorted_pixel =
+         distorted_intrinsics.CameraToImageCoordinates(undistorted_point);
+         
+      map[y][x] = Eigen::Vector2f(distorted_pixel.x(), distorted_pixel.y());
+    }
+  }
+
+  return map;
+}
+
+Camera UndistortCameraWrapper(const Camera& distorted_camera,
+  const bool scale_intr_to_new_image_bounds) {
+  Camera undistorted_camera;
+  UndistortCamera(distorted_camera, 
+    scale_intr_to_new_image_bounds, &undistorted_camera);
+  return undistorted_camera;
+}
+
 }  // namespace theia

@@ -465,7 +465,7 @@ if __name__ == "__main__":
                     u, v = int(rep_pt2[0]), int(rep_pt2[1])
 
                     depth *= scale_rec_to_mm
-                    if 0 <= v < W and 0 <= u <= H and depth > 0 and depth > 0.001 and depth < 10000:
+                    if 0 <= v < H and 0 <= u < W and depth > 0 and depth > 0.001 and depth < 10000:
                         sfm_depth[v, u] = depth
                 depth_img_name = view.Name().split(".")[0] + ".png"
                 depth_file_path = os.path.join(depth_img_path, depth_img_name)

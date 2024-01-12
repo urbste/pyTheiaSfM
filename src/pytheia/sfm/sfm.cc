@@ -817,12 +817,11 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("SetOutlierTracksToUnestimated",
         theia::SetOutlierTracksToUnestimatedWrapper);
   m.def("SetCameraIntrinsicsFromPriors", theia::SetCameraIntrinsicsFromPriors);
-  // m.def("UndistortImage", theia::UndistortImageWrapper);
-  // m.def("UndistortCamera", theia::UndistortCameraWrapper);
-  // m.def("UndistortReconstruction", theia::UndistortReconstructionWrapper);
+  m.def("UndistortReconstruction", theia::UndistortReconstruction);
+  m.def("UndistortCamera", theia::UndistortCameraWrapper);
+  m.def("ComputeUndistortionMap", theia::ComputeUndistortionMap);
   m.def("FindCommonViewsByName", theia::FindCommonViewsByName);
   m.def("FindCommonTracksInViews", theia::FindCommonTracksInViews);
-
   m.def("RemoveDisconnectedViewPairs", theia::RemoveDisconnectedViewPairs);
 
   // View class
@@ -901,19 +900,7 @@ void pytheia_sfm_classes(py::module& m) {
                          final_max_reprojection_error)
 
       ;
-
-  /*
-    // KeypointsAndDescriptors
-    py::class_<theia::KeypointsAndDescriptors>(m, "KeypointsAndDescriptors")
-      .def(py::init<>())
-      .def_readwrite("image_name", &theia::KeypointsAndDescriptors::image_name)
-      .def_readwrite("keypoints", &theia::KeypointsAndDescriptors::keypoints)
-      .def_readwrite("descriptors",
-    &theia::KeypointsAndDescriptors::descriptors)
-    ;
-
-    */
-
+      
   // TwoViewMatchGeometricVerification
   py::class_<theia::TwoViewMatchGeometricVerification>(
       m, "TwoViewMatchGeometricVerification")

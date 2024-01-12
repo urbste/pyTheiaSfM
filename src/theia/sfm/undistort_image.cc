@@ -38,7 +38,6 @@
 #include <algorithm>
 #include <limits>
 
-#include "theia/image/image.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/camera_intrinsics_model.h"
 #include "theia/sfm/camera/division_undistortion_camera_model.h"
@@ -88,6 +87,21 @@ void SetLensDistortionToZero(Camera* camera) {
       LOG(FATAL) << "Invalid camera intrinsics type.";
       break;
   }
+}
+
+// create pinhole camera model
+void CreatePinholeCameraModel(const Camera& distorted_camera,
+                              Camera* undistorted_camera) {
+  undistorted_camera->SetCameraIntrinsicsModelType(
+    CameraIntrinsicsModelType::PINHOLE);
+
+  undistorted_camera->SetImageSize(distorted_camera.ImageWidth(),
+                                   distorted_camera.ImageHeight());
+  undistorted_camera->SetFocalLength(distorted_camera.FocalLength());
+  undistorted_camera->SetPrincipalPoint(distorted_camera.PrincipalPointX(),
+                                        distorted_camera.PrincipalPointY());
+  double* intrinsics = undistorted_camera->mutable_intrinsics(); 
+  intrinsics[PinholeCameraModel::ASPECT_RATIO] = 1.0;
 }
 
 // We seek a mapping from undistorted pixels to distorted pixels such that a
@@ -149,73 +163,78 @@ void FindUndistortedImageBoundary(const Camera& distorted_camera,
   *bounds = Eigen::Vector4d(left_max_x, right_min_x, top_max_y, bottom_min_y);
 }
 
-// Create an undistorted image from the distorted image given the distorted and
-// undistorted camera parameters. This function only maps the pixels to create
-// the undistorted image and assumes the camera parameters and image sizes have
-// already been solved for.
-void RemoveImageLensDistortion(const Camera& distorted_camera,
-                               const FloatImage& distorted_image,
-                               const Camera& undistorted_camera,
-                               FloatImage* undistorted_image) {
-  const CameraIntrinsicsModel& distorted_intrinsics =
-      *distorted_camera.CameraIntrinsics();
-  const CameraIntrinsicsModel& undistorted_intrinsics =
-      *undistorted_camera.CameraIntrinsics();
+// // Create an undistorted image from the distorted image given the distorted and
+// // undistorted camera parameters. This function only maps the pixels to create
+// // the undistorted image and assumes the camera parameters and image sizes have
+// // already been solved for.
+// void RemoveImageLensDistortion(const Camera& distorted_camera,
+//                                const FloatImage& distorted_image,
+//                                const Camera& undistorted_camera,
+//                                FloatImage* undistorted_image) {
+//   const CameraIntrinsicsModel& distorted_intrinsics =
+//       *distorted_camera.CameraIntrinsics();
+//   const CameraIntrinsicsModel& undistorted_intrinsics =
+//       *undistorted_camera.CameraIntrinsics();
 
-  // For each pixel in the undistorted image, find the coordinate in the
-  // distorted image and set the pixel color accordingly.
-  const int num_channels = distorted_image.Channels();
-  oiio::ImageBuf& undistorted_img = undistorted_image->GetOpenImageIOImageBuf();
-  oiio::ImageBuf::Iterator<float> undistorted_it(undistorted_img);
-  for (; !undistorted_it.done(); ++undistorted_it) {
-    Eigen::Vector2d image_point(undistorted_it.x() + 0.5,
-                                undistorted_it.y() + 0.5);
+//   // For each pixel in the undistorted image, find the coordinate in the
+//   // distorted image and set the pixel color accordingly.
+//   const int num_channels = distorted_image.Channels();
+//   oiio::ImageBuf& undistorted_img = undistorted_image->GetOpenImageIOImageBuf();
+//   oiio::ImageBuf::Iterator<float> undistorted_it(undistorted_img);
+//   for (; !undistorted_it.done(); ++undistorted_it) {
+//     Eigen::Vector2d image_point(undistorted_it.x() + 0.5,
+//                                 undistorted_it.y() + 0.5);
 
-    // Camera models assume that the upper left pixel center is (0.5, 0.5).
-    const Eigen::Vector3d distorted_point =
-        undistorted_intrinsics.ImageToCameraCoordinates(image_point);
-    const Eigen::Vector2d distorted_pixel =
-        distorted_intrinsics.CameraToImageCoordinates(distorted_point);
-    const Eigen::Vector2d pixel(std::round<int>(distorted_pixel.x() - 0.5),
-                                std::round<int>(distorted_pixel.y() - 0.5));
-    // Set all color channels appropriately. Note that we do not need to check
-    // if the distorted pixel is within the image bounds since the
-    // FindUndistortedImageBoundary function has guaranteed that all pixels will
-    // be within the image borders.
-    for (int c = 0; c < num_channels; c++) {
-      undistorted_it[c] = distorted_image.BilinearInterpolate(
-          distorted_pixel.x(), distorted_pixel.y(), c);
-    }
-  }
-}
+//     // Camera models assume that the upper left pixel center is (0.5, 0.5).
+//     const Eigen::Vector3d distorted_point =
+//         undistorted_intrinsics.ImageToCameraCoordinates(image_point);
+//     const Eigen::Vector2d distorted_pixel =
+//         distorted_intrinsics.CameraToImageCoordinates(distorted_point);
+//     const Eigen::Vector2d pixel(std::round<int>(distorted_pixel.x() - 0.5),
+//                                 std::round<int>(distorted_pixel.y() - 0.5));
+//     // Set all color channels appropriately. Note that we do not need to check
+//     // if the distorted pixel is within the image bounds since the
+//     // FindUndistortedImageBoundary function has guaranteed that all pixels will
+//     // be within the image borders.
+//     for (int c = 0; c < num_channels; c++) {
+//       undistorted_it[c] = distorted_image.BilinearInterpolate(
+//           distorted_pixel.x(), distorted_pixel.y(), c);
+//     }
+//   }
+// }
 
 }  // namespace
 
-bool UndistortImage(const Camera& distorted_camera,
-                    const FloatImage& distorted_image,
-                    const Camera& undistorted_camera,
-                    FloatImage* undistorted_image) {
-  // Undistort the image.
-  if (distorted_image.Channels() == 1) {
-    undistorted_image->ConvertToGrayscaleImage();
-  } else {
-    undistorted_image->ConvertToRGBImage();
-  }
-  undistorted_image->Resize(undistorted_camera.ImageWidth(),
-                            undistorted_camera.ImageHeight());
+// bool UndistortImage(const Camera& distorted_camera,
+//                     const FloatImage& distorted_image,
+//                     const Camera& undistorted_camera,
+//                     FloatImage* undistorted_image) {
+//   // Undistort the image.
+//   if (distorted_image.Channels() == 1) {
+//     undistorted_image->ConvertToGrayscaleImage();
+//   } else {
+//     undistorted_image->ConvertToRGBImage();
+//   }
+//   undistorted_image->Resize(undistorted_camera.ImageWidth(),
+//                             undistorted_camera.ImageHeight());
 
-  // Remap the distorted pixels into the undistorted image.
-  RemoveImageLensDistortion(
-      distorted_camera, distorted_image, undistorted_camera, undistorted_image);
+//   // Remap the distorted pixels into the undistorted image.
+//   RemoveImageLensDistortion(
+//       distorted_camera, distorted_image, undistorted_camera, undistorted_image);
 
-  return true;
-}
+//   return true;
+// }
 
 // Create the undistorted camera by removing radial distortion parameters.
 bool UndistortCamera(const Camera& distorted_camera,
+                     const bool scale_intr_to_new_image_bounds,
                      Camera* undistorted_camera) {
   *undistorted_camera = distorted_camera;
-  SetLensDistortionToZero(undistorted_camera);
+  CreatePinholeCameraModel(distorted_camera, undistorted_camera);
+
+  if (!scale_intr_to_new_image_bounds) {
+    return true;
+  }
 
   Eigen::Vector4d undistorted_image_boundaries;
   FindUndistortedImageBoundary(
@@ -258,7 +277,8 @@ bool UndistortCamera(const Camera& distorted_camera,
   return true;
 }
 
-bool UndistortReconstruction(Reconstruction* reconstruction) {
+bool UndistortReconstruction(const bool scale_intr_to_new_image_bounds,
+                             Reconstruction* reconstruction) {
   const auto view_ids = reconstruction->ViewIds();
   for (const ViewId view_id : view_ids) {
     View* view = reconstruction->MutableView(view_id);
@@ -269,7 +289,8 @@ bool UndistortReconstruction(Reconstruction* reconstruction) {
     // Undistort the image to obtain the undistorted camera.
     const Camera distorted_camera = view->Camera();
     Camera* undistorted_camera = view->MutableCamera();
-    if (!UndistortCamera(distorted_camera, undistorted_camera)) {
+    if (!UndistortCamera(distorted_camera, 
+      scale_intr_to_new_image_bounds, undistorted_camera)) {
       return false;
     }
 
@@ -291,7 +312,7 @@ bool UndistortReconstruction(Reconstruction* reconstruction) {
       // Get the undistorted feature.
       const Feature* distorted_feature = view->GetFeature(track_id);
       const Eigen::Vector3d distorted_point =
-          distorted_intrinsics.ImageToCameraCoordinates(*distorted_feature);
+          distorted_intrinsics.ImageToCameraCoordinates((*distorted_feature).point_);
       const Eigen::Vector2d undistorted_feature =
           undistorted_intrinsics.CameraToImageCoordinates(distorted_point);
 

@@ -38,7 +38,7 @@
 
 namespace theia {
 class Camera;
-class FloatImage;
+//class FloatImage;
 class Reconstruction;
 
 // Given an image with lens distortion distortion described by the camera
@@ -50,20 +50,23 @@ class Reconstruction;
 //
 // The implementation of this method was inspired by the library
 // COLMAP: https://colmap.github.io/
-bool UndistortImage(const Camera& distorted_camera,
-                    const FloatImage& distorted_image,
-                    const Camera& undistorted_camera,
-                    FloatImage* undistorted_image);
+// bool UndistortImage(const Camera& distorted_camera,
+//                     const FloatImage& distorted_image,
+//                     const Camera& undistorted_camera,
+//                     FloatImage* undistorted_image);
 
 // Create the undistorted camera by removing radial distortion parameters.
 bool UndistortCamera(const Camera& distorted_camera,
-                     std::shared_ptr<Camera> undistorted_camera);
+                     const bool scale_intr_to_new_image_bounds,
+                     Camera* undistorted_camera);
 
 // Undistorts the entire reconstruction. All features in all views are
 // undistorted, but only the features which would survive the crop of the
 // undistorted image (see description above) are kept. This will modify the
 // reconstruction in place and potentially remove observations or tracks.
-bool UndistortReconstruction(Reconstruction* reconstruction);
+bool UndistortReconstruction(
+    const bool scale_intr_to_new_image_bounds,
+    Reconstruction* reconstruction);
 
 }  // namespace theia
 
