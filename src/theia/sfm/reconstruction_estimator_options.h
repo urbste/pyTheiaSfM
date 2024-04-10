@@ -44,6 +44,8 @@
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
 #include "theia/util/random.h"
+#include "theia/sfm/estimators/estimate_calibrated_absolute_pose.h"
+#include "src/theia/solvers/sample_consensus_estimator.h"
 
 namespace theia {
 
@@ -83,8 +85,8 @@ enum class GlobalPositionEstimatorType {
 
 // Track parametrization type:
 //   XYZW: 4D point --> optimization over homogeneous 4 vector
-//   XYZ_MANIFOLD: 4D point --> optimization over ceres::SphereManifold<4>()
-//   manifol INVERSE_DEPTH: optimization of track using inverse depth
+//   XYZ_MANIFOLD: 4D point --> optimization over ceres::SphereManifold<4>() 
+//   INVERSE_DEPTH: optimization of track using inverse depth
 //   parametrization
 enum class TrackParametrizationType {
   XYZW = 0,
@@ -127,6 +129,8 @@ struct ReconstructionEstimatorOptions {
   int ransac_min_iterations = 50;
   int ransac_max_iterations = 1000;
   bool ransac_use_mle = true;
+  bool ransac_use_lo = true;
+  int ransac_lo_start_iterations = 50;
 
   // --------------- Rotation Filtering Options --------------- //
 
@@ -324,6 +328,12 @@ struct ReconstructionEstimatorOptions {
   // track subsampling. If the view does not observe this many tracks, then all
   // tracks in the view are optimized.
   int min_num_optimized_tracks_per_view = 200;
+
+  // --------------- Reconstruction Localization Options --------------- //
+
+  // The PnP type that is used in the calibrated camera case
+  PnPType localization_pnp_type = PnPType::DLS;
+
 };
 
 }  // namespace theia

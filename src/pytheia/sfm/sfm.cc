@@ -799,7 +799,9 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::LocalizeViewToReconstructionOptions::ba_options)
       .def_readwrite(
           "min_num_inliers",
-          &theia::LocalizeViewToReconstructionOptions::min_num_inliers);
+          &theia::LocalizeViewToReconstructionOptions::min_num_inliers)
+      .def_readwrite("pnp_type",
+                     &theia::LocalizeViewToReconstructionOptions::pnp_type);
 
   m.def("EstimateTwoViewInfo", theia::EstimateTwoViewInfoWrapper);
   m.def("ColorizeReconstruction", theia::ColorizeReconstruction);
@@ -1121,7 +1123,6 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("reconstruction_estimator_options",
                      &theia::ReconstructionBuilderOptions::
                          reconstruction_estimator_options)
-
       .def_readwrite("features_and_matches_database_directory",
                      &theia::ReconstructionBuilderOptions::
                          features_and_matches_database_directory)
@@ -1235,6 +1236,10 @@ void pytheia_sfm_classes(py::module& m) {
           &theia::ReconstructionEstimatorOptions::ransac_max_iterations)
       .def_readwrite("ransac_use_mle",
                      &theia::ReconstructionEstimatorOptions::ransac_use_mle)
+      .def_readwrite("ransac_use_lo",
+                     &theia::ReconstructionEstimatorOptions::ransac_use_lo)
+      .def_readwrite("ransac_lo_start_iterations",
+                        &theia::ReconstructionEstimatorOptions::ransac_lo_start_iterations)
       .def_readwrite("rotation_filtering_max_difference_degrees",
                      &theia::ReconstructionEstimatorOptions::
                          rotation_filtering_max_difference_degrees)
@@ -1308,8 +1313,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("min_cameras_for_iterative_solver",
                      &theia::ReconstructionEstimatorOptions::
                          min_cameras_for_iterative_solver)
-      .def_readwrite(
-          "intrinsics_to_optimize",
+      .def_readwrite("intrinsics_to_optimize",
           &theia::ReconstructionEstimatorOptions::intrinsics_to_optimize)
       .def_readwrite("subsample_tracks_for_bundle_adjustment",
                      &theia::ReconstructionEstimatorOptions::
@@ -1323,10 +1327,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("min_num_optimized_tracks_per_view",
                      &theia::ReconstructionEstimatorOptions::
                          min_num_optimized_tracks_per_view)
-      .def_readwrite(
-          "track_parametrization_type",
-          &theia::ReconstructionEstimatorOptions::track_parametrization_type);
-
+      .def_readwrite("track_parametrization_type",
+          &theia::ReconstructionEstimatorOptions::track_parametrization_type)
+      .def_readwrite("localization_pnp_type",
+                     &theia::ReconstructionEstimatorOptions::localization_pnp_type);
   // Reconstruction class
   py::class_<theia::Reconstruction>(m, "Reconstruction")
       .def(py::init<>())

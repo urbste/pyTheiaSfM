@@ -46,6 +46,8 @@
 #include "theia/sfm/view.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/map_util.h"
+#include "theia/sfm/localize_view_to_reconstruction.h"
+
 
 namespace theia {
 class Reconstruction;
@@ -68,6 +70,9 @@ BundleAdjustmentOptions SetBundleAdjustmentOptions(
 // NOTE: This does not set the error threshold since that is application
 // specific. The caller must set this threshold.
 RansacParameters SetRansacParameters(
+    const ReconstructionEstimatorOptions& options);
+
+LocalizeViewToReconstructionOptions SetLocalizeViewToReconstructionOptions(
     const ReconstructionEstimatorOptions& options);
 
 // Collects the relative rotations for each view pair into a simple map.
