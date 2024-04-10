@@ -46,8 +46,6 @@
 #include "theia/sfm/view.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/map_util.h"
-#include "theia/sfm/localize_view_to_reconstruction.h"
-
 
 namespace theia {
 class Reconstruction;
