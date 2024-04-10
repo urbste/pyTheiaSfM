@@ -137,13 +137,13 @@ BundleAdjustmentOptions SetBundleAdjustmentOptions(
   }
 
   if (num_views >= options.min_cameras_for_iterative_solver) {
-    ba_options.linear_solver_type = ceres::CGNR;
+    ba_options.linear_solver_type = ceres::SPARSE_SCHUR;
     ba_options.preconditioner_type = ceres::JACOBI;
     // NOTE: this is an arbitrary scaling that was found to work well. It may
     // need to change depending on the application.
     ba_options.max_num_iterations *= 1.5;
   } else if (num_views >= kMinViewsForSparseSchur) {
-    ba_options.linear_solver_type = ceres::CGNR;
+    ba_options.linear_solver_type = ceres::SPARSE_SCHUR;
     ba_options.preconditioner_type = ceres::JACOBI;
   } else {
     ba_options.linear_solver_type = ceres::DENSE_SCHUR;
