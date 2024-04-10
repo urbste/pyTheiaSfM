@@ -192,7 +192,7 @@ bool EstimateCameraPose(const bool known_intrinsics,
     CalibratedAbsolutePose pose;
     if (EstimateCalibratedAbsolutePose(ransac_parameters,
                                        RansacType::RANSAC,
-                                       PnPType::KNEIP,
+                                       options.pnp_type,
                                        matches,
                                        &pose,
                                        summary)) {

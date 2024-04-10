@@ -135,6 +135,7 @@ HybridReconstructionEstimator::HybridReconstructionEstimator(
   localization_options_.ba_options.verbose = false;
   localization_options_.min_num_inliers =
       options_.min_num_absolute_pose_inliers;
+  localization_options_.pnp_type = options_.localization_pnp_type;
 
   num_optimized_views_ = 0;
 }
