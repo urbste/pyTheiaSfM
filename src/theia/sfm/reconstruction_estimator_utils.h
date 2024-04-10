@@ -72,9 +72,6 @@ BundleAdjustmentOptions SetBundleAdjustmentOptions(
 RansacParameters SetRansacParameters(
     const ReconstructionEstimatorOptions& options);
 
-LocalizeViewToReconstructionOptions SetLocalizeViewToReconstructionOptions(
-    const ReconstructionEstimatorOptions& options);
-
 // Collects the relative rotations for each view pair into a simple map.
 std::unordered_map<ViewIdPair, Eigen::Vector3d> RelativeRotationsFromViewGraph(
     const ViewGraph& view_graph);
