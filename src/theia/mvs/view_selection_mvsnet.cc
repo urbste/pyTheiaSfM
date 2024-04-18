@@ -39,13 +39,15 @@ namespace theia {
 double ComputeAngleBetweenRays(const Eigen::Vector3d& ci,
                                const Eigen::Vector3d& cj,
                                const Eigen::Vector3d& p) {
-  const Eigen::Vector3d ray1 = (p - ci).normalized();
-  const Eigen::Vector3d ray2 = (p - cj).normalized();
+  const Eigen::Vector3d ray1 = (ci - p).normalized();
+  const Eigen::Vector3d ray2 = (cj - p).normalized();
   const double cos_angle = ray1.dot(ray2);
   return 180. / M_PI * std::acos(cos_angle);
 }
 
-double ScoreFun(const double theta, const double theta0, const double sigma) {
+double ScoreFun(const double theta, const double theta0, const double sigma1, const double sigma2) {
+  const double sigma = (theta <= theta0) ? sigma1 : sigma2;
+
   return std::exp(-std::pow(theta - theta0, 2) / (2 * std::pow(sigma, 2)));
 }
 
@@ -98,12 +100,7 @@ ViewSelectionMVSNet(const Reconstruction& reconstruction,
         const auto track = reconstruction.Track(t_id);
         const Eigen::Vector3d p = track->Point().hnormalized();
         const double theta = ComputeAngleBetweenRays(ci, cj, p);
-
-        if (theta <= theta0) {
-          score += ScoreFun(theta, theta0, sigma1);
-        } else {
-          score += ScoreFun(theta, theta0, sigma2);
-        }
+        score += ScoreFun(theta, theta0, sigma1, sigma2);
       }
       all_view_scores[score] = view_j_id;
     }  // end loop over neighbors
