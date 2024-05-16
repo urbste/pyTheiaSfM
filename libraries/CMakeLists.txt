@@ -27,4 +27,10 @@ add_subdirectory(vlfeat)
 #add_subdirectory(visual_sfm)
 
 # Add pybind11 files.
+# only if python is enabled
+if (PYTHON_BUILD)
+message(STATUS "Building pybind11")
 add_subdirectory(pybind11)
+else()
+message(STATUS "Skipping pybind11")
+endif (PYTHON_BUILD)
