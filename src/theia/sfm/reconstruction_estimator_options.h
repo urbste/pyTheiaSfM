@@ -45,7 +45,7 @@
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
 #include "theia/util/random.h"
 #include "theia/sfm/estimators/estimate_calibrated_absolute_pose.h"
-#include "src/theia/solvers/sample_consensus_estimator.h"
+#include "theia/solvers/sample_consensus_estimator.h"
 
 namespace theia {
 
