@@ -258,6 +258,13 @@ If you have problems like **/lib/libstdc++.so.6: version `GLIBCXX_3.4.30' not fo
 conda install -c conda-forge libstdcxx-ng
 ```
 
+Another solution is to check the GLIBCXX versions. If the version that the library requires is installed, then we can create a symbolic link into the conda environment.
+```
+strings /usr/lib/x86_64-linux-gnu/libstdc++.so.6 | grep GLIBCXX
+# if the GLIBCXX version is available then do:
+ln -sf /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ${CONDA_PREFIX}/lib/libstdc++.so.6
+```
+
 ### With Docker
 The docker build will actually build manylinux wheels for Linux (Python 3.6-3.12).
 There are two ways to do that. One will clutter the source directory, but you will have the wheel file directly available (./wheelhouse/).
@@ -269,8 +276,8 @@ docker run --rm -e PYTHON_VERSION="cp39-cp39" -v `pwd`:/home urbste/pytheia_base
 
 The other one is cleaner but you will have to copy the wheels out of the docker container afterwards:
 ```bash
-docker build -t pytheia:0.1 .
-docker run -it pytheia:0.1
+docker build -t pytheia:1.0 .
+docker run -it pytheia:1.0
 ```
 Then all the wheels will be inside the container in the folder /home/wheelhouse.
 Open a second terminal and run

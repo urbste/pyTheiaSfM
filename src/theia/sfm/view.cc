@@ -135,6 +135,24 @@ void View::AddFeature(const TrackId track_id, const Feature& feature) {
   features_to_tracks_[feature] = track_id;
 }
 
+void View::UpdateFeature(const TrackId track_id, const Feature& feature) {
+    // Check if the track_id exists in features_
+    const auto old_feature = FindOrNull(features_, track_id);
+    
+    // Only proceed if the old feature exists
+    if (old_feature) {
+        // If the old feature is different from the new feature, update the mappings
+        if (*old_feature != feature) {
+            // Remove the old feature from features_to_tracks_
+            features_to_tracks_.erase(*old_feature);
+            // Update the feature for the track_id
+            features_[track_id] = feature;
+            // Insert the new feature into features_to_tracks_
+            features_to_tracks_[feature] = track_id;
+        }
+    }
+}
+
 bool View::RemoveFeature(const TrackId track_id) {
   const auto feature = FindOrNull(features_, track_id);
   if (feature) {

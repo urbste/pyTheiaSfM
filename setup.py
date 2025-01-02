@@ -52,7 +52,7 @@ def configure_c_extension():
 def build_c_extension():
     """Compile C extension."""
     print("Compiling extension...")
-    subprocess.check_call(['make', '-j5'], cwd='cmake_build')
+    subprocess.check_call(['make', '-j15'], cwd='cmake_build')
 
 
 def create_package():
@@ -65,7 +65,7 @@ create_package()
 
 setuptools.setup(
     name='pytheia',
-    version='0.2.3',
+    version='0.2.4',
     description='A performant Structure from Motion library for Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',

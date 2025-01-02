@@ -91,6 +91,11 @@ class Feature {
   bool operator==(const Feature& o) const {
     return point_.x() == o.point_.x() && point_.y() == o.point_.y();
   }
+  
+  // Define the inequality operator
+  bool operator!=(const Feature& o) const {
+    return !(*this == o); // Use the equality operator
+  }
 
   bool operator<(const Feature& o) const {
     return point_.x() < o.point_.x() ||

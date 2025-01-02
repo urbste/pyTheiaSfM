@@ -86,6 +86,8 @@ class View {
 
   void AddFeature(const TrackId track_id, const Feature& feature);
 
+  void UpdateFeature(const TrackId track_id, const Feature& feature);
+
   bool RemoveFeature(const TrackId track_id);
 
   double GetTimestamp() const;

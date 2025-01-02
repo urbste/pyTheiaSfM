@@ -71,4 +71,19 @@ std::unordered_set<TrackId> GetEstimatedTracksFromReconstructionWrapper(
   return estimated_tracks;
 }
 
+void AddFeatureCorrespondencesToTrackBuilderWrapper(
+    const ViewId view_id1,
+    const std::vector<Eigen::Vector2d>& features1,
+    const ViewId view_id2,
+    const std::vector<Eigen::Vector2d>& features2,
+    TrackBuilder& track_builder) {
+  CHECK_EQ(features1.size(), features2.size())
+      << "The number of features in each view must be the same.";
+  for (int i = 0; i < features1.size(); i++) {
+    Feature feature1(features1[i].x(), features1[i].y());
+    Feature feature2(features2[i].x(), features2[i].y());
+    track_builder.AddFeatureCorrespondence(view_id1, feature1, view_id2, feature2);
+  }
+}
+
 }  // namespace theia

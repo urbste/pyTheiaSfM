@@ -15,6 +15,7 @@
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
 #include "theia/sfm/undistort_image.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
+#include "theia/sfm/track_builder.h"
 
 namespace theia {
 
@@ -51,5 +52,13 @@ std::unordered_set<ViewId> GetEstimatedViewsFromReconstructionWrapper(
 // Outputs the TrackId of all estimated tracks in the reconstruction.
 std::unordered_set<TrackId> GetEstimatedTracksFromReconstructionWrapper(
     const Reconstruction& reconstruction);
+
+// Let's us fill the track builder with a vector of features.
+void AddFeatureCorrespondencesToTrackBuilderWrapper(
+    const ViewId view_id1,
+    const std::vector<Eigen::Vector2d>& features1,
+    const ViewId view_id2,
+    const std::vector<Eigen::Vector2d>& features2,
+    TrackBuilder& track_builder);
 
 }  // namespace theia

@@ -824,8 +824,8 @@ void pytheia_sfm_classes(py::module& m) {
   // m.def("UndistortReconstruction", theia::UndistortReconstructionWrapper);
   m.def("FindCommonViewsByName", theia::FindCommonViewsByName);
   m.def("FindCommonTracksInViews", theia::FindCommonTracksInViews);
-
   m.def("RemoveDisconnectedViewPairs", theia::RemoveDisconnectedViewPairs);
+  m.def("AddFeatureCorrespondencesToTrackBuilder", theia::AddFeatureCorrespondencesToTrackBuilderWrapper);
 
   // View class
   py::class_<theia::View>(m, "View")
@@ -836,9 +836,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def("SetIsEstimated", &theia::View::SetEstimated)
       .def("NumFeatures", &theia::View::NumFeatures)
       .def("AddFeature", &theia::View::AddFeature)
+      .def("UpdateFeature", &theia::View::UpdateFeature)
       .def("RemoveFeature", &theia::View::RemoveFeature)
       .def("TrackIds", &theia::View::TrackIds)
-      //.def_readwrite("focal_length", &theia::View::Track)
       .def("GetFeature",
            &theia::View::GetFeature,
            py::return_value_policy::reference)
