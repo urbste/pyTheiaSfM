@@ -61,4 +61,11 @@ void AddFeatureCorrespondencesToTrackBuilderWrapper(
     const std::vector<Eigen::Vector2d>& features2,
     TrackBuilder& track_builder);
 
+void UpdateFeaturesInViewWrapper(
+    const ViewId& view_id,
+    const std::vector<TrackId>& track_ids,
+    const std::vector<Eigen::Vector2d>& new_features,
+    const std::vector<Eigen::Matrix2d>& covariances,
+    Reconstruction& reconstruction);
+
 }  // namespace theia

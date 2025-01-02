@@ -86,4 +86,29 @@ void AddFeatureCorrespondencesToTrackBuilderWrapper(
   }
 }
 
+void UpdateFeaturesInViewWrapper(
+    const ViewId& view_id,
+    const std::vector<TrackId>& track_ids,
+    const std::vector<Eigen::Vector2d>& new_features,
+    const std::vector<Eigen::Matrix2d>& covariances,
+    Reconstruction& reconstruction) {
+    
+  const bool has_covariances = covariances.size() > 0;
+  if (has_covariances > 0) {
+    CHECK_EQ(new_features.size(), covariances.size())
+        << "The number of new features must be the same as the number of covariances.";
+  }
+
+  auto view = reconstruction.MutableView(view_id);
+
+  for (int i = 0; i < track_ids.size(); i++) {
+    const TrackId track_id = track_ids[i];
+    if (has_covariances) {
+      view->UpdateFeature(track_id, Feature(new_features[i], covariances[i]));
+    } else {
+      view->UpdateFeature(track_id, Feature(new_features[i]));
+    }
+  }
+}
+
 }  // namespace theia

@@ -85,19 +85,17 @@ class View {
   const TrackId GetTrack(const Feature& feature) const;
 
   void AddFeature(const TrackId track_id, const Feature& feature);
-
   void UpdateFeature(const TrackId track_id, const Feature& feature);
-
   bool RemoveFeature(const TrackId track_id);
 
   double GetTimestamp() const;
-
   void SetTimestamp(const double timestamp);
 
   void SetPositionPrior(const Eigen::Vector3d& position_prior,
                         const Eigen::Matrix3d& position_prior_information);
   Eigen::Vector3d GetPositionPrior() const;
   Eigen::Matrix3d GetPositionPriorSqrtInformation() const;
+
   bool HasPositionPrior() const;
 
   void SetGravityPrior(const Eigen::Vector3d& gravity_prior,
