@@ -42,7 +42,7 @@
 #include <ceres/rotation.h>
 
 #include <Sophus/sophus/se3.hpp>
-#include "sophus/sim3.hpp"
+#include <Sophus/sophus/sim3.hpp>
 
 namespace theia {
 

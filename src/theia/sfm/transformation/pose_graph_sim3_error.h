@@ -39,7 +39,7 @@
 #include <Eigen/Geometry>
 #include <vector>
 
-#include "sophus/sim3.hpp"
+#include <Sophus/sophus/sim3.hpp>
 
 namespace theia {
 
