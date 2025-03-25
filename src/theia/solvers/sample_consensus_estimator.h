@@ -41,6 +41,7 @@
 #include <limits>
 #include <memory>
 #include <vector>
+#include <iostream>
 
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/inlier_support.h"
@@ -181,7 +182,8 @@ class SampleConsensusEstimator {
   // ratio is the best with a probability corresponding to log_failure_prob.
   int ComputeMaxIterations(const double min_sample_size,
                            const double inlier_ratio,
-                           const double log_failure_prob) const;
+                           const double log_failure_prob,
+                           const int total_num_samples) const;
 
   // Get inlier datum points (for LO)
   void GetInlierDatum(const std::vector<Datum>& data,
@@ -234,11 +236,18 @@ template <class ModelEstimator>
 int SampleConsensusEstimator<ModelEstimator>::ComputeMaxIterations(
     const double min_sample_size,
     const double inlier_ratio,
-    const double log_failure_prob) const {
+    const double log_failure_prob,
+    const int total_num_samples) const {
   CHECK_GT(inlier_ratio, 0.0);
   if (inlier_ratio == 1.0) {
     return ransac_params_.min_iterations;
   }
+
+  // This includes a fix proposed in "Fixing the RANSAC Stopping Criterion"
+  // by J. Schoenberger et al. (2025) 
+
+  // Number of inliers.
+  const int ninl = static_cast<int>(inlier_ratio * total_num_samples);
 
   // If we use the T_{1,1} test, we have to adapt the number of samples
   // that needs to be generated accordingly since we use another
@@ -247,14 +256,24 @@ int SampleConsensusEstimator<ModelEstimator>::ComputeMaxIterations(
   const double num_samples =
       ransac_params_.use_Tdd_test ? min_sample_size + 1 : min_sample_size;
 
-  const double log_prob = log(1.0 - pow(inlier_ratio, num_samples)) -
-                          std::numeric_limits<double>::epsilon();
+  // Compute the probability of selecting 'samsiz' inliers in a row (without replacement).
+  double a = 1.0, b = 1.0;
+  for (int i = 0; i < num_samples; ++i) {
+    a *= ninl - i;
+    b *= total_num_samples - i;
+  }
+  const double prob_all_inliers = a / b;
 
-  // NOTE: For very low inlier ratios the number of iterations can actually
-  // exceed the maximum value for an int. We need to keep this variable as a
-  // double until we do the check below against the minimum and maximum number
-  // of iterations in the parameter settings.
-  const double num_iterations = log_failure_prob / log_prob;
+  // Handle degenerate cases.
+  if (prob_all_inliers < std::numeric_limits<double>::epsilon()) {
+    return ransac_params_.max_iterations;
+  }
+  if (prob_all_inliers >= 1.0 - std::numeric_limits<double>::epsilon()) {
+    return ransac_params_.min_iterations;
+  }
+
+  // Compute the required number of iterations.
+  const double num_iterations = log_failure_prob / log(1.0 - prob_all_inliers);
 
   return std::max(static_cast<double>(ransac_params_.min_iterations),
                   std::min(num_iterations,
@@ -288,7 +307,7 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
     max_iterations =
         std::min(ComputeMaxIterations(estimator_.SampleSize(),
                                       ransac_params_.min_inlier_ratio,
-                                      log_failure_prob),
+                                      log_failure_prob, data.size()),
                  ransac_params_.max_iterations);
   }
 
@@ -349,7 +368,7 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
         // case) so we only update the max iterations if the number decreases.
         max_iterations = std::min(
             ComputeMaxIterations(
-                estimator_.SampleSize(), inlier_ratio, log_failure_prob),
+                estimator_.SampleSize(), inlier_ratio, log_failure_prob, data.size()),
             max_iterations);
 
         VLOG(3) << "Inlier ratio = " << inlier_ratio
