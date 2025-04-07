@@ -48,7 +48,6 @@ function(create_resource_file file output)
 endfunction()
 
 create_resource_file("${PROJECT_SOURCE_DIR}/data/camera_sensor_database.txt" "${CMAKE_CURRENT_BINARY_DIR}/camera_sensor_database.h")
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Add headers
 file(GLOB_RECURSE THEIA_HDRS *.h)
@@ -271,18 +270,61 @@ else (PYTHON_BUILD)
       ${THEIA_HDRS})
 endif (PYTHON_BUILD)
 
+# Target definition and linking
 add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
-if (WITH_ROCKSDB)
-    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES} ${ROCKSDB_LIBRARIES})
-else (WITH_ROCKSDB)
-    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES})
-endif (WITH_ROCKSDB)
 
+# Add include directories to the target
+target_include_directories(${CMAKE_PROJECT_NAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> # For headers within the src dir
+    $<INSTALL_INTERFACE:include/theia> # Public install interface
+  PRIVATE
+    # Internal includes needed for compiling the library itself
+    ${CMAKE_SOURCE_DIR}/libraries/stlplus3
+    ${CMAKE_SOURCE_DIR}/libraries/vlfeat
+    ${CMAKE_SOURCE_DIR}/libraries/statx
+    ${CMAKE_SOURCE_DIR}/libraries/optimo
+    ${CMAKE_SOURCE_DIR}/libraries/spectra
+    ${CMAKE_SOURCE_DIR}/libraries/Sophus
+    ${CMAKE_SOURCE_DIR}/libraries/cereal/include
+    ${CMAKE_SOURCE_DIR}/libraries/akaze
+    ${CMAKE_SOURCE_DIR}/libraries/flann/src/cpp
+    ${CMAKE_SOURCE_DIR}/libraries/gtest/include # If gtest headers used internally
+    ${CMAKE_SOURCE_DIR}/libraries/pybind11/include # If pybind11 headers used internally
+    # Add include dirs from find_package results
+    ${GFLAGS_INCLUDE_DIR}
+    ${GLOG_INCLUDE_DIR}
+    ${ROCKSDB_INCLUDE_DIRS} # Add if RocksDB is found and needed directly
+  SYSTEM INTERFACE # Propagate system include property for Eigen
+    ${EIGEN_INCLUDE_DIRS}
+)
+
+# Link libraries using variables instead of imported targets
+target_link_libraries(${CMAKE_PROJECT_NAME}
+  PUBLIC
+    # Libraries needed by users of theia
+    Eigen3::Eigen # Eigen is likely part of the public API
+    ${GFLAGS_LIBRARIES} # Use variable instead of gflags::gflags
+    ${GLOG_LIBRARIES}   # Use variable instead of glog::glog
+  PRIVATE
+    # Libraries only needed to build theia itself
+    # Link bundled libraries (assuming they are built as targets)
+    flann_cpp_s # Assuming this is the static flann target name from libraries/flann/src/cpp/CMakeLists.txt
+    statx       # Assuming this is the target name from libraries/statx/CMakeLists.txt
+    stlplus3    # Assuming this is the target name from libraries/stlplus3/CMakeLists.txt
+    vlfeat      # Assuming this is the target name from libraries/vlfeat/CMakeLists.txt
+    # Link other private dependencies
+    ${CMAKE_THREAD_LIBS_INIT} # Use variable instead of Threads::Threads
+    ${ROCKSDB_LIBRARIES} # Link RocksDB if WITH_ROCKSDB is ON
+)
+
+# Set target properties (versioning)
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
   VERSION ${THEIA_VERSION}
   SOVERSION ${THEIA_VERSION_MAJOR}
-  )
+)
 
+# Install target
 install(TARGETS ${CMAKE_PROJECT_NAME}
   EXPORT  TheiaExport
   RUNTIME DESTINATION bin
@@ -296,9 +338,10 @@ if (BUILD_TESTING)
     list(GET TEST_NAME_LIST 0 TEST_NAME)
     add_executable(${TEST_NAME}_test test/test_main.cc ${FILENAME}_test.cc)
     target_link_libraries(${TEST_NAME}_test
-      gtest
+      PRIVATE
       ${CMAKE_PROJECT_NAME}
-      ${THEIA_LIBRARY_DEPENDENCIES})
+      GTest::gtest_main
+      )
     add_test(NAME ${TEST_NAME}_test
       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TEST_NAME}_test)
   endmacro (GTEST)

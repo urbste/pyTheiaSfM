@@ -58,6 +58,11 @@ def build_c_extension():
 def create_package():
     files = glob('cmake_build/lib/pytheia*')
     subprocess.run(['cp'] + files + ['src/pytheia'])
+    
+    # Copy stub files to the right location for distribution
+    os.makedirs('src/pytheia/stubs', exist_ok=True)
+    subprocess.run(['cp', '-r', 'src/pytheia/stubs/pytheia', 'src/pytheia'])
+
 
 configure_c_extension()
 build_c_extension()
@@ -65,16 +70,13 @@ create_package()
 
 setuptools.setup(
     name='pytheia',
-    version='0.2.6',
+    version='0.2.7',
     description='A performant Structure from Motion library for Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/urbste/pyTheiaSfM.git',
-    # project_urls={
-    #     "Documentation": "http://theia-sfm.org/",
-    # },
-    author='Steffen Urban, Shengyu Yin',
-    author_email = "urbste@googlemail.com, shengyu952014@outlook.com",
+    author='Steffen Urban',
+    author_email = "urbste@googlemail.com",
     license='BSD',
     packages=setuptools.find_packages(where='src'),
     include_package_data=True,
@@ -85,12 +87,14 @@ setuptools.setup(
         'pytheia': [
             'pytheia.*',
             'libflann_cpp.*',
-            #'stubs/pytheia/pytheia/__init__.pyi',
-            #'stubs/pytheia/pytheia/io/__init__.pyi',
-            #'stubs/pytheia/pytheia/matching/__init__.pyi',
-            #'stubs/pytheia/pytheia/math/__init__.pyi',
-            #'stubs/pytheia/pytheia/sfm/__init__.pyi',
-            #'stubs/pytheia/pytheia/solvers/__init__.pyi',
+            'pytheia/__init__.pyi',
+            'pytheia/io/__init__.pyi',
+            'pytheia/matching/__init__.pyi',
+            'pytheia/math/__init__.pyi',
+            'pytheia/mvs/__init__.pyi',
+            'pytheia/sfm/__init__.pyi',
+            'pytheia/solvers/__init__.pyi',
+            'py.typed'  # Added py.typed marker to the existing list
         ]
     },
     cmdclass={'bdist_wheel': platform_bdist_wheel},

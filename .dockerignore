@@ -11,6 +11,8 @@ auditwheel/
 auditwheel-*
 pyelf*
 elftools*
+dist/
+*.egg-info/
 
 ### Cpp template
 # Compiled Object files
