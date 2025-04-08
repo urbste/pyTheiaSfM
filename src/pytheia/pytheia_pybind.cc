@@ -41,12 +41,70 @@
 #include "pytheia/sfm/sfm.h"
 #include "pytheia/solvers/solvers.h"
 
+#include <stdexcept>
+
 namespace pytheia {
 
-PYBIND11_MODULE(pytheia, m) {
-  m.doc() = "Python binding for TheiaSfM";
+// Convert C++ exceptions to Python
+static void TranslateExceptions(const std::exception& e) {
+  // Handle standard exceptions
+  if (dynamic_cast<const std::runtime_error*>(&e) != nullptr) {
+    PyErr_SetString(PyExc_RuntimeError, e.what());
+  }
+  else if (dynamic_cast<const std::invalid_argument*>(&e) != nullptr) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+  }
+  else if (dynamic_cast<const std::out_of_range*>(&e) != nullptr) {
+    PyErr_SetString(PyExc_IndexError, e.what());
+  }
+  else if (dynamic_cast<const std::domain_error*>(&e) != nullptr) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+  }
+  else {
+    // Default to RuntimeError for unknown exceptions
+    PyErr_SetString(PyExc_RuntimeError, e.what());
+  }
+}
 
-  // register all submodules here
+PYBIND11_MODULE(pytheia, m) {
+  // Register exception translator
+  py::register_exception_translator([](std::exception_ptr p) {
+    try {
+      if (p) std::rethrow_exception(p);
+    }
+    catch (const std::exception& e) {
+      TranslateExceptions(e);
+    }
+  });
+
+  m.doc() = R"pbdoc(
+    Python bindings for TheiaSfM library
+    -----------------------------------
+
+    .. currentmodule:: pytheia
+
+    This module provides Python bindings for TheiaSfM, a computer vision library for:
+    - Structure from Motion (SfM) 
+    - Multi-View Stereo (MVS)
+    - Feature Detection and Matching
+    - Geometric Vision and Camera Models
+    - Robust Optimization and Estimation
+
+    Submodules
+    ----------
+    io : Input/output operations for reconstructions and features
+    matching : Feature detection and matching utilities
+    math : Mathematical utilities and geometry operations
+    mvs : Multi-view stereo reconstruction
+    sfm : Structure from Motion pipeline and utilities  
+    solvers : Geometric vision solvers and estimators
+  )pbdoc";
+
+  // Module version info
+  m.attr("__version__") = "1.0.0";
+  m.attr("__author__") = "Steffen Urban";
+
+  // Register all submodules
   io::pytheia_io(m);
   matching::pytheia_matching(m);
   math::pytheia_math(m);

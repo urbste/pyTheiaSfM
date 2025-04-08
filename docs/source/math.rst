@@ -107,10 +107,10 @@ Theia implements many useful linear algebra methods including optimizations, fac
 .. class:: L1Solver
 
   We implement a robust :math:`L_1` solver that minimizes :math:`||Ax - b||_1`
-  under :math:`L_1` norm. This problem may be cast as a simple and efficient
-  linear program and solved with interior point methods. The interface is fairly
-  generic and may be used with sparse or dense matrices. An initial guess is
-  needed for :math:`x` to perform the minimization.
+  using the Alternating Direction Method of Multipliers (ADMM). This solver is particularly 
+  efficient as it only needs to factorize the system matrix once using Cholesky decomposition.
+  The solver converges quickly to good solutions in early iterations while subsequent iterations
+  refine the solution to achieve global optimality.
 
 .. member:: double L1Solver::Options::max_num_iterations
 
@@ -118,36 +118,72 @@ Theia implements many useful linear algebra methods including optimizations, fac
 
   The maximum number of iterations to perform before stopping.
 
+.. member:: double L1Solver::Options::rho
+
+  DEFAULT: ``1.0``
+  
+  The augmented Lagrangian parameter used in ADMM.
+
+.. member:: double L1Solver::Options::alpha
+
+  DEFAULT: ``1.0``
+  
+  Over-relaxation parameter (typically between 1.0 and 1.8).
+
+.. class:: QPSolver
+
+  Implements an efficient quadratic program solver that minimizes:
+  
+  .. math:: \frac{1}{2} x^T P x + q^T x + r
+  
+  subject to bound constraints :math:`lb \leq x \leq ub`. The solver uses ADMM which provides
+  fast convergence to good solutions while maintaining numerical stability through Cholesky
+  factorization of the system matrix.
+
+.. member:: QPSolver::Options::max_num_iterations
+
+  DEFAULT: ``1000``
+  
+  Maximum number of ADMM iterations.
+
+.. member:: QPSolver::Options::rho 
+
+  DEFAULT: ``1.0``
+  
+  Augmented Lagrangian parameter.
+
+.. member:: QPSolver::Options::alpha
+
+  DEFAULT: ``1.0``
+  
+  Over-relaxation parameter (typically between 1.0 and 1.8).
+
+Both solvers handle sparse matrices efficiently through specialized Cholesky factorization
+implementations. The matrix operations are built on top of the Eigen library providing
+both dense and sparse matrix support.
+
 .. code:: c++
 
+  // Example L1 solver usage
+  L1Solver::Options options;
   Eigen::MatrixXd A;
   Eigen::VectorXd b, x;
-  // Fill A and b with known values.
-
-  L1Solver::Options option;
+  // Fill A and b with known values
+  
   L1Solver<Eigen::MatrixXd> l1_solver(options, A);
   l1_solver.Solve(b, &x);
-  // x now contains the solution that minimizes ||Ax - b|| under L1 norm.
+  // x now contains the solution that minimizes ||Ax - b|| under L1 norm
 
-
-.. class:: DominantEigensolver
-
-  This class finds the dominant eigenvalue/eigenvector pair of a given matrix
-  using `power iterations <https://en.wikipedia.org/wiki/Power_iteration>`_. We
-  use a generic interface that utilizes the :class:`LinearOperator` class so
-  that the user may determine who the dominant eigenvalues are computed. For
-  instance, by passing the :class:`SparseInveseLULinearOperator` the
-  :class:`DominantEigensolver` performs inverse power iterations and thus the
-  smallest eigenvalue/eigenvector pair may be computed. This is useful for
-  recovering a null space vector.
-
-.. function:: void GaussJordan(Eigen::MatrixBase<Derived>* input, int max_rows = 99999)
-
-  Perform traditional Gauss-Jordan elimination on an Eigen3 matrix. If
-  ``max_rows`` is specified, it will on perform Gauss-Jordan on the first
-  ``max_rows`` number of rows. This is useful for problems where your system is
-  extremely overdetermined and you do not need all rows to be solved.
-
+  // Example QP solver usage  
+  QPSolver::Options qp_options;
+  Eigen::SparseMatrix<double> P;
+  Eigen::VectorXd q;
+  double r;
+  // Set up P, q, r
+  
+  QPSolver qp_solver(qp_options, P, q, r);
+  Eigen::VectorXd solution;
+  qp_solver.Solve(&solution);
 
 .. _section-sprt:
 

@@ -46,12 +46,13 @@
 namespace py = pybind11;
 using namespace py::literals;
 
-// PYBIND11_MAKE_OPAQUE(std::vector<int>);
-// PYBIND11_MAKE_OPAQUE(std::vector<int64_t>);
-// PYBIND11_MAKE_OPAQUE(std::vector<uint8_t>);
-// PYBIND11_MAKE_OPAQUE(std::vector<float>);
-// PYBIND11_MAKE_OPAQUE(std::vector<double>);
-// PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3d>);
-// PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3i>);
-// PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector2d>);
-// PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector2i>);
+// Enable opaque containers for better Python-side type safety and memory management
+PYBIND11_MAKE_OPAQUE(std::vector<int>);
+PYBIND11_MAKE_OPAQUE(std::vector<int64_t>); 
+PYBIND11_MAKE_OPAQUE(std::vector<uint8_t>);
+PYBIND11_MAKE_OPAQUE(std::vector<float>);
+PYBIND11_MAKE_OPAQUE(std::vector<double>);
+PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3d>);
+PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3i>);
+PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector2d>);
+PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector2i>);

@@ -466,9 +466,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("PixelToNormalizedCoordinates",
            &theia::Camera::PixelToNormalizedCoordinates)
       .def("PixelToUnitDepthRay", &theia::Camera::PixelToUnitDepthRay)
-      .def("ProjectPoint", &theia::Camera::ProjectPointWrapper)
-      //.def_readonly_static("kExtrinsicsSize", &theia::Camera::kExtrinsicsSize)
-      ;
+      .def("ProjectPoint", &theia::Camera::ProjectPointWrapper);
 
   // tested
   py::enum_<theia::CameraIntrinsicsModelType>(m, "CameraIntrinsicsModelType")
@@ -1401,10 +1399,9 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::Reconstruction::MutableTrack,
            py::return_value_policy::reference_internal)
       .def("GetViewsInCameraIntrinsicGroup",
-           &theia::Reconstruction::GetViewsInCameraIntrinsicGroup)
+           &theia::Reconstruction::GetViewsInCameraIntrinsicGroup);
       //.def("GetSubReconstruction",
-      //&theia::Reconstruction::GetSubReconstructionWrapper)
-      ;
+      //&theia::Reconstruction::GetSubReconstructionWrapper);
 
   // Reconstruction Estimator Helpers
   m.def("SetUnderconstrainedTracksToUnestimated",
@@ -1455,21 +1452,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def("AddEdge", &theia::ViewGraph::AddEdge)
       .def("RemoveEdge", &theia::ViewGraph::RemoveEdge)
       .def("NumViews", &theia::ViewGraph::NumViews)
-      .def("NumEdges", &theia::ViewGraph::NumEdges)
-      .def("GetNeighborIdsForView",
-           &theia::ViewGraph::GetNeighborIdsForView,
-           py::return_value_policy::reference)
-      .def("GetEdge",
-           &theia::ViewGraph::GetEdge,
-           py::return_value_policy::reference)
-      .def("GetAllEdges", &theia::ViewGraph::GetAllEdges)
-
-      // not sure pointer as input
-      //.def("ExtractSubgraph", &theia::ViewGraph::ExtractSubgraph)
-      //.def("GetLargestConnectedComponentIds",
-      //&theia::ViewGraph::GetLargestConnectedComponentIds)
-
-      ;
+      .def("NumEdges", &theia::ViewGraph::NumEdges) 
+      .def("GetEdge", &theia::ViewGraph::GetEdge)
+      .def("GetAllEdges", &theia::ViewGraph::GetAllEdges);
 
   // GPS converter
   py::class_<theia::GPSConverter>(m, "GPSConverter")

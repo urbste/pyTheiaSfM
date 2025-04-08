@@ -21,9 +21,20 @@ The following RANSAC methods are implemented in Theia:
 
 * :class:`Ransac`
 * :class:`Prosac`
-* :class:`Arrsac`
+* :class:`ExhaustiveRansac`
 * :class:`Evsac`
 * :class:`LMed`
+
+You can select which RANSAC variant to use through the RansacType enum:
+
+.. code-block:: c++
+
+   enum class RansacType { 
+       RANSAC = 0, 
+       PROSAC = 1, 
+       LMED = 2, 
+       EXHAUSTIVE = 3 
+   };
 
 :class:`Estimator`
 ==================
@@ -276,31 +287,29 @@ constructor. The constructors for each method are specified as follows
     by quality! That is, that the highest quality data point is first, and the
     worst quality data point is last in the input vector.
 
-.. class:: Arrsac
+.. class:: ExhaustiveRansac
 
-  Adaptive Real-Time Consensus is a method proposed by [Raguram]_ that utilizes
-  pre-emptive techniques to perform a partially depth-first evaluation of many
-  generated hypotheses at once. This allows for a bounded running time while
-  pursuing only the models which are most likely to lead to high quality
-  results. This results in a very fast method which can be used for real-time applications.
+  ExhaustiveRansac performs an exhaustive evaluation of all possible minimal sample sets
+  to find the best model. This is useful for small datasets or when absolute certainty
+  of finding the globally optimal solution is required. However, it can be computationally
+  expensive for large datasets.
 
-.. function:: Arrsac::Arrsac(const RansacParams& params, const Estimator& estimator, int max_candidate_hyps = 500, int block_size = 100)
+.. function:: ExhaustiveRansac::ExhaustiveRansac(const RansacParams& params, const Estimator& estimator)
 
-     ``max_candidate_hyps``: Maximum number of hypotheses in the initial hypothesis set
-
-     ``block_size``: Number of data points a hypothesis is evaluated against before preemptive ordering is used.
-
-  .. NOTE:: This method works for all the unit tests currently in Theia, but
-    needs to be tested further to ensure correctness. Use with caution.
+     ``params``: The ransac parameters
+     
+     ``estimator``: The model estimator to use
 
 .. class:: Evsac
 
-  Evsac is a method proposed by [Fragoso]_ that models the smallest
-  nearest-neighbor (NN) matching distances as an inlier distribution
-  and an outlier distribution to compute weights for
-  getting a non-uniform sampling strategy. The computed non-uniform
-  sampling strategy tends to achieve a fast convergence, even when the
-  inlier ratio is small.
+  Extreme Value Sample Consensus (EVSAC) is a method proposed by [Fragoso]_ that models 
+  the matching scores using Extreme Value Theory to achieve faster convergence. It uses 
+  a statistical model that assumes two processes generate minimum distances:
+  
+  1. A gamma distribution for correct correspondences
+  2. A generalized extreme value (GEV) distribution for incorrect correspondences
+
+  This approach is particularly effective when the inlier ratio is small.
 
 .. function:: Evsac::Evsac(const RansacParameters& ransac_params, const ModelEstimator& estimator, const Eigen::MatrixXd& sorted_distances, const double predictor_threshold, const FittingMethod fitting_method)
 
@@ -308,16 +317,16 @@ constructor. The constructors for each method are specified as follows
 
      ``estimator``: The model estimator to use.
 
-     ``sorted_distances``: The matrix containing k L2 sorted
-     distances in ascending order. The matrix has num. of query
-     features as rows and k columns.
+     ``sorted_distances``: The matrix containing k L2 sorted distances in ascending order. 
+     The matrix has num. of query features as rows and k columns.
 
-     ``predictor_threshold``: The threshold used to decide correct or
-     incorrect matches/correspondences. The threshold must be in the
-     range of (0, 1.0). The recommended value is 0.65.
+     ``predictor_threshold``: The threshold used to decide correct or incorrect 
+     matches/correspondences. Must be in range (0, 1.0). The recommended value is 0.65.
 
-     ``fitting_method``:  The fitting method MLE or QUANTILE_NLS.
-     The recommended fitting method is the MLE estimation.
+     ``fitting_method``: The distribution fitting method to use:
+     
+     * MLE: Maximum likelihood estimation (recommended)
+     * QUANTILE_NLS: Quantile non-linear least squares estimation
 
 .. class:: LMed
 

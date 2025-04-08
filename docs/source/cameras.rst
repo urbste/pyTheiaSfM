@@ -246,6 +246,90 @@ an alternative representation for camera models with large radial distortion
 principal point is roughly proportional to the angle between the 3D point and
 the optical axis. This camera model is first proposed in [Devernay]_.
 
+DivisionUndistortionCameraModel
+------------------------------
+
+.. class:: DivisionUndistortionCameraModel
+
+The Division Undistortion camera model is an alternative model for cameras with radial distortion. Unlike the traditional polynomial distortion model, it uses a simple rational function to model lens distortion. This model is particularly effective for wide-angle lenses.
+
+The division distortion model has 5 parameters:
+
+.. math::
+   \text{intrinsics} = [f, a, p_x, p_y, k_1]
+
+where:
+- :math:`f` is the focal length
+- :math:`a` is the aspect ratio
+- :math:`p_x, p_y` are the principal points
+- :math:`k_1` is the division distortion parameter
+
+DoubleSphereModel
+----------------
+
+.. class:: DoubleSphereCameraModel
+
+The Double Sphere camera model is designed for cameras with strong radial distortion, particularly fisheye lenses. It models the distortion using two spherical projections, making it effective for very wide field of view cameras.
+
+The model has 7 parameters:
+
+.. math::
+   \text{intrinsics} = [f, a, s, p_x, p_y, \xi, \alpha]
+
+where:
+- :math:`f` is the focal length
+- :math:`a` is the aspect ratio
+- :math:`s` is the skew
+- :math:`p_x, p_y` are the principal points
+- :math:`\xi` is the first sphere parameter (value range: -1 to 1)
+- :math:`\alpha` is the second sphere parameter (value range: 0 to 1)
+
+ExtendedUnifiedCameraModel
+-------------------------
+
+.. class:: ExtendedUnifiedCameraModel
+
+The Extended Unified camera model is a versatile model that can handle various types of cameras, from perspective to fisheye. It is based on the paper "The Double Sphere Camera Model" by V. Usenko et al.
+
+The model has 7 parameters:
+
+.. math::
+   \text{intrinsics} = [f, a, s, p_x, p_y, \alpha, \beta]
+
+where:
+- :math:`f` is the focal length
+- :math:`a` is the aspect ratio
+- :math:`s` is the skew
+- :math:`p_x, p_y` are the principal points
+- :math:`\alpha` is the first distortion parameter (value range: 0 to 1)
+- :math:`\beta` is the second distortion parameter (value range: > 0)
+
+OrthographicCameraModel
+----------------------
+
+.. class:: OrthographicCameraModel
+
+The Orthographic camera model implements parallel projection, where the size of objects in the image is independent of their distance from the camera. This is useful for applications where perspective effects are undesirable or when objects are viewed from very far away.
+
+The model has 7 parameters:
+
+.. math::
+   \text{intrinsics} = [f, a, s, p_x, p_y, k_1, k_2]
+
+where:
+- :math:`f` is the focal length (magnification)
+- :math:`a` is the aspect ratio
+- :math:`s` is the skew
+- :math:`p_x, p_y` are the principal points 
+- :math:`k_1, k_2` are radial distortion parameters
+
+For an orthographic camera, the projection is independent of the translation in z direction. The projection equations are:
+
+.. math::
+   x_u = m \cdot x_c \\
+   y_u = m \cdot y_c
+
+where :math:`m` is the magnification factor and :math:`(x_c, y_c)` are the points in camera coordinates.
 
 Adding a New Camera Model
 -------------------------
