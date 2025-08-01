@@ -58,6 +58,15 @@ SimilarityTransformation AlignReconstructionsRobust(
     const Reconstruction& reconstruction1,
     Reconstruction* reconstruction2);
 
+// Aligns two reconstructions using Sim3. We optimize multiple objectives:
+// 1. The a pose graph as common cameras between both reconstructions need to have identical poses.
+// 2. The reprojection error within the second reconstruction, as with each iteration
+//    the reconstruction is updated. So we need to also construct a pose graph for the second reconstruction
+//    that keeps the poses consistent
+void AlignOverlapReconstructionsWithPointsAndPosesRobust(
+    const Reconstruction& reconstruction1,
+    Reconstruction* reconstruction2);
 }  // namespace theia
+
 
 #endif  // THEIA_SFM_TRANSFORMATION_ALIGN_RECONSTRUCTIONS_H_

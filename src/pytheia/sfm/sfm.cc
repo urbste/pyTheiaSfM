@@ -569,6 +569,38 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("AlignReconstructionsRobust", theia::AlignReconstructionsRobustWrapper);
   m.def("TransformReconstruction", theia::TransformReconstructionWrapper);
 
+  // SIM3 Point Cloud Alignment
+  py::enum_<theia::Sim3AlignmentType>(m, "Sim3AlignmentType")
+      .value("POINT_TO_POINT", theia::Sim3AlignmentType::POINT_TO_POINT)
+      .value("ROBUST_POINT_TO_POINT", theia::Sim3AlignmentType::ROBUST_POINT_TO_POINT)
+      .value("POINT_TO_PLANE", theia::Sim3AlignmentType::POINT_TO_PLANE)
+      .export_values();
+
+  py::class_<theia::Sim3AlignmentOptions>(m, "Sim3AlignmentOptions")
+      .def(py::init<>())
+      .def_readwrite("alignment_type", &theia::Sim3AlignmentOptions::alignment_type)
+      .def_readwrite("initial_sim3_params", &theia::Sim3AlignmentOptions::initial_sim3_params)
+      .def_readwrite("target_normals", &theia::Sim3AlignmentOptions::target_normals)
+      .def_readwrite("point_weights", &theia::Sim3AlignmentOptions::point_weights)
+      .def_readwrite("max_iterations", &theia::Sim3AlignmentOptions::max_iterations)
+      .def_readwrite("function_tolerance", &theia::Sim3AlignmentOptions::function_tolerance)
+      .def_readwrite("gradient_tolerance", &theia::Sim3AlignmentOptions::gradient_tolerance)
+      .def_readwrite("parameter_tolerance", &theia::Sim3AlignmentOptions::parameter_tolerance)
+      .def_readwrite("verbose", &theia::Sim3AlignmentOptions::verbose);
+
+  py::class_<theia::Sim3AlignmentSummary>(m, "Sim3AlignmentSummary")
+      .def(py::init<>())
+      .def_readwrite("success", &theia::Sim3AlignmentSummary::success)
+      .def_readwrite("sim3_params", &theia::Sim3AlignmentSummary::sim3_params)
+      .def_readwrite("alignment_error", &theia::Sim3AlignmentSummary::alignment_error)
+      .def_readwrite("num_iterations", &theia::Sim3AlignmentSummary::num_iterations)
+      .def_readwrite("final_cost", &theia::Sim3AlignmentSummary::final_cost);
+
+  m.def("OptimizeAlignmentSim3", theia::OptimizeAlignmentSim3Wrapper);
+  m.def("Sim3FromRotationTranslationScale", theia::Sim3FromRotationTranslationScaleWrapper);
+  m.def("Sim3ToRotationTranslationScale", theia::Sim3ToRotationTranslationScaleWrapper);
+  m.def("Sim3ToHomogeneousMatrix", theia::Sim3ToHomogeneousMatrixWrapper);
+
   py::class_<theia::SimilarityTransformation>(m, "SimilarityTransformation")
       .def(py::init<>())
       .def_readwrite("rotation", &theia::SimilarityTransformation::rotation)

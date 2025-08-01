@@ -1,6 +1,7 @@
 #pragma once
 
 #include "theia/sfm/reconstruction.h"
+#include "theia/sfm/transformation/align_point_clouds.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <tuple>
@@ -42,4 +43,26 @@ void TransformReconstructionWrapper(Reconstruction& reconstruction,
                                     const Eigen::Matrix3d& rotation,
                                     const Eigen::Vector3d& translation,
                                     const double scale);
+
+// SIM3 Point Cloud Alignment Wrappers
+Sim3AlignmentSummary OptimizeAlignmentSim3Wrapper(
+    const std::vector<Eigen::Vector3d>& source_points,
+    const std::vector<Eigen::Vector3d>& target_points,
+    const Sim3AlignmentOptions& options = Sim3AlignmentOptions());
+
+Sophus::Vector7d Sim3FromRotationTranslationScaleWrapper(
+    const Eigen::Matrix3d& rotation,
+    const Eigen::Vector3d& translation,
+    double scale);
+
+void Sim3ToRotationTranslationScaleWrapper(
+    const Sophus::Vector7d& sim3_params,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* translation,
+    double* scale);
+
+// Wrapper that returns homogeneous transformation matrix
+Eigen::Matrix4d Sim3ToHomogeneousMatrixWrapper(
+    const Sophus::Vector7d& sim3_params);
+
 }  // namespace theia

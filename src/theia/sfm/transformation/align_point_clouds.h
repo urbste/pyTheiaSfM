@@ -37,6 +37,9 @@
 
 #include <Eigen/Core>
 #include <vector>
+#include <ceres/ceres.h>
+#include <sophus/sim3.hpp>
+#include <sophus/types.hpp>
 
 namespace theia {
 
@@ -62,6 +65,77 @@ void AlignPointCloudsUmeyamaWithWeights(
     const std::vector<Eigen::Vector3d>& left,
     const std::vector<Eigen::Vector3d>& right,
     const std::vector<double>& weights,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* translation,
+    double* scale);
+
+// SIM3 Alignment Types
+enum class Sim3AlignmentType {
+  POINT_TO_POINT,
+  ROBUST_POINT_TO_POINT,
+  POINT_TO_PLANE
+};
+
+// Options for SIM3 alignment
+struct Sim3AlignmentOptions {
+  // Alignment type
+  Sim3AlignmentType alignment_type = Sim3AlignmentType::POINT_TO_POINT;
+  
+  // Initial guess for SIM3 parameters [rx, ry, rz, tx, ty, tz, scale]
+  const Sophus::Vector7d* initial_sim3_params = nullptr;
+  
+  // Point weights and thresholds
+  double point_weight = 1.0;
+  double huber_threshold = 0.1;
+  double outlier_threshold = 1.0;
+  
+  // Target normals for point-to-plane alignment
+  const std::vector<Eigen::Vector3d>* target_normals = nullptr;
+  const std::vector<double>* point_weights = nullptr;
+  
+  // Solver options
+  ceres::LinearSolverType linear_solver_type = ceres::SPARSE_SCHUR;
+  ceres::MinimizerType minimizer_type = ceres::TRUST_REGION;
+  int max_iterations = 100;
+  int max_refinement_iterations = 5;
+  double function_tolerance = 1e-6;
+  double gradient_tolerance = 1e-10;
+  double parameter_tolerance = 1e-8;
+  int num_threads = 1;
+  bool verbose = false;
+  
+  Sim3AlignmentOptions() = default;
+};
+
+// Summary of SIM3 alignment results
+struct Sim3AlignmentSummary {
+  bool success = false;
+  double final_cost = 0.0;
+  int num_iterations = 0;
+  double alignment_error = 0.0;
+  Sophus::Vector7d sim3_params;
+  
+  Sim3AlignmentSummary() {
+    sim3_params.setZero();
+    sim3_params[6] = 1.0;  // scale = 1.0
+  }
+};
+
+// Main SIM3 alignment function using initial Umeyama + Ceres optimization
+Sim3AlignmentSummary OptimizeAlignmentSim3(
+    const std::vector<Eigen::Vector3d>& source_points,
+    const std::vector<Eigen::Vector3d>& target_points,
+    const Sim3AlignmentOptions& options = Sim3AlignmentOptions());
+
+// Convert rotation matrix, translation, and scale to SIM3 parameters
+Sophus::Vector7d Sim3FromRotationTranslationScale(
+    const Eigen::Matrix3d& rotation,
+    const Eigen::Vector3d& translation,
+    double scale);
+
+// Convert SIM3 parameters to rotation matrix, translation, and scale
+void Sim3ToRotationTranslationScale(
+    const Sophus::Vector7d& sim3_params,
     Eigen::Matrix3d* rotation,
     Eigen::Vector3d* translation,
     double* scale);

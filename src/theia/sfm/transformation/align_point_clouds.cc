@@ -36,6 +36,10 @@
 
 #include <Eigen/Dense>
 #include <glog/logging.h>
+#include <ceres/ceres.h>
+#include <Sophus/sophus/sim3.hpp>
+
+#include "theia/sfm/transformation/alignment_error.h"
 
 namespace theia {
 
@@ -124,4 +128,172 @@ void AlignPointCloudsUmeyamaWithWeights(
   *translation = right_centroid - (*scale) * (*rotation) * left_centroid;
 }
 
+// SIM3 Alignment with Initial Umeyama + Ceres Optimization
+// 
+// This approach uses a two-stage alignment:
+// 1. Initial alignment using robust Umeyama algorithm for coarse alignment
+// 2. Fine optimization using Ceres Solver for precise alignment
+// 
+// This is more robust than using Ceres alone, especially for large transformations
+// or when the initial guess is poor.
+
+Sim3AlignmentSummary OptimizeAlignmentSim3(
+    const std::vector<Eigen::Vector3d>& source_points,
+    const std::vector<Eigen::Vector3d>& target_points,
+    const Sim3AlignmentOptions& options) {
+  
+  Sim3AlignmentSummary summary;
+  
+  if (source_points.size() != target_points.size()) {
+    LOG(ERROR) << "Source and target point clouds must have the same size.";
+    return summary;
+  }
+  if (source_points.size() == 0) {
+    LOG(ERROR) << "Point clouds cannot be empty.";
+    return summary;
+  }
+  
+  // Initialize SIM3 parameters (identity transformation)
+  Sophus::Vector7d sim3_params = Sophus::Vector7d::Zero();
+  sim3_params[6] = 1.0;  // scale = 1.0 (last parameter)
+      
+  // If initial guess is provided, use it
+  if (options.initial_sim3_params) {
+    sim3_params = *options.initial_sim3_params;
+  } else {
+    // Use robust Umeyama for initial alignment
+    Eigen::Matrix3d rotation;
+    Eigen::Vector3d translation;
+    double scale;
+    
+    // Use weighted Umeyama with robust weights
+    std::vector<double> weights(source_points.size(), 1.0);
+    AlignPointCloudsUmeyamaWithWeights(source_points, target_points, weights, 
+                                      &rotation, &translation, &scale);
+    
+    // Convert to SIM3 parameters [translation, rotation, scale]
+    sim3_params = Sim3FromRotationTranslationScale(rotation, translation, scale);
+  }
+  
+  // Create optimization problem
+  ceres::Problem problem;
+  
+  // Add point-to-point residuals
+  for (size_t i = 0; i < source_points.size(); ++i) {
+    ceres::CostFunction* cost_function = nullptr;
+    double point_weight = 1.0;  // Default weight
+    
+    // Use individual point weights if provided (higher weight = higher confidence)
+    if (options.point_weights && i < options.point_weights->size()) {
+      point_weight = (*options.point_weights)[i];
+    } else {
+      // Fall back to global point weight if no individual weights provided
+      point_weight = options.point_weight;
+    }
+    
+    switch (options.alignment_type) {
+      case Sim3AlignmentType::POINT_TO_POINT:
+        cost_function = Sim3PointToPointError::Create(
+            source_points[i], target_points[i], point_weight);
+        break;
+        
+      case Sim3AlignmentType::ROBUST_POINT_TO_POINT:
+        cost_function = Sim3PointToPointError::Create(
+            source_points[i], target_points[i], point_weight);
+        break;
+        
+      case Sim3AlignmentType::POINT_TO_PLANE:
+        if (options.target_normals && i < options.target_normals->size()) {
+          cost_function = Sim3PointToPlaneError::Create(
+              source_points[i], target_points[i], 
+              (*options.target_normals)[i], point_weight);
+        } else {
+          LOG(WARNING) << "Target normals not provided for point-to-plane alignment. "
+                      << "Falling back to point-to-point.";
+          cost_function = Sim3PointToPointError::Create(
+              source_points[i], target_points[i], point_weight);
+        }
+        break;
+        
+      default:
+        LOG(FATAL) << "Unknown alignment type.";
+        break;
+    }
+    
+    if (cost_function) {
+      // Use Huber loss function for robust alignment
+      ceres::LossFunction* loss_function = nullptr;
+      if (options.alignment_type == Sim3AlignmentType::ROBUST_POINT_TO_POINT) {
+        loss_function = new ceres::HuberLoss(options.huber_threshold);
+      }
+      
+      problem.AddResidualBlock(cost_function, loss_function, sim3_params.data());
+    }
+  }
+    
+  // Set up solver options
+  ceres::Solver::Options solver_options;
+  solver_options.linear_solver_type = options.linear_solver_type;
+  solver_options.minimizer_type = options.minimizer_type;
+  solver_options.max_num_iterations = options.max_iterations;
+  solver_options.function_tolerance = options.function_tolerance;
+  solver_options.gradient_tolerance = options.gradient_tolerance;
+  solver_options.parameter_tolerance = options.parameter_tolerance;
+  solver_options.minimizer_progress_to_stdout = options.verbose;
+  solver_options.num_threads = options.num_threads;
+  
+  // Solve the problem
+  ceres::Solver::Summary solver_summary;
+  ceres::Solve(solver_options, &problem, &solver_summary);
+  
+  // Fill summary
+  summary.success = solver_summary.termination_type == ceres::CONVERGENCE;
+  summary.final_cost = solver_summary.final_cost;
+  summary.num_iterations = solver_summary.iterations.size();
+  summary.sim3_params = sim3_params;
+  
+  // Compute final alignment error
+  Sophus::Sim3d final_transformation = Sophus::Sim3d::exp(sim3_params);
+  double total_error = 0.0;
+  for (size_t i = 0; i < source_points.size(); ++i) {
+    Eigen::Vector3d transformed_point = final_transformation * source_points[i];
+    total_error += (transformed_point - target_points[i]).norm();
+  }
+  summary.alignment_error = total_error / source_points.size();
+  
+  return summary;
+}
+
+// Utility functions for converting between different representations
+
+Sophus::Vector7d Sim3FromRotationTranslationScale(
+    const Eigen::Matrix3d& rotation,
+    const Eigen::Vector3d& translation,
+    double scale) {
+  
+  // Create SIM3 using the correct constructor
+  Sophus::Sim3d sim3(Sophus::RxSO3d(scale, rotation), translation);
+  
+  // Return the 7-parameter representation
+  return sim3.log();
+}
+
+void Sim3ToRotationTranslationScale(
+    const Sophus::Vector7d& sim3_params,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* translation,
+    double* scale) {
+  
+  CHECK_NOTNULL(rotation);
+  CHECK_NOTNULL(translation);
+  CHECK_NOTNULL(scale);
+  
+  // Create SIM3 from the 7-parameter representation
+  Sophus::Sim3d sim3 = Sophus::Sim3d::exp(sim3_params);
+  
+  // Extract components
+  *rotation = sim3.rotationMatrix();
+  *translation = sim3.translation();
+  *scale = sim3.scale();
+}
 }  // namespace theia

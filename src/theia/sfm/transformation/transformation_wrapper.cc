@@ -93,4 +93,36 @@ void TransformReconstructionWrapper(Reconstruction& reconstruction,
   TransformReconstruction(rotation, translation, scale, &reconstruction);
 }
 
+// SIM3 Point Cloud Alignment Wrapper Implementations
+Sim3AlignmentSummary OptimizeAlignmentSim3Wrapper(
+    const std::vector<Eigen::Vector3d>& source_points,
+    const std::vector<Eigen::Vector3d>& target_points,
+    const Sim3AlignmentOptions& options) {
+  return OptimizeAlignmentSim3(source_points, target_points, options);
+}
+
+Sophus::Vector7d Sim3FromRotationTranslationScaleWrapper(
+    const Eigen::Matrix3d& rotation,
+    const Eigen::Vector3d& translation,
+    double scale) {
+  return Sim3FromRotationTranslationScale(rotation, translation, scale);
+}
+
+void Sim3ToRotationTranslationScaleWrapper(
+    const Sophus::Vector7d& sim3_params,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* translation,
+    double* scale) {
+  Sim3ToRotationTranslationScale(sim3_params, rotation, translation, scale);
+}
+
+Eigen::Matrix4d Sim3ToHomogeneousMatrixWrapper(
+    const Sophus::Vector7d& sim3_params) {
+  // Create SIM3 object from parameters
+  Sophus::Sim3d sim3 = Sophus::Sim3d::exp(sim3_params);
+  
+  // Get the 4x4 homogeneous transformation matrix
+  return sim3.matrix();
+}
+
 }  // namespace theia
