@@ -105,6 +105,40 @@ struct Sim3AlignmentOptions {
   bool verbose = false;
   
   Sim3AlignmentOptions() = default;
+  
+  // Setter functions for Python bindings
+  void SetInitialSim3Params(const Sophus::Vector7d& params) {
+    initial_sim3_params_storage_ = params;
+    initial_sim3_params = &initial_sim3_params_storage_;
+  }
+  
+  void SetTargetNormals(const std::vector<Eigen::Vector3d>& normals) {
+    target_normals_storage_ = normals;
+    target_normals = &target_normals_storage_;
+  }
+  
+  void SetPointWeights(const std::vector<double>& weights) {
+    point_weights_storage_ = weights;
+    point_weights = &point_weights_storage_;
+  }
+  
+  void ClearInitialSim3Params() {
+    initial_sim3_params = nullptr;
+  }
+  
+  void ClearTargetNormals() {
+    target_normals = nullptr;
+  }
+  
+  void ClearPointWeights() {
+    point_weights = nullptr;
+  }
+
+ private:
+  // Storage for the pointer members to avoid dangling pointers
+  Sophus::Vector7d initial_sim3_params_storage_;
+  std::vector<Eigen::Vector3d> target_normals_storage_;
+  std::vector<double> point_weights_storage_;
 };
 
 // Summary of SIM3 alignment results

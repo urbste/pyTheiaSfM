@@ -579,15 +579,28 @@ void pytheia_sfm_classes(py::module& m) {
   py::class_<theia::Sim3AlignmentOptions>(m, "Sim3AlignmentOptions")
       .def(py::init<>())
       .def_readwrite("alignment_type", &theia::Sim3AlignmentOptions::alignment_type)
-      .def_readwrite("initial_sim3_params", &theia::Sim3AlignmentOptions::initial_sim3_params)
-      .def_readwrite("target_normals", &theia::Sim3AlignmentOptions::target_normals)
-      .def_readwrite("point_weights", &theia::Sim3AlignmentOptions::point_weights)
+      .def_readwrite("point_weight", &theia::Sim3AlignmentOptions::point_weight)
+      .def_readwrite("huber_threshold", &theia::Sim3AlignmentOptions::huber_threshold)
+      .def_readwrite("outlier_threshold", &theia::Sim3AlignmentOptions::outlier_threshold)
       .def_readwrite("max_iterations", &theia::Sim3AlignmentOptions::max_iterations)
+      .def_readwrite("max_refinement_iterations", &theia::Sim3AlignmentOptions::max_refinement_iterations)
       .def_readwrite("function_tolerance", &theia::Sim3AlignmentOptions::function_tolerance)
       .def_readwrite("gradient_tolerance", &theia::Sim3AlignmentOptions::gradient_tolerance)
       .def_readwrite("parameter_tolerance", &theia::Sim3AlignmentOptions::parameter_tolerance)
-      .def_readwrite("huber_threshold", &theia::Sim3AlignmentOptions::huber_threshold)
-      .def_readwrite("verbose", &theia::Sim3AlignmentOptions::verbose);
+      .def_readwrite("num_threads", &theia::Sim3AlignmentOptions::num_threads)
+      .def_readwrite("verbose", &theia::Sim3AlignmentOptions::verbose)
+      .def("set_initial_sim3_params", &theia::Sim3AlignmentOptions::SetInitialSim3Params,
+           py::arg("params"), "Set initial SIM3 parameters")
+      .def("set_target_normals", &theia::Sim3AlignmentOptions::SetTargetNormals,
+           py::arg("normals"), "Set target normals for point-to-plane alignment")
+      .def("set_point_weights", &theia::Sim3AlignmentOptions::SetPointWeights,
+           py::arg("weights"), "Set point weights")
+      .def("clear_initial_sim3_params", &theia::Sim3AlignmentOptions::ClearInitialSim3Params,
+           "Clear initial SIM3 parameters")
+      .def("clear_target_normals", &theia::Sim3AlignmentOptions::ClearTargetNormals,
+           "Clear target normals")
+      .def("clear_point_weights", &theia::Sim3AlignmentOptions::ClearPointWeights,
+           "Clear point weights");
 
   py::class_<theia::Sim3AlignmentSummary>(m, "Sim3AlignmentSummary")
       .def(py::init<>())

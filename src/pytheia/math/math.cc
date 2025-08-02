@@ -153,16 +153,21 @@ void pytheia_math_classes(py::module& m) {
            py::arg("quaternion"), py::arg("translation"),
            "Constructor from quaternion and translation")
       .def(py::init([](const Eigen::Matrix3d& rotation_matrix, const Eigen::Vector3d& translation, double scale) {
-          Sophus::RxSO3d rxso3(rotation_matrix * scale);
+          Sophus::RxSO3d rxso3(scale, rotation_matrix);
           return Sophus::Sim3d(rxso3, translation);
       }), py::arg("rotation_matrix"), py::arg("translation"), py::arg("scale"),
            "Constructor from rotation matrix, translation, and scale")
       .def(py::init([](const Eigen::Vector4d& quaternion, const Eigen::Vector3d& translation, double scale) {
           Eigen::Quaterniond q(quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
-          Sophus::RxSO3d rxso3(q.toRotationMatrix() * scale);
+          Sophus::RxSO3d rxso3(scale, q.toRotationMatrix());
           return Sophus::Sim3d(rxso3, translation);
       }), py::arg("quaternion"), py::arg("translation"), py::arg("scale"),
            "Constructor from quaternion [w, x, y, z], translation, and scale")
+      .def(py::init([](const Sophus::Vector7d& tangent_vector) {
+          return Sophus::Sim3d::exp(tangent_vector);
+      }), py::arg("tangent_vector"),
+           "Constructor from tangent vector using exponential map")
+      
       .def("matrix", &Sophus::Sim3d::matrix, "Get 4x4 transformation matrix")
       .def("matrix3x4", &Sophus::Sim3d::matrix3x4, "Get 3x4 matrix")
       .def("quaternion", &Sophus::Sim3d::quaternion, "Get quaternion")

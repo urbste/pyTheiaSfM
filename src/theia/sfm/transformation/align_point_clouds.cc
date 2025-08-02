@@ -117,6 +117,27 @@ void AlignPointCloudsUmeyamaWithWeights(
   const Eigen::Matrix3d& vtmatrix = svd.matrixV().transpose();
   const Eigen::Vector3d& singular_values = svd.singularValues();
 
+  // Check for matrix singularity (degenerate point clouds)
+  const double min_singular_value = singular_values.minCoeff();
+  const double max_singular_value = singular_values.maxCoeff();
+  const double condition_number = max_singular_value / (min_singular_value + 1e-12);
+  
+  // If the condition number is too large or singular values are too small, 
+  // the point clouds are degenerate (identical, collinear, or coplanar)
+  const double singularity_threshold = 1e6;  // Condition number threshold
+  const double min_singular_threshold = 1e-8;  // Minimum singular value threshold
+  
+  if (condition_number > singularity_threshold || min_singular_value < min_singular_threshold) {
+    LOG(WARNING) << "Degenerate point clouds detected (condition number: " 
+                 << condition_number << ", min singular value: " << min_singular_value 
+                 << "). Returning identity transformation.";
+    // Return identity transformation for degenerate cases
+    *scale = 1.0;
+    *rotation = Eigen::Matrix3d::Identity();
+    *translation = Eigen::Vector3d::Zero();
+    return;
+  }
+
   const double det = umatrix.determinant() * vtmatrix.determinant();
   Eigen::Matrix3d s = Eigen::Matrix3d::Identity();
   s(2, 2) = det > 0 ? 1 : -1;

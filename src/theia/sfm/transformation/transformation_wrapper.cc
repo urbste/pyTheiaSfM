@@ -108,12 +108,13 @@ Sophus::Vector7d Sim3FromRotationTranslationScaleWrapper(
   return Sim3FromRotationTranslationScale(rotation, translation, scale);
 }
 
-void Sim3ToRotationTranslationScaleWrapper(
-    const Sophus::Vector7d& sim3_params,
-    Eigen::Matrix3d* rotation,
-    Eigen::Vector3d* translation,
-    double* scale) {
-  Sim3ToRotationTranslationScale(sim3_params, rotation, translation, scale);
+std::tuple<Eigen::Matrix3d, Eigen::Vector3d, double> Sim3ToRotationTranslationScaleWrapper(
+    const Sophus::Vector7d& sim3_params) {
+  Eigen::Matrix3d rotation;
+  Eigen::Vector3d translation;
+  double scale;
+  Sim3ToRotationTranslationScale(sim3_params, &rotation, &translation, &scale);
+  return std::make_tuple(rotation, translation, scale);
 }
 
 Eigen::Matrix4d Sim3ToHomogeneousMatrixWrapper(
