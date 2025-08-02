@@ -42,6 +42,7 @@ namespace pytheia {
 namespace math {
 
 void pytheia_math(py::module& m);
+void pytheia_math_classes(py::module& m);
 
 }
 }  // namespace pytheia

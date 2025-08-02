@@ -44,7 +44,12 @@ def configure_c_extension():
         '-DPYTHON_EXECUTABLE=' + sys.executable,
 	    '-DPYTHON_LIBRARY=' + python_lib_location,
 	    '-DPYTHON_INCLUDE_DIR=' +  python_include_dir,
-        '-DBUILD_WITH_MARCH_NATIVE={}'.format("ON" if build_march_native else "OFF")
+        '-DBUILD_WITH_MARCH_NATIVE={}'.format("ON" if build_march_native else "OFF"),
+        '-DCMAKE_CXX_FLAGS=-flto=auto',
+        '-DCMAKE_C_FLAGS=-flto=auto',
+        '-DCMAKE_EXE_LINKER_FLAGS=-flto=auto',
+        '-DCMAKE_SHARED_LINKER_FLAGS=-flto=auto',
+        '-DCMAKE_MODULE_LINKER_FLAGS=-flto=auto'
     ]
     subprocess.check_call(cmake_command, cwd='cmake_build')
 
@@ -52,7 +57,7 @@ def configure_c_extension():
 def build_c_extension():
     """Compile C extension."""
     print("Compiling extension...")
-    subprocess.check_call(['make', '-j5'], cwd='cmake_build')
+    subprocess.check_call(['make', '-j20'], cwd='cmake_build')
 
 
 def create_package():

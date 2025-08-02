@@ -586,6 +586,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("function_tolerance", &theia::Sim3AlignmentOptions::function_tolerance)
       .def_readwrite("gradient_tolerance", &theia::Sim3AlignmentOptions::gradient_tolerance)
       .def_readwrite("parameter_tolerance", &theia::Sim3AlignmentOptions::parameter_tolerance)
+      .def_readwrite("huber_threshold", &theia::Sim3AlignmentOptions::huber_threshold)
       .def_readwrite("verbose", &theia::Sim3AlignmentOptions::verbose);
 
   py::class_<theia::Sim3AlignmentSummary>(m, "Sim3AlignmentSummary")
