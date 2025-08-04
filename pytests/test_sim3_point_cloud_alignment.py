@@ -165,7 +165,7 @@ def test_optimize_alignment_sim3_point_to_point():
     rotation = np.array([
         [0.866, -0.5, 0.0],
         [0.5, 0.866, 0.0],
-        [0.0, 0.0, 1.0]
+        [0.0, 0.0, 1.0e]
     ], dtype=np.float64)  # ~30 degree rotation around Z
     translation = np.array([1.0, 2.0, 0.5], dtype=np.float64)
     scale = 1.5
@@ -457,7 +457,7 @@ def test_sim3_alignment_options():
     assert options.huber_threshold == 0.1
     assert options.verbose == False
     
-    # Test setting values
+    # Test setting value
     options.alignment_type = pt.sfm.Sim3AlignmentType.ROBUST_POINT_TO_POINT
     options.max_iterations = 50
     options.function_tolerance = 1e-5

@@ -909,7 +909,12 @@ void pytheia_sfm_classes(py::module& m) {
       .def("GetGravityPriorSqrtInformation",
            &theia::View::GetGravityPriorSqrtInformation)
       .def("SetGravityPrior", &theia::View::SetGravityPrior)
-      .def("HasGravityPrior", &theia::View::HasGravityPrior);
+      .def("HasGravityPrior", &theia::View::HasGravityPrior)
+      .def("GetOrientationPrior", &theia::View::GetOrientationPrior)
+      .def("GetOrientationPriorSqrtInformation",
+           &theia::View::GetOrientationPriorSqrtInformation)
+      .def("SetOrientationPrior", &theia::View::SetOrientationPrior)
+      .def("HasOrientationPrior", &theia::View::HasOrientationPrior);
 
   // Visibility pyramid
   py::class_<theia::VisibilityPyramid>(m, "VisibilityPyramid")
@@ -1039,6 +1044,8 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::BundleAdjustmentOptions::max_trust_region_radius)
       .def_readwrite("use_position_priors",
                      &theia::BundleAdjustmentOptions::use_position_priors)
+      .def_readwrite("use_orientation_priors",
+                     &theia::BundleAdjustmentOptions::use_orientation_priors)
       .def_readwrite("use_gravity_priors",
                      &theia::BundleAdjustmentOptions::use_gravity_priors)
       .def_readwrite("orthographic_camera",

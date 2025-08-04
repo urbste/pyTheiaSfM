@@ -139,6 +139,9 @@ struct BundleAdjustmentOptions {
   // Use position priors
   bool use_position_priors = false;
 
+  // Use orientation priors
+  bool use_orientation_priors = false;
+
   // Add depth priors
   bool use_depth_priors = false;
 

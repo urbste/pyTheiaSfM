@@ -93,4 +93,18 @@ void TransformReconstruction(const Eigen::Matrix3d& rotation,
   }
 }
 
+void TransformReconstruction(const Eigen::Matrix4d& T_c_w,
+                             Reconstruction* reconstruction) {
+  const Eigen::Matrix3d rotation = T_c_w.block<3,3>(0,0);
+  const Eigen::Vector3d translation = T_c_w.block<3,1>(0,3);
+  const double scale = T_c_w(3,3);
+  TransformReconstruction(rotation, translation, scale, reconstruction);
+}
+
+void TransformReconstruction(const Sophus::Sim3d& sim3,
+                             Reconstruction* reconstruction) {
+  const Eigen::Matrix4d T_c_w = sim3.matrix();
+  TransformReconstruction(T_c_w, reconstruction);
+}
+
 }  // namespace theia

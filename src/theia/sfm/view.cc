@@ -180,7 +180,7 @@ Eigen::Matrix3d View::GetPositionPriorSqrtInformation() const {
   return position_prior_sqrt_information_;
 }
 
-bool View::HasPositionPrior() const { return has_gravity_prior_; }
+bool View::HasPositionPrior() const { return has_position_prior_; }
 
 void View::SetGravityPrior(
     const Eigen::Vector3d& gravity_prior,
@@ -197,5 +197,21 @@ Eigen::Matrix3d View::GetGravityPriorSqrtInformation() const {
 }
 
 bool View::HasGravityPrior() const { return has_gravity_prior_; }
+
+void View::SetOrientationPrior(
+    const Eigen::Vector3d& orientation_prior,
+    const Eigen::Matrix3d& orientation_prior_sqrt_information) {
+  orientation_prior_ = orientation_prior;
+  orientation_prior_sqrt_information_ = orientation_prior_sqrt_information;
+  has_orientation_prior_ = true;
+}
+
+Eigen::Vector3d View::GetOrientationPrior() const { return orientation_prior_; }
+
+Eigen::Matrix3d View::GetOrientationPriorSqrtInformation() const {
+  return orientation_prior_sqrt_information_;
+}
+
+bool View::HasOrientationPrior() const { return has_orientation_prior_; }
 
 }  // namespace theia

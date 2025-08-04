@@ -292,6 +292,8 @@ inline ceres::CostFunction* CreateInvReprojectionPoseErrorCostFunction(
   }
 }
 
+
+
 inline ceres::CostFunction* CreateSim3InvReprojectionErrorCostFunction(
     const CameraIntrinsicsModelType& camera_model_type,
     const Feature& feature, const Eigen::Vector3d& ref_bearing) {
@@ -440,6 +442,81 @@ inline ceres::CostFunction* CreateSim3InvReprojectionPoseErrorCostFunction(
           ExtendedUnifiedCameraModel::kIntrinsicsSize,
           kPointSize>(
           new Sim3InvReprojectionPoseError<ExtendedUnifiedCameraModel>(feature, ref_bearing));
+      break;
+    default:
+      LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "
+                    "for a list of valid camera models.";
+      return NULL;
+      break;
+  }
+}
+
+inline ceres::CostFunction* CreateSim3ReprojectionErrorCostFunction(
+    const CameraIntrinsicsModelType& camera_model_type,
+    const Feature& feature) {
+  static const int kResidualSize = 2;
+  static const int kPointSize = 4;
+  // Return the appropriate reprojection error cost function based on the camera
+  // model type.
+  switch (camera_model_type) {
+    case CameraIntrinsicsModelType::PINHOLE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<PinholeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          PinholeCameraModel::kIntrinsicsSize,
+          kPointSize>(new Sim3ReprojectionError<PinholeCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::PINHOLE_RADIAL_TANGENTIAL:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<PinholeRadialTangentialCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          PinholeRadialTangentialCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3ReprojectionError<PinholeRadialTangentialCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<FisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          FisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(new Sim3ReprojectionError<FisheyeCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::FOV:
+      return new ceres::AutoDiffCostFunction<Sim3ReprojectionError<FOVCameraModel>,
+                                             kResidualSize,
+                                             Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+                                             FOVCameraModel::kIntrinsicsSize,
+                                             kPointSize>(
+          new Sim3ReprojectionError<FOVCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::DIVISION_UNDISTORTION:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<DivisionUndistortionCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          DivisionUndistortionCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3ReprojectionError<DivisionUndistortionCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::DOUBLE_SPHERE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<DoubleSphereCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          DoubleSphereCameraModel::kIntrinsicsSize,
+          kPointSize>(new Sim3ReprojectionError<DoubleSphereCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<ExtendedUnifiedCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          ExtendedUnifiedCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3ReprojectionError<ExtendedUnifiedCameraModel>(feature));
       break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "

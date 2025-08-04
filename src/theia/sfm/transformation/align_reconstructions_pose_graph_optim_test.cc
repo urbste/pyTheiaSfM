@@ -60,186 +60,178 @@
 #include "theia/sfm/transformation/align_reconstructions_pose_graph_optim.h"
 #include "theia/sfm/camera/create_reprojection_error_cost_function.h"
 #include "theia/sfm/transformation/align_reconstructions.h"
-
+#include "theia/sfm/transformation/align_point_clouds.h"
+#include "theia/sfm/set_outlier_tracks_to_unestimated.h"
 
 namespace theia {
 
 
-TEST(AlignReconstructionPoseGraphOptim, Test) {
-  Reconstruction recon_qry;
-  Reconstruction recon_qry_in_ref;
-  
-  std::string base_path = "/home/steffen/Data/GPStrava/Muehltal/MilowsClaw";
-  theia::ReadReconstruction(base_path+"/run2_recs/theia_recon_0.recon", &recon_qry);  
-  theia::ReadReconstruction(base_path+"/run2_recs/run2_in_run1.recon", &recon_qry_in_ref);  
-  
 
-  // first do a general transformation of traj 2 to 1 
-  AlignReconstructionsRobust(1.0, recon_qry_in_ref, &recon_qry);
-
-  // // calculate inverse depth from depth
-  // for (const auto& track_id : recon_qry.TrackIds()) {
-  //   Track* track = CHECK_NOTNULL(recon_qry.MutableTrack(track_id));
-  //   if (track == nullptr || !track->IsEstimated()) {
-  //     continue;
-  //   }
-  //   std::cout<<"Old inv depth: "<<track->InverseDepth()<<std::endl;
-  //   const View* ref_view = recon_qry.View(track->ReferenceViewId());
-  //   Eigen::Vector2d pt;
-  //   const double d = ref_view->Camera().ProjectPoint(track->Point(), &pt);
-  //   track->SetInverseDepth(1/d);
-  //   std::cout<<"New inv depth: "<<track->InverseDepth()<<std::endl;
-
-  // }
-
-  // ViewGraph view_graph;
-  // ViewGraphFromReconstruction(recon_qry, 0, &view_graph);
-
-   ceres::Problem problem;
-   ceres::LocalParameterization* sim3_local_parameterization =
-       new Sim3Parameterization;
-
-  // get all transformations
-  std::map<ViewId, Eigen::Matrix<double, 7, 1>> sim3s;
-  for (const auto& view_id : recon_qry.ViewIds()) {
-    Eigen::Matrix3d R_c_w = recon_qry.View(view_id)->Camera().GetOrientationAsRotationMatrix();
-    Eigen::Vector3d t_c_w = -R_c_w*recon_qry.View(view_id)->Camera().GetPosition();
+void GetSim3s(const Reconstruction& recon, std::map<ViewId, Eigen::Matrix<double, 7, 1>>& sim3s) {
+  sim3s.clear();
+  for (const auto& view_id : recon.ViewIds()) {
+    Eigen::Matrix3d R_c_w = recon.View(view_id)->Camera().GetOrientationAsRotationMatrix();
+    Eigen::Vector3d t_c_w = -R_c_w*recon.View(view_id)->Camera().GetPosition();
     Sophus::Sim3d sim3(Sophus::RxSO3d(1.0, R_c_w), t_c_w);
     sim3s[view_id] = sim3.log();
   }
-
-  // // //  create sim3 relative tranformations
-  // // for (const auto& edge : view_graph.GetAllEdges()) {
-  // //   const ViewId view_id1 = edge.first.first;
-  // //   const ViewId view_id2 = edge.first.second;
-  // //   std::cout << "view_id1: " << view_id1 << " view_id2: " << view_id2 << std::endl;
-
-  // //   Eigen::Matrix3d R_c_w_i = recon_qry.View(view_id1)->Camera().GetOrientationAsRotationMatrix();
-  // //   Eigen::Vector3d t_c_w_i = -R_c_w_i*recon_qry.View(view_id1)->Camera().GetPosition();
-
-  // //   Eigen::Matrix3d R_c_w_j = recon_qry.View(view_id2)->Camera().GetOrientationAsRotationMatrix();
-  // //   Eigen::Vector3d t_c_w_j = -R_c_w_j*recon_qry.View(view_id2)->Camera().GetPosition();
-
-  // //   Sophus::SE3d T_i_w(R_c_w_i, t_c_w_i);
-  // //   Sophus::SE3d T_j_w(R_c_w_j, t_c_w_j);
-
-  // //   Sophus::Sim3d Siw(Sophus::RxSO3d(1.0, T_i_w.rotationMatrix()), T_i_w.translation());
-  // //   Sophus::Sim3d Sjw(Sophus::RxSO3d(1.0, T_j_w.rotationMatrix()), T_j_w.translation());
-
-  // //   // relative transformation from camera 1 to camera 2
-  // //   Sophus::SE3d Tji = T_j_w * T_i_w.inverse(); 
-  // //   Sophus::Sim3d Sji(Sophus::RxSO3d(1.0, Tji.rotationMatrix()), Tji.translation());
-
-  // //   ceres::CostFunction* cost_function =
-  // //         SelfEdgesErrorTerm::Create(Sji, Eigen::Matrix<double, 7, 7>::Identity());
-  // //   problem.AddResidualBlock(cost_function, nullptr, 
-  // //       sim3s[view_id1].data(),
-  // //       sim3s[view_id2].data());
-  // // }
+}
 
 
-    // now Add edges to the reference reconstruction
-    for (const auto& view_id : recon_qry_in_ref.ViewIds()) {
-      const View* view_qry_in_ref = recon_qry_in_ref.View(view_id);
-      const auto& name = view_qry_in_ref->Name();
-      const ViewId vid_qry = recon_qry.ViewIdFromName(name);
-      if (vid_qry == kInvalidViewId) {
-          continue;
-      }
-      const View* view_in_qry = recon_qry.View(view_id);
-      if (view_in_qry == nullptr || view_qry_in_ref == nullptr) {
-          continue;
-      } 
+void GetSE3s(const Reconstruction& recon, std::map<ViewId, Eigen::Matrix<double, 6, 1>>& se3s) {
+  se3s.clear();
+  for (const auto& view_id : recon.ViewIds()) {
+    Eigen::Matrix3d R_c_w = recon.View(view_id)->Camera().GetOrientationAsRotationMatrix();
+    Eigen::Vector3d t_c_w = -R_c_w*recon.View(view_id)->Camera().GetPosition();
+    Sophus::SE3d se3(R_c_w, t_c_w);
+    se3s[view_id] = se3.log();
+  }
+}
 
-        // get pose from view_qrys_in_ref
-        Eigen::Matrix3d R_c_w_ref = view_qry_in_ref->Camera().GetOrientationAsRotationMatrix();
-        Eigen::Vector3d t_c_w_ref = -R_c_w_ref*view_qry_in_ref->Camera().GetPosition();
+double GetReconReprojectionError(const theia::Reconstruction& recon) {
 
-        Sophus::Sim3d S_r_w(Sophus::RxSO3d(1.0, R_c_w_ref), t_c_w_ref);
+  const auto track_ids = recon.TrackIds();
+  int num_projected_points = 0;
+  double reproj_error = 0.0;
+  for (const auto& track_id : track_ids) {
+    const Track* track = recon.Track(track_id);
+    const auto& view_ids = track->ViewIds();
+    for (const auto& view_id : view_ids) {
+      const View* view = recon.View(view_id);
+      const Feature* feature = view->GetFeature(track_id);
+      const Camera& camera = view->Camera();
 
-        Eigen::Matrix<double, 7, 7> inv_sqrt = Eigen::Matrix<double, 7, 7>::Identity();
-        inv_sqrt.block<3,3>(0,0) = Eigen::Matrix3d::Identity()*100.;
-        inv_sqrt.block<3,3>(3,3) = Eigen::Matrix3d::Identity()*100.;
-        inv_sqrt.block<1,1>(6,6) = Eigen::Matrix<double, 1, 1>::Identity()*0.1;
-        problem.AddResidualBlock(
-            CrossEdgesErrorTerm::Create(S_r_w, inv_sqrt), 
-            nullptr, sim3s[vid_qry].data());
+      Eigen::Vector2d reprojected_point;
+      camera.ProjectPoint(track->Point(), &reprojected_point);
+
+      const double reproj_error_i = (reprojected_point - feature->point_).squaredNorm();
+      reproj_error += reproj_error_i;
+      num_projected_points++;
     }
+  } 
 
-    // add reprojection residuals
-    for (const auto& track_id : recon_qry.TrackIds()) {
-      Track* track = CHECK_NOTNULL(recon_qry.MutableTrack(track_id));
-      if (track == nullptr || !track->IsEstimated()) {
-        continue;
-      }
-      
-      const auto ref_view_id = track->ReferenceViewId();
-      if (ref_view_id == kInvalidViewId) {
-        continue;
-      }
-      View* ref_view = CHECK_NOTNULL(recon_qry.MutableView(ref_view_id));
-      if (ref_view == nullptr) {
-        continue;
-      }
-      Camera* ref_cam = ref_view->MutableCamera();
-      const Eigen::Vector3d ref_bearing_vector = track->ReferenceBearingVector();
+  return reproj_error / num_projected_points;
+}
 
-      const auto& observed_view_ids = track->ViewIds();
-      for (const ViewId view_id : observed_view_ids) {
-        View* view = CHECK_NOTNULL(recon_qry.MutableView(view_id));
 
-        // Check if view is estimated and can now be optimized
-        if (!view->IsEstimated()) {
-          continue;
-        }
 
-        const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
-        Camera* camera = view->MutableCamera();
+TEST(AlignReconstructionPoseGraphOptim, Test) {
+  Reconstruction recon_qry;
+  Reconstruction recon_ref;
+  
+  std::string base_path = "/home/steffen/Data/GPStrava/TAAWN_TEST_DATA/1/Reference/run1/undist_reduced_result/reconstructions/";
+  theia::ReadReconstruction(base_path+"/chunk_000000.sfm", &recon_ref);  
+  theia::ReadReconstruction(base_path+"/chunk_000001.sfm", &recon_qry);  
+  
 
-        if (camera != ref_cam) {
-            problem.AddResidualBlock(
-            CreateSim3InvReprojectionErrorCostFunction(
-                camera->GetCameraIntrinsicsModelType(), 
-                *feature, ref_bearing_vector), 
-            NULL,
-            sim3s[ref_view_id].data(),
-            sim3s[view_id].data(),
-            camera->mutable_intrinsics(), 
-            track->MutableInverseDepth());
-        } else {
-            problem.AddResidualBlock(
-            CreateSim3InvReprojectionPoseErrorCostFunction(
-                ref_cam->GetCameraIntrinsicsModelType(), 
-                *feature, ref_bearing_vector), 
-            NULL,
-            sim3s[ref_view_id].data(),
-            ref_cam->mutable_intrinsics(), 
-            track->MutableInverseDepth());
-        }
+  // just write out view ids and names
+  for (const auto& view_id : recon_qry.ViewIds()) {
+    std::cout<<"Query View id: "<<view_id<<" name: "<<recon_qry.View(view_id)->Name()<<std::endl;
+  }
+  for (const auto& view_id : recon_ref.ViewIds()) {
+    std::cout<<"Reference View id: "<<view_id<<" name: "<<recon_ref.View(view_id)->Name()<<std::endl;
+  }
+
+  double reproj_error_qry = GetReconReprojectionError(recon_qry);
+  double reproj_error_ref = GetReconReprojectionError(recon_ref);
+  std::cout<<"Reprojection error before optimization: "<<reproj_error_qry<<std::endl;
+  std::cout<<"Reprojection error before optimization: "<<reproj_error_ref<<std::endl;
+
+  // define view graph matches that need to align
+  int chunk_size = 20;
+  int overlap_size = 10;
+
+  // we need a function so that id_ref=chunk_size-overlap_size+0  equals id_qry= 0
+  // and id_ref=chunk_size-overlap_size+1  equals id_qry=1
+  std::vector<std::pair<ViewId, ViewId>> view_graph_matches_ref_qry;
+  for (int i = 0; i < overlap_size; i += 1) {
+    int idx_ref = chunk_size - overlap_size + i;
+    int idx_qry = i;
+    std::cout<<"idx_ref: "<<idx_ref<<" idx_qry: "<<idx_qry<<std::endl;
+    view_graph_matches_ref_qry.push_back({idx_ref, idx_qry});
+  }
+
+
+  // now we get all corresponding tracks in the query and reference reconstruction
+  std::vector<Eigen::Vector3d> points_qry, points_ref;
+  for (const auto& view_id : view_graph_matches_ref_qry) {
+    const View* view_ref = recon_ref.View(view_id.first);
+    const View* view_qry = recon_qry.View(view_id.second);
+
+    const auto& tracks_ref = view_ref->TrackIds();
+
+    for (const auto& track_id : tracks_ref) {
+      const Track* track_ref = recon_ref.Track(track_id);
+      const auto& ref_feat = view_ref->GetFeature(track_id);
+      const auto& track_qry_id = view_qry->GetTrack(*ref_feat);
+      if (track_qry_id != kInvalidTrackId) {
+        points_qry.push_back(recon_qry.Track(track_qry_id)->Point().hnormalized());
+        points_ref.push_back(recon_ref.Track(track_id)->Point().hnormalized());
       }
     }
+  }
+
+  theia::Sim3AlignmentOptions options;
+  options.alignment_type = theia::Sim3AlignmentType::POINT_TO_POINT;
+  theia::Sim3AlignmentSummary summary = theia::OptimizeAlignmentSim3(points_qry, points_ref, options);
 
 
+  // // align with umeyama
+  // Eigen::Matrix3d rotation;
+  // Eigen::Vector3d translation;
+  // double scale;
+  // theia::AlignPointCloudsUmeyama(points_qry, points_ref, &rotation, &translation, &scale);
+  // std::cout<<"rotation: "<<rotation.transpose()<<std::endl;
+  // std::cout<<"translation: "<<translation.transpose()<<std::endl;
+  // std::cout<<"scale: "<<scale<<std::endl;
+  // theia::TransformReconstruction(rotation, translation, 1.0, &recon_qry);
 
-    ceres::Solver::Options solver_options;
-    ceres::Solver::Summary solver_summary;
-    solver_options.linear_solver_type = ceres::CGNR;
-    solver_options.minimizer_progress_to_stdout = true;
-    solver_options.max_num_iterations = 30;
-    solver_options.num_threads = 20;
-    ceres::Solve(solver_options, &problem, &solver_summary);
+  std::cout<<"Summary: "<<summary.success<<" "<<summary.final_cost<<" "<<summary.num_iterations<<" "<<summary.alignment_error<<std::endl;
+  theia::TransformReconstruction(Sophus::Sim3d::exp(summary.sim3_params), &recon_qry);
 
-    // set sim3s to recon_qry
-    for (const auto& view_id : recon_qry.ViewIds()) {
-      Sophus::Sim3d sim3 = Sophus::Sim3d::exp(sim3s[view_id]);
-      
-      recon_qry.MutableView(view_id)->MutableCamera()->SetOrientationFromRotationMatrix(sim3.rotationMatrix());
-      const Eigen::Vector3d translation = sim3.translation() / sim3.scale();
-      recon_qry.MutableView(view_id)->MutableCamera()->SetPosition(-sim3.rotationMatrix().transpose() * translation);
-    }
 
-    theia::WriteReconstruction(recon_qry, base_path+"/run2_recs/run2_in_run1_sim3.recon");
-    theia::WritePlyFile(base_path+"/run2_recs/run2_in_run1_sim3.ply",recon_qry, Eigen::Vector3i(255, 255,255), 2);
+  theia::WritePlyFile(base_path+"/chunk_000001_trafo.ply", recon_qry, Eigen::Vector3i(0, 255,255), 0);
+
+  for (const auto& pair : view_graph_matches_ref_qry) {
+    const ViewId view_id_ref = pair.first;
+    const ViewId view_id_qry = pair.second;
+    View* view_ref = recon_ref.MutableView(view_id_ref);
+    View* view_qry = recon_qry.MutableView(view_id_qry);
+    view_qry->SetOrientationPrior(view_ref->Camera().GetOrientationAsAngleAxis(), 5*Eigen::Matrix3d::Identity());
+    view_qry->SetPositionPrior(view_ref->Camera().GetPosition(), 100*Eigen::Matrix3d::Identity());
+  }
+
+
+  theia::BundleAdjustmentOptions ba_options;
+  ba_options.use_orientation_priors = true;
+  ba_options.use_position_priors = true;
+  ba_options.max_num_iterations = 50;
+  ba_options.verbose = true;
+
+  theia::BundleAdjustReconstruction(ba_options, &recon_qry);
+
+  int removed_tracks = theia::SetOutlierTracksToUnestimated(5, 0.15, &recon_qry);
+
+  // plot pose error between ref and qry
+  for (const auto& view_id : view_graph_matches_ref_qry) {
+    const View* view_ref = recon_ref.View(view_id.first);
+    const View* view_qry = recon_qry.View(view_id.second);
+
+    Eigen::Matrix3d R_ref = view_ref->Camera().GetOrientationAsRotationMatrix();
+    Eigen::Matrix3d R_qry = view_qry->Camera().GetOrientationAsRotationMatrix();
+    Eigen::Matrix3d R_error = R_ref.transpose() * R_qry;
+    std::cout<<"Pose error: "<<R_error.transpose()<<std::endl;
+
+    // position error
+    Eigen::Vector3d t_ref = view_ref->Camera().GetPosition();
+    Eigen::Vector3d t_qry = view_qry->Camera().GetPosition();
+    Eigen::Vector3d t_error = t_ref - t_qry;
+    std::cout<<"Position error: "<<t_error.transpose()<<std::endl;
+  }
+
+  // Write the optimized reconstruction
+  theia::WritePlyFile(base_path+"/chunk_000001_opt.ply", recon_qry, Eigen::Vector3i(255, 0,255), 0);
+
 }
 
 }  // namespace theia

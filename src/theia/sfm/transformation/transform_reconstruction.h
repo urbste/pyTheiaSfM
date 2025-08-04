@@ -36,6 +36,7 @@
 #define THEIA_SFM_TRANSFORMATION_TRANSFORM_RECONSTRUCTION_H_
 
 #include <Eigen/Core>
+#include <sophus/sim3.hpp>
 
 namespace theia {
 class Reconstruction;
@@ -45,6 +46,12 @@ class Reconstruction;
 void TransformReconstruction(const Eigen::Matrix3d& rotation,
                              const Eigen::Vector3d& translation,
                              const double scale,
+                             Reconstruction* reconstruction);
+
+void TransformReconstruction(const Eigen::Matrix4d& T_c_w,
+                             Reconstruction* reconstruction);
+
+void TransformReconstruction(const Sophus::Sim3d& sim3,
                              Reconstruction* reconstruction);
 
 }  // namespace theia

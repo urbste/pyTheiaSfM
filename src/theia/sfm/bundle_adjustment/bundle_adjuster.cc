@@ -49,6 +49,7 @@
 #include "theia/sfm/bundle_adjustment/position_error.h"
 #include "theia/sfm/bundle_adjustment/gravity_error.h"
 #include "theia/sfm/bundle_adjustment/depth_prior_error.h"
+#include "theia/sfm/bundle_adjustment/orientation_error.h"
 
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
@@ -159,6 +160,11 @@ void BundleAdjuster::AddView(const ViewId view_id) {
   // add a gravity prior if available
   if (options_.use_gravity_priors && view->HasGravityPrior()) {
     AddGravityPriorErrorResidual(view, camera);
+  }
+
+  // add a orientation prior if available
+  if (options_.use_orientation_priors && view->HasOrientationPrior()) {
+    AddOrientationPriorErrorResidual(view, camera);
   }
 }
 
@@ -292,6 +298,11 @@ void BundleAdjuster::AddViewPriors() {
     // add a gravity prior if available
     if (options_.use_gravity_priors && view->HasGravityPrior()) {
       AddGravityPriorErrorResidual(view, camera);
+    }
+
+    // add a orientation prior if available
+    if (options_.use_orientation_priors && view->HasOrientationPrior()) {
+      AddOrientationPriorErrorResidual(view, camera);
     }
   }
 
@@ -633,6 +644,13 @@ void BundleAdjuster::AddDepthPriorErrorResidual(const Feature& feature,
     DepthPriorError::Create(feature),
     depth_prior_loss_function_.get(),
     camera->mutable_extrinsics(), track->MutablePoint()->data());
+}
+
+void BundleAdjuster::AddOrientationPriorErrorResidual(View* view, Camera* camera) {
+  problem_->AddResidualBlock(
+      OrientationPriorError::Create(view->GetOrientationPrior(),
+                            view->GetOrientationPriorSqrtInformation()),
+      NULL, camera->mutable_extrinsics());
 }
 
 bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id,

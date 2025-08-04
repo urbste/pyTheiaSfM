@@ -91,6 +91,13 @@ class View {
   double GetTimestamp() const;
   void SetTimestamp(const double timestamp);
 
+  // Prior
+  void SetOrientationPrior(const Eigen::Vector3d& orientation_prior,
+                        const Eigen::Matrix3d& orientation_prior_information);
+  Eigen::Vector3d GetOrientationPrior() const;
+  Eigen::Matrix3d GetOrientationPriorSqrtInformation() const;
+  bool HasOrientationPrior() const;
+
   void SetPositionPrior(const Eigen::Vector3d& position_prior,
                         const Eigen::Matrix3d& position_prior_information);
   Eigen::Vector3d GetPositionPrior() const;
@@ -122,7 +129,10 @@ class View {
        has_position_prior_,
        gravity_prior_,
        gravity_prior_sqrt_information_,
-       has_gravity_prior_);
+       has_gravity_prior_,
+       orientation_prior_,
+       orientation_prior_sqrt_information_,
+       has_orientation_prior_);
   }
 
   std::string name_;
@@ -143,6 +153,11 @@ class View {
   Eigen::Vector3d gravity_prior_;
   Eigen::Matrix3d gravity_prior_sqrt_information_;
   bool has_gravity_prior_;
+
+  // A prior on orientation (world to camera transformation)
+  Eigen::Vector3d orientation_prior_;
+  Eigen::Matrix3d orientation_prior_sqrt_information_;
+  bool has_orientation_prior_;
 };
 
 }  // namespace theia

@@ -439,7 +439,7 @@ struct Sim3ReprojectionError {
         sqrt_information_x * (reprojection[0] - feature_.point_.x());
     reprojection_error[1] =
         sqrt_information_y * (reprojection[1] - feature_.point_.y());
-
+        
     return res;
   }
 
