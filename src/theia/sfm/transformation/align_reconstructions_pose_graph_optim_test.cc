@@ -62,6 +62,7 @@
 #include "theia/sfm/transformation/align_reconstructions.h"
 #include "theia/sfm/transformation/align_point_clouds.h"
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
+#include "theia/sfm/find_common_tracks_by_feature_in_reconstructions.h"
 
 namespace theia {
 
@@ -119,10 +120,13 @@ TEST(AlignReconstructionPoseGraphOptim, Test) {
   Reconstruction recon_qry;
   Reconstruction recon_ref;
   
-  std::string base_path = "/home/steffen/Data/GPStrava/TAAWN_TEST_DATA/1/Reference/run1/undist_reduced_result/reconstructions/";
-  theia::ReadReconstruction(base_path+"/chunk_000000.sfm", &recon_ref);  
-  theia::ReadReconstruction(base_path+"/chunk_000001.sfm", &recon_qry);  
+  std::string base_path = "/home/steffen/Data/GPStrava/TAAWN_TEST_DATA/1/Reference/run1/undist_reduced_result/debug_reconstructions/";
+  theia::ReadReconstruction(base_path+"/chunk_000000_01_original_ref.sfm", &recon_ref);  
+  theia::ReadReconstruction(base_path+"/chunk_000001_01_original_qry.sfm", &recon_qry);  
   
+
+  theia::BundleAdjustReconstruction(theia::BundleAdjustmentOptions(), &recon_qry);
+  theia::BundleAdjustReconstruction(theia::BundleAdjustmentOptions(), &recon_ref);
 
   // just write out view ids and names
   for (const auto& view_id : recon_qry.ViewIds()) {
@@ -139,7 +143,7 @@ TEST(AlignReconstructionPoseGraphOptim, Test) {
 
   // define view graph matches that need to align
   int chunk_size = 20;
-  int overlap_size = 10;
+  int overlap_size = 5;
 
   // we need a function so that id_ref=chunk_size-overlap_size+0  equals id_qry= 0
   // and id_ref=chunk_size-overlap_size+1  equals id_qry=1
@@ -153,41 +157,22 @@ TEST(AlignReconstructionPoseGraphOptim, Test) {
 
 
   // now we get all corresponding tracks in the query and reference reconstruction
-  std::vector<Eigen::Vector3d> points_qry, points_ref;
-  for (const auto& view_id : view_graph_matches_ref_qry) {
-    const View* view_ref = recon_ref.View(view_id.first);
-    const View* view_qry = recon_qry.View(view_id.second);
+  std::vector<Eigen::Vector3d> points_ref;
+  std::vector<Eigen::Vector3d> points_qry;
+  std::vector<std::pair<TrackId, TrackId>> track_id_pairs;
+  theia::FindCommonTracksByFeatureInReconstructions(
+    recon_ref, recon_qry, view_graph_matches_ref_qry, &points_ref, &points_qry, &track_id_pairs);
 
-    const auto& tracks_ref = view_ref->TrackIds();
+  std::cout<<"Number of common tracks: "<<points_ref.size()<<std::endl;
 
-    for (const auto& track_id : tracks_ref) {
-      const Track* track_ref = recon_ref.Track(track_id);
-      const auto& ref_feat = view_ref->GetFeature(track_id);
-      const auto& track_qry_id = view_qry->GetTrack(*ref_feat);
-      if (track_qry_id != kInvalidTrackId) {
-        points_qry.push_back(recon_qry.Track(track_qry_id)->Point().hnormalized());
-        points_ref.push_back(recon_ref.Track(track_id)->Point().hnormalized());
-      }
-    }
-  }
 
   theia::Sim3AlignmentOptions options;
   options.alignment_type = theia::Sim3AlignmentType::POINT_TO_POINT;
+  options.max_num_iterations = 100;
   theia::Sim3AlignmentSummary summary = theia::OptimizeAlignmentSim3(points_qry, points_ref, options);
 
-
-  // // align with umeyama
-  // Eigen::Matrix3d rotation;
-  // Eigen::Vector3d translation;
-  // double scale;
-  // theia::AlignPointCloudsUmeyama(points_qry, points_ref, &rotation, &translation, &scale);
-  // std::cout<<"rotation: "<<rotation.transpose()<<std::endl;
-  // std::cout<<"translation: "<<translation.transpose()<<std::endl;
-  // std::cout<<"scale: "<<scale<<std::endl;
-  // theia::TransformReconstruction(rotation, translation, 1.0, &recon_qry);
-
   std::cout<<"Summary: "<<summary.success<<" "<<summary.final_cost<<" "<<summary.num_iterations<<" "<<summary.alignment_error<<std::endl;
-  theia::TransformReconstruction(Sophus::Sim3d::exp(summary.sim3_params), &recon_qry);
+  theia::TransformReconstruction(summary.sim3_params, &recon_qry);
 
 
   theia::WritePlyFile(base_path+"/chunk_000001_trafo.ply", recon_qry, Eigen::Vector3i(0, 255,255), 0);
@@ -210,7 +195,7 @@ TEST(AlignReconstructionPoseGraphOptim, Test) {
 
   theia::BundleAdjustReconstruction(ba_options, &recon_qry);
 
-  int removed_tracks = theia::SetOutlierTracksToUnestimated(5, 0.15, &recon_qry);
+  //int removed_tracks = theia::SetOutlierTracksToUnestimated(5, 0.15, &recon_qry);
 
   // plot pose error between ref and qry
   for (const auto& view_id : view_graph_matches_ref_qry) {

@@ -99,6 +99,13 @@ struct BundleAdjustmentOptions {
   ceres::VisibilityClusteringType visibility_clustering_type =
       ceres::CANONICAL_VIEWS;
 
+  // Use mixed precision solves
+  bool use_mixed_precision_solves = false;
+
+  // Max number of refinement iterations
+  int max_num_refinement_iterations = 2;
+
+
   // If true, ceres will log verbosely.
   bool verbose = false;
 

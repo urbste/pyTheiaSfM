@@ -16,6 +16,7 @@
 #include "theia/sfm/undistort_image.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/track_builder.h"
+#include "theia/sfm/find_common_tracks_by_feature_in_reconstructions.h"
 
 namespace theia {
 
@@ -67,5 +68,15 @@ void UpdateFeaturesInViewWrapper(
     const std::vector<Eigen::Vector2d>& new_features,
     const std::vector<Eigen::Matrix2d>& covariances,
     Reconstruction& reconstruction);
+
+// Find common tracks between two reconstructions based on ffeature similiarity
+// Feature need to be exactly identical in terms of 2D location
+std::tuple<std::vector<Eigen::Vector3d>,
+           std::vector<Eigen::Vector3d>,
+           std::vector<std::pair<TrackId, TrackId>>>
+FindCommonTracksByFeatureInReconstructionsWrapper(
+    const Reconstruction& reconstruction_ref,   
+    const Reconstruction& reconstruction_qry,
+    const std::vector<std::pair<ViewId, ViewId>>& view_graph_matches_ref_qry);
 
 }  // namespace theia

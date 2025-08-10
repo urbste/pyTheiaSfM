@@ -144,6 +144,7 @@ set(THEIA_SRC
   sfm/filter_view_graph_cycles_by_rotation.cc
   sfm/filter_view_pairs_from_orientation.cc
   sfm/filter_view_pairs_from_relative_translation.cc
+  sfm/find_common_tracks_by_feature_in_reconstructions.cc
   sfm/find_common_tracks_in_views.cc
   sfm/find_common_views_by_name.cc
   sfm/global_pose_estimation/compute_triplet_baseline_ratios.cc

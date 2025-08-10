@@ -77,6 +77,8 @@ void SetSolverOptions(const BundleAdjustmentOptions& options,
   solver_options->gradient_tolerance = options.gradient_tolerance;
   solver_options->parameter_tolerance = options.parameter_tolerance;
   solver_options->max_trust_region_radius = options.max_trust_region_radius;
+  solver_options->use_mixed_precision_solves = options.use_mixed_precision_solves;
+  solver_options->max_num_refinement_iterations = options.max_num_refinement_iterations;
 
   // Solver options takes ownership of the ordering so that we can order the BA
   // problem by points and cameras.

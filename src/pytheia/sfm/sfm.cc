@@ -43,6 +43,7 @@
 #include <complex>
 #include <glog/logging.h>
 #include <math.h>
+#include <ceres/types.h>
 
 #include "theia/math/polynomial.h"
 #include "theia/sfm/pose/util.h"
@@ -568,6 +569,7 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("AlignReconstructions", theia::AlignReconstructionsWrapper);
   m.def("AlignReconstructionsRobust", theia::AlignReconstructionsRobustWrapper);
   m.def("TransformReconstruction", theia::TransformReconstructionWrapper);
+  m.def("TransformReconstruction4", theia::TransformReconstructionWrapper4);
 
   // SIM3 Point Cloud Alignment
   py::enum_<theia::Sim3AlignmentType>(m, "Sim3AlignmentType")
@@ -583,11 +585,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("huber_threshold", &theia::Sim3AlignmentOptions::huber_threshold)
       .def_readwrite("outlier_threshold", &theia::Sim3AlignmentOptions::outlier_threshold)
       .def_readwrite("max_iterations", &theia::Sim3AlignmentOptions::max_iterations)
-      .def_readwrite("max_refinement_iterations", &theia::Sim3AlignmentOptions::max_refinement_iterations)
-      .def_readwrite("function_tolerance", &theia::Sim3AlignmentOptions::function_tolerance)
-      .def_readwrite("gradient_tolerance", &theia::Sim3AlignmentOptions::gradient_tolerance)
-      .def_readwrite("parameter_tolerance", &theia::Sim3AlignmentOptions::parameter_tolerance)
-      .def_readwrite("num_threads", &theia::Sim3AlignmentOptions::num_threads)
+      .def_readwrite("perform_optimization", &theia::Sim3AlignmentOptions::perform_optimization)
       .def_readwrite("verbose", &theia::Sim3AlignmentOptions::verbose)
       .def("set_initial_sim3_params", &theia::Sim3AlignmentOptions::SetInitialSim3Params,
            py::arg("params"), "Set initial SIM3 parameters")
@@ -873,6 +871,9 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("RemoveDisconnectedViewPairs", theia::RemoveDisconnectedViewPairs);
   m.def("AddFeatureCorrespondencesToTrackBuilder", theia::AddFeatureCorrespondencesToTrackBuilderWrapper);
   m.def("UpdateFeaturesInView", theia::UpdateFeaturesInViewWrapper);
+  
+  m.def("FindCommonTracksByFeatureInReconstructions", 
+        theia::FindCommonTracksByFeatureInReconstructionsWrapper);
 
   // View class
   py::class_<theia::View>(m, "View")
@@ -1017,6 +1018,12 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::BundleAdjustmentOptions::loss_function_type)
       .def_readwrite("robust_loss_width",
                      &theia::BundleAdjustmentOptions::robust_loss_width)
+      .def_readwrite("linear_solver_type",
+                     &theia::BundleAdjustmentOptions::linear_solver_type)
+      .def_readwrite("preconditioner_type",
+                     &theia::BundleAdjustmentOptions::preconditioner_type)
+      .def_readwrite("visibility_clustering_type",
+                     &theia::BundleAdjustmentOptions::visibility_clustering_type)
       .def_readwrite("verbose", &theia::BundleAdjustmentOptions::verbose)
       .def_readwrite(
           "constant_camera_orientation",
@@ -1055,7 +1062,11 @@ void pytheia_sfm_classes(py::module& m) {
                          use_homogeneous_point_parametrization)
       .def_readwrite(
           "use_inverse_depth_parametrization",
-          &theia::BundleAdjustmentOptions::use_inverse_depth_parametrization);
+          &theia::BundleAdjustmentOptions::use_inverse_depth_parametrization)
+      .def_readwrite("use_mixed_precision_solves",
+                     &theia::BundleAdjustmentOptions::use_mixed_precision_solves)
+      .def_readwrite("max_num_refinement_iterations",
+                     &theia::BundleAdjustmentOptions::max_num_refinement_iterations);
 
   // Reconstruction Options
   py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
@@ -1531,6 +1542,30 @@ void pytheia_sfm_classes(py::module& m) {
       .def_static("LLAToECEF", theia::GPSConverter::LLAToECEF);
 
   // Bundle Adjustment
+  // Expose selected Ceres enums to configure solver from Python.
+  py::enum_<ceres::LinearSolverType>(m, "LinearSolverType")
+      .value("DENSE_QR", ceres::LinearSolverType::DENSE_QR)
+      .value("DENSE_NORMAL_CHOLESKY", ceres::LinearSolverType::DENSE_NORMAL_CHOLESKY)
+      .value("DENSE_SCHUR", ceres::LinearSolverType::DENSE_SCHUR)
+      .value("SPARSE_NORMAL_CHOLESKY", ceres::LinearSolverType::SPARSE_NORMAL_CHOLESKY)
+      .value("SPARSE_SCHUR", ceres::LinearSolverType::SPARSE_SCHUR)
+      .value("ITERATIVE_SCHUR", ceres::LinearSolverType::ITERATIVE_SCHUR)
+      .value("CGNR", ceres::LinearSolverType::CGNR)
+      .export_values();
+
+  py::enum_<ceres::PreconditionerType>(m, "PreconditionerType")
+      .value("IDENTITY", ceres::PreconditionerType::IDENTITY)
+      .value("JACOBI", ceres::PreconditionerType::JACOBI)
+      .value("SCHUR_JACOBI", ceres::PreconditionerType::SCHUR_JACOBI)
+      .value("CLUSTER_JACOBI", ceres::PreconditionerType::CLUSTER_JACOBI)
+      .value("CLUSTER_TRIDIAGONAL", ceres::PreconditionerType::CLUSTER_TRIDIAGONAL)
+      .export_values();
+
+  py::enum_<ceres::VisibilityClusteringType>(m, "VisibilityClusteringType")
+      .value("SINGLE_LINKAGE", ceres::VisibilityClusteringType::SINGLE_LINKAGE)
+      .value("CANONICAL_VIEWS", ceres::VisibilityClusteringType::CANONICAL_VIEWS)
+      .export_values();
+
   py::enum_<theia::OptimizeIntrinsicsType>(m, "OptimizeIntrinsicsType")
       .value("NONE", theia::OptimizeIntrinsicsType::NONE)
       .value("FOCAL_LENGTH", theia::OptimizeIntrinsicsType::FOCAL_LENGTH)

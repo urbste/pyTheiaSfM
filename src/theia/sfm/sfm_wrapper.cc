@@ -111,4 +111,21 @@ void UpdateFeaturesInViewWrapper(
   }
 }
 
+std::tuple<std::vector<Eigen::Vector3d>,
+           std::vector<Eigen::Vector3d>,
+           std::vector<std::pair<TrackId, TrackId>>>
+FindCommonTracksByFeatureInReconstructionsWrapper(
+    const Reconstruction& reconstruction_ref,
+    const Reconstruction& reconstruction_qry,
+    const std::vector<std::pair<ViewId, ViewId>>& view_graph_matches_ref_qry) {
+  std::vector<Eigen::Vector3d> points_ref;
+  std::vector<Eigen::Vector3d> points_qry;
+  std::vector<std::pair<TrackId, TrackId>> track_id_pairs;
+
+  FindCommonTracksByFeatureInReconstructions(
+      reconstruction_ref, reconstruction_qry, view_graph_matches_ref_qry, &points_ref, &points_qry, &track_id_pairs);
+      
+  return std::make_tuple(points_ref, points_qry, track_id_pairs);
+}
+
 }  // namespace theia

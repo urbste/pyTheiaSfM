@@ -173,6 +173,7 @@
 #include "theia/sfm/filter_view_pairs_from_orientation.h"
 #include "theia/sfm/filter_view_pairs_from_relative_translation.h"
 #include "theia/sfm/find_common_tracks_in_views.h"
+#include "theia/sfm/find_common_tracks_by_feature_in_reconstructions.h"
 #include "theia/sfm/find_common_views_by_name.h"
 #include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/compute_triplet_baseline_ratios.h"

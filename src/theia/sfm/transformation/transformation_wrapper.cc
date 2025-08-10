@@ -93,6 +93,11 @@ void TransformReconstructionWrapper(Reconstruction& reconstruction,
   TransformReconstruction(rotation, translation, scale, &reconstruction);
 }
 
+void TransformReconstructionWrapper4(Reconstruction& reconstruction,
+  const Eigen::Matrix4d& transformation) {
+  TransformReconstruction(transformation, &reconstruction);
+}
+
 // SIM3 Point Cloud Alignment Wrapper Implementations
 Sim3AlignmentSummary OptimizeAlignmentSim3Wrapper(
     const std::vector<Eigen::Vector3d>& source_points,

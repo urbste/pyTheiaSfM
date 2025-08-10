@@ -97,12 +97,10 @@ struct Sim3AlignmentOptions {
   ceres::LinearSolverType linear_solver_type = ceres::SPARSE_SCHUR;
   ceres::MinimizerType minimizer_type = ceres::TRUST_REGION;
   int max_iterations = 100;
-  int max_refinement_iterations = 5;
-  double function_tolerance = 1e-6;
-  double gradient_tolerance = 1e-10;
-  double parameter_tolerance = 1e-8;
-  int num_threads = 1;
   bool verbose = false;
+
+  // Whether to perform optimization or just use the initial guess
+  bool perform_optimization = true;
   
   Sim3AlignmentOptions() = default;
   

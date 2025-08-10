@@ -180,7 +180,7 @@ Sim3AlignmentSummary OptimizeAlignmentSim3(
       
   // If initial guess is provided, use it
   if (options.initial_sim3_params) {
-    sim3_params = *options.initial_sim3_params;
+    summary.sim3_params = *options.initial_sim3_params;
   } else {
     // Use robust Umeyama for initial alignment
     Eigen::Matrix3d rotation;
@@ -193,95 +193,93 @@ Sim3AlignmentSummary OptimizeAlignmentSim3(
                                       &rotation, &translation, &scale);
     
     // Convert to SIM3 parameters [translation, rotation, scale]
-    sim3_params = Sim3FromRotationTranslationScale(rotation, translation, scale);
+    summary.sim3_params = Sim3FromRotationTranslationScale(rotation, translation, scale);
   }
+  summary.success = true;
   
-  // Create optimization problem
-  ceres::Problem problem;
-  
-  // Add point-to-point residuals
-  for (size_t i = 0; i < source_points.size(); ++i) {
-    ceres::CostFunction* cost_function = nullptr;
-    double point_weight = 1.0;  // Default weight
+  if (options.perform_optimization) {
+    // Create optimization problem
+    ceres::Problem problem;
     
-    // Use individual point weights if provided (higher weight = higher confidence)
-    if (options.point_weights && i < options.point_weights->size()) {
-      point_weight = (*options.point_weights)[i];
-    } else {
-      // Fall back to global point weight if no individual weights provided
-      point_weight = options.point_weight;
-    }
-    
-    switch (options.alignment_type) {
-      case Sim3AlignmentType::POINT_TO_POINT:
-        cost_function = Sim3PointToPointError::Create(
-            source_points[i], target_points[i], point_weight);
-        break;
-        
-      case Sim3AlignmentType::ROBUST_POINT_TO_POINT:
-        cost_function = Sim3PointToPointError::Create(
-            source_points[i], target_points[i], point_weight);
-        break;
-        
-      case Sim3AlignmentType::POINT_TO_PLANE:
-        if (options.target_normals && i < options.target_normals->size()) {
-          cost_function = Sim3PointToPlaneError::Create(
-              source_points[i], target_points[i], 
-              (*options.target_normals)[i], point_weight);
-        } else {
-          LOG(WARNING) << "Target normals not provided for point-to-plane alignment. "
-                      << "Falling back to point-to-point.";
-          cost_function = Sim3PointToPointError::Create(
-              source_points[i], target_points[i], point_weight);
-        }
-        break;
-        
-      default:
-        LOG(FATAL) << "Unknown alignment type.";
-        break;
-    }
-    
-    if (cost_function) {
-      // Use Huber loss function for robust alignment
-      ceres::LossFunction* loss_function = nullptr;
-      if (options.alignment_type == Sim3AlignmentType::ROBUST_POINT_TO_POINT) {
-        loss_function = new ceres::HuberLoss(options.huber_threshold);
+    // Add point-to-point residuals
+    for (size_t i = 0; i < source_points.size(); ++i) {
+      ceres::CostFunction* cost_function = nullptr;
+      double point_weight = 1.0;  // Default weight
+      
+      // Use individual point weights if provided (higher weight = higher confidence)
+      if (options.point_weights && i < options.point_weights->size()) {
+        point_weight = (*options.point_weights)[i];
+      } else {
+        // Fall back to global point weight if no individual weights provided
+        point_weight = options.point_weight;
       }
       
-      problem.AddResidualBlock(cost_function, loss_function, sim3_params.data());
+      switch (options.alignment_type) {
+        case Sim3AlignmentType::POINT_TO_POINT:
+          cost_function = Sim3PointToPointError::Create(
+              source_points[i], target_points[i], point_weight);
+          break;
+          
+        case Sim3AlignmentType::ROBUST_POINT_TO_POINT:
+          cost_function = Sim3PointToPointError::Create(
+              source_points[i], target_points[i], point_weight);
+          break;
+          
+        case Sim3AlignmentType::POINT_TO_PLANE:
+          if (options.target_normals && i < options.target_normals->size()) {
+            cost_function = Sim3PointToPlaneError::Create(
+                source_points[i], target_points[i], 
+                (*options.target_normals)[i], point_weight);
+          } else {
+            LOG(WARNING) << "Target normals not provided for point-to-plane alignment. "
+                        << "Falling back to point-to-point.";
+            cost_function = Sim3PointToPointError::Create(
+                source_points[i], target_points[i], point_weight);
+          }
+          break;
+          
+        default:
+          LOG(FATAL) << "Unknown alignment type.";
+          break;
+      }
+      
+      if (cost_function) {
+        // Use Huber loss function for robust alignment
+        ceres::LossFunction* loss_function = nullptr;
+        if (options.alignment_type == Sim3AlignmentType::ROBUST_POINT_TO_POINT) {
+          loss_function = new ceres::HuberLoss(options.huber_threshold);
+        }
+        
+        problem.AddResidualBlock(cost_function, loss_function, sim3_params.data());
+      }
     }
-  }
+      
+    // Set up solver options
+    ceres::Solver::Options solver_options;
+    solver_options.linear_solver_type = options.linear_solver_type;
+    solver_options.minimizer_type = options.minimizer_type;
+    solver_options.max_num_iterations = options.max_iterations;
+    solver_options.minimizer_progress_to_stdout = options.verbose;
     
-  // Set up solver options
-  ceres::Solver::Options solver_options;
-  solver_options.linear_solver_type = options.linear_solver_type;
-  solver_options.minimizer_type = options.minimizer_type;
-  solver_options.max_num_iterations = options.max_iterations;
-  solver_options.function_tolerance = options.function_tolerance;
-  solver_options.gradient_tolerance = options.gradient_tolerance;
-  solver_options.parameter_tolerance = options.parameter_tolerance;
-  solver_options.minimizer_progress_to_stdout = options.verbose;
-  solver_options.num_threads = options.num_threads;
-  
-  // Solve the problem
-  ceres::Solver::Summary solver_summary;
-  ceres::Solve(solver_options, &problem, &solver_summary);
-  
-  // Fill summary
-  summary.success = solver_summary.termination_type == ceres::CONVERGENCE;
-  summary.final_cost = solver_summary.final_cost;
-  summary.num_iterations = solver_summary.iterations.size();
-  summary.sim3_params = sim3_params;
-  
-  // Compute final alignment error
-  Sophus::Sim3d final_transformation = Sophus::Sim3d::exp(sim3_params);
-  double total_error = 0.0;
-  for (size_t i = 0; i < source_points.size(); ++i) {
-    Eigen::Vector3d transformed_point = final_transformation * source_points[i];
-    total_error += (transformed_point - target_points[i]).norm();
+    // Solve the problem
+    ceres::Solver::Summary solver_summary;
+    ceres::Solve(solver_options, &problem, &solver_summary);
+    
+    // Fill summary
+    summary.success = solver_summary.termination_type == ceres::CONVERGENCE;
+    summary.final_cost = solver_summary.final_cost;
+    summary.num_iterations = solver_summary.iterations.size();
+    summary.sim3_params = sim3_params;
+    
+    // Compute final alignment error
+    Sophus::Sim3d final_transformation = Sophus::Sim3d::exp(sim3_params);
+    double total_error = 0.0;
+    for (size_t i = 0; i < source_points.size(); ++i) {
+      Eigen::Vector3d transformed_point = final_transformation * source_points[i];
+      total_error += (transformed_point - target_points[i]).norm();
+    }
+    summary.alignment_error = total_error / source_points.size();
   }
-  summary.alignment_error = total_error / source_points.size();
-  
   return summary;
 }
 

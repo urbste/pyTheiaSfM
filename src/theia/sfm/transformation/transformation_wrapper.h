@@ -44,6 +44,9 @@ void TransformReconstructionWrapper(Reconstruction& reconstruction,
                                     const Eigen::Vector3d& translation,
                                     const double scale);
 
+void TransformReconstructionWrapper4(Reconstruction& reconstruction,
+                                    const Eigen::Matrix4d& transformation);
+
 // SIM3 Point Cloud Alignment Wrappers
 Sim3AlignmentSummary OptimizeAlignmentSim3Wrapper(
     const std::vector<Eigen::Vector3d>& source_points,
