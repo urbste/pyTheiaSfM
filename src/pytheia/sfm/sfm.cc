@@ -1466,6 +1466,8 @@ void pytheia_sfm_classes(py::module& m) {
            py::return_value_policy::reference_internal)
       .def("GetViewsInCameraIntrinsicGroup",
            &theia::Reconstruction::GetViewsInCameraIntrinsicGroup)
+      .def("InitializeInverseDepth",
+           &theia::Reconstruction::InitializeInverseDepth)
       //.def("GetSubReconstruction",
       //&theia::Reconstruction::GetSubReconstructionWrapper)
       ;

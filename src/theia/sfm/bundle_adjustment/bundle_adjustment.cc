@@ -77,8 +77,7 @@ void UpdateInverseDepth(
 
     const theia::View* ref_view = CHECK_NOTNULL(recon.View(mutable_track->ReferenceViewId()));
     const theia::Camera ref_cam = ref_view->Camera();
-    Eigen::Vector2d pt;
-    const double depth = ref_cam.ProjectPoint(mutable_track->Point(), &pt);
+    const double depth = ref_cam.ProjectPoint(mutable_track->Point(), nullptr);
     mutable_track->SetInverseDepth(1/depth);
   }
 }
@@ -102,8 +101,7 @@ void UpdateInverseDepthViews(
       }
 
       const theia::Camera camera = view->Camera();
-      Eigen::Vector2d pt;
-      const double depth = camera.ProjectPoint(mutable_track->Point(), &pt);
+      const double depth = camera.ProjectPoint(mutable_track->Point(), nullptr);
       mutable_track->SetInverseDepth(1/depth);
     }
   }

@@ -208,6 +208,9 @@ double Camera::ProjectPoint(const Vector4d& point, Vector2d* pixel) const {
   Eigen::Vector3d rotated_point;
   ceres::AngleAxisRotatePoint(
           extrinsics() + ORIENTATION, adjusted_point.data(), rotated_point.data());
+  if (pixel == nullptr) {
+    return rotated_point[2] / point[3];
+  }
   *pixel = camera_intrinsics_->CameraToImageCoordinates(rotated_point);
   return rotated_point[2] / point[3];
 }

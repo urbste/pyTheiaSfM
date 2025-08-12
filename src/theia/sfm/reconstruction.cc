@@ -561,4 +561,22 @@ void Reconstruction::GetSubReconstruction(
   }
 }
 
+void Reconstruction::InitializeInverseDepth() {
+  for (const auto& track_id : TrackIds()) {
+    class Track* track = MutableTrack(track_id);
+    if (!track->IsEstimated()) {
+      continue;
+    }
+
+    const ViewId ref_view_id = track->ReferenceViewId();
+    const class View* ref_view = CHECK_NOTNULL(View(ref_view_id));
+    const Camera& ref_cam = ref_view->Camera();
+    const Feature* reference_obs = ref_view->GetFeature(track_id);
+    const double depth = ref_cam.ProjectPoint(track->Point(), nullptr);
+    track->SetReferenceBearingVector(
+      ref_cam.PixelToNormalizedCoordinates(reference_obs->point_)); 
+    track->SetInverseDepth(1/depth);
+  }
+}
+
 }  // namespace theia

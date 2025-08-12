@@ -165,6 +165,9 @@ class Reconstruction {
   Reconstruction GetSubReconstructionWrapper(
       const std::unordered_set<ViewId>& views_in_subset);
 
+  // Initialize inverse depth for all tracks
+  void InitializeInverseDepth();
+
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
