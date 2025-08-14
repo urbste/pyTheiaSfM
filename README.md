@@ -15,12 +15,12 @@ pyTheia does not aim at being an end-to-end SfM library. For example, building r
 pyTheia is rather a "swiss knife" for quickly prototyping SfM related reconstruction applications without sacrificing perfomance.
 For example SOTA feature detection & matching, place recognition algorithms are based on deep learning, and easily usable from Python. However, using these algorithms from a C++ library is not always straighforward and especially quick testing and prototyping is cumbersome.
 
-## What was removed
-Hence, we removed some libaries from the original TheiaSfM:
-* SuiteSparse: Optional for ceres, however all GPL related code was removed from src/math/matrix/sparse_cholesky_llt.cc (cholmod -> Eigen::SimplicialLDLT). This will probably be slower on large problems and potentially numerically a bit more unstable.
-* OpenImageIO: was used for image in and output and for recitification.
-* RapidJSON: Camera intrinsic in and output. Is part of cereal headers anyways.
-* RocksDB: Used for saving and loading extracted features efficiently.
+## Dependency changes
+Compared to the original TheiaSfM:
+* SuiteSparse: Optional for Ceres; GPL-dependent code was removed in src/math/matrix/sparse_cholesky_llt.cc (cholmod -> Eigen::SimplicialLDLT), which may be slower for very large problems and slightly less stable numerically.
+* RapidJSON: No separate dependency; RapidJSON is vendored via cereal headers.
+* RocksDB: Feature/match database remains available but is optional behind the WITH_ROCKSDB CMake option.
+* OpenImageIO: Still used internally for image I/O.
 
 ## Changes to the original TheiaSfM library
 
@@ -52,11 +52,11 @@ Hence, we removed some libaries from the original TheiaSfM:
 ## Usage Examples
 
 ### Full reconstruction example: Global, Hybrid or Incremental SfM using OpenCV feature detection and matching
-Have a look at the short example: [sfm_pipeline.py](pytest/sfm_pipeline.py).
+Have a look at the short example: [sfm_pipeline.py](pytests/sfm_pipeline.py).
 Download the south_building dataset from [here](https://demuc.de/colmap/datasets/).
 Extract it somewhere and run: 
 ```bash
-python pytest/sfm_pipeline.py --image_path /path/to/south-building/images/
+python pytests/sfm_pipeline.py --image_path /path/to/south-building/images/
 ```
 
 ### Creating a camera
@@ -96,7 +96,7 @@ pt3_h_ = ray*depth + camera.GetPosition() # == pt3_h[:3]
 
 ### Solve for absolute or relative camera pose
 pyTheia integrates a lot of performant geometric vision algorithms. 
-Have a look at the [tests](pytest/sfm)
+Have a look at the [tests](pytests/sfm)
 ``` Python
 import pytheia as pt
 
@@ -185,6 +185,17 @@ res = BundleAdjustTracksWithCov(recon, opts, [view_id1,trackid])
 # two view optimization
 res = BundleAdjustTwoViewsAngular(recon, [pt.sfm.FeatureCorrespondence], pt.sfm.TwoViewInfo())
 ```
+
+### Export to Nerfstudio and SDFStudio
+You can export a `pt.sfm.Reconstruction` to Nerfstudio or SDFStudio formats directly from Python:
+```python
+import pytheia as pt
+# Nerfstudio (writes transforms.json)
+pt.io.WriteNerfStudio("/path/to/images", recon, 16, "/path/to/out/transforms.json")
+# SDFStudio (all images must be undistorted)
+pt.io.WriteSdfStudio("/path/to/images", recon, (2.0, 6.0), 1.0)
+```
+More complete examples are in `pyexamples/nerfstudio_export_reconstruction.py` and `pyexamples/sdfstudio_export_reconstruction.py`.
 
 ## Building
 This section describes how to build on Ubuntu locally or on WSL2 both with sudo rights.

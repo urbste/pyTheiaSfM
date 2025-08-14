@@ -43,13 +43,13 @@ First we need the basic libraries: Eigen3 and the ceres-solver
   mkdir LIBS && cd LIBS
  
   git clone https://gitlab.com/libeigen/eigen
-  cd eigen && git checkout 3.3.9
+  cd eigen && git checkout 3.4.0
   mkdir -p build && cd build && cmake .. && sudo make install
 
   # ceres solver
   cd LIBS
   git clone https://ceres-solver.googlesource.com/ceres-solver
-  cd ceres-solver && git checkout 2.0.0 && mkdir build && cd build 
+  cd ceres-solver && git checkout 2.1.0 && mkdir build && cd build 
   cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF
   make -j && make install
 
@@ -59,3 +59,5 @@ In your favorite Python environment execute the following commands:
 .. code-block:: bash
   python3 setup.py bdist_wheel
   cd dist && pip install *.whl
+
+Manylinux wheels can also be built using Docker or the helper scripts under `pypackage/` (see repository README for details).

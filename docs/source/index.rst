@@ -12,12 +12,12 @@ algorithms for Structure from Motion (SfM).
 
 pyTheia provides extensive Python wrappers for Theia and actually extends the original library in several parts:
 
-* Removed some libraries: OpenImageIO, RapidJSON, RocksDB
+* Dependencies adjusted: RocksDB is optional, RapidJSON is vendored via cereal headers, and OpenImageIO is still used internally
 * Image processing and feature detection is supposed to be done in Python
 * GPL SuiteSparse: Optional for ceres, however all GPL related code was removed from src/math/matrix/sparse_cholesky_llt.cc (cholmod -> Eigen::SimplicialLDLT). This will probably be slower on large problems and potentially numerically a bit more unstable.
 * Added GlobalSfM methods
 * Added some pose algorithms
-* Added camera models (DoubleSphere, EUCM)
+* Added camera models (DoubleSphere, EUCM, Orthographic)
 * Added some features to BA (e.g. pose or depth priors, covariance for points and cameras, homogeneous tangent)
 * Added covariance estimation to BA
 
@@ -34,7 +34,7 @@ After building and installing the pyTheia wheel, simply import it in your Python
 
 ``import pytheia as pt``
 
-You can find more examples on how to use the library in: ...
+You can find examples in the repository under `pyexamples` and `pytests`.
 
 Citation
 ========

@@ -8,7 +8,7 @@
 Features
 ========
 
-Feature detection and description is a major area of focus in Computer Vision. While SIFT remains the gold standard because of its robustness and matching performance, many other detectors and descriptors are used and often have other competitive advantages. Theia presents friendly classes for feature detection and decription such that the interface is always the same regardless of the methods used. Note that all keypoint and descriptor extraction methods we perform automatic conversion to grayscale images if necessary.
+Feature detection and description is a major area of focus in Computer Vision. While SIFT remains the gold standard because of its robustness and matching performance, many other detectors and descriptors are used and often have other competitive advantages. Theia presents friendly classes for feature detection and decription such that the interface is always the same regardless of the methods used. Note that all keypoint and descriptor extraction methods we perform automatic conversion to grayscale images if necessary. In pyTheia, feature extraction and matching are typically done from Python, allowing you to integrate modern deep-learning methods.
 
 .. NOTE:: The keypoint detection and descriptor extraction methods here are generally not thread-safe. Use with caution when multi-threading.
 
@@ -231,6 +231,8 @@ images, which can then provide geometric constrainst for the poses between these
 images. As such, feature matching is a very critical process in the context of
 multi-view geometry. We provide a generic interface for feature matching that
 works with binary descriptors or float descriptors.
+
+For most pyTheia users, we recommend performing feature extraction and matching in Python and importing matches for SfM.
 
 For feature matching, we implement an abstract :class:`FeatureMatcher` class that
 serves as an abstract class for various feature-matching methods. The

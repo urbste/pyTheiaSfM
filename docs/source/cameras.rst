@@ -36,9 +36,10 @@ the camera's extrinsics pose (i.e., the orientation and position in 3D space) as
 well as a projection model that defines how the camera projects 3D points onto
 the image plane (via the :class:`CameraIntrinsicsModel` class). The type of
 projection model is defined at runtime, and the :class:`Camera` API is agnostic
-to the projection model. Currently there are 4 types of projection models:
+to the projection model. Currently there are 8 types of projection models:
 :class:`PinholeCameraModel`, :class:`PinholeRadialTangentialCameraModel`,
-:class:`FisheyeCameraModel`, and :class:`FOVCameraModel`.
+:class:`FisheyeCameraModel`, :class:`FOVCameraModel`, :class:`DivisionUndistortionCameraModel`,
+:class:`DoubleSphereCameraModel`, :class:`ExtendedUnifiedCameraModel`, and :class:`OrthographicCameraModel`.
 
 Camera
 ------
@@ -246,6 +247,33 @@ an alternative representation for camera models with large radial distortion
 principal point is roughly proportional to the angle between the 3D point and
 the optical axis. This camera model is first proposed in [Devernay]_.
 
+DivisionUndistortionCameraModel
+-------------------------------
+
+.. class:: DivisionUndistortionCameraModel
+
+Single-parameter radial division model for strong distortions.
+
+DoubleSphereCameraModel
+-----------------------
+
+.. class:: DoubleSphereCameraModel
+
+Double-sphere fisheye model.
+
+ExtendedUnifiedCameraModel
+--------------------------
+
+.. class:: ExtendedUnifiedCameraModel
+
+Extended unified (EUCM) camera model.
+
+OrthographicCameraModel
+-----------------------
+
+.. class:: OrthographicCameraModel
+
+Orthographic projection with limited distortion support and magnification.
 
 Adding a New Camera Model
 -------------------------
