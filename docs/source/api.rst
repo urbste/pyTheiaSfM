@@ -14,3 +14,4 @@ API Reference
    math
    cameras
    sfm
+   io

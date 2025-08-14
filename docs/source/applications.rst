@@ -8,7 +8,8 @@ There are several applications that come with Theia right out of the box. These
 applications are useful on their own, and also help provide context for how
 Theia can be used for your own applications. Only minimal documentation is
 provided here, but a full description of command line arguments and more can be
-found within each application file.
+found within each application file. For Python-based pipelines (deep feature
+matching, Nerfstudio export), see `pyexamples/`.
 
 The general way to run each of the applications (after building Theia) is by running the executables and supplying the required command line flags. The command line flags may be determined by running the executable followed by ``--helpshort``. This will supply a list of required command line flags with a short description of their meaning, as well as the default parameters. When many flags are required to run a program, it is advisable to put all the flags into a single .txt file and supply them as a "flagfile" such as:
 

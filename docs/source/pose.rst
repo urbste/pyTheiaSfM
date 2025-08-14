@@ -260,3 +260,23 @@ Two Point Absolute Pose with a Partially Known Rotation
     is indeed equal to (0, 1, 0).
 
     When using this algorithm please cite the paper [SweeneyISMAR2015]_.
+
+L137: 
+L138: 
+L139: .. _section-sqpnp:
+L140: 
+L141: SQPnP (Globally Optimal PnP)
+L142: ============================
+L143: 
+L144:   .. function:: bool SQPnP(const std::vector<Eigen::Vector2d>& feature_positions, const std::vector<Eigen::Vector3d>& world_points, std::vector<Eigen::Quaterniond>* solution_rotation, std::vector<Eigen::Vector3d>* solution_translation)
+L145: 
+L146:     Consistently fast and globally optimal PnP solver [TerzakisECCV2020]_. Requires >= 3 correspondences.
+L147: 
+L148: .. _section-orthographic_planar_pose:
+L149: 
+L150: Planar Uncalibrated Orthographic Pose
+L151: =====================================
+L152: 
+L153:   .. function:: bool PlanarUncalibratedOrthographicPose(const std::vector<Eigen::Vector2d>& feature_points, const std::vector<Eigen::Vector3d>& world_points, const Eigen::Vector2d &principal_point, std::vector<Eigen::Matrix3d>* solution_rotations, std::vector<Eigen::Vector3d>* solution_translations, double* magnification)
+L154: 
+L155:     Estimates a planar orthographic pose and magnification from 2D-3D correspondences.
