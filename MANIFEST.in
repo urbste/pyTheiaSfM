@@ -1,0 +1,2 @@
+include src/pytheia/py.typed
+recursive-include src/pytheia *.pyi
