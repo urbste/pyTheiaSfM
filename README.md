@@ -296,3 +296,23 @@ Open a second terminal and run
 docker ps # this will give you a list of running containers to find the correct CONTAINER_ID
 docker cp CONTAINER_ID:/home/wheelhouse /path/to/result/folder/pytheia_wheels
 ```
+
+## Typing and editor stubs
+To get full function/argument lists and IntelliSense in editors for the native extension:
+
+- Generate stubs locally (requires `pybind11-stubgen`):
+   
+   ```bash
+   pip install pybind11-stubgen
+   dev/generate_stubs.sh
+   ```
+   
+   This writes `.pyi` files to `typings/pytheia`. VS Code/Pylance will pick them up via `pyrightconfig.json`.
+ 
+ - When building wheels via `setup.py`, stubs are generated automatically by default. To skip:
+   
+   ```bash
+   GENERATE_STUBS=0 python setup.py bdist_wheel --plat-name=...
+   ```
+ 
+ - The package ships a PEP 561 marker (`py.typed`) so downstream type checkers can consume the bundled stubs.
