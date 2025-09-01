@@ -32,3 +32,14 @@ cmake_build/*
 pytheia.egg-info
 pytheia_build/*
 dist/*
+
+src/pytheia/pytheia/
+
+src/pytheia/pytheia/math
+src/pytheia/pytheia/*.pyi
+src/pytheia/pytheia/*/*.pyi
+src/pytheia/__init__.pyi
+src/pytheia/**/*.pyi
+
+# Generated stub directories
+typings/
