@@ -1219,6 +1219,28 @@ the reprojection error.
 
    DEFAULT: ``ceres::SINGLE_LINKAGE``
 
+.. member:: ceres::DenseLinearAlgebraLibraryType BundleAdjustmentOptions::dense_linear_algebra_library_type
+
+  DEFAULT: ``ceres::EIGEN``
+
+  Selects the linear algebra backend for dense solvers (e.g., ``ceres::DENSE_SCHUR``, ``ceres::DENSE_NORMAL_CHOLESKY``). If Ceres was compiled with CUDA support, you may set this to ``ceres::CUDA`` to use GPU-accelerated dense linear algebra.
+
+.. member:: ceres::SparseLinearAlgebraLibraryType BundleAdjustmentOptions::sparse_linear_algebra_library_type
+
+  DEFAULT: ``ceres::EIGEN_SPARSE``
+
+  Selects the linear algebra backend for sparse solvers (e.g., ``ceres::SPARSE_SCHUR``, ``ceres::SPARSE_NORMAL_CHOLESKY``, ``ceres::ITERATIVE_SCHUR``). If Ceres was compiled with CUDA support, you may set this to ``ceres::CUDA_SPARSE`` to use GPU-accelerated sparse linear algebra.
+
+.. note::
+
+  If you build pyTheia locally and link against a Ceres Solver that was compiled with CUDA, you can enable GPU solving by choosing compatible combinations of
+  ``linear_solver_type`` together with the dense/sparse backend settings:
+
+  - For dense solvers (e.g., ``ceres::DENSE_SCHUR``), set ``dense_linear_algebra_library_type = ceres::CUDA``.
+  - For sparse solvers (e.g., ``ceres::SPARSE_SCHUR`` or ``ceres::ITERATIVE_SCHUR``), set ``sparse_linear_algebra_library_type = ceres::CUDA_SPARSE``.
+
+  These settings are only effective if your Ceres build has CUDA enabled; otherwise the CPU backends will be used.
+
 .. member:: bool BundleAdjustmentOptions::verbose
 
   DEFAULT: ``false``
