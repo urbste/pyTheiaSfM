@@ -109,7 +109,7 @@ generate_stubs()
 
 setuptools.setup(
     name='pytheia',
-    version='0.2.9',
+    version='0.3.0',
     description='A performant Structure from Motion library for Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',

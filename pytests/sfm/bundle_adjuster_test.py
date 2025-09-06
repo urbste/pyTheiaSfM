@@ -10,23 +10,23 @@ def test_BundleAdjustView(gen, ba_options):
         gen.add_noise_to_views(noise_pos=1e-3, noise_angle=1e-1)
         result = pt.sfm.BundleAdjustView(gen.recon, ba_options, vid)
         dist_pos = np.linalg.norm(
-            orig_pos - gen.recon.View(vid).Camera().Position)
+            orig_pos - gen.recon.View(vid).Camera().GetPosition())
         assert dist_pos < 1e-4
         assert result.success
 
 def test_BundleAdjustTrack(gen, ba_options):
 
     gen.add_noise_to_tracks(noise_track=1e-3)
-    for t_id in gen.recon.TrackIds:
+    for t_id in gen.recon.TrackIds():
         result = pt.sfm.BundleAdjustTrack(gen.recon, ba_options, t_id)
         assert result.success
 
 def test_BundleAdjustWithPositionPrior(gen, ba_options):
     ba_options.use_position_priors = True
 
-    for vid in gen.recon.ViewIds:
+    for vid in gen.recon.ViewIds():
         # get the original camera pose as a prior
-        pos_prior = gen.recon.View(vid).Camera().Position
+        pos_prior = gen.recon.View(vid).Camera().GetPosition()
         # now put noise on the position
         gen.add_noise_to_views(noise_pos=1e-2, noise_angle=1e-1)
 
@@ -39,7 +39,7 @@ def test_BundleAdjustWithPositionPrior(gen, ba_options):
         result = pt.sfm.BundleAdjustView(gen.recon, ba_options, vid)
 
         dist_pos = np.linalg.norm(
-            pos_prior - gen.recon.View(vid).Camera().Position)
+            pos_prior - gen.recon.View(vid).Camera().GetPosition())
         assert dist_pos < 1e-4
         assert result.success
 
@@ -50,9 +50,9 @@ def test_BundleAdjustWithPositionPriorAndInformation(gen, ba_options):
     # set a low standard dev for the position prior
     # the sqrt_information will then be 1./std * eye(3)
     pos_priors_std_dev = 0.001
-    for vid in gen.recon.ViewIds:
+    for vid in gen.recon.ViewIds():
         view = gen.recon.View(vid)
-        original_position = view.Camera().Position
+        original_position = view.Camera().GetPosition()
         # get the original camera pose as a prior
         pos_prior = original_position + pos_priors_std_dev * np.random.randn(3)
         # now put a large noise on the position and see if the prior helps to recover the original position
@@ -68,7 +68,7 @@ def test_BundleAdjustWithPositionPriorAndInformation(gen, ba_options):
         result = pt.sfm.BundleAdjustView(gen.recon, ba_options, vid)
 
         dist_pos = np.linalg.norm(
-            original_position - gen.recon.View(vid).Camera().Position)
+            original_position - gen.recon.View(vid).Camera().GetPosition())
         assert dist_pos < 3 * pos_priors_std_dev
         assert result.success
 
@@ -85,7 +85,12 @@ if __name__ == "__main__":
     ba_options.robust_loss_width = 1.345
     ba_options.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
     ba_options.verbose = True
-    ba_options.use_position_priors = False
+    ba_options.use_position_priors = False            
+    ba_options.use_homogeneous_point_parametrization = False
+
+    ba_options.dense_linear_algebra_library_type = pt.sfm.DenseLinearAlgebraLibraryType.CUDA
+    ba_options.linear_solver_type = pt.sfm.LinearSolverType.SPARSE_SCHUR
+
     test_BundleAdjustView(gen, ba_options)
 
     # test 2

@@ -99,6 +99,9 @@ struct BundleAdjustmentOptions {
   ceres::VisibilityClusteringType visibility_clustering_type =
       ceres::CANONICAL_VIEWS;
 
+  ceres::DenseLinearAlgebraLibraryType dense_linear_algebra_library_type = ceres::EIGEN;
+  ceres::SparseLinearAlgebraLibraryType sparse_linear_algebra_library_type = ceres::EIGEN_SPARSE;
+
   // Use mixed precision solves
   bool use_mixed_precision_solves = false;
 

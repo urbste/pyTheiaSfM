@@ -163,12 +163,12 @@ class RandomReconGenerator:
             self.add_noise_to_view(view_id, noise_pos, noise_angle)
 
     def add_noise_to_track(self, track_id, noise_track):
-        noisy_track = self.recon.Track(track_id).Point[:3] / self.recon.Track(track_id).Point[3]
+        noisy_track = self.recon.Track(track_id).Point()[:3] / self.recon.Track(track_id).Point()[3]
         noisy_track += noise_track * np.random.randn(3)
         self.recon.MutableTrack(track_id).SetPoint(np.append(noisy_track,1))
 
     def add_noise_to_tracks(self, noise_track=1e-5):
-        for track_id in self.recon.TrackIds:
+        for track_id in self.recon.TrackIds():
             self.add_noise_to_track(track_id, noise_track)
 
 if __name__ == "__main__":

@@ -1066,7 +1066,11 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("use_mixed_precision_solves",
                      &theia::BundleAdjustmentOptions::use_mixed_precision_solves)
       .def_readwrite("max_num_refinement_iterations",
-                     &theia::BundleAdjustmentOptions::max_num_refinement_iterations);
+                     &theia::BundleAdjustmentOptions::max_num_refinement_iterations)
+      .def_readwrite("dense_linear_algebra_library_type",
+                     &theia::BundleAdjustmentOptions::dense_linear_algebra_library_type)
+      .def_readwrite("sparse_linear_algebra_library_type",
+                     &theia::BundleAdjustmentOptions::sparse_linear_algebra_library_type);
 
   // Reconstruction Options
   py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
@@ -1566,6 +1570,19 @@ void pytheia_sfm_classes(py::module& m) {
   py::enum_<ceres::VisibilityClusteringType>(m, "VisibilityClusteringType")
       .value("SINGLE_LINKAGE", ceres::VisibilityClusteringType::SINGLE_LINKAGE)
       .value("CANONICAL_VIEWS", ceres::VisibilityClusteringType::CANONICAL_VIEWS)
+      .export_values();
+
+  py::enum_<ceres::DenseLinearAlgebraLibraryType>(m, "DenseLinearAlgebraLibraryType")
+      .value("EIGEN", ceres::DenseLinearAlgebraLibraryType::EIGEN)
+      .value("LAPACK", ceres::DenseLinearAlgebraLibraryType::LAPACK)
+      .value("CUDA", ceres::DenseLinearAlgebraLibraryType::CUDA)
+      .export_values();
+
+  py::enum_<ceres::SparseLinearAlgebraLibraryType>(m, "SparseLinearAlgebraLibraryType")
+      .value("SUITE_SPARSE", ceres::SparseLinearAlgebraLibraryType::SUITE_SPARSE)
+      .value("EIGEN_SPARSE", ceres::SparseLinearAlgebraLibraryType::EIGEN_SPARSE)
+      .value("CX_SPARSE", ceres::SparseLinearAlgebraLibraryType::CX_SPARSE)
+      .value("ACCELERATE_SPARSE", ceres::SparseLinearAlgebraLibraryType::ACCELERATE_SPARSE)
       .export_values();
 
   py::enum_<theia::OptimizeIntrinsicsType>(m, "OptimizeIntrinsicsType")

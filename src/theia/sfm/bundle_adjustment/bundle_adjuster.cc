@@ -79,6 +79,8 @@ void SetSolverOptions(const BundleAdjustmentOptions& options,
   solver_options->max_trust_region_radius = options.max_trust_region_radius;
   solver_options->use_mixed_precision_solves = options.use_mixed_precision_solves;
   solver_options->max_num_refinement_iterations = options.max_num_refinement_iterations;
+  solver_options->dense_linear_algebra_library_type = options.dense_linear_algebra_library_type;
+  solver_options->sparse_linear_algebra_library_type = options.sparse_linear_algebra_library_type;
 
   // Solver options takes ownership of the ordering so that we can order the BA
   // problem by points and cameras.
