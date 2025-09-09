@@ -5,7 +5,6 @@ function repair_wheel {
     if ! auditwheel show "$wheel"; then
         echo "Skipping non-platform wheel $wheel"
     else
-         #auditwheel repair "$wheel" --plat "$PLAT" -w /wheelhouse/
          auditwheel repair "$wheel" -w /home/wheelhouse/
     fi
 }
@@ -30,10 +29,9 @@ echo "Python version: $PYTHONVER"
 
 export PATH=$PYBIN:$PATH
 
-${PYBIN}/pip install auditwheel
+${PYBIN}/pip install auditwheel setuptools
 
-PLAT=manylinux_2_35_x86_64
-"${PYBIN}/python" setup.py bdist_wheel --plat-name=$PLAT
+"${PYBIN}/python" setup.py bdist_wheel
 
 cp /home/dist/*.whl /home/wheelhouse
 rm -rf /home/dist
