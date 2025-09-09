@@ -3,8 +3,9 @@
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/view_graph/view_graph.h"
-//#include "theia/image/image.h"
 #include "theia/sfm/camera/camera.h"
+#include "glog/logging.h"
+#include <chrono>
 
 namespace theia {
 
@@ -126,6 +127,42 @@ FindCommonTracksByFeatureInReconstructionsWrapper(
       reconstruction_ref, reconstruction_qry, view_graph_matches_ref_qry, &points_ref, &points_qry, &track_id_pairs);
       
   return std::make_tuple(points_ref, points_qry, track_id_pairs);
+}
+
+void AddObservationsWrapper(
+    const ViewId view_id,
+    const std::vector<TrackId>& track_ids,
+    const std::vector<Eigen::Vector2d>& features,
+    Reconstruction& reconstruction) {
+
+  CHECK_EQ(track_ids.size(), features.size())
+      << "track_ids.size() must equal features.size()";
+
+  for (int i = 0; i < track_ids.size(); i++) {
+    const TrackId track_id = track_ids[i];
+    const Feature feature(features[i]);
+    reconstruction.AddObservation(view_id, track_id, feature);
+  }
+}
+
+std::vector<TrackId> AddTracksWrapper(
+    const std::vector<Eigen::Vector3d>& tracks,
+    const std::vector<Eigen::Matrix<uint8_t, 3, 1>>& colors,
+    Reconstruction& reconstruction) {
+
+  CHECK_EQ(tracks.size(), colors.size())
+      << "tracks.size() must equal colors.size()";
+
+  std::vector<TrackId> track_ids(tracks.size());
+  for (int i = 0; i < tracks.size(); i++) {
+    track_ids[i] = reconstruction.AddTrack();
+    auto mutable_track = reconstruction.MutableTrack(track_ids[i]);
+    mutable_track->SetPoint(tracks[i].homogeneous());
+    mutable_track->SetColor(colors[i]);
+    mutable_track->SetEstimated(true);
+  }
+
+  return track_ids;
 }
 
 }  // namespace theia

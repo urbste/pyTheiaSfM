@@ -114,6 +114,9 @@ class Reconstruction {
   // user will manage the visibility of the track.
   TrackId AddTrack();
 
+  // Reserve internal storage for tracks to avoid rehashing during bulk insert.
+  void ReserveTracks(const size_t expected_total_num_tracks);
+
   // This can be dangerous. The user has to manage all track ids.
   void AddTrack(const theia::TrackId& track_id);
 
@@ -134,6 +137,12 @@ class Reconstruction {
   // returned. Failure results when multiple features from the same image are
   // present, and kInvalidTrackId is returned.
   TrackId AddTrack(const std::vector<std::pair<ViewId, Feature> >& track);
+
+  // Adds a new track and sets its properties in a single call for efficiency.
+  // Returns the new track id.
+  TrackId AddTrack(const Eigen::Vector4d& point,
+                   const Eigen::Matrix<uint8_t, 3, 1>& color,
+                   const bool is_estimated);
 
   // Removes the track from the reconstruction including the corresponding
   // features that are present in the view that observe it.

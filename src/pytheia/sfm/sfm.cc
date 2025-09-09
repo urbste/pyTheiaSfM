@@ -863,17 +863,15 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("SetOutlierTracksToUnestimated",
         theia::SetOutlierTracksToUnestimatedWrapper);
   m.def("SetCameraIntrinsicsFromPriors", theia::SetCameraIntrinsicsFromPriors);
-  // m.def("UndistortImage", theia::UndistortImageWrapper);
-  // m.def("UndistortCamera", theia::UndistortCameraWrapper);
-  // m.def("UndistortReconstruction", theia::UndistortReconstructionWrapper);
   m.def("FindCommonViewsByName", theia::FindCommonViewsByName);
   m.def("FindCommonTracksInViews", theia::FindCommonTracksInViews);
   m.def("RemoveDisconnectedViewPairs", theia::RemoveDisconnectedViewPairs);
   m.def("AddFeatureCorrespondencesToTrackBuilder", theia::AddFeatureCorrespondencesToTrackBuilderWrapper);
   m.def("UpdateFeaturesInView", theia::UpdateFeaturesInViewWrapper);
-  
   m.def("FindCommonTracksByFeatureInReconstructions", 
         theia::FindCommonTracksByFeatureInReconstructionsWrapper);
+  m.def("AddObservations", theia::AddObservationsWrapper);
+  m.def("AddTracks", theia::AddTracksWrapper);
 
   // View class
   py::class_<theia::View>(m, "View")

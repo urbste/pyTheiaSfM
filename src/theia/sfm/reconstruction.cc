@@ -264,6 +264,13 @@ TrackId Reconstruction::AddTrack() {
   return new_track_id;
 }
 
+void Reconstruction::ReserveTracks(const size_t expected_total_num_tracks) {
+  // Only reserve when it can grow the bucket count to avoid shrink churn.
+  if (expected_total_num_tracks > tracks_.size()) {
+    tracks_.reserve(expected_total_num_tracks);
+  }
+}
+
 void Reconstruction::AddTrack(const theia::TrackId& track_id) {
   CHECK(!ContainsKey(tracks_, track_id))
       << "The reconstruction already contains a track with id: " << track_id;
@@ -338,6 +345,23 @@ TrackId Reconstruction::AddTrack(
     view->AddFeature(new_track_id, observation.second);
   }
 
+  tracks_.emplace(new_track_id, new_track);
+  ++next_track_id_;
+  return new_track_id;
+}
+
+TrackId Reconstruction::AddTrack(const Eigen::Vector4d& point,
+                                 const Eigen::Matrix<uint8_t, 3, 1>& color,
+                                 const bool is_estimated) {
+  const TrackId new_track_id = next_track_id_;
+  CHECK(!ContainsKey(tracks_, new_track_id))
+      << "The reconstruction already contains a track with id: "
+      << new_track_id;
+
+  class Track new_track;
+  new_track.SetPoint(point);
+  new_track.SetColor(color);
+  new_track.SetEstimated(is_estimated);
   tracks_.emplace(new_track_id, new_track);
   ++next_track_id_;
   return new_track_id;

@@ -79,4 +79,15 @@ FindCommonTracksByFeatureInReconstructionsWrapper(
     const Reconstruction& reconstruction_qry,
     const std::vector<std::pair<ViewId, ViewId>>& view_graph_matches_ref_qry);
 
+void AddObservationsWrapper(
+    const ViewId view_id,
+    const std::vector<TrackId>& track_ids,
+    const std::vector<Eigen::Vector2d>& features,
+    Reconstruction& reconstruction);
+
+std::vector<TrackId> AddTracksWrapper(
+    const std::vector<Eigen::Vector3d>& tracks,
+    const std::vector<Eigen::Matrix<uint8_t, 3, 1>>& colors,
+    Reconstruction& reconstruction);
+
 }  // namespace theia
