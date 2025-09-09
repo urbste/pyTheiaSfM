@@ -25,7 +25,7 @@ jobs:
         submodules: recursive
     - name: Build the Linux wheels
       run: |
-        sudo docker run --rm -e PYTHON_VERSION=${{ matrix.pyversion }} -v `pwd`:/home urbste/pytheia_base:1.2.0 /home/pypackage/build-wheel-linux.sh
+        sudo docker run --rm -e PYTHON_VERSION=${{ matrix.pyversion }} -v `pwd`:/home urbste/pytheia_base:1.3.0 /home/pypackage/build-wheel-linux.sh
         # cleanup for custom runner
         sudo chown -R $(whoami):$(whoami) .
     - name: Publish distribution to Test PyPI
