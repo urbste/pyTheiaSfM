@@ -30,6 +30,7 @@ AWPY="$(ls -d /opt/python/*/bin | head -n1)/python"
 for PYBIN in /opt/python/*/bin; do
     ( cd / && "${PYBIN}/python" -m pip install --upgrade --no-cache-dir pip wheel setuptools )
     cd /home
+
     "${PYBIN}/python" setup.py bdist_wheel
     rm -rf /home/cmake_build/lib/*.so
     rm -rf /home/build/lib/pytheia/*.so

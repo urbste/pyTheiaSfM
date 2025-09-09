@@ -31,8 +31,8 @@ export PATH=$PYBIN:$PATH
 export PIP_ROOT_USER_ACTION=ignore
 
 ( cd / && "${PYBIN}/python" -m pip install --upgrade --no-cache-dir pip wheel setuptools auditwheel )
-
 cd /home
+
 "${PYBIN}/python" setup.py bdist_wheel
 
 cp /home/dist/*.whl /home/wheelhouse
