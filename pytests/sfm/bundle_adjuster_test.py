@@ -108,3 +108,4 @@ if __name__ == "__main__":
     ba_options.constant_camera_position = True
     gen.generate_random_recon(nr_views=5, nr_tracks=20, pixel_noise=0.5)
     test_BundleAdjustTrack(gen, ba_options)
+    

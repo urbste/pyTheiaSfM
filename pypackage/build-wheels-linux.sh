@@ -25,7 +25,7 @@ for PYBIN in /opt/python/*/bin; do
     # if [[ "$PYBIN" == *"$NOT_BUILDING"* ]]; then
     #    echo "Not building for python 3.12"
     #else
-    "${PYBIN}/pip" install nose
+    "${PYBIN}/pip" install nose setuptools auditwheel
     "${PYBIN}/python" setup.py bdist_wheel
     rm -rf /home/cmake_build/lib/*.so
     rm -rf /home/build/lib/pytheia/*.so
