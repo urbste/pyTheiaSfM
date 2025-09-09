@@ -12,14 +12,14 @@
       * Redistributions in binary form must reproduce the above copyright
         notice, this list of conditions and the following disclaimer in the
         documentation and/or other materials provided with the distribution.
-      * Neither the name of cereal nor the
+      * Neither the name of the copyright holder nor the
         names of its contributors may be used to endorse or promote products
         derived from this software without specific prior written permission.
 
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
   ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  DISCLAIMED. IN NO EVENT SHALL RANDOLPH VOORHIES OR SHANE GRANT BE LIABLE FOR ANY
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
   DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
   (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -30,15 +30,15 @@
 #ifndef CEREAL_TYPES_POLYMORPHIC_HPP_
 #define CEREAL_TYPES_POLYMORPHIC_HPP_
 
-#include <cereal/cereal.hpp>
-#include <cereal/types/memory.hpp>
+#include "cereal/cereal.hpp"
+#include "cereal/types/memory.hpp"
 
-#include <cereal/details/util.hpp>
-#include <cereal/details/helpers.hpp>
-#include <cereal/details/traits.hpp>
-#include <cereal/details/polymorphic_impl.hpp>
+#include "cereal/details/util.hpp"
+#include "cereal/details/helpers.hpp"
+#include "cereal/details/traits.hpp"
+#include "cereal/details/polymorphic_impl.hpp"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER < 1916
 #define CEREAL_STATIC_CONSTEXPR static
 #else
 #define CEREAL_STATIC_CONSTEXPR static constexpr
@@ -165,17 +165,19 @@
     See CEREAL_REGISTER_DYNAMIC_INIT for detailed explanation
     of how this macro should be used.  The name used should
     match that for CEREAL_REGISTER_DYNAMIC_INIT. */
-#define CEREAL_FORCE_DYNAMIC_INIT(LibName)              \
-  namespace cereal {                                    \
-  namespace detail {                                    \
-    void dynamic_init_dummy_##LibName();                \
-  } /* end detail */                                    \
-  namespace {                                           \
-    void dynamic_init_##LibName()                       \
-    {                                                   \
-      ::cereal::detail::dynamic_init_dummy_##LibName(); \
-    }                                                   \
-  } } /* end namespaces */
+#define CEREAL_FORCE_DYNAMIC_INIT(LibName)                 \
+  namespace cereal {                                       \
+  namespace detail {                                       \
+    void CEREAL_DLL_EXPORT dynamic_init_dummy_##LibName(); \
+  } /* end detail */                                       \
+  } /* end cereal */                                       \
+  namespace {                                              \
+    struct dynamic_init_##LibName {                        \
+      dynamic_init_##LibName() {                           \
+        ::cereal::detail::dynamic_init_dummy_##LibName();  \
+      }                                                    \
+    } dynamic_init_instance_##LibName;                     \
+  } /* end anonymous namespace */
 
 namespace cereal
 {
@@ -212,7 +214,7 @@ namespace cereal
       else
         name = ar.getPolymorphicName(nameid);
 
-      auto & bindingMap = detail::StaticObject<detail::InputBindingMap<Archive>>::getInstance().map;
+      auto const & bindingMap = detail::StaticObject<detail::InputBindingMap<Archive>>::getInstance().map;
 
       auto binding = bindingMap.find(name);
       if(binding == bindingMap.end())
@@ -315,7 +317,7 @@ namespace cereal
     // of an abstract object
     //  this implies we need to do the lookup
 
-    auto & bindingMap = detail::StaticObject<detail::OutputBindingMap<Archive>>::getInstance().map;
+    auto const & bindingMap = detail::StaticObject<detail::OutputBindingMap<Archive>>::getInstance().map;
 
     auto binding = bindingMap.find(std::type_index(ptrinfo));
     if(binding == bindingMap.end())
@@ -350,7 +352,7 @@ namespace cereal
       return;
     }
 
-    auto & bindingMap = detail::StaticObject<detail::OutputBindingMap<Archive>>::getInstance().map;
+    auto const & bindingMap = detail::StaticObject<detail::OutputBindingMap<Archive>>::getInstance().map;
 
     auto binding = bindingMap.find(std::type_index(ptrinfo));
     if(binding == bindingMap.end())
@@ -414,7 +416,7 @@ namespace cereal
     // of an abstract object
     //  this implies we need to do the lookup
 
-    auto & bindingMap = detail::StaticObject<detail::OutputBindingMap<Archive>>::getInstance().map;
+    auto const & bindingMap = detail::StaticObject<detail::OutputBindingMap<Archive>>::getInstance().map;
 
     auto binding = bindingMap.find(std::type_index(ptrinfo));
     if(binding == bindingMap.end())
@@ -449,7 +451,7 @@ namespace cereal
       return;
     }
 
-    auto & bindingMap = detail::StaticObject<detail::OutputBindingMap<Archive>>::getInstance().map;
+    auto const & bindingMap = detail::StaticObject<detail::OutputBindingMap<Archive>>::getInstance().map;
 
     auto binding = bindingMap.find(std::type_index(ptrinfo));
     if(binding == bindingMap.end())

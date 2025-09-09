@@ -121,8 +121,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 #endif (PYTHON_BUILD)
 
 # Eigen
-set(MIN_EIGEN_VERSION 3.4)
-find_package(Eigen ${MIN_EIGEN_VERSION} REQUIRED)
+#set(MIN_EIGEN_VERSION 3.4)
+find_package(Eigen  REQUIRED)
 if (EIGEN_FOUND)
   message("-- Found Eigen version ${EIGEN_VERSION}: ${EIGEN_INCLUDE_DIRS}")
 endif (EIGEN_FOUND)
