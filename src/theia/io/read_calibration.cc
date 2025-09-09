@@ -41,6 +41,7 @@
 #include <vector>
 
 #include <cereal/external/rapidjson/document.h>
+#include <cereal/external/rapidjson/rapidjson.h>
 #include <stlplus3/file_system.hpp>
 
 #include "theia/sfm/camera/camera_intrinsics_model_type.h"
@@ -70,7 +71,7 @@ static const char* kLatitude = "latitude";
 static const char* kLongitude = "longitude";
 static const char* kAltitude = "altitude";
 
-bool ExtractPriorParameters(const cereal::rapidjson::Value& entry,
+bool ExtractPriorParameters(const rapidjson::Value& entry,
                             CameraIntrinsicsPrior* prior) {
   // Get the focal length.
   if (entry.HasMember(kFocalLength)) {
@@ -230,7 +231,7 @@ bool ExtractPriorParameters(const cereal::rapidjson::Value& entry,
   return true;
 }
 
-bool ExtractCameraIntrinsicsPrior(const cereal::rapidjson::Value& entry,
+bool ExtractCameraIntrinsicsPrior(const rapidjson::Value& entry,
                                   std::string* view_name,
                                   CameraIntrinsicsPrior* prior) {
   // Get the view name.
@@ -264,9 +265,9 @@ bool ExtractCameraIntrinsicsPrior(const cereal::rapidjson::Value& entry,
 bool ExtractCameraIntrinsicPriorsFromJson(
     const char* json_str,
     std::unordered_map<std::string, CameraIntrinsicsPrior>* view_to_priors) {
-  using cereal::rapidjson::Document;
-  using cereal::rapidjson::SizeType;
-  using cereal::rapidjson::Value;
+  using rapidjson::Document;
+  using rapidjson::SizeType;
+  using rapidjson::Value;
 
   Document json;
   json.Parse(json_str);

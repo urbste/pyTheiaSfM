@@ -12,14 +12,14 @@
       * Redistributions in binary form must reproduce the above copyright
         notice, this list of conditions and the following disclaimer in the
         documentation and/or other materials provided with the distribution.
-      * Neither the name of cereal nor the
+      * Neither the name of the copyright holder nor the
         names of its contributors may be used to endorse or promote products
         derived from this software without specific prior written permission.
 
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
   ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  DISCLAIMED. IN NO EVENT SHALL RANDOLPH VOORHIES OR SHANE GRANT BE LIABLE FOR ANY
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
   DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
   (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -45,32 +45,58 @@
 #ifndef CEREAL_DETAILS_POLYMORPHIC_IMPL_HPP_
 #define CEREAL_DETAILS_POLYMORPHIC_IMPL_HPP_
 
-#include <cereal/details/polymorphic_impl_fwd.hpp>
-#include <cereal/details/static_object.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/string.hpp>
+#include "cereal/details/polymorphic_impl_fwd.hpp"
+#include "cereal/details/static_object.hpp"
+#include "cereal/types/memory.hpp"
+#include "cereal/types/string.hpp"
 #include <functional>
 #include <typeindex>
 #include <map>
+#include <limits>
+#include <set>
+#include <stack>
 
-//! Binds a polymorhic type to all registered archives
+//! Helper macro to omit unused warning
+#if defined(__GNUC__)
+  // GCC / clang don't want the function
+  #define CEREAL_BIND_TO_ARCHIVES_UNUSED_FUNCTION
+#else
+  #define CEREAL_BIND_TO_ARCHIVES_UNUSED_FUNCTION static void unused() { (void)b; }
+#endif
+
+//! Binds a polymorphic type to all registered archives
 /*! This binds a polymorphic type to all compatible registered archives that
     have been registered with CEREAL_REGISTER_ARCHIVE.  This must be called
     after all archives are registered (usually after the archives themselves
     have been included). */
+#ifdef CEREAL_HAS_CPP17
 #define CEREAL_BIND_TO_ARCHIVES(...)                                     \
     namespace cereal {                                                   \
     namespace detail {                                                   \
     template<>                                                           \
     struct init_binding<__VA_ARGS__> {                                   \
-        static bind_to_archives<__VA_ARGS__> const & b;                  \
-        static void unused() { (void)b; }                                \
+        static inline bind_to_archives<__VA_ARGS__> const & b=           \
+        ::cereal::detail::StaticObject<                                  \
+            bind_to_archives<__VA_ARGS__>                                \
+        >::getInstance().bind();                                         \
+        CEREAL_BIND_TO_ARCHIVES_UNUSED_FUNCTION                          \
+    };                                                                   \
+    }} /* end namespaces */
+#else
+#define CEREAL_BIND_TO_ARCHIVES(...)                                     \
+    namespace cereal {                                                   \
+    namespace detail {                                                   \
+    template<>                                                           \
+    struct init_binding<__VA_ARGS__> {                                   \
+        static bind_to_archives<__VA_ARGS__> const& b;                   \
+        CEREAL_BIND_TO_ARCHIVES_UNUSED_FUNCTION                          \
     };                                                                   \
     bind_to_archives<__VA_ARGS__> const & init_binding<__VA_ARGS__>::b = \
         ::cereal::detail::StaticObject<                                  \
             bind_to_archives<__VA_ARGS__>                                \
         >::getInstance().bind();                                         \
     }} /* end namespaces */
+#endif
 
 namespace cereal
 {
@@ -112,8 +138,12 @@ namespace cereal
         all registered mappings between base and derived types. */
     struct PolymorphicCasters
     {
+      //! Maps from a derived type index to a set of chainable casters
+      using DerivedCasterMap = std::unordered_map<std::type_index, std::vector<PolymorphicCaster const *>>;
       //! Maps from base type index to a map from derived type index to caster
-      std::map<std::type_index, std::map<std::type_index, std::vector<PolymorphicCaster const*>>> map;
+      std::unordered_map<std::type_index, DerivedCasterMap> map;
+
+      std::multimap<std::type_index, std::type_index> reverseMap;
 
       //! Error message used for unregistered polymorphic casts
       #define UNREGISTERED_POLYMORPHIC_CAST_EXCEPTION(LoadSave)                                                                                                                \
@@ -122,24 +152,26 @@ namespace cereal
                                 "Make sure you either serialize the base class at some point via cereal::base_class or cereal::virtual_base_class.\n"                          \
                                 "Alternatively, manually register the association with CEREAL_REGISTER_POLYMORPHIC_RELATION.");
 
-      //! Checks if the mapping object that can perform the upcast or downcast
+      //! Checks if the mapping object that can perform the upcast or downcast exists, and returns it if so
       /*! Uses the type index from the base and derived class to find the matching
-          registered caster. If no matching caster exists, returns false. */
-      static bool exists( std::type_index const & baseIndex, std::type_index const & derivedIndex )
+          registered caster. If no matching caster exists, the bool in the pair will be false and the vector
+          reference should not be used. */
+      static std::pair<bool, std::vector<PolymorphicCaster const *> const &>
+      lookup_if_exists( std::type_index const & baseIndex, std::type_index const & derivedIndex )
       {
         // First phase of lookup - match base type index
-        auto & baseMap = StaticObject<PolymorphicCasters>::getInstance().map;
+        auto const & baseMap = StaticObject<PolymorphicCasters>::getInstance().map;
         auto baseIter = baseMap.find( baseIndex );
         if (baseIter == baseMap.end())
-          return false;
+          return {false, {}};
 
         // Second phase - find a match from base to derived
-        auto & derivedMap = baseIter->second;
+        auto const & derivedMap = baseIter->second;
         auto derivedIter = derivedMap.find( derivedIndex );
         if (derivedIter == derivedMap.end())
-          return false;
+          return {false, {}};
 
-        return true;
+        return {true, derivedIter->second};
       }
 
       //! Gets the mapping object that can perform the upcast or downcast
@@ -151,17 +183,17 @@ namespace cereal
       static std::vector<PolymorphicCaster const *> const & lookup( std::type_index const & baseIndex, std::type_index const & derivedIndex, F && exceptionFunc )
       {
         // First phase of lookup - match base type index
-        auto & baseMap = StaticObject<PolymorphicCasters>::getInstance().map;
+        auto const & baseMap = StaticObject<PolymorphicCasters>::getInstance().map;
         auto baseIter = baseMap.find( baseIndex );
         if( baseIter == baseMap.end() )
           exceptionFunc();
 
         // Second phase - find a match from base to derived
-        auto & derivedMap = baseIter->second;
+        auto const & derivedMap = baseIter->second;
         auto derivedIter = derivedMap.find( derivedIndex );
         if( derivedIter == derivedMap.end() )
           exceptionFunc();
-        
+
         return derivedIter->second;
       }
 
@@ -171,8 +203,8 @@ namespace cereal
       {
         auto const & mapping = lookup( baseInfo, typeid(Derived), [&](){ UNREGISTERED_POLYMORPHIC_CAST_EXCEPTION(save) } );
 
-        for( auto const * map : mapping )
-          dptr = map->downcast( dptr );
+        for( auto const * dmap : mapping )
+          dptr = dmap->downcast( dptr );
 
         return static_cast<Derived const *>( dptr );
       }
@@ -186,8 +218,8 @@ namespace cereal
         auto const & mapping = lookup( baseInfo, typeid(Derived), [&](){ UNREGISTERED_POLYMORPHIC_CAST_EXCEPTION(load) } );
 
         void * uptr = dptr;
-        for( auto const * map : mapping )
-          uptr = map->upcast( uptr );
+        for( auto mIter = mapping.rbegin(), mEnd = mapping.rend(); mIter != mEnd; ++mIter )
+          uptr = (*mIter)->upcast( uptr );
 
         return uptr;
       }
@@ -199,14 +231,22 @@ namespace cereal
         auto const & mapping = lookup( baseInfo, typeid(Derived), [&](){ UNREGISTERED_POLYMORPHIC_CAST_EXCEPTION(load) } );
 
         std::shared_ptr<void> uptr = dptr;
-        for( auto const * map : mapping )
-          uptr = map->upcast( uptr );
+        for( auto mIter = mapping.rbegin(), mEnd = mapping.rend(); mIter != mEnd; ++mIter )
+          uptr = (*mIter)->upcast( uptr );
 
         return uptr;
       }
 
       #undef UNREGISTERED_POLYMORPHIC_CAST_EXCEPTION
     };
+
+    #ifdef CEREAL_OLDER_GCC
+      #define CEREAL_EMPLACE_MAP(map, key, value)                     \
+      map.insert( std::make_pair(std::move(key), std::move(value)) );
+    #else // NOT CEREAL_OLDER_GCC
+      #define CEREAL_EMPLACE_MAP(map, key, value)                     \
+      map.emplace( key, value );
+    #endif // NOT_CEREAL_OLDER_GCC
 
     //! Strongly typed derivation of PolymorphicCaster
     template <class Base, class Derived>
@@ -218,71 +258,155 @@ namespace cereal
           assuming dynamic type information is available */
       PolymorphicVirtualCaster()
       {
+        const auto baseKey = std::type_index(typeid(Base));
+        const auto derivedKey = std::type_index(typeid(Derived));
+
+        // First insert the relation Base->Derived
+        const auto lock = StaticObject<PolymorphicCasters>::lock();
         auto & baseMap = StaticObject<PolymorphicCasters>::getInstance().map;
-        auto baseKey = std::type_index(typeid(Base));
-        auto lb = baseMap.lower_bound(baseKey);
 
         {
-          auto & derivedMap = baseMap.insert( lb, {baseKey, {}} )->second;
-          auto derivedKey = std::type_index(typeid(Derived));
-          auto lbd = derivedMap.lower_bound(derivedKey);
-          auto & derivedVec = derivedMap.insert( lbd, { std::move(derivedKey), {}} )->second;
+          auto & derivedMap = baseMap.insert( {baseKey, PolymorphicCasters::DerivedCasterMap{}} ).first->second;
+          auto & derivedVec = derivedMap.insert( {derivedKey, {}} ).first->second;
           derivedVec.push_back( this );
         }
 
+        // Insert reverse relation Derived->Base
+        auto & reverseMap = StaticObject<PolymorphicCasters>::getInstance().reverseMap;
+        CEREAL_EMPLACE_MAP(reverseMap, derivedKey, baseKey);
+
         // Find all chainable unregistered relations
-        std::map<std::type_index, std::pair<std::type_index, std::vector<PolymorphicCaster const *>>> unregisteredRelations;
+        /* The strategy here is to process only the nodes in the class hierarchy graph that have been
+           affected by the new insertion. The algorithm iteratively processes a node an ensures that it
+           is updated with all new shortest length paths. It then processes the parents of the active node,
+           with the knowledge that all children have already been processed.
+
+           Note that for the following, we'll use the nomenclature of parent and child to not confuse with
+           the inserted base derived relationship */
         {
-          auto checkRelation = [](std::type_index const & baseInfo, std::type_index const & derivedInfo)
+          // Checks whether there is a path from parent->child and returns a <dist, path> pair
+          // dist is set to MAX if the path does not exist
+          auto checkRelation = [](std::type_index const & parentInfo, std::type_index const & childInfo) ->
+            std::pair<size_t, std::vector<PolymorphicCaster const *> const &>
           {
-            const bool exists = PolymorphicCasters::exists( baseInfo, derivedInfo );
-            return std::make_pair( exists, exists ? PolymorphicCasters::lookup( baseInfo, derivedInfo, [](){} ) : 
-                                                    std::vector<PolymorphicCaster const *>{} );
+            auto result = PolymorphicCasters::lookup_if_exists( parentInfo, childInfo );
+            if( result.first )
+            {
+              auto const & path = result.second;
+              return {path.size(), path};
+            }
+            else
+              return {(std::numeric_limits<size_t>::max)(), {}};
           };
 
-          for( auto baseIt : baseMap )
-            for( auto derivedIt : baseIt.second )
+          std::stack<std::type_index>         parentStack;      // Holds the parent nodes to be processed
+          std::vector<std::type_index> dirtySet;                // Marks child nodes that have been changed
+          std::unordered_set<std::type_index> processedParents; // Marks parent nodes that have been processed
+
+          // Checks if a child has been marked dirty
+          auto isDirty = [&](std::type_index const & c)
+          {
+            auto const dirtySetSize = dirtySet.size();
+            for( size_t i = 0; i < dirtySetSize; ++i )
+              if( dirtySet[i] == c )
+                return true;
+
+            return false;
+          };
+
+          // Begin processing the base key and mark derived as dirty
+          parentStack.push( baseKey );
+          dirtySet.emplace_back( derivedKey );
+
+          while( !parentStack.empty() )
+          {
+            using Relations = std::unordered_multimap<std::type_index, std::pair<std::type_index, std::vector<PolymorphicCaster const *>>>;
+            Relations unregisteredRelations; // Defer insertions until after main loop to prevent iterator invalidation
+
+            const auto parent = parentStack.top();
+            parentStack.pop();
+
+            // Update paths to all children marked dirty
+            for( auto const & childPair : baseMap[parent] )
             {
-              for( auto otherBaseIt : baseMap )
+              const auto child = childPair.first;
+              if( isDirty( child ) && baseMap.count( child ) )
               {
-                if( baseIt.first == otherBaseIt.first ) // only interested in chained relations
-                  continue;
+                auto parentChildPath = checkRelation( parent, child );
 
-                // Check if there exists a mapping otherBase -> base -> derived that is shorter than
-                // any existing otherBase -> derived direct mapping
-                auto otherBaseItToDerived = checkRelation( otherBaseIt.first, derivedIt.first );
-                auto baseToDerived        = checkRelation( baseIt.first,      derivedIt.first );
-                auto otherBaseToBase      = checkRelation( otherBaseIt.first, baseIt.first );
-
-                const size_t newLength = otherBaseToBase.second.size() + baseToDerived.second.size();
-                const bool isShorterOrFirstPath = !otherBaseItToDerived.first || (newLength < derivedIt.second.size());
-
-                if( isShorterOrFirstPath &&
-                    baseToDerived.first  &&
-                    otherBaseToBase.first )
+                // Search all paths from the child to its own children (finalChild),
+                // looking for a shorter path from parent to finalChild
+                for( auto const & finalChildPair : baseMap[child] )
                 {
-                  std::vector<PolymorphicCaster const *> path = otherBaseToBase.second;
-                  path.insert( path.end(), baseToDerived.second.begin(), baseToDerived.second.end() );
+                  const auto finalChild = finalChildPair.first;
 
-                 #ifdef CEREAL_OLDER_GCC
-                 unregisteredRelations.insert( std::make_pair(otherBaseIt.first,
-                                               std::pair<std::type_index, std::vector<PolymorphicCaster const *>>{derivedIt.first, std::move(path)}) );
-                 #else // NOT CEREAL_OLDER_GCC
-                 unregisteredRelations.emplace( otherBaseIt.first,
-                                                std::pair<std::type_index, std::vector<PolymorphicCaster const *>>{derivedIt.first, std::move(path)} );
-                 #endif // NOT CEREAL_OLDER_GCC
-                }
-              } // end otherBaseIt
-            } // end derivedIt
-        } // end chain lookup
+                  auto parentFinalChildPath = checkRelation( parent, finalChild );
+                  auto childFinalChildPath  = checkRelation( child, finalChild );
 
-        // Insert chained relations
-        for( auto it : unregisteredRelations )
-        {
-          auto & derivedMap = baseMap.find( it.first )->second;
-          derivedMap[it.second.first] = it.second.second;
-        }
-      }
+                  const size_t newLength = 1u + parentChildPath.first;
+
+                  if( newLength < parentFinalChildPath.first )
+                  {
+                    std::vector<PolymorphicCaster const *> path = parentChildPath.second;
+                    path.insert( path.end(), childFinalChildPath.second.begin(), childFinalChildPath.second.end() );
+
+                    // Check to see if we have a previous uncommitted path in unregisteredRelations
+                    // that is shorter. If so, ignore this path
+                    auto hintRange = unregisteredRelations.equal_range( parent );
+                    auto hint = hintRange.first;
+                    for( ; hint != hintRange.second; ++hint )
+                      if( hint->second.first == finalChild )
+                        break;
+
+                    const bool uncommittedExists = hint != unregisteredRelations.end();
+                    if( uncommittedExists && (hint->second.second.size() <= newLength) )
+                      continue;
+
+                    auto newPath = std::pair<std::type_index, std::vector<PolymorphicCaster const *>>{finalChild, std::move(path)};
+
+                    // Insert the new path if it doesn't exist, otherwise this will just lookup where to do the
+                    // replacement
+                    #ifdef CEREAL_OLDER_GCC
+                    auto old = unregisteredRelations.insert( hint, std::make_pair(parent, newPath) );
+                    #else // NOT CEREAL_OLDER_GCC
+                    auto old = unregisteredRelations.emplace_hint( hint, parent, newPath );
+                    #endif // NOT CEREAL_OLDER_GCC
+
+                    // If there was an uncommitted path, we need to perform a replacement
+                    if( uncommittedExists )
+                      old->second = newPath;
+                  }
+                } // end loop over child's children
+              } // end if dirty and child has children
+            } // end loop over children
+
+            // Insert chained relations
+            for( auto const & it : unregisteredRelations )
+            {
+              auto & derivedMap = baseMap.find( it.first )->second;
+              derivedMap[it.second.first] = it.second.second;
+              CEREAL_EMPLACE_MAP(reverseMap, it.second.first, it.first );
+            }
+
+            // Mark current parent as modified
+            dirtySet.emplace_back( parent );
+
+            // Insert all parents of the current parent node that haven't yet been processed
+            auto parentRange = reverseMap.equal_range( parent );
+            for( auto pIter = parentRange.first; pIter != parentRange.second; ++pIter )
+            {
+              const auto pParent = pIter->second;
+              if( !processedParents.count( pParent ) )
+              {
+                parentStack.push( pParent );
+                processedParents.insert( pParent );
+              }
+            }
+          } // end loop over parent stack
+        } // end chainable relations
+      } // end PolymorphicVirtualCaster()
+
+      #undef CEREAL_EMPLACE_MAP
 
       //! Performs the proper downcast with the templated types
       void const * downcast( void const * const ptr ) const override
@@ -409,6 +533,7 @@ namespace cereal
       InputBindingCreator()
       {
         auto & map = StaticObject<InputBindingMap<Archive>>::getInstance().map;
+        auto lock = StaticObject<InputBindingMap<Archive>>::lock();
         auto key = std::string(binding_name<T>::name());
         auto lb = map.lower_bound(key);
 
@@ -544,7 +669,7 @@ namespace cereal
 
             auto ptr = PolymorphicCasters::template downcast<T>( dptr, baseInfo );
 
-            #ifdef _MSC_VER
+            #if defined(_MSC_VER) && _MSC_VER < 1916 && !defined(__clang__)
             savePolymorphicSharedPtr( ar, ptr, ::cereal::traits::has_shared_from_this<T>::type() ); // MSVC doesn't like typename here
             #else // not _MSC_VER
             savePolymorphicSharedPtr( ar, ptr, typename ::cereal::traits::has_shared_from_this<T>::type() );
@@ -570,9 +695,23 @@ namespace cereal
     //! of instantiate_polymorphic_binding
     struct adl_tag {};
 
-    //! Tag for init_binding, bind_to_archives and instantiate_polymorphic_binding. Due to the use of anonymous
-    //! namespace it becomes a different type in each translation unit.
+    //! Tag for init_binding, bind_to_archives and instantiate_polymorphic_binding.
+    //! For C++14 and below, we must instantiate a unique StaticObject per TU that is
+    //! otherwise identical -- otherwise we get multiple definition problems (ODR violations).
+    //! To achieve this, put a tag in an anonymous namespace and use it as a template argument.
+    //!
+    //! For C++17, we can use static inline global variables to unify these definitions across
+    //! all TUs in the same shared object (DLL).  The tag is therefore not necessary.
+    //! For convenience, keep it to not complicate other code, but don't put it in
+    //! an anonymous namespace.  Now the template instantiations will correspond
+    //! to the same type, and since they are marked inline with C++17, they will be merged
+    //! across all TUs.
+#ifdef CEREAL_HAS_CPP17
+    struct polymorphic_binding_tag {};
+#else
     namespace { struct polymorphic_binding_tag {}; }
+#endif
+
 
     //! Causes the static object bindings between an archive type and a serializable type T
     template <class Archive, class T>
@@ -642,8 +781,8 @@ namespace cereal
     {
       //! Binding for non abstract types
       void bind(std::false_type) const
-	    {
-		    instantiate_polymorphic_binding((T*) 0, 0, Tag{}, adl_tag{});
+      {
+        instantiate_polymorphic_binding(static_cast<T*>(nullptr), 0, Tag{}, adl_tag{});
       }
 
       //! Binding for abstract types
@@ -673,7 +812,7 @@ namespace cereal
 
         Since the compiler needs to check all possible overloads, the
         other overloads created via CEREAL_REGISTER_ARCHIVE, which will have
-        lower precedence due to requring a conversion from int to (Archive*),
+        lower precedence due to requiring a conversion from int to (Archive*),
         will cause their return types to be instantiated through the static object
         mechanisms even though they are never called.
 
