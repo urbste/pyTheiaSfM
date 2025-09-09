@@ -35,10 +35,11 @@ cd /home
 
 "${PYBIN}/python" setup.py bdist_wheel
 
-cp /home/dist/*.whl /home/wheelhouse
-rm -rf /home/dist
-
-# Bundle external shared libraries into the wheels
-for whl in /home/wheelhouse/*.whl; do
+# Repair built wheels and move only manylinux wheels to wheelhouse
+for whl in /home/dist/*.whl; do
     repair_wheel "$whl"
+    rm -f "$whl"
 done
+
+# Ensure only manylinux wheels remain in wheelhouse
+find /home/wheelhouse -maxdepth 1 -type f -name "*.whl" ! -name "*manylinux*" -print -delete

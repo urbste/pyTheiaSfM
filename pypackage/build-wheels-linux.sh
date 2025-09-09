@@ -38,11 +38,15 @@ for PYBIN in /opt/python/*/bin; do
     rm -rf /home/build/lib/pytheia/*.so
     rm -rf /home/pytheia.egg-info
     #fi
-done
-cp /home/dist/*.whl /home/wheelhouse
-rm -rf /home/dist
+    # Repair newly built wheels immediately and remove the original
+    for whl in /home/dist/*.whl; do
+        repair_wheel "$whl"
+        rm -f "$whl"
+    done
+ done
+
+# Ensure only manylinux wheels remain in wheelhouse
+find /home/wheelhouse -maxdepth 1 -type f -name "*.whl" ! -name "*manylinux*" -print -delete
 
 # Bundle external shared libraries into the wheels
-for whl in /home/wheelhouse/*.whl; do
-    repair_wheel "$whl"
-done
+# (No-op: we already repaired individual wheels during the loop)
