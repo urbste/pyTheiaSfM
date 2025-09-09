@@ -2,10 +2,10 @@
 
 function repair_wheel {
     wheel="$1"
-    if ! auditwheel show "$wheel"; then
+    if ! "$PYBIN/python" -m auditwheel show "$wheel"; then
         echo "Skipping non-platform wheel $wheel"
     else
-         auditwheel repair "$wheel" -w /home/wheelhouse/
+         "$PYBIN/python" -m auditwheel repair "$wheel" -w /home/wheelhouse/
     fi
 }
 
@@ -28,9 +28,11 @@ echo "Python version number: $PYVER_NUM"
 echo "Python version: $PYTHONVER"
 
 export PATH=$PYBIN:$PATH
+export PIP_ROOT_USER_ACTION=ignore
 
-${PYBIN}/pip install auditwheel setuptools
+( cd / && "${PYBIN}/python" -m pip install --upgrade --no-cache-dir pip wheel setuptools auditwheel )
 
+cd /home
 "${PYBIN}/python" setup.py bdist_wheel
 
 cp /home/dist/*.whl /home/wheelhouse
