@@ -8,24 +8,29 @@ set -e -u -x
 
 function repair_wheel {
     wheel="$1"
-    if ! auditwheel show "$wheel"; then
+    if ! "$AWPY" -m auditwheel show "$wheel"; then
         echo "Skipping non-platform wheel $wheel"
     else
          #auditwheel repair "$wheel" --plat "$PLAT" -w /wheelhouse/
-         auditwheel repair "$wheel" -w /home/wheelhouse/
+         "$AWPY" -m auditwheel repair "$wheel" -w /home/wheelhouse/
     fi
 }
 
 cd /home
 mkdir -p wheelhouse
-# NOT_BUILDING='cp312-cp312'
+
+export PIP_ROOT_USER_ACTION=ignore
+
+# Choose a Python to run auditwheel (first available)
+AWPY="$(ls -d /opt/python/*/bin | head -n1)/python"
+# Ensure auditwheel is available for the chosen interpreter
+( cd / && "$AWPY" -m pip install --upgrade --no-cache-dir pip wheel setuptools auditwheel )
 
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
-    # if [[ "$PYBIN" == *"$NOT_BUILDING"* ]]; then
-    #    echo "Not building for python 3.12"
-    #else
-    "${PYBIN}/pip" install nose setuptools auditwheel
+    ( cd / && "${PYBIN}/python" -m pip install --upgrade --no-cache-dir pip wheel setuptools )
+    cd /home
+
     "${PYBIN}/python" setup.py bdist_wheel
     rm -rf /home/cmake_build/lib/*.so
     rm -rf /home/build/lib/pytheia/*.so
