@@ -125,15 +125,15 @@ setuptools.setup(
     package_dir={
         'pytheia': 'src/pytheia',
     },
-        package_data={
-         'pytheia': [
-             'pytheia.*',
-             'libflann_cpp.*',
-            '*.pyi',
-            '*/*.pyi',
-            '*/*/*.pyi',
-            'py.typed',
-         ]
+    package_data={
+        'pytheia': [
+            'pytheia.*',
+            'libflann_cpp.*',
+        '*.pyi',
+        '*/*.pyi',
+        '*/*/*.pyi',
+        'py.typed',
+        ]
      },
     cmdclass={'bdist_wheel': platform_bdist_wheel},
 )

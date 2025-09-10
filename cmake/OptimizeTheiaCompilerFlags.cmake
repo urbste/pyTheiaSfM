@@ -95,7 +95,7 @@ macro(OptimizeTheiaCompilerFlags)
       # Linux
       if (CMAKE_SYSTEM_NAME MATCHES "Linux")
         if (NOT GCC_VERSION VERSION_LESS 4.2)
-          set (THEIA_CXX_FLAGS "${THEIA_CXX_FLAGS} -march=native -mtune=native")
+          set (THEIA_CXX_FLAGS "${THEIA_CXX_FLAGS} -mtune=native")
         endif (NOT GCC_VERSION VERSION_LESS 4.2)
       endif (CMAKE_SYSTEM_NAME MATCHES "Linux")
       # Mac OS X
