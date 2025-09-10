@@ -15,7 +15,7 @@ macro(PCL_CHECK_FOR_SSE)
         execute_process(COMMAND ${CMAKE_CXX_COMPILER} "-dumpversion"
                         OUTPUT_VARIABLE GCC_VERSION_STRING)
         if(GCC_VERSION_STRING VERSION_GREATER 4.2 AND NOT APPLE AND NOT CMAKE_CROSSCOMPILING)
-            SET(SSE_FLAGS "${SSE_FLAGS} -march=native")
+            SET(SSE_FLAGS "${SSE_FLAGS}")
             message(STATUS "Using CPU native flags for SSE optimization: ${SSE_FLAGS}")
         endif()
     endif()

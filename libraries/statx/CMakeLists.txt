@@ -138,12 +138,12 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
     if (CMAKE_SYSTEM_NAME MATCHES "Linux")
       if (NOT GCC_VERSION VERSION_LESS 4.2)
         set (STATX_CXX_FLAGS
-          "${STATX_CXX_FLAGS} -march=native -mtune=native -msse2 -msse3 -msse4")
+          "${STATX_CXX_FLAGS} -mtune=native")
       endif (NOT GCC_VERSION VERSION_LESS 4.2)
     endif (CMAKE_SYSTEM_NAME MATCHES "Linux")
     # Mac OS X
     if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-      set (STATX_CXX_FLAGS "${STATX_CXX_FLAGS} -msse3 -msse4 -msse3 -msse2")
+      set (STATX_CXX_FLAGS "${STATX_CXX_FLAGS}")
       execute_process(COMMAND ${CMAKE_C_COMPILER}
         ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
         OUTPUT_VARIABLE GCC_VERSION
