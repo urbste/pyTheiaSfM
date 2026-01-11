@@ -69,8 +69,8 @@ BundleAdjustmentSummary BundleAdjustPartialReconstructionWrapper(
 
 BundleAdjustmentSummary BundleAdjustPartialViewsConstantWrapper(
     const BundleAdjustmentOptions& options,
-    const std::vector<ViewId>& views_to_optimize,
-    const std::vector<TrackId>& tracks_to_optimize,
+    const std::vector<ViewId>& var_view_ids,
+    const std::vector<ViewId>& const_view_ids,
     Reconstruction& reconstruction);
 
 // std::tuple<BundleAdjustmentSummary, Camera, Camera,
