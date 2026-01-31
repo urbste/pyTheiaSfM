@@ -136,18 +136,18 @@ BundleAdjustmentOptions SetBundleAdjustmentOptions(
     LOG(FATAL) << "Unknown track parametrization type.";
   }
 
-  if (num_views >= options.min_cameras_for_iterative_solver) {
-    ba_options.linear_solver_type = ceres::SPARSE_SCHUR;
-    ba_options.preconditioner_type = ceres::JACOBI;
-    // NOTE: this is an arbitrary scaling that was found to work well. It may
-    // need to change depending on the application.
-    ba_options.max_num_iterations *= 1.5;
-  } else if (num_views >= kMinViewsForSparseSchur) {
-    ba_options.linear_solver_type = ceres::SPARSE_SCHUR;
-    ba_options.preconditioner_type = ceres::JACOBI;
-  } else {
-    ba_options.linear_solver_type = ceres::DENSE_SCHUR;
+  ba_options.dense_linear_algebra_library_type = options.dense_linear_algebra_library_type;
+  ba_options.sparse_linear_algebra_library_type = options.sparse_linear_algebra_library_type;
+  ba_options.preconditioner_type = options.preconditioner_type;
+  ba_options.linear_solver_type = options.linear_solver_type;
+  ba_options.visibility_clustering_type = options.visibility_clustering_type;
+
+  // print a warning to the user that if the number of cameras is small he
+  // shoould use DENSE_SCHUR and not SPARSE_SCHUR
+  if (num_views < kMinViewsForSparseSchur && ba_options.linear_solver_type == ceres::SPARSE_SCHUR) {
+    LOG(WARNING) << "The number of cameras is small. Consider using DENSE_SCHUR instead of SPARSE_SCHUR.";
   }
+
   ba_options.verbose = VLOG_IS_ON(1);
   return ba_options;
 }

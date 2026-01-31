@@ -1053,11 +1053,15 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::BundleAdjustmentOptions::use_orientation_priors)
       .def_readwrite("use_gravity_priors",
                      &theia::BundleAdjustmentOptions::use_gravity_priors)
+      .def_readwrite("use_depth_priors",
+                     &theia::BundleAdjustmentOptions::use_depth_priors)
       .def_readwrite("orthographic_camera",
                      &theia::BundleAdjustmentOptions::orthographic_camera)
       .def_readwrite("use_homogeneous_point_parametrization",
                      &theia::BundleAdjustmentOptions::
                          use_homogeneous_point_parametrization)
+      .def_readwrite("robust_loss_width_depth_prior",
+                     &theia::BundleAdjustmentOptions::robust_loss_width_depth_prior)
       .def_readwrite(
           "use_inverse_depth_parametrization",
           &theia::BundleAdjustmentOptions::use_inverse_depth_parametrization)
@@ -1397,7 +1401,17 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("track_parametrization_type",
           &theia::ReconstructionEstimatorOptions::track_parametrization_type)
       .def_readwrite("localization_pnp_type",
-                     &theia::ReconstructionEstimatorOptions::localization_pnp_type);
+                     &theia::ReconstructionEstimatorOptions::localization_pnp_type)
+      .def_readwrite("dense_linear_algebra_library_type",
+                     &theia::ReconstructionEstimatorOptions::dense_linear_algebra_library_type)
+      .def_readwrite("sparse_linear_algebra_library_type",
+                     &theia::ReconstructionEstimatorOptions::sparse_linear_algebra_library_type)
+      .def_readwrite("linear_solver_type",
+                     &theia::ReconstructionEstimatorOptions::linear_solver_type)
+      .def_readwrite("preconditioner_type",
+                     &theia::ReconstructionEstimatorOptions::preconditioner_type)
+      .def_readwrite("visibility_clustering_type",
+                     &theia::ReconstructionEstimatorOptions::visibility_clustering_type);
   // Reconstruction class
   py::class_<theia::Reconstruction>(m, "Reconstruction")
       .def(py::init<>())

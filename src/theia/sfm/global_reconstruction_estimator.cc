@@ -462,7 +462,11 @@ void GlobalReconstructionEstimator::EstimateStructure() {
       options_.min_triangulation_angle_degrees;
   triangulation_options.bundle_adjustment = options_.bundle_adjust_tracks;
   triangulation_options.ba_options = SetBundleAdjustmentOptions(options_, 0);
-  triangulation_options.ba_options.num_threads = 1;
+  triangulation_options.ba_options.num_threads = 2;
+  triangulation_options.ba_options.dense_linear_algebra_library_type =
+      DenseLinearAlgebraLibraryType::EIGEN;
+  triangulation_options.ba_options.linear_solver_type =
+      ceres::DENSE_QR;
   triangulation_options.ba_options.verbose = false;
   triangulation_options.num_threads = options_.num_threads;
   triangulation_options.triangulation_method = options_.triangulation_method;

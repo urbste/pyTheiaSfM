@@ -36,6 +36,7 @@
 #define THEIA_SFM_RECONSTRUCTION_ESTIMATOR_OPTIONS_H_
 
 #include <memory>
+#include <ceres/types.h>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/estimate_track.h"
@@ -287,6 +288,13 @@ struct ReconstructionEstimatorOptions {
   TrackParametrizationType track_parametrization_type =
       TrackParametrizationType::XYZW_MANIFOLD;
 
+  ceres::DenseLinearAlgebraLibraryType dense_linear_algebra_library_type = ceres::EIGEN;
+  ceres::SparseLinearAlgebraLibraryType sparse_linear_algebra_library_type = ceres::EIGEN_SPARSE;
+
+  ceres::LinearSolverType linear_solver_type = ceres::SPARSE_SCHUR;
+  ceres::PreconditionerType preconditioner_type = ceres::SCHUR_JACOBI;
+  ceres::VisibilityClusteringType visibility_clustering_type = ceres::CANONICAL_VIEWS;
+  
   // --------------- Track Subsampling Options --------------- //
 
   // Bundle adjustment performs joint nonlinear optimization of point positions

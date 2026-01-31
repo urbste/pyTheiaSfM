@@ -89,6 +89,7 @@ struct BundleAdjustmentOptions {
   // loss function, but robust cost functions could be used.
   LossFunctionType loss_function_type = LossFunctionType::TRIVIAL;
   double robust_loss_width = 2.0;
+
   // e.g. 1cm for downweighting depth priors as outliers
   double robust_loss_width_depth_prior = 0.01;
 
@@ -107,7 +108,6 @@ struct BundleAdjustmentOptions {
 
   // Max number of refinement iterations
   int max_num_refinement_iterations = 2;
-
 
   // If true, ceres will log verbosely.
   bool verbose = false;
