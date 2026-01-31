@@ -87,6 +87,21 @@ void AddFeatureCorrespondencesToTrackBuilderWrapper(
   }
 }
 
+void AddFullFeatureCorrespondencesToTrackBuilderWrapper(
+    const ViewId view_id1,
+    const std::vector<Feature>& features1,
+    const ViewId view_id2,
+    const std::vector<Feature>& features2,
+    TrackBuilder& track_builder) {
+  CHECK_EQ(features1.size(), features2.size())
+      << "The number of features in each view must be the same.";
+  for (int i = 0; i < features1.size(); i++) {
+    track_builder.AddFeatureCorrespondence(view_id1, features1[i], view_id2, features2[i]);
+  }
+}
+
+
+
 void UpdateFeaturesInViewWrapper(
     const ViewId& view_id,
     const std::vector<TrackId>& track_ids,

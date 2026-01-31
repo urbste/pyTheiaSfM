@@ -58,7 +58,7 @@ class Feature {
   double depth_prior_ = 0.0;
 
   //! depth prior variance
-  double depth_prior_variance_ = 0.0;
+  double depth_prior_variance_ = 1.0;
 
   Feature() {}
   Feature(const double x, const double y) { point_ << x, y; }

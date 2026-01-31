@@ -79,8 +79,7 @@ public:
                                 adjusted_point.data(), rotated_point);
 
     const T sqrt_information = T(1. / ceres::sqrt(feature_.depth_prior_variance()));
-    //std::cout<<"rotated_point[2]: "<<rotated_point[2]<<"\n";
-    //std::cout<<"feature_.depth_prior(): "<<feature_.depth_prior()<<"\n";
+
     (*depth_error) = sqrt_information * (rotated_point[2] - T(feature_.depth_prior()));
 
     return true;

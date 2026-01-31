@@ -62,6 +62,15 @@ void AddFeatureCorrespondencesToTrackBuilderWrapper(
     const std::vector<Eigen::Vector2d>& features2,
     TrackBuilder& track_builder);
 
+// Let's us fill the track builder with a vector of features.
+void AddFullFeatureCorrespondencesToTrackBuilderWrapper(
+    const ViewId view_id1,
+    const std::vector<Feature>& features1,
+    const ViewId view_id2,
+    const std::vector<Feature>& features2,
+    TrackBuilder& track_builder);
+
+
 void UpdateFeaturesInViewWrapper(
     const ViewId& view_id,
     const std::vector<TrackId>& track_ids,
