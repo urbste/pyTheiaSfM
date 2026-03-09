@@ -121,8 +121,12 @@ class Camera {
   // infinity.
   double ProjectPoint(const Eigen::Vector4d& point,
                       Eigen::Vector2d* pixel) const;
+
   std::tuple<double, Eigen::Vector2d> ProjectPointWrapper(
       const Eigen::Vector4d& point);
+
+  std::tuple<double, Eigen::Vector2d> ProjectPointWrapper(
+      const Eigen::Vector3d& point);
 
   // Converts the pixel point to a ray in 3D space such that the origin of the
   // ray is at the camera center and the direction is the pixel direction

@@ -467,7 +467,8 @@ void pytheia_sfm_classes(py::module& m) {
       .def("PixelToNormalizedCoordinates",
            &theia::Camera::PixelToNormalizedCoordinates)
       .def("PixelToUnitDepthRay", &theia::Camera::PixelToUnitDepthRay)
-      .def("ProjectPoint", &theia::Camera::ProjectPointWrapper)
+      .def("ProjectPoint", (std::tuple<double, Eigen::Vector2d> (theia::Camera::*)(const Eigen::Vector4d&)) &theia::Camera::ProjectPointWrapper)
+      .def("ProjectPoint", (std::tuple<double, Eigen::Vector2d> (theia::Camera::*)(const Eigen::Vector3d&)) &theia::Camera::ProjectPointWrapper)
       //.def_readonly_static("kExtrinsicsSize", &theia::Camera::kExtrinsicsSize)
       ;
 

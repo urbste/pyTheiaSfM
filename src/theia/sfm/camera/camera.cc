@@ -306,4 +306,12 @@ std::tuple<double, Eigen::Vector2d> Camera::ProjectPointWrapper(
   double depth = ProjectPoint(point, &pixel);
   return std::make_tuple(depth, pixel);
 }
+
+std::tuple<double, Eigen::Vector2d> Camera::ProjectPointWrapper(
+    const Eigen::Vector3d& point) {
+  Eigen::Vector2d pixel;
+  double depth = ProjectPoint(point.homogeneous(), &pixel);
+  return std::make_tuple(depth, pixel);
+}
+
 }  // namespace theia
