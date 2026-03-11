@@ -294,6 +294,10 @@ struct ReconstructionEstimatorOptions {
   ceres::LinearSolverType linear_solver_type = ceres::SPARSE_SCHUR;
   ceres::PreconditionerType preconditioner_type = ceres::SCHUR_JACOBI;
   ceres::VisibilityClusteringType visibility_clustering_type = ceres::CANONICAL_VIEWS;
+
+  // Set the maximum number of bundle adjustment iterations
+  int max_num_iterations = 50;
+  int use_inner_iterations = true;
   
   // --------------- Track Subsampling Options --------------- //
 

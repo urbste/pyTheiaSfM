@@ -1413,7 +1413,11 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("preconditioner_type",
                      &theia::ReconstructionEstimatorOptions::preconditioner_type)
       .def_readwrite("visibility_clustering_type",
-                     &theia::ReconstructionEstimatorOptions::visibility_clustering_type);
+                     &theia::ReconstructionEstimatorOptions::visibility_clustering_type)
+      .def_readwrite("use_inner_iterations",
+                     &theia::ReconstructionEstimatorOptions::use_inner_iterations)
+      .def_readwrite("max_num_iterations",
+                     &theia::ReconstructionEstimatorOptions::max_num_iterations);
   // Reconstruction class
   py::class_<theia::Reconstruction>(m, "Reconstruction")
       .def(py::init<>())

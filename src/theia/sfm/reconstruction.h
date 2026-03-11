@@ -171,9 +171,7 @@ class Reconstruction {
   // the same IDs as the original reconstruction.
   void GetSubReconstruction(const std::unordered_set<ViewId>& views_in_subset,
                             Reconstruction* subreconstruction) const;
-  Reconstruction GetSubReconstructionWrapper(
-      const std::unordered_set<ViewId>& views_in_subset);
-
+                            
   // Initialize inverse depth for all tracks
   void InitializeInverseDepth();
 

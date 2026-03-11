@@ -142,11 +142,9 @@ BundleAdjustmentOptions SetBundleAdjustmentOptions(
   ba_options.linear_solver_type = options.linear_solver_type;
   ba_options.visibility_clustering_type = options.visibility_clustering_type;
 
-  // print a warning to the user that if the number of cameras is small he
-  // shoould use DENSE_SCHUR and not SPARSE_SCHUR
-  if (num_views < kMinViewsForSparseSchur && ba_options.linear_solver_type == ceres::SPARSE_SCHUR) {
-    LOG(WARNING) << "The number of cameras is small. Consider using DENSE_SCHUR instead of SPARSE_SCHUR.";
-  }
+  ba_options.max_num_iterations = options.max_num_iterations;
+  ba_options.use_inner_iterations = options.use_inner_iterations;
+
 
   ba_options.verbose = VLOG_IS_ON(1);
   return ba_options;

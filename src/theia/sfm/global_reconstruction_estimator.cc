@@ -537,6 +537,7 @@ bool GlobalReconstructionEstimator::BundleAdjustCameraPositionsAndPoints() {
 
   std::unordered_set<ViewId> views_to_optimize;
   GetEstimatedViewsFromReconstruction(*reconstruction_, &views_to_optimize);
+
   const auto& bundle_adjustment_summary =
       BundleAdjustPartialReconstruction(bundle_adjustment_options_,
                                         views_to_optimize,

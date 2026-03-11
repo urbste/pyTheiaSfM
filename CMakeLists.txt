@@ -224,6 +224,30 @@ include_directories(
   ${GLOG_INCLUDE_DIRS}
 )
 
+# Detect whether Ceres was built with CUDA (for dense linear algebra fallback in BA).
+# Ceres defines CERES_NO_CUDA when built without CUDA; we compile a small check.
+if (DEFINED THEIA_CERES_USE_CUDA)
+  set(THEIA_CERES_HAS_CUDA_DENSE ${THEIA_CERES_USE_CUDA})
+  message("-- Ceres CUDA for BA: ${THEIA_CERES_HAS_CUDA_DENSE} (user override)")
+else ()
+  try_compile(THEIA_CERES_HAS_CUDA_DENSE
+    "${CMAKE_BINARY_DIR}/CheckCeresCuda"
+    "${CMAKE_SOURCE_DIR}/cmake/CheckCeresCuda"
+    CheckCeresCuda
+    CMAKE_FLAGS "-DCERES_INCLUDE_DIRS:STRING=${CERES_INCLUDE_DIRS}"
+  )
+  if (THEIA_CERES_HAS_CUDA_DENSE)
+    message("-- Ceres was built with CUDA (dense linear algebra available)")
+  else ()
+    message("-- Ceres was built without CUDA; BA will fall back to EIGEN if CUDA is requested")
+  endif ()
+endif ()
+if (THEIA_CERES_HAS_CUDA_DENSE)
+  set(THEIA_CERES_HAS_CUDA_DENSE_VALUE 1)
+else ()
+  set(THEIA_CERES_HAS_CUDA_DENSE_VALUE 0)
+endif ()
+
 if (NOT PYTHON_BUILD AND WITH_ROCKSB)
     include_directories(${ROCKSDB_INCLUDE_DIR})
 endif (NOT PYTHON_BUILD AND WITH_ROCKSB)
