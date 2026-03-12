@@ -109,14 +109,11 @@ generate_stubs()
 
 setuptools.setup(
     name='pytheia',
-    version='0.4.6',
+    version='0.5.0',
     description='A performant Structure from Motion library for Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/urbste/pyTheiaSfM.git',
-    # project_urls={
-    #     "Documentation": "http://theia-sfm.org/",
-    # },
     author='Steffen Urban, Shengyu Yin',
     author_email = "urbste@googlemail.com, shengyu952014@outlook.com",
     license='BSD',

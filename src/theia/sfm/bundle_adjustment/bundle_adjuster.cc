@@ -79,16 +79,7 @@ void SetSolverOptions(const BundleAdjustmentOptions& options,
   solver_options->max_trust_region_radius = options.max_trust_region_radius;
   solver_options->use_mixed_precision_solves = options.use_mixed_precision_solves;
   solver_options->max_num_refinement_iterations = options.max_num_refinement_iterations;
-#if THEIA_CERES_HAS_CUDA_DENSE
   solver_options->dense_linear_algebra_library_type = options.dense_linear_algebra_library_type;
-#else
-  if (options.dense_linear_algebra_library_type == ceres::DenseLinearAlgebraLibraryType::CUDA) {
-    LOG(WARNING) << "Ceres was not built with CUDA; using EIGEN for dense linear algebra.";
-    solver_options->dense_linear_algebra_library_type = ceres::EIGEN;
-  } else {
-    solver_options->dense_linear_algebra_library_type = options.dense_linear_algebra_library_type;
-  }
-#endif
   solver_options->sparse_linear_algebra_library_type = options.sparse_linear_algebra_library_type;
 
   // Solver options takes ownership of the ordering so that we can order the BA

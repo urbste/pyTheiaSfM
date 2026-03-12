@@ -1597,14 +1597,18 @@ void pytheia_sfm_classes(py::module& m) {
   py::enum_<ceres::DenseLinearAlgebraLibraryType>(m, "DenseLinearAlgebraLibraryType")
       .value("EIGEN", ceres::DenseLinearAlgebraLibraryType::EIGEN)
       .value("LAPACK", ceres::DenseLinearAlgebraLibraryType::LAPACK)
+#if THEIA_CERES_HAS_CUDA_DENSE
       .value("CUDA", ceres::DenseLinearAlgebraLibraryType::CUDA)
+#endif
       .export_values();
 
   py::enum_<ceres::SparseLinearAlgebraLibraryType>(m, "SparseLinearAlgebraLibraryType")
       .value("SUITE_SPARSE", ceres::SparseLinearAlgebraLibraryType::SUITE_SPARSE)
       .value("EIGEN_SPARSE", ceres::SparseLinearAlgebraLibraryType::EIGEN_SPARSE)
-      .value("CX_SPARSE", ceres::SparseLinearAlgebraLibraryType::CX_SPARSE)
       .value("ACCELERATE_SPARSE", ceres::SparseLinearAlgebraLibraryType::ACCELERATE_SPARSE)
+#if THEIA_CERES_HAS_CUDA_SPARSE
+      .value("CUDA_SPARSE", ceres::SparseLinearAlgebraLibraryType::CUDA_SPARSE)
+#endif
       .export_values();
 
   py::enum_<theia::OptimizeIntrinsicsType>(m, "OptimizeIntrinsicsType")

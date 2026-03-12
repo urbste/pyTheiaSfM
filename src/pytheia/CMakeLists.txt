@@ -24,6 +24,9 @@ pybind11_add_module(${PACKAGE_NAME}
     ${PY_ALL_HEADER_FILES} ${PY_ALL_SOURCE_FILES})
 
 target_link_libraries(${PACKAGE_NAME} PRIVATE ${CMAKE_PROJECT_NAME})
+target_compile_definitions(${PACKAGE_NAME} PRIVATE
+  THEIA_CERES_HAS_CUDA_DENSE=${THEIA_CERES_HAS_CUDA_DENSE_VALUE}
+  THEIA_CERES_HAS_CUDA_SPARSE=${THEIA_CERES_HAS_CUDA_SPARSE_VALUE})
 if (WIN32)
     target_link_options(${PACKAGE_NAME} PUBLIC "/force:multiple")
 endif()

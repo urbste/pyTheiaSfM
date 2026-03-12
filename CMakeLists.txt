@@ -248,6 +248,29 @@ else ()
   set(THEIA_CERES_HAS_CUDA_DENSE_VALUE 0)
 endif ()
 
+# Detect whether Ceres was built with CUDA sparse (cuDSS). Use Ceres' CERES_COMPILED_COMPONENTS
+# (set by find_package(Ceres) in Config mode): cuDSS is only present when Ceres was built with
+# cuDSS. The enum CUDA_SPARSE exists in headers even without cuDSS, so try_compile would
+# give false positives.
+if (DEFINED THEIA_CERES_USE_CUDA_SPARSE)
+  set(THEIA_CERES_HAS_CUDA_SPARSE ${THEIA_CERES_USE_CUDA_SPARSE})
+  message("-- Ceres CUDA sparse (cuDSS) for BA: ${THEIA_CERES_HAS_CUDA_SPARSE} (user override)")
+else ()
+  list(FIND CERES_COMPILED_COMPONENTS "cuDSS" CUDSS_COMPONENT_INDEX)
+  if (CUDSS_COMPONENT_INDEX GREATER_EQUAL 0)
+    set(THEIA_CERES_HAS_CUDA_SPARSE TRUE)
+    message("-- Ceres was built with CUDA sparse (cuDSS); BA can use CUDA_SPARSE")
+  else ()
+    set(THEIA_CERES_HAS_CUDA_SPARSE FALSE)
+    message("-- Ceres was built without CUDA sparse (cuDSS); CUDA_SPARSE not available")
+  endif ()
+endif ()
+if (THEIA_CERES_HAS_CUDA_SPARSE)
+  set(THEIA_CERES_HAS_CUDA_SPARSE_VALUE 1)
+else ()
+  set(THEIA_CERES_HAS_CUDA_SPARSE_VALUE 0)
+endif ()
+
 if (NOT PYTHON_BUILD AND WITH_ROCKSB)
     include_directories(${ROCKSDB_INCLUDE_DIR})
 endif (NOT PYTHON_BUILD AND WITH_ROCKSB)
