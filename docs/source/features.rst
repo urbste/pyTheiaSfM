@@ -8,7 +8,13 @@
 Features
 ========
 
-Feature detection and description is a major area of focus in Computer Vision. While SIFT remains the gold standard because of its robustness and matching performance, many other detectors and descriptors are used and often have other competitive advantages. Theia presents friendly classes for feature detection and decription such that the interface is always the same regardless of the methods used. Note that all keypoint and descriptor extraction methods we perform automatic conversion to grayscale images if necessary. In pyTheia, feature extraction and matching are typically done from Python, allowing you to integrate modern deep-learning methods.
+Feature detection and description is a major area of focus in Computer Vision.
+Theia does not ship built-in feature extractors (SIFT/VLFeat have been removed).
+Extract features externally (e.g. OpenCV, COLMAP, or deep-learning pipelines)
+and load them via :func:`ReadKeypointsAndDescriptors` or the keypoint
+binary/text file APIs. Theia provides keypoint and descriptor types, I/O, and
+matching so the rest of the pipeline is descriptor-agnostic. In pyTheia, feature
+extraction and matching are typically done from Python.
 
 .. NOTE:: The keypoint detection and descriptor extraction methods here are generally not thread-safe. Use with caution when multi-threading.
 
@@ -95,22 +101,16 @@ Detecting keypoints with Theia is very simple, and we have implemented a number 
         keypoint_detector.DetectKeypoints(input_image, &detected_keypoints);
 
 
-The following keypoint detectors have been implemented in Theia (class constructors are given):
-
-.. function:: SiftDetector::SiftDetector(int num_octaves, int num_scale_levels, int first_octave)
-
-    The algorithm originally proposed by [Lowe]_ that uses the `VLFeat
-    <http://www.vlfeat.org>`_ as the underlying engine.
-
-    Specify the number of image octaves, number of scale levels per octave, and
-    where the first octave should start. The default constructor sets these values
-    to values -1 (i.e., as many octaves as can be generated), 3, and 0 (i.e., the
-    source image)
+Built-in keypoint detectors (e.g. SIFT) have been removed. Use external
+extraction and load keypoints/descriptors via the I/O APIs.
 
 Descriptors
 ===========
 
-Theia uses a semi-generic interface for all descriptor types. For floating point descriptors (e.g., SIFT) we use Eigen::VectorXf and set the number of entries to equal the dimension of the descriptor. This way, we can utilize Eigen's speed and optimizations to get the most efficient and accurate representation of the descriptors.
+Theia uses a generic interface for descriptors: floating-point descriptors are
+represented as ``Eigen::VectorXf`` with length equal to the descriptor dimension
+(e.g. 128 for Lowe-style descriptors). This allows efficient matching and I/O
+regardless of the external tool used to extract features.
 
 DescriptorExtractor
 ===================
@@ -162,65 +162,19 @@ DescriptorExtractor
 .. function:: bool DescriptorExtractor::DetectAndExtractDescriptors(const FloatImage& input_image, std::vector<Keypoint>* keypoints, std::vector<Eigen::VectorXf>* float_descriptors)
 
     Detects keypoints and extracts descriptors using the default keypoint
-    detector for the corresponding descriptor. For SIFT, this is the SIFT
-    keypoint detector. This has the potential to be faster because it may avoid
-    recomputing certain member variables.
+    detector for the corresponding descriptor. Built-in extractors (e.g. SIFT)
+    have been removed; use external feature extraction and load results via
+    :func:`ReadKeypointsAndDescriptors` or keypoint file I/O.
 
     ``input_image``: The image that you want to detect keypoints on.
 
     ``keypoints``: An output vector of the keypoint points that have been
     detected and successfully had descriptors extracted.
 
-    ``float_descriptors``: A container for the descriptors
-    that have been created based on the type of descriptor that is being
-    extracted. Eigen::VectorXf is used for extracting float descriptors (e.g.,
-    SIFT).
+    ``float_descriptors``: A container for the descriptors (e.g. ``Eigen::VectorXf``).
 
-  .. code-block:: c++
-
-    // Open image we want to extract features from.
-    FloatImage input_image(input_image_filename);
-
-    // Detect keypoints.
-    SiftDetector sift_keypoint_detector;
-    bool keypoint_detector_init = sift_keypoint_detector.Initialize();
-    const bool keypoint_init_success = sift_keypoint_detector.Initialize();
-    std::vector<Keypoint> sift_keypoints;
-    const bool detection_success =
-        sift_keypoint_detector.DetectKeypoints(input_image, &sift_keypoints);
-
-    // Initialize descriptor extractor.
-    SiftDescriptorExtractor sift_extractor;
-    const bool descriptor_init_succes = sift_extractor.Initialize();
-
-    // E.g., compute a single descriptor
-    Eigen::VectorXf sift_descriptor;
-    bool sift_success =
-      sift_extractor.ComputeDescriptor(input_image, keypoint[0], &sift_descriptor);
-
-    // E.g., compute many descriptors.
-    std::vector<Eigen::VectorXf> sift_descriptors;
-    const bool extraction_success =
-      sift_extractor.ComputeDescriptors(image, &sift_keypoints, &sift_descriptors)
-
-We implement the following descriptor extractors (and corresponding descriptors)
-in Theia (constructors are given).
-
-.. class:: SiftDescriptorExtractor
-
-.. function:: SiftDescriptorExtractor::SiftDescriptorExtractor(int num_octaves, int num_scale_levels, int first_octave)
-
-  The algorithm originally proposed by [Lowe]_ that uses the `VLFeat
-  <http://www.vlfeat.org>`_ as the underlying engine.
-
-  We only implement the standard 128-dimension descriptor. Specify the number
-  of image octaves, number of scale levels per octave, and where the first
-  octave should start. The default constructor sets these values to values -1
-  (i.e., as many octaves as can be generated), 3, and 0 (i.e., the source
-  image). Typically these parameters are set to match the :class:`SiftDetector`
-  parameters.
-
-.. NOTE:: This algorithm is patented and commercial use requires a license.
+Built-in descriptor extractors (e.g. SIFT) have been removed. Load
+pre-extracted keypoints and descriptors from file instead.
 
 
 Feature Matching

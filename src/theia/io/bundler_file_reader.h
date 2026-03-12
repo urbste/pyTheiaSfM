@@ -62,7 +62,7 @@ struct FeatureInfo {
   // Index of the camera in the lists file.
   int camera_index;
   // Index of the feature in the SIFT file.
-  int sift_index;
+  int feature_index;
   // Pixel position.
   int kpt_x;
   int kpt_y;

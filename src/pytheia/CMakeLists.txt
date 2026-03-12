@@ -30,11 +30,3 @@ target_compile_definitions(${PACKAGE_NAME} PRIVATE
 if (WIN32)
     target_link_options(${PACKAGE_NAME} PUBLIC "/force:multiple")
 endif()
-
-# Use `make pip-package` to create the pip package in the build directory
-# add_custom_target(pip-package
-#     COMMAND ${PYTHON_EXECUTABLE} setup.py bdist_wheel --dist-dir pip_package
-#     COMMAND echo "pip wheel created at ${PYTHON_PACKAGE_DST_DIR}/pip_package"
-#     WORKING_DIRECTORY ${PYTHON_PACKAGE_DST_DIR}
-#     DEPENDS python-package
-# )

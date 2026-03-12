@@ -13,14 +13,12 @@
 #include "theia/sfm/select_good_tracks_for_bundle_adjustment.h"
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
-#include "theia/sfm/undistort_image.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/track_builder.h"
 #include "theia/sfm/find_common_tracks_by_feature_in_reconstructions.h"
 
 namespace theia {
 
-class FloatImage;
 class Reconstruction;
 class TwoViewInfo;
 class ViewGraph;

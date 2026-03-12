@@ -82,14 +82,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 option(BUILD_TESTING "Enable testing" OFF)
 option(BUILD_DOCUMENTATION "Build html User's Guide" OFF)
 option(PYTHON_BUILD "If we are building python bindings" OFF)
-option(WITH_ROCKSDB "If rcocksdb should be included as a feature database" OFF)
-
 if (PYTHON_BUILD)
     add_definitions(-DPYTHON_BUILD)
-endif()
-
-if (WITH_ROCKSDB)
-    add_definitions(-DWITH_ROCKSDB)
 endif()
 
 enable_testing()
@@ -205,17 +199,6 @@ else (CERES_FOUND)
 endif (CERES_FOUND)
 
 
-# RocksDB
-if (NOT PYTHON_BUILD AND WITH_ROCKSDB)
-    message("-- Check for RocksDB")
-    find_package(RocksDB REQUIRED)
-    if (ROCKSDB_FOUND)
-      message("-- Found RocksDB: ${ROCKSDB_INCLUDE_DIR}")
-    else (ROCKSDB_FOUND)
-      message(FATAL_ERROR "Can't find RocksDB. Please set ROCKSDB_INCLUDE_DIR & ROCKSDB_LIBRARY to use RocksDB.")
-    endif (ROCKSDB_FOUND)
-endif (NOT PYTHON_BUILD AND WITH_ROCKSDB)
-
 include_directories(
   include
   src
@@ -271,11 +254,6 @@ else ()
   set(THEIA_CERES_HAS_CUDA_SPARSE_VALUE 0)
 endif ()
 
-if (NOT PYTHON_BUILD AND WITH_ROCKSB)
-    include_directories(${ROCKSDB_INCLUDE_DIR})
-endif (NOT PYTHON_BUILD AND WITH_ROCKSB)
-
-
 # NOTE: This fix came from Ceres solver with the following comment:
 #
 # Eigen SparseQR generates various compiler warnings related to unused and
@@ -296,19 +274,11 @@ include_directories(
   libraries
   libraries/spectra
   libraries/Sophus
-  ${akaze_SOURCE_DIR}
-  ${akaze_INCLUDE_DIR}
   ${cereal_SOURCE_DIR}
   ${cereal_SOURCE_DIR}/include
-  ${flann_SOURCE_DIR}
-  ${flann_SOURCE_DIR}/src/cpp
   ${gtest_SOURCE_DIR}/include
   ${gtest_SOURCE_DIR}
-  ${optimo_SOURCE_DIR}
-  ${statx_SOURCE_DIR}
   ${stlplus3_SOURCE_DIR}
-  ${vlfeat_SOURCE_DIR}
-  #${visual_sfm_SOURCE_DIR}
   )
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -400,7 +370,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TheiaConfig.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindEigen.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGlog.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGflags.cmake"
-              "${CMAKE_SOURCE_DIR}/cmake/FindRocksDB.cmake"
               #"${CMAKE_SOURCE_DIR}/cmake/FindSuiteSparse.cmake"
               DESTINATION ${CMAKECONFIG_INSTALL_DIR})
 

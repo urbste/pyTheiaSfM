@@ -37,7 +37,6 @@
 
 #include <glog/logging.h>
 
-#include "theia/solvers/evsac.h"
 #include "theia/solvers/exhaustive_ransac.h"
 #include "theia/solvers/lmed.h"
 #include "theia/solvers/prosac.h"
@@ -73,9 +72,6 @@ CreateAndInitializeRansacVariant(const RansacType& ransac_type,
       ransac_variant.reset(
           new ExhaustiveRansac<Estimator>(ransac_options, estimator));
       break;
-      //    case RansacType::EVSAC:
-      //      ransac_variant.reset(new Evsac<Estimator>(ransac_options,
-      //      estimator)); break;
     default:
       ransac_variant.reset(new Ransac<Estimator>(ransac_options, estimator));
       break;

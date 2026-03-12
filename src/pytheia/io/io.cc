@@ -48,15 +48,11 @@
 #include "theia/io/populate_image_sizes.h"
 #include "theia/io/read_1dsfm.h"
 #include "theia/io/read_bundler_files.h"
-#include "theia/io/read_keypoints_and_descriptors.h"
 #include "theia/io/read_strecha_dataset.h"
 #include "theia/io/reconstruction_reader.h"
 #include "theia/io/reconstruction_writer.h"
-#include "theia/io/sift_binary_file.h"
-#include "theia/io/sift_text_file.h"
 #include "theia/io/write_bundler_files.h"
 #include "theia/io/write_colmap_files.h"
-#include "theia/io/write_keypoints_and_descriptors.h"
 #include "theia/io/write_nerfstudio.h"
 #include "theia/io/write_nvm_file.h"
 #include "theia/io/write_ply_file.h"
@@ -90,7 +86,7 @@ void pytheia_io_classes(py::module& m) {
   py::class_<theia::FeatureInfo>(m, "FeatureInfo")
       .def(py::init())
       .def_readwrite("camera_index", &theia::FeatureInfo::camera_index)
-      .def_readwrite("sift_index", &theia::FeatureInfo::sift_index)
+      .def_readwrite("feature_index", &theia::FeatureInfo::feature_index)
       .def_readwrite("kpt_x", &theia::FeatureInfo::kpt_x)
       .def_readwrite("kpt_y", &theia::FeatureInfo::kpt_y);
 
@@ -105,19 +101,12 @@ void pytheia_io_classes(py::module& m) {
         theia::PopulateImageSizesAndPrincipalPointsWrapper);
   m.def("Read1DSFM", theia::Read1DSFMWrapper);
   m.def("ReadBundlerFiles", theia::ReadBundlerFilesWrapper);
-  m.def("ReadKeypointsAndDescriptors",
-        theia::ReadKeypointsAndDescriptorsWrapper);
-
   m.def("ReadStrechaDataset", theia::ReadStrechaDatasetWrapper);
   m.def("ReadReconstruction", theia::ReadReconstructionWrapper);
   m.def("WriteReconstruction", theia::WriteReconstruction);
   m.def("WriteReconstructionJson", theia::WriteReconstructionJson);
-  m.def("WriteSiftKeyBinaryFile", theia::WriteSiftKeyBinaryFile);
-  m.def("ReadSiftKeyBinaryFile", theia::ReadSiftKeyBinaryFileWrapper);
-  m.def("ReadSiftKeyTextFile", theia::ReadSiftKeyTextFileWrapper);
   m.def("WriteBundlerFiles", theia::WriteBundlerFiles);
   m.def("WriteColmapFiles", theia::WriteColmapFiles);
-  m.def("WriteKeypointsAndDescriptors", theia::WriteKeypointsAndDescriptors);
   m.def("WriteNVMFile", theia::WriteNVMFile);
   m.def("WritePlyFile", theia::WritePlyFile);
   m.def("WriteNerfStudio", theia::WriteNerfStudio);

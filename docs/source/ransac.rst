@@ -22,7 +22,6 @@ The following RANSAC methods are implemented in Theia:
 * :class:`Ransac`
 * :class:`Prosac`
 * :class:`Arrsac`
-* :class:`Evsac`
 * :class:`LMed`
 
 :class:`Estimator`
@@ -292,32 +291,6 @@ constructor. The constructors for each method are specified as follows
 
   .. NOTE:: This method works for all the unit tests currently in Theia, but
     needs to be tested further to ensure correctness. Use with caution.
-
-.. class:: Evsac
-
-  Evsac is a method proposed by [Fragoso]_ that models the smallest
-  nearest-neighbor (NN) matching distances as an inlier distribution
-  and an outlier distribution to compute weights for
-  getting a non-uniform sampling strategy. The computed non-uniform
-  sampling strategy tends to achieve a fast convergence, even when the
-  inlier ratio is small.
-
-.. function:: Evsac::Evsac(const RansacParameters& ransac_params, const ModelEstimator& estimator, const Eigen::MatrixXd& sorted_distances, const double predictor_threshold, const FittingMethod fitting_method)
-
-     ``ransac_params``: The ransac parameters.
-
-     ``estimator``: The model estimator to use.
-
-     ``sorted_distances``: The matrix containing k L2 sorted
-     distances in ascending order. The matrix has num. of query
-     features as rows and k columns.
-
-     ``predictor_threshold``: The threshold used to decide correct or
-     incorrect matches/correspondences. The threshold must be in the
-     range of (0, 1.0). The recommended value is 0.65.
-
-     ``fitting_method``:  The fitting method MLE or QUANTILE_NLS.
-     The recommended fitting method is the MLE estimation.
 
 .. class:: LMed
 

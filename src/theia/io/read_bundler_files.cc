@@ -159,8 +159,8 @@ int AddTracksToReconstruction(const BundlerFileReader& reader,
     std::vector<std::pair<ViewId, Feature> > track;
     track.reserve(num_views);
     for (int j = 0; j < num_views; j++) {
-      // TODO(vfragoso): Should we store SIFT indices in Theia? It is useful for
-      // img-based localization.
+      // TODO(vfragoso): Should we store feature indices in Theia? It is useful
+      // for img-based localization.
       const FeatureInfo& feature_info = point.view_list[j];
 
       // NOTE: We flip the pixel directions to compensate for Bundlers different

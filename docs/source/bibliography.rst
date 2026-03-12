@@ -40,11 +40,6 @@ Bibliography
    paradigm for model fitting with applications to image analysis and automated
    cartography**. *Commun. ACM* 24, 6 (June 1981), 381-395.
 
-.. [Fragoso] V. Fragoso, P. Sen, S. Rodriguez, and M. Turk. **EVSAC:
-   Accelerating Hypotheses Generation by Modeling Matching Scores with
-   Extreme Value Theory**. In Proceedings of the IEEE International
-   Conference in Computer Vision (ICCV), Sydney, Australia, December 2013.
-
 .. [HartleyZisserman] R.I. Hartley & A. Zisserman, **Multiview
    Geometry in Computer Vision**, Cambridge University Press, 2004.
 

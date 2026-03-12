@@ -163,26 +163,6 @@ else (GFLAGS_FOUND)
 endif (GFLAGS_FOUND)
 list(APPEND THEIA_INCLUDE_DIRS ${GFLAGS_INCLUDE_DIRS})
 
-# OpenImageIO
-#find_package(OpenImageIO QUIET)
-#if (OPENIMAGEIO_FOUND)
-#  message(STATUS "Found Theia dependency: OpenImageIO in ${OPENIMAGEIO_INCLUDE_DIRS}")
-#else (OPENIMAGEIO_FOUND)
-#  theia_report_not_found("Missing required Theia dependency: OpenImageIO. Please set "
-#    "OPENIMAGEIO_INCLUDE_DIR & OPENIMAGEIO_LIBRARY")
-#endif (OPENIMAGEIO_FOUND)
-#list(APPEND THEIA_INCLUDE_DIRS ${OPENIMAGEIO_INCLUDE_DIRS})
-
-find_package(RocksDB QUIET)
-if (ROCKSDB_FOUND)
-  message(STATUS "Found RocksDB: ${ROCKSDB_INCLUDE_DIRS}")
-  list(APPEND THEIA_INCLUDE_DIRS ${ROCKSDB_INCLUDE_DIRS})
-else (ROCKSDB_FOUND)
-#theia_report_not_found("Missing required Theia dependence: RocksDB. Please "
-#    "set ROCKSDB_INCLUDE_DIR & ROCKSDB_LIBRARY.")
-  message("No ROCKSDB found")
-endif (ROCKSDB_FOUND)
-
 #find_package(SuiteSparse QUIET)
 #if (SUITESPARSE_FOUND)
 #  # On Ubuntu the system install of SuiteSparse (v3.4.0) up to at least

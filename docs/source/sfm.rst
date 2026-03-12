@@ -9,8 +9,8 @@ Structure from Motion (SfM)
 ===========================
 
 Theia has a full Structure-from-Motion pipeline that is extremely efficient. Our
-overall pipeline consists of several steps. First, we extract features (SIFT is
-the default). Then, we perform two-view matching and geometric verification to
+overall pipeline consists of several steps. First, we load or extract features
+(e.g. from external tools; see :ref:`documentation-features`). Then, we perform two-view matching and geometric verification to
 obtain relative poses between image pairs and create a :class:`ViewGraph`. Next,
 we perform either incremental or global SfM.
 
@@ -370,11 +370,9 @@ extraction, feature matching, which SfM pipeline to use, and more.
 
 .. member:: DescriptorExtractorType ReconstructionBuilderOptions::descriptor_type
 
-  DEFAULT: ``DescriptorExtractorType::SIFT``
-
-  Descriptor type for extracting features.
-  See `//theia/image/descriptor/create_descriptor_extractor.h
-  <https://github.com/sweeneychris/TheiaSfM/blob/master/src/theia/image/descriptor/create_descriptor_extractor.h>`_
+  Legacy option; built-in descriptor extraction has been removed. Use
+  pre-extracted features and :func:`ReadKeypointsAndDescriptors` (or
+  keypoint file I/O) instead.
 
 .. member:: FeatureDensity ReconstructionBuilderOptions::feature_density
 

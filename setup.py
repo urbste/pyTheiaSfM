@@ -125,7 +125,6 @@ setuptools.setup(
     package_data={
         'pytheia': [
             'pytheia.*',
-            'libflann_cpp.*',
         '*.pyi',
         '*/*.pyi',
         '*/*/*.pyi',

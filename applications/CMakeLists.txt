@@ -8,26 +8,6 @@
 # target_link_libraries(test_align_recon ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 
-
-#add_executable(extract_features extract_features.cc)
-#target_link_libraries(extract_features ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES})
-
-#add_executable(compute_two_view_geometry compute_two_view_geometry.cc)
-#target_link_libraries(compute_two_view_geometry ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
-
-## Tools for building SfM models
-# add_executable(build_reconstruction build_reconstruction.cc)
-# target_link_libraries(build_reconstruction ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
-
-# add_executable(build_1dsfm_reconstruction build_1dsfm_reconstruction.cc)
-# target_link_libraries(build_1dsfm_reconstruction ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
-
-#add_executable(calibrate_camera_intrinsics calibrate_camera_intrinsics.cc)
-#target_link_libraries(calibrate_camera_intrinsics ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
-
-#add_executable(undistort_images undistort_images.cc)
-#target_link_libraries(undistort_images ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
-
 ## Reconstruction visualization.
 #find_package(OpenGL REQUIRED)
 #if (NOT MSVC)
@@ -67,9 +47,6 @@
 # add_executable(compare_reconstructions compare_reconstructions.cc)
 # target_link_libraries(compare_reconstructions ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-#add_executable(compute_matching_relative_pose_errors compute_matching_relative_pose_errors.cc)
-#target_link_libraries(compute_matching_relative_pose_errors ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
-
 #add_executable(evaluate_relative_translation_optimization evaluate_relative_translation_optimization.cc)
 #target_link_libraries(evaluate_relative_translation_optimization ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
@@ -77,8 +54,6 @@
 # target_link_libraries(verify_1dsfm_input ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ## File conversions and exporters.
-#add_executable(convert_sift_key_file convert_sift_key_file.cc)
-#target_link_libraries(convert_sift_key_file ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 #add_executable(convert_bundle_file convert_bundle_file.cc)
 #target_link_libraries(convert_bundle_file ${CMAKE_PROJECT_NAME} ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})

@@ -23,15 +23,14 @@ In order to view the logging that Theia provides (which can be extremely useful!
 Features
 ========
 
-Extract Features
-----------------
+Keypoint and descriptor I/O
+---------------------------
 
-Extract any type of feature that is implemented in Theia (e.g., SIFT) and write
-them to disk.
-
-.. code-block:: bash
-
-  ./bin/extract_features --input_images=/path/to/images/*.jpg --features_output_director=/path/to/output --num_threads=4 --descriptor=SIFT --logtostderr
+Theia does not include built-in feature extraction. Extract features with
+external tools (e.g. OpenCV, COLMAP, or deep-learning pipelines) and load them
+via the Python API :func:`ReadKeypointsAndDescriptors` or the keypoint file
+formats. Use ``convert_keypoint_file`` (when built) to convert between
+keypoint text (Lowe .key) and binary formats.
 
 Reconstructions
 ===============

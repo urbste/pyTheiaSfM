@@ -19,8 +19,6 @@ For example SOTA feature detection & matching, place recognition algorithms are 
 Compared to the original TheiaSfM:
 * SuiteSparse: Optional for Ceres; GPL-dependent code was removed in src/math/matrix/sparse_cholesky_llt.cc (cholmod -> Eigen::SimplicialLDLT), which may be slower for very large problems and slightly less stable numerically.
 * RapidJSON: No separate dependency; RapidJSON is vendored via cereal headers.
-* RocksDB: Feature/match database remains available but is optional behind the WITH_ROCKSDB CMake option.
-* OpenImageIO: Still used internally for image I/O.
 
 ## Changes to the original TheiaSfM library
 

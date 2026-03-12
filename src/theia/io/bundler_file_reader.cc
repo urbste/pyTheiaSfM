@@ -161,7 +161,7 @@ bool ReadViewList(FILE* in, std::vector<FeatureInfo>* view_list) {
     if (fscanf(in, "%f", &entry) != 1) {
       return false;
     }
-    (*view_list)[i].sift_index = static_cast<int>(entry);
+    (*view_list)[i].feature_index = static_cast<int>(entry);
     // Kpt x.
     if (fscanf(in, "%f", &entry) != 1) {
       return false;

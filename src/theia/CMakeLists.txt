@@ -61,32 +61,16 @@ set(THEIA_SRC
   io/read_1dsfm.cc
   io/read_bundler_files.cc
   io/read_calibration.cc
-  io/read_keypoints_and_descriptors.cc
   io/read_strecha_dataset.cc
   io/reconstruction_reader.cc
   io/reconstruction_writer.cc
-  io/sift_binary_file.cc
-  io/sift_text_file.cc
   io/write_bundler_files.cc
   io/write_calibration.cc
   io/write_colmap_files.cc
-  io/write_keypoints_and_descriptors.cc
-  io/write_matches.cc
   io/write_nerfstudio.cc
   io/write_sdfstudio.cc
   io/write_nvm_file.cc
   io/write_ply_file.cc
-  matching/brute_force_feature_matcher.cc
-  matching/cascade_hasher.cc
-  matching/cascade_hashing_feature_matcher.cc
-  matching/create_feature_matcher.cc
-  matching/feature_matcher_utils.cc
-  matching/feature_matcher.cc
-  matching/fisher_vector_extractor.cc
-  matching/graph_match.cc
-  matching/guided_epipolar_matcher.cc
-  matching/in_memory_features_and_matches_database.cc
-  matching/rocksdb_features_and_matches_database.cc
   math/closed_form_polynomial_solver.cc
   math/constrained_l1_solver.cc
   math/find_polynomial_roots_companion_matrix.cc
@@ -139,8 +123,6 @@ set(THEIA_SRC
   sfm/estimators/estimate_uncalibrated_relative_pose.cc
   #sfm/exif_reader.cc
   sfm/extract_maximally_parallel_rigid_subgraph.cc
-  sfm/feature_extractor_and_matcher.cc
-  sfm/feature_extractor.cc
   sfm/filter_view_graph_cycles_by_rotation.cc
   sfm/filter_view_pairs_from_orientation.cc
   sfm/filter_view_pairs_from_relative_translation.cc
@@ -199,7 +181,6 @@ set(THEIA_SRC
   sfm/pose/two_point_pose_partial_rotation.cc
   sfm/pose/upnp.cc
   sfm/pose/util.cc
-  sfm/reconstruction_builder.cc
   sfm/reconstruction_estimator_utils.cc
   sfm/reconstruction_estimator.cc
   sfm/reconstruction.cc
@@ -215,7 +196,6 @@ set(THEIA_SRC
   sfm/transformation/gdls_similarity_transform.cc
   sfm/transformation/transform_reconstruction.cc
   sfm/triangulation/triangulation.cc
-  sfm/two_view_match_geometric_verification.cc
   sfm/twoview_info.cc
   # sfm/undistort_image.cc
   sfm/view_graph/orientations_from_maximum_spanning_tree.cc
@@ -254,10 +234,7 @@ set(THEIA_LIBRARY_DEPENDENCIES
   ${GFLAGS_LIBRARIES}
   ${GLOG_LIBRARIES}
   #${SUITESPARSE_LIBRARIES}
-  flann_cpp_s
-  statx
   stlplus3
-  vlfeat
 )
 
 
@@ -273,11 +250,7 @@ else (PYTHON_BUILD)
 endif (PYTHON_BUILD)
 
 add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
-if (WITH_ROCKSDB)
-    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES} ${ROCKSDB_LIBRARIES})
-else (WITH_ROCKSDB)
-    target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES})
-endif (WITH_ROCKSDB)
+target_link_libraries(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_DEPENDENCIES})
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
   VERSION ${THEIA_VERSION}
@@ -421,7 +394,6 @@ if (BUILD_TESTING)
 #  gtest(sfm/view_graph/view_graph)
 #  gtest(solvers/exhaustive_ransac)
 #  gtest(solvers/exhaustive_sampler)
-#  gtest(solvers/evsac)
 #  gtest(solvers/lmed)
 #  gtest(solvers/prosac)
 #  gtest(solvers/random_sampler)
