@@ -41,11 +41,17 @@ namespace py = pybind11;
 namespace pytheia {
 namespace mvs {
 void pytheia_mvs_classes(py::module& m) {
-  m.def("ViewSelectionMVSNet", &theia::ViewSelectionMVSNet);
+  m.def("ViewSelectionMVSNet", &theia::ViewSelectionMVSNet,
+        py::arg("reconstruction"), py::arg("num_neighbors"),
+        py::arg("theta0") = 5.0, py::arg("sigma1") = 1.0,
+        py::arg("sigma2") = 10.0,
+        "Select neighbor views for MVSNet per reference view (covisibility and angle-based scoring). "
+        "Returns a dict mapping each view_id to a list of (score, neighbor_id) sorted by score descending.");
 }
 
 void pytheia_mvs(py::module& m) {
-  py::module m_submodule = m.def_submodule("mvs");
+  py::module m_submodule =
+      m.def_submodule("mvs", "Multi-view stereo: view selection (e.g. MVSNet).");
   pytheia_mvs_classes(m_submodule);
 }
 

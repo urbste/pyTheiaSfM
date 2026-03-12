@@ -64,18 +64,23 @@ namespace pytheia {
 namespace io {
 
 void pytheia_io_classes(py::module& m) {
-  // PYBIND11_MODULE(io, m) {
-  //     m.attr("__name__") = "pytheia.io";
-  // BundleFileReader
-  py::class_<theia::BundlerFileReader>(m, "BundlerFileReader")
-      .def(py::init<std::string, std::string>())
-      .def("cameras", &theia::BundlerFileReader::cameras)
-      .def("points", &theia::BundlerFileReader::points)
-      .def("img_entries", &theia::BundlerFileReader::img_entries)
-      .def("ParseBundleFile", &theia::BundlerFileReader::ParseBundleFile)
-      .def("ParseListsFile", &theia::BundlerFileReader::ParseListsFile);
+  py::class_<theia::BundlerFileReader>(m, "BundlerFileReader",
+                                       "Reader for Bundler format (lists + bundle file).")
+      .def(py::init<std::string, std::string>(),
+           py::arg("lists_file"), py::arg("bundle_file"))
+      .def("cameras", &theia::BundlerFileReader::cameras,
+           "Return list of Bundler cameras.")
+      .def("points", &theia::BundlerFileReader::points,
+           "Return 3D points.")
+      .def("img_entries", &theia::BundlerFileReader::img_entries,
+           "Return image list entries.")
+      .def("ParseBundleFile", &theia::BundlerFileReader::ParseBundleFile,
+           "Parse the bundle file. Returns True on success.")
+      .def("ParseListsFile", &theia::BundlerFileReader::ParseListsFile,
+           "Parse the image lists file. Returns True on success.");
 
-  py::class_<theia::BundlerCamera>(m, "BundlerCamera")
+  py::class_<theia::BundlerCamera>(m, "BundlerCamera",
+                                   "Bundler camera: translation, rotation, focal length, radial coeffs.")
       .def(py::init())
       .def_readwrite("translation", &theia::BundlerCamera::translation)
       .def_readwrite("rotation", &theia::BundlerCamera::rotation)
@@ -83,38 +88,72 @@ void pytheia_io_classes(py::module& m) {
       .def_readwrite("radial_coeff_1", &theia::BundlerCamera::radial_coeff_1)
       .def_readwrite("radial_coeff_2", &theia::BundlerCamera::radial_coeff_2);
 
-  py::class_<theia::FeatureInfo>(m, "FeatureInfo")
+  py::class_<theia::FeatureInfo>(m, "FeatureInfo",
+                                "Feature index and 2D position for one camera.")
       .def(py::init())
       .def_readwrite("camera_index", &theia::FeatureInfo::camera_index)
       .def_readwrite("feature_index", &theia::FeatureInfo::feature_index)
       .def_readwrite("kpt_x", &theia::FeatureInfo::kpt_x)
       .def_readwrite("kpt_y", &theia::FeatureInfo::kpt_y);
 
-  py::class_<theia::ListImgEntry>(m, "ListImgEntry")
+  py::class_<theia::ListImgEntry>(m, "ListImgEntry",
+                                 "Single entry in a Bundler image list (filename, focal length).")
       .def(py::init())
       .def_readwrite("filename", &theia::ListImgEntry::filename)
       .def_readwrite("second_entry", &theia::ListImgEntry::second_entry)
       .def_readwrite("focal_length", &theia::ListImgEntry::focal_length);
 
-  m.def("ImportNVMFile", theia::ImportNVMFileWrapper);
+  m.def("ImportNVMFile", theia::ImportNVMFileWrapper,
+        py::arg("nvm_filepath"),
+        "Load reconstruction and view graph from an NVM file. Returns (success, reconstruction).");
   m.def("PopulateImageSizesAndPrincipalPoints",
-        theia::PopulateImageSizesAndPrincipalPointsWrapper);
-  m.def("Read1DSFM", theia::Read1DSFMWrapper);
-  m.def("ReadBundlerFiles", theia::ReadBundlerFilesWrapper);
-  m.def("ReadStrechaDataset", theia::ReadStrechaDatasetWrapper);
-  m.def("ReadReconstruction", theia::ReadReconstructionWrapper);
-  m.def("WriteReconstruction", theia::WriteReconstruction);
-  m.def("WriteReconstructionJson", theia::WriteReconstructionJson);
-  m.def("WriteBundlerFiles", theia::WriteBundlerFiles);
-  m.def("WriteColmapFiles", theia::WriteColmapFiles);
-  m.def("WriteNVMFile", theia::WriteNVMFile);
-  m.def("WritePlyFile", theia::WritePlyFile);
-  m.def("WriteNerfStudio", theia::WriteNerfStudio);
-  m.def("WriteSdfStudio", theia::WriteSdfStudio);
+        theia::PopulateImageSizesAndPrincipalPointsWrapper,
+        py::arg("image_directory"),
+        "Populate image sizes and principal points from images in directory. Returns (success, reconstruction).");
+  m.def("Read1DSFM", theia::Read1DSFMWrapper,
+        py::arg("dataset_directory"),
+        "Read 1DSFM dataset. Returns (success, reconstruction, view_graph).");
+  m.def("ReadBundlerFiles", theia::ReadBundlerFilesWrapper,
+        py::arg("lists_file"), py::arg("bundle_file"),
+        "Read Bundler reconstruction from lists and bundle file. Returns (success, reconstruction).");
+  m.def("ReadStrechaDataset", theia::ReadStrechaDatasetWrapper,
+        py::arg("dataset_directory"),
+        "Read Strecha dataset. Returns (success, reconstruction).");
+  m.def("ReadReconstruction", theia::ReadReconstructionWrapper,
+        py::arg("input_file"),
+        "Read reconstruction from binary file. Returns (success, reconstruction).");
+  m.def("WriteReconstruction", theia::WriteReconstruction,
+        py::arg("reconstruction"), py::arg("output_file"),
+        "Write reconstruction to binary file. Returns True on success.");
+  m.def("WriteReconstructionJson", theia::WriteReconstructionJson,
+        py::arg("reconstruction"), py::arg("output_json_file"),
+        "Write reconstruction to JSON file. Returns True on success.");
+  m.def("WriteBundlerFiles", theia::WriteBundlerFiles,
+        py::arg("reconstruction"), py::arg("lists_file"), py::arg("bundle_file"),
+        "Write reconstruction in Bundler format. Returns True on success.");
+  m.def("WriteColmapFiles", theia::WriteColmapFiles,
+        py::arg("reconstruction"), py::arg("output_directory"),
+        "Write reconstruction in COLMAP format (cameras, images, points). Returns True on success.");
+  m.def("WriteNVMFile", theia::WriteNVMFile,
+        py::arg("nvm_filepath"), py::arg("reconstruction"),
+        "Write reconstruction to NVM file. Returns True on success.");
+  m.def("WritePlyFile", theia::WritePlyFile,
+        py::arg("ply_file"), py::arg("reconstruction"),
+        py::arg("camera_color"), py::arg("min_num_observations_per_point"),
+        "Write reconstruction to PLY file (points and cameras). Returns True on success.");
+  m.def("WriteNerfStudio", theia::WriteNerfStudio,
+        py::arg("path_to_images"), py::arg("reconstruction"),
+        py::arg("aabb_scale"), py::arg("out_json_nerfstudio_file"),
+        "Write reconstruction for NeRF Studio. Returns True on success.");
+  m.def("WriteSdfStudio", theia::WriteSdfStudio,
+        py::arg("path_to_images"), py::arg("reconstruction"),
+        py::arg("nearfar"), py::arg("radius"),
+        "Write reconstruction for SDF Studio. Returns True on success.");
 }
 
 void pytheia_io(py::module& m) {
-  py::module m_submodule = m.def_submodule("io");
+  py::module m_submodule =
+      m.def_submodule("io", "I/O for reconstructions: Bundler, NVM, COLMAP, PLY, NeRF Studio, SDF Studio.");
   pytheia_io_classes(m_submodule);
 }
 

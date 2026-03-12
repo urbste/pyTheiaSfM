@@ -18,22 +18,33 @@ namespace pytheia {
 namespace matching {
 
 void pytheia_matching_classes(py::module& m) {
-  py::class_<theia::FeatureCorrespondence>(m, "FeatureCorrespondence")
+  py::class_<theia::FeatureCorrespondence>(m, "FeatureCorrespondence",
+                                           "A pair of matching 2D features (one per image).")
       .def(py::init<>())
-      .def(py::init<theia::Feature, theia::Feature>())
-      .def_readwrite("feature1", &theia::FeatureCorrespondence::feature1)
-      .def_readwrite("feature2", &theia::FeatureCorrespondence::feature2);
+      .def(py::init<theia::Feature, theia::Feature>(),
+           py::arg("feature1"), py::arg("feature2"))
+      .def_readwrite("feature1", &theia::FeatureCorrespondence::feature1,
+                     "Feature in the first image.")
+      .def_readwrite("feature2", &theia::FeatureCorrespondence::feature2,
+                     "Feature in the second image.");
 
-  py::class_<theia::ImagePairMatch>(m, "ImagePairMatch")
+  py::class_<theia::ImagePairMatch>(m, "ImagePairMatch",
+                                    "Match between two images: view names, two-view geometry, correspondences.")
       .def(py::init<>())
-      .def_readwrite("image1", &theia::ImagePairMatch::image1)
-      .def_readwrite("image2", &theia::ImagePairMatch::image2)
-      .def_readwrite("twoview_info", &theia::ImagePairMatch::twoview_info)
-      .def_readwrite("correspondences", &theia::ImagePairMatch::correspondences);
+      .def_readwrite("image1", &theia::ImagePairMatch::image1,
+                     "Name of the first image.")
+      .def_readwrite("image2", &theia::ImagePairMatch::image2,
+                     "Name of the second image.")
+      .def_readwrite("twoview_info", &theia::ImagePairMatch::twoview_info,
+                     "Relative pose and focal length info for the pair.")
+      .def_readwrite("correspondences", &theia::ImagePairMatch::correspondences,
+                     "List of feature correspondences between the two images.");
 }
 
 void pytheia_matching(py::module& m) {
-  py::module m_submodule = m.def_submodule("matching");
+  py::module m_submodule = m.def_submodule(
+      "matching",
+      "Feature correspondences and image-pair matches for use with pre-computed matches.");
   pytheia_matching_classes(m_submodule);
 }
 

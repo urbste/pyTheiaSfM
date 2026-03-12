@@ -44,7 +44,8 @@
 namespace pytheia {
 
 PYBIND11_MODULE(pytheia, m) {
-  m.doc() = "Python binding for TheiaSfM";
+  m.doc() = "Python bindings for TheiaSfM: structure-from-motion, I/O, camera models, "
+            "bundle adjustment, and RANSAC/solvers.";
 
   // register all submodules here
   io::pytheia_io(m);

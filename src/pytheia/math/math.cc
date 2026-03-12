@@ -64,7 +64,9 @@ namespace pytheia {
 namespace math {
 
 void pytheia_math_classes(py::module& m) {
-  m.def("FindQuadraticPolynomialRoots", &theia::FindQuadraticPolynomialRoots);
+  m.def("FindQuadraticPolynomialRoots", &theia::FindQuadraticPolynomialRoots,
+        py::arg("polynomial"), py::arg("real"), py::arg("imaginary"),
+        "Compute the two roots of a quadratic polynomial. polynomial: 3-vector [c0, c1, c2] for c0 + c1*x + c2*x^2. real and imaginary output vectors are filled with the real and imaginary parts of the roots.");
 
   // rotation.h
   m.def("AlignRotations",
@@ -226,7 +228,9 @@ void pytheia_math_classes(py::module& m) {
 }
 
 void pytheia_math(py::module& m) {
-  py::module m_submodule = m.def_submodule("math");
+  py::module m_submodule = m.def_submodule(
+      "math",
+      "Math utilities: rotations, polynomial roots, Sophus SE3/Sim3 Lie groups.");
   pytheia_math_classes(m_submodule);
 }
 

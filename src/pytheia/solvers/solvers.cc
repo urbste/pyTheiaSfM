@@ -64,20 +64,25 @@ namespace pytheia {
 namespace solvers {
 
 void pytheia_solvers_classes(py::module& m) {
-  // RandomNumberGenerator
-  py::class_<theia::RandomNumberGenerator>(m, "RandomNumberGenerator")
-      .def(py::init<>())
-      .def(py::init<int>())
-      .def("Seed", &theia::RandomNumberGenerator::Seed)
-      .def("RandDouble", &theia::RandomNumberGenerator::RandDouble)
-      .def("RandFloat", &theia::RandomNumberGenerator::RandFloat)
-      .def("RandInt", &theia::RandomNumberGenerator::RandInt)
-      .def("RandGaussian", &theia::RandomNumberGenerator::RandGaussian)
+  py::class_<theia::RandomNumberGenerator>(m, "RandomNumberGenerator",
+                                            "Reproducible random number generator for RANSAC/sampling.")
+      .def(py::init<>(), "Default constructor (non-deterministic seed).")
+      .def(py::init<int>(), py::arg("seed"), "Constructor with fixed seed.")
+      .def("Seed", &theia::RandomNumberGenerator::Seed, py::arg("seed"),
+           "Set the random seed.")
+      .def("RandDouble", &theia::RandomNumberGenerator::RandDouble,
+           "Return a random double in [0, 1).")
+      .def("RandFloat", &theia::RandomNumberGenerator::RandFloat,
+           "Return a random float in [0, 1).")
+      .def("RandInt", &theia::RandomNumberGenerator::RandInt, py::arg("min"),
+           py::arg("max"),
+           "Return a random integer in [min, max] (inclusive).")
+      .def("RandGaussian", &theia::RandomNumberGenerator::RandGaussian,
+           py::arg("mean"), py::arg("std_dev"),
+           "Return a sample from a Gaussian distribution.");
 
-      ;
-
-  // RansacSummary
-  py::class_<theia::RansacSummary>(m, "RansacSummary")
+  py::class_<theia::RansacSummary>(m, "RansacSummary",
+                                   "Summary of a RANSAC run: inliers, iterations, confidence.")
       .def_readwrite("inliers", &theia::RansacSummary::inliers)
       .def_readwrite("num_input_data_points",
                      &theia::RansacSummary::num_input_data_points)
@@ -86,7 +91,8 @@ void pytheia_solvers_classes(py::module& m) {
       .def_readwrite("num_lo_iterations",
                      &theia::RansacSummary::num_lo_iterations);
 
-  py::class_<theia::RansacParameters>(m, "RansacParameters")
+  py::class_<theia::RansacParameters>(m, "RansacParameters",
+                                      "Parameters for RANSAC: thresholds, iteration limits, MLE/LO options.")
       .def(py::init<>())
       .def_readwrite("error_thresh", &theia::RansacParameters::error_thresh)
       .def_readwrite("failure_probability",
@@ -103,7 +109,9 @@ void pytheia_solvers_classes(py::module& m) {
 }
 
 void pytheia_solvers(py::module& m) {
-  py::module m_submodule = m.def_submodule("solvers");
+  py::module m_submodule = m.def_submodule(
+      "solvers",
+      "RANSAC and sample-consensus: parameters, summary, random number generator.");
   pytheia_solvers_classes(m_submodule);
 }
 
