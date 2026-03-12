@@ -1074,7 +1074,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("dense_linear_algebra_library_type",
                      &theia::BundleAdjustmentOptions::dense_linear_algebra_library_type)
       .def_readwrite("sparse_linear_algebra_library_type",
-                     &theia::BundleAdjustmentOptions::sparse_linear_algebra_library_type);
+                     &theia::BundleAdjustmentOptions::sparse_linear_algebra_library_type)
+      .def_readwrite("optimize_for_forward_facing_trajectory",
+                     &theia::BundleAdjustmentOptions::optimize_for_forward_facing_trajectory);
 
   // Reconstruction Options
   py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
@@ -1417,7 +1419,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("use_inner_iterations",
                      &theia::ReconstructionEstimatorOptions::use_inner_iterations)
       .def_readwrite("max_num_iterations",
-                     &theia::ReconstructionEstimatorOptions::max_num_iterations);
+                     &theia::ReconstructionEstimatorOptions::max_num_iterations)
+      .def_readwrite("optimize_for_forward_facing_trajectory",
+                     &theia::ReconstructionEstimatorOptions::optimize_for_forward_facing_trajectory);
   // Reconstruction class
   py::class_<theia::Reconstruction>(m, "Reconstruction")
       .def(py::init<>())

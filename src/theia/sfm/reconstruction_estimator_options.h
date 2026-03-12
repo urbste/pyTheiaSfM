@@ -298,6 +298,9 @@ struct ReconstructionEstimatorOptions {
   // Set the maximum number of bundle adjustment iterations
   int max_num_iterations = 50;
   int use_inner_iterations = true;
+
+  // Collapse intrinsics and extrinsics into a single parameter block
+  bool optimize_for_forward_facing_trajectory = false;
   
   // --------------- Track Subsampling Options --------------- //
 

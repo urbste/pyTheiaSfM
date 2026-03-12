@@ -103,6 +103,10 @@ struct BundleAdjustmentOptions {
   ceres::DenseLinearAlgebraLibraryType dense_linear_algebra_library_type = ceres::EIGEN;
   ceres::SparseLinearAlgebraLibraryType sparse_linear_algebra_library_type = ceres::EIGEN_SPARSE;
 
+
+  // Collapse intrinsics and extrinsics into a single parameter block
+  bool optimize_for_forward_facing_trajectory = false;
+
   // Use mixed precision solves
   bool use_mixed_precision_solves = false;
 

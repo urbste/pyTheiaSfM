@@ -144,7 +144,7 @@ BundleAdjustmentOptions SetBundleAdjustmentOptions(
 
   ba_options.max_num_iterations = options.max_num_iterations;
   ba_options.use_inner_iterations = options.use_inner_iterations;
-
+  ba_options.optimize_for_forward_facing_trajectory = options.optimize_for_forward_facing_trajectory;
 
   ba_options.verbose = VLOG_IS_ON(1);
   return ba_options;

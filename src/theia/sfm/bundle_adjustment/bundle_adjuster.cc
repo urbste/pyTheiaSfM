@@ -554,21 +554,21 @@ void BundleAdjuster::SetHomogeneousPointParametrization(
 }
 
 void BundleAdjuster::SetCameraSchurGroups(const ViewId view_id) {
-  static const int kIntrinsicsParameterGroup = 1;
-  static const int kExtrinsicsParameterGroup = 2;
   View* view = reconstruction_->MutableView(view_id);
   Camera* camera = view->MutableCamera();
 
-  // Add camera parameters to groups 1 and 2. The extrinsics *must* belong to
-  // group 2. This is because inner iterations uses a reverse ordering of
-  // elimination and the Schur-based solvers require the first group to be an
-  // independent set. Since the intrinsics may be shared, they are not
-  // guaranteed to form an independent set and so we must use the extrinsics
-  // in group 2.
-  parameter_ordering_->AddElementToGroup(camera->mutable_extrinsics(),
-                                         kExtrinsicsParameterGroup);
-  parameter_ordering_->AddElementToGroup(camera->mutable_intrinsics(),
-                                         kIntrinsicsParameterGroup);
+  if (options_.optimize_for_forward_facing_trajectory) {
+    // COLLAPSED GROUPS: Put everything except points into Group 1
+    static const int kCameraGroup = 1;
+    parameter_ordering_->AddElementToGroup(camera->mutable_extrinsics(), kCameraGroup);
+    parameter_ordering_->AddElementToGroup(camera->mutable_intrinsics(), kCameraGroup);
+  } else {
+    // Three-group elimination
+    static const int kIntrinsicsParameterGroup = 1;
+    static const int kExtrinsicsParameterGroup = 2;
+    parameter_ordering_->AddElementToGroup(camera->mutable_intrinsics(), kIntrinsicsParameterGroup);
+    parameter_ordering_->AddElementToGroup(camera->mutable_extrinsics(), kExtrinsicsParameterGroup);
+  }
 }
 
 void BundleAdjuster::SetTrackSchurGroup(const TrackId track_id) {
