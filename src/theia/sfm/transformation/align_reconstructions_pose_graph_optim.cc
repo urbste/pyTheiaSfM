@@ -36,10 +36,10 @@
 
 namespace theia {
 
-bool Sim3Parameterization::Plus(const double* x,
-                                const double* delta,
-                                double* x_plus_delta) const {
-  Eigen::Map<const Eigen::Matrix<double, 7, 1> > lie_x(x);
+bool Sim3Manifold::Plus(const double* x,
+                        const double* delta,
+                        double* x_plus_delta) const {
+  Eigen::Map<const Eigen::Matrix<double, 7, 1>> lie_x(x);
   Eigen::Matrix<double, 7, 1> lie_delta;
   Eigen::Map<Eigen::Matrix<double, 7, 1>> updated(x_plus_delta);
 
@@ -55,9 +55,28 @@ bool Sim3Parameterization::Plus(const double* x,
   return true;
 }
 
-bool Sim3Parameterization::ComputeJacobian(const double* x,
-                                           double* jacobian) const {
-  ceres::MatrixRef(jacobian, 7, 7) = ceres::Matrix::Identity(7, 7);
+bool Sim3Manifold::PlusJacobian(const double* x, double* jacobian) const {
+  Eigen::Map<Eigen::Matrix<double, 7, 7, Eigen::RowMajor>> J(jacobian);
+  J.setIdentity();
+  return true;
+}
+
+bool Sim3Manifold::Minus(const double* y,
+                         const double* x,
+                         double* y_minus_x) const {
+  Eigen::Map<const Eigen::Matrix<double, 7, 1>> lie_y(y);
+  Eigen::Map<const Eigen::Matrix<double, 7, 1>> lie_x(x);
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> result(y_minus_x);
+
+  Sophus::Sim3d sim_x = Sophus::Sim3d::exp(lie_x);
+  Sophus::Sim3d sim_y = Sophus::Sim3d::exp(lie_y);
+  result = (sim_x.inverse() * sim_y).log();
+  return true;
+}
+
+bool Sim3Manifold::MinusJacobian(const double* x, double* jacobian) const {
+  Eigen::Map<Eigen::Matrix<double, 7, 7, Eigen::RowMajor>> J(jacobian);
+  J.setIdentity();
   return true;
 }
 

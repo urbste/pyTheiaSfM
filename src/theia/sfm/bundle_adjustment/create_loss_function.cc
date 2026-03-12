@@ -34,7 +34,9 @@
 
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
 #include "theia/sfm/bundle_adjustment/loss_functions.h"
+
 #include <ceres/ceres.h>
+#include <glog/logging.h>
 #include <memory>
 
 namespace theia {

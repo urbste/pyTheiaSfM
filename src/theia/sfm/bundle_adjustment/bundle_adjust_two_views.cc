@@ -267,11 +267,10 @@ BundleAdjustmentSummary OptimizeFundamentalMatrix(
   // Allow Ceres to determine the ordering.
   solver_options.linear_solver_ordering.reset();
 
-  // Add the fundamental matrix as a parameter block.
-  ceres::LocalParameterization* fundamental_parametrization = new ceres::
-      AutoDiffLocalParameterization<FundamentalMatrixParametrization, 9, 7>;
-  problem.AddParameterBlock(
-      fundamental_matrix->data(), 9, fundamental_parametrization);
+  // Add the fundamental matrix as a parameter block (Ceres 2.2 Manifold API).
+  ceres::Manifold* fundamental_manifold =
+      new ceres::AutoDiffManifold<FundamentalMatrixParametrization, 9, 7>;
+  problem.AddParameterBlock(fundamental_matrix->data(), 9, fundamental_manifold);
 
   // Add all the epipolar constraints from feature matches.
   for (const FeatureCorrespondence& match : correspondences) {

@@ -32,6 +32,7 @@
 
 #include "statx/distributions/evd/gev_ceres.h"
 
+#include <glog/logging.h>
 #include <vector>
 #include "statx/utils/common_funcs.h"
 #include "statx/utils/ecdf.h"

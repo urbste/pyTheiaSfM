@@ -76,8 +76,7 @@ int main() {
   // ViewGraphFromReconstruction(recon_qry, 0, &view_graph);
 
   ceres::Problem problem;
-  ceres::LocalParameterization* sim3_local_parameterization =
-      new Sim3Parameterization;
+  ceres::Manifold* sim3_manifold = new Sim3Manifold;
 
   // get all transformations
   std::map<ViewId, Eigen::Matrix<double, 7, 1>> sim3s;
@@ -86,6 +85,7 @@ int main() {
     Eigen::Vector3d t_c_w = -R_c_w*recon_qry.View(view_id)->Camera().GetPosition();
     Sophus::Sim3d sim3(Sophus::RxSO3d(1.0, R_c_w), t_c_w);
     sim3s[view_id] = sim3.log();
+    problem.AddParameterBlock(sim3s[view_id].data(), 7, sim3_manifold);
   }
 
   // // //  create sim3 relative tranformations

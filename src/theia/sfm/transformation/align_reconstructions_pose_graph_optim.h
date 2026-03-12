@@ -45,15 +45,19 @@
 namespace theia {
 
 
-class CERES_EXPORT Sim3Parameterization : public ceres::LocalParameterization {
+class CERES_EXPORT Sim3Manifold : public ceres::Manifold {
  public:
-  virtual ~Sim3Parameterization() {}
+  ~Sim3Manifold() override {}
+  int AmbientSize() const override { return 7; }
+  int TangentSize() const override { return 7; }
   bool Plus(const double* x,
             const double* delta,
-            double* x_plus_delta) const;
-  bool ComputeJacobian(const double* x, double* jacobian) const;
-  int GlobalSize() const { return 7; }
-  int LocalSize() const { return 7; }
+            double* x_plus_delta) const override;
+  bool PlusJacobian(const double* x, double* jacobian) const override;
+  bool Minus(const double* y,
+            const double* x,
+            double* y_minus_x) const override;
+  bool MinusJacobian(const double* x, double* jacobian) const override;
 };
 
 /**

@@ -43,7 +43,7 @@
 #include <Sophus/sophus/sim3.hpp>
 #include "gtest/gtest.h"
 
-#include <ceres/local_parameterization.h>
+#include <ceres/ceres.h>
 #include <ceres/solver.h>
 
 #include "theia/sfm/reconstruction.h"
@@ -168,11 +168,11 @@ TEST(AlignReconstructionPoseGraphOptim, Test) {
 
   theia::Sim3AlignmentOptions options;
   options.alignment_type = theia::Sim3AlignmentType::POINT_TO_POINT;
-  options.max_num_iterations = 100;
+  options.max_iterations = 100;
   theia::Sim3AlignmentSummary summary = theia::OptimizeAlignmentSim3(points_qry, points_ref, options);
 
   std::cout<<"Summary: "<<summary.success<<" "<<summary.final_cost<<" "<<summary.num_iterations<<" "<<summary.alignment_error<<std::endl;
-  theia::TransformReconstruction(summary.sim3_params, &recon_qry);
+  theia::TransformReconstruction(Sophus::Sim3d::exp(summary.sim3_params), &recon_qry);
 
 
   theia::WritePlyFile(base_path+"/chunk_000001_trafo.ply", recon_qry, Eigen::Vector3i(0, 255,255), 0);

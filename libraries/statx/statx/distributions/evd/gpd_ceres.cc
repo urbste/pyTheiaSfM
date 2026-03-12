@@ -33,6 +33,8 @@
 #include "statx/utils/common_funcs.h"
 #include "statx/utils/ecdf.h"
 
+#include <glog/logging.h>
+
 namespace libstatx {
 namespace distributions {
 namespace evd {
