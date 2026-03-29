@@ -14,6 +14,7 @@
 #include "theia/sfm/pose/orthographic_four_point.h"
 
 #include "theia/sfm/pose/dls_pnp.h"
+#include "theia/sfm/pose/mlpnp.h"
 #include "theia/sfm/pose/sqpnp.h"
 #include "theia/sfm/pose/essential_matrix_utils.h"
 #include "theia/sfm/pose/fundamental_matrix_util.h"
@@ -327,6 +328,17 @@ PoseFromThreePointsWrapper(const std::vector<Vector2d>& feature_points_in,
   const bool success = PoseFromThreePoints(
       feature_points_in, points_3d_in, &solution_rotations, &solution_translations);
   return std::make_tuple(success, solution_rotations, solution_translations);
+}
+
+std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d> MLPnPWrapper(
+    const std::vector<Eigen::Vector2d>& norm_feature_points,
+    const std::vector<Eigen::Matrix3d>& feature_covariances,
+    const std::vector<Eigen::Vector3d>& world_points) {
+  Eigen::Matrix3d R;
+  Eigen::Vector3d t;
+  const bool ok = MLPnP(norm_feature_points, feature_covariances, world_points, &R,
+                         &t);
+  return std::make_tuple(ok, R, t);
 }
 
 std::tuple<bool, Eigen::Vector3d> PositionFromTwoRaysWrapper(

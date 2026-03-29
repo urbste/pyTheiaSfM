@@ -36,7 +36,7 @@
 #include <glog/logging.h>
 #include <vector>
 
-#include "theia/image/keypoint_detector/keypoint.h"
+#include "theia/matching/keypoint.h"
 #include "theia/matching/guided_epipolar_matcher.h"
 #include "theia/matching/indexed_feature_match.h"
 #include "theia/matching/keypoints_and_descriptors.h"

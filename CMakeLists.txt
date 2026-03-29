@@ -32,21 +32,31 @@
 # Please contact the author of this library if you have any questions.
 # Author: Chris Sweeney (sweeney.chris.m@gmail.com)
 
-cmake_minimum_required(VERSION 3.6)
-if (COMMAND cmake_policy)
-  cmake_policy(SET CMP0003 NEW)
-endif (COMMAND cmake_policy)
+# 3.15 matches vendored pybind11 when PYTHON_BUILD=ON.
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
-# Disable warnings about rpath on MacOS X for now.
-# TODO(cmsweeney): Figure out the proper way to handle this!
 if(POLICY CMP0042)
-  cmake_policy(SET CMP0042 NEW) # CMake 3.0
+  cmake_policy(SET CMP0042 NEW)
+endif()
+if(POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)
 endif()
 
-project(THEIA C CXX)
-include_directories(${PROJECT_SOURCE_DIR})
+# Single source of truth with Python packaging (see root VERSION).
+file(READ "${CMAKE_SOURCE_DIR}/VERSION" _theia_version_file)
+string(STRIP "${_theia_version_file}" _theia_version_string)
+project(THEIA VERSION ${_theia_version_string} LANGUAGES C CXX)
+
+include(GNUInstallDirs)
+
+set(THEIA_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(THEIA_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(THEIA_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set(THEIA_VERSION ${PROJECT_VERSION})
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Set up the git hook to make Gerrit Change-Id: lines in commit messages.
 set (LOCAL_GIT_DIRECTORY)
@@ -82,14 +92,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 option(BUILD_TESTING "Enable testing" OFF)
 option(BUILD_DOCUMENTATION "Build html User's Guide" OFF)
 option(PYTHON_BUILD "If we are building python bindings" OFF)
-option(WITH_ROCKSDB "If rcocksdb should be included as a feature database" OFF)
-
 if (PYTHON_BUILD)
     add_definitions(-DPYTHON_BUILD)
-endif()
-
-if (WITH_ROCKSDB)
-    add_definitions(-DWITH_ROCKSDB)
 endif()
 
 enable_testing()
@@ -105,12 +109,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RELEASE_POSTFIX "")
 set(CMAKE_DEBUG_POSTFIX "-debug")
 
-set(THEIA_VERSION_MAJOR 0)
-set(THEIA_VERSION_MINOR 7)
-set(THEIA_VERSION_PATCH 0)
-set(THEIA_VERSION
-    ${THEIA_VERSION_MAJOR}.${THEIA_VERSION_MINOR}.${THEIA_VERSION_PATCH})
-set(THEIA_ABI_VERSION 0.7.0)
+set(THEIA_ABI_VERSION ${PROJECT_VERSION})
 
 # THEIA data directory
 add_definitions(-DTHEIA_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
@@ -134,11 +133,11 @@ endif (EIGEN_FOUND)
 set(BUILD_WITH_MARCH_NATIVE OFF CACHE BOOL "Enable architecture-aware optimization (-march=native)")
 if(BUILD_WITH_MARCH_NATIVE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native -march=native")
-    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -mtune=native -march=native")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native -march=native")
     message(STATUS "Architecture-aware optimization (-march=native): ENABLED")
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
-    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native")
     message(STATUS "Architecture-aware optimization (-march=native): DISABLED")
 endif()
 
@@ -204,26 +203,6 @@ else (CERES_FOUND)
     "CERES_LIBRARY")
 endif (CERES_FOUND)
 
-
-# RocksDB
-if (NOT PYTHON_BUILD AND WITH_ROCKSDB)
-    message("-- Check for RocksDB")
-    find_package(RocksDB REQUIRED)
-    if (ROCKSDB_FOUND)
-      message("-- Found RocksDB: ${ROCKSDB_INCLUDE_DIR}")
-    else (ROCKSDB_FOUND)
-      message(FATAL_ERROR "Can't find RocksDB. Please set ROCKSDB_INCLUDE_DIR & ROCKSDB_LIBRARY to use RocksDB.")
-    endif (ROCKSDB_FOUND)
-endif (NOT PYTHON_BUILD AND WITH_ROCKSDB)
-
-include_directories(
-  include
-  src
-  ${CERES_INCLUDE_DIRS}
-  ${GFLAGS_INCLUDE_DIRS}
-  ${GLOG_INCLUDE_DIRS}
-)
-
 # Detect whether Ceres was built with CUDA (for dense linear algebra fallback in BA).
 # Ceres defines CERES_NO_CUDA when built without CUDA; we compile a small check.
 if (DEFINED THEIA_CERES_USE_CUDA)
@@ -271,11 +250,6 @@ else ()
   set(THEIA_CERES_HAS_CUDA_SPARSE_VALUE 0)
 endif ()
 
-if (NOT PYTHON_BUILD AND WITH_ROCKSB)
-    include_directories(${ROCKSDB_INCLUDE_DIR})
-endif (NOT PYTHON_BUILD AND WITH_ROCKSB)
-
-
 # NOTE: This fix came from Ceres solver with the following comment:
 #
 # Eigen SparseQR generates various compiler warnings related to unused and
@@ -288,39 +262,40 @@ endif (NOT PYTHON_BUILD AND WITH_ROCKSB)
 # Note that this is *not* propagated to clients, ie CERES_INCLUDE_DIRS
 # used by clients after find_package(Ceres) does not identify Eigen as
 # as system headers.
-include_directories(SYSTEM ${EIGEN_INCLUDE_DIRS})
 
 # build Third party libraries included in distro.
 add_subdirectory(libraries)
-include_directories(
-  libraries
-  libraries/spectra
-  libraries/Sophus
-  ${akaze_SOURCE_DIR}
-  ${akaze_INCLUDE_DIR}
-  ${cereal_SOURCE_DIR}
-  ${cereal_SOURCE_DIR}/include
-  ${flann_SOURCE_DIR}
-  ${flann_SOURCE_DIR}/src/cpp
-  ${gtest_SOURCE_DIR}/include
-  ${gtest_SOURCE_DIR}
-  ${optimo_SOURCE_DIR}
-  ${statx_SOURCE_DIR}
-  ${stlplus3_SOURCE_DIR}
-  ${vlfeat_SOURCE_DIR}
-  #${visual_sfm_SOURCE_DIR}
-  )
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+# In-tree and vendored header paths only ($<BUILD_INTERFACE:...> so they are
+# not written into installed TheiaTargets.cmake). Third-party includes come
+# from Ceres::ceres / gflags / glog targets linked against THEIA.
+add_library(theia_build_includes INTERFACE)
+target_include_directories(theia_build_includes INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/spectra>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/Sophus>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/cereal/include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/stlplus3>
+)
+if(BUILD_TESTING)
+  target_include_directories(theia_build_includes INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/gtest/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/gtest>
+  )
+endif()
+
+# Eigen as global SYSTEM include (same as historic Theia): avoids embedding
+# machine-specific paths in exported TheiaTargets. Consumers get Eigen via
+# find_package in TheiaConfig.cmake.
+include_directories(SYSTEM ${EIGEN_INCLUDE_DIRS})
+
 include(OptimizeTheiaCompilerFlags)
 optimizetheiacompilerflags()
 
 add_subdirectory(src/theia)
-
-if (NOT PYTHON_BUILD)
-  # in case of python build we do not add application folder
-  add_subdirectory(applications)
-endif (NOT PYTHON_BUILD)
 
 if (BUILD_DOCUMENTATION)
   message("-- Documentation building is enabled")
@@ -333,12 +308,15 @@ endif (BUILD_DOCUMENTATION)
 # ---------------- Install commands ----------------- #
 # Install the .h files
 file(GLOB THEIA_HDRS ${CMAKE_SOURCE_DIR}/include/theia/*.h)
-install(FILES ${THEIA_HDRS} DESTINATION include/theia)
+install(FILES ${THEIA_HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/theia)
 
 file(GLOB_RECURSE THEIA_INTERNAL_HDRS ${CMAKE_SOURCE_DIR}/src/theia/*.h)
-install(DIRECTORY src/theia/ DESTINATION include/theia FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY src/theia/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/theia
+  FILES_MATCHING PATTERN "*.h")
 
-install(DIRECTORY libraries/ DESTINATION include/theia/libraries FILES_MATCHING PATTERN "*.h*")
+install(DIRECTORY libraries/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/theia/libraries
+  FILES_MATCHING PATTERN "*.h*")
 
 # Add an uninstall target to remove all installed files.
 configure_file("${CMAKE_SOURCE_DIR}/cmake/uninstall.cmake.in"
@@ -348,19 +326,14 @@ configure_file("${CMAKE_SOURCE_DIR}/cmake/uninstall.cmake.in"
 add_custom_target(uninstall
                   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/cmake/uninstall.cmake)
 
-# Set up install directories. INCLUDE_INSTALL_DIR, LIB_INSTALL_DIR and
-# CMAKECONFIG_INSTALL_DIR must not be absolute paths.
-if (WIN32)
-  set(INCLUDE_INSTALL_DIR Include)
-  set(LIB_INSTALL_DIR Lib)
+# Package config install directory (must be relative, not absolute).
+if(WIN32)
   set(CMAKECONFIG_INSTALL_DIR CMake)
   set(RELATIVE_CMAKECONFIG_INSTALL_DIR CMake)
-else ()
-  set(INCLUDE_INSTALL_DIR include)
-  set(LIB_INSTALL_DIR lib)
-  set(CMAKECONFIG_INSTALL_DIR share/Theia)
-  set(RELATIVE_CMAKECONFIG_INSTALL_DIR share/Theia)
-endif ()
+else()
+  set(CMAKECONFIG_INSTALL_DIR ${CMAKE_INSTALL_DATAROOTDIR}/Theia)
+  set(RELATIVE_CMAKECONFIG_INSTALL_DIR ${CMAKE_INSTALL_DATAROOTDIR}/Theia)
+endif()
 
 # This "exports" all targets which have been put into the export set
 # "TheiaExport". This means that CMake generates a file with the given
@@ -400,7 +373,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TheiaConfig.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindEigen.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGlog.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGflags.cmake"
-              "${CMAKE_SOURCE_DIR}/cmake/FindRocksDB.cmake"
               #"${CMAKE_SOURCE_DIR}/cmake/FindSuiteSparse.cmake"
               DESTINATION ${CMAKECONFIG_INSTALL_DIR})
 

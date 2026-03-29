@@ -39,7 +39,6 @@
 #include <glog/logging.h>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/sfm/pose/four_point_focal_length_helper.h"
 
 namespace theia {

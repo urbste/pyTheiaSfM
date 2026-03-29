@@ -57,15 +57,12 @@ struct BundlerCamera {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
-// Feature2d information.
-struct FeatureInfo {
-  // Index of the camera in the lists file.
+// 2D observation of a 3D point in one image (Bundler bundle format).
+struct BundlerObservation {
   int camera_index;
-  // Index of the feature in the SIFT file.
-  int sift_index;
-  // Pixel position.
-  int kpt_x;
-  int kpt_y;
+  int feature_index;
+  int x;
+  int y;
 };
 
 // Reconstructed 3D point.
@@ -75,7 +72,7 @@ struct BundlerPoint {
   // 3D point's color.
   Eigen::Vector3d color;
   // A list of where this poins is viewed.
-  std::vector<FeatureInfo> view_list;
+  std::vector<BundlerObservation> view_list;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

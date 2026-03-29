@@ -38,7 +38,6 @@
 #include <Eigen/Core>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/feature.h"
 #include "theia/sfm/types.h"

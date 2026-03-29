@@ -40,7 +40,6 @@
 
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/util/util.h"
 
 namespace theia {

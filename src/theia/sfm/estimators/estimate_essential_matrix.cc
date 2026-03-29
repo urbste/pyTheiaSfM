@@ -37,7 +37,6 @@
 #include <Eigen/Core>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/pose/five_point_relative_pose.h"
 #include "theia/sfm/pose/util.h"

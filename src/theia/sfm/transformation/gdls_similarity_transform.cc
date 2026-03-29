@@ -41,7 +41,6 @@
 #include <glog/logging.h>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/sfm/pose/dls_impl.h"
 #include "theia/util/random.h"
 

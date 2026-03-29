@@ -142,7 +142,7 @@ bool ReadCameras(const int num_cameras,
   return true;
 }
 
-bool ReadViewList(FILE* in, std::vector<FeatureInfo>* view_list) {
+bool ReadViewList(FILE* in, std::vector<BundlerObservation>* view_list) {
   // Read number of views.
   int num_views = 0;
   if (fscanf(in, "%d", &num_views) != 1) {
@@ -161,17 +161,15 @@ bool ReadViewList(FILE* in, std::vector<FeatureInfo>* view_list) {
     if (fscanf(in, "%f", &entry) != 1) {
       return false;
     }
-    (*view_list)[i].sift_index = static_cast<int>(entry);
-    // Kpt x.
+    (*view_list)[i].feature_index = static_cast<int>(entry);
     if (fscanf(in, "%f", &entry) != 1) {
       return false;
     }
-    (*view_list)[i].kpt_x = static_cast<int>(entry);
-    // Kpt y.
+    (*view_list)[i].x = static_cast<int>(entry);
     if (fscanf(in, "%f", &entry) != 1) {
       return false;
     }
-    (*view_list)[i].kpt_y = static_cast<int>(entry);
+    (*view_list)[i].y = static_cast<int>(entry);
   }
   return true;
 }

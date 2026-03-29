@@ -39,7 +39,6 @@
 #include <Eigen/Geometry>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 
 namespace theia {
 // Computes the solution to the generalized pose and scale problem. That is,

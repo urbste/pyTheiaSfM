@@ -40,9 +40,8 @@
 #include <stdint.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
-
-#include "flann/flann.hpp"
 
 #include "theia/matching/distance.h"
 #include "theia/matching/indexed_feature_match.h"
@@ -360,7 +359,6 @@ void GuidedEpipolarMatcher::FindKNearestNeighbors(
     std::vector<std::vector<float> >* nn_distances,
     std::vector<std::vector<int> >* nn_indices) {
   static const int kNumNearestNeighbors = 2;
-  static const int kMinNumLeafsVisited = 50;
   const int num_descriptor_dimensions = features1_.descriptors[0].size();
 
   // Gather the query descriptors.
@@ -371,9 +369,6 @@ void GuidedEpipolarMatcher::FindKNearestNeighbors(
     const int match_index = query_feature_indices[i];
     query_descriptors.row(i) = features1_.descriptors[match_index];
   }
-  flann::Matrix<float> flann_query_descriptors(query_descriptors.data(),
-                                               query_descriptors.rows(),
-                                               query_descriptors.cols());
 
   // Gather the candidate matching descriptors.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
@@ -384,33 +379,35 @@ void GuidedEpipolarMatcher::FindKNearestNeighbors(
     candidate_descriptors.row(i) = features2_.descriptors[match_index];
   }
 
-  // Create the searchable KD-tree with FLANN.
-  flann::Matrix<float> flann_candidate_descriptors(
-      candidate_descriptors.data(),
-      candidate_descriptors.rows(),
-      candidate_descriptors.cols());
+  const int num_queries = query_descriptors.rows();
+  const int num_candidates = candidate_descriptors.rows();
+  nn_distances->resize(num_queries);
+  nn_indices->resize(num_queries);
+  const int k =
+      std::min(kNumNearestNeighbors, std::max(0, num_candidates));
 
-  flann::Index<flann::L2<float> > flann_kd_tree(
-      flann_candidate_descriptors, flann::KDTreeSingleIndexParams());
-  flann_kd_tree.buildIndex();
-
-  // Query the KD-tree to get the top 2 nearest neighbors.
-  const int max_leafs_to_check =
-      std::max(static_cast<int>(candidate_descriptors.rows() * 0.2),
-               kMinNumLeafsVisited);
-  flann_kd_tree.knnSearch(flann_query_descriptors,
-                          *nn_indices,
-                          *nn_distances,
-                          kNumNearestNeighbors,
-                          flann::SearchParams(max_leafs_to_check));
-
-  // Output the top 2 matches.
-  for (int i = 0; i < query_feature_indices.size(); i++) {
-    // Change the NN indices to be the feature index instead of the index of the
-    // FLANN matrix.
-    for (int j = 0; j < kNumNearestNeighbors; j++) {
-      const int flann_index = (*nn_indices)[i][j];
-      (*nn_indices)[i][j] = candidate_feature_indices[flann_index];
+  for (int qi = 0; qi < num_queries; ++qi) {
+    std::vector<std::pair<float, int>> scores;
+    scores.reserve(num_candidates);
+    for (int ci = 0; ci < num_candidates; ++ci) {
+      const float dist =
+          (query_descriptors.row(qi) - candidate_descriptors.row(ci))
+              .squaredNorm();
+      scores.emplace_back(dist, ci);
+    }
+    const int k_eff = std::max(0, std::min(k, static_cast<int>(scores.size())));
+    if (k_eff == 0) {
+      (*nn_distances)[qi].clear();
+      (*nn_indices)[qi].clear();
+      continue;
+    }
+    std::partial_sort(scores.begin(), scores.begin() + k_eff, scores.end());
+    (*nn_distances)[qi].resize(k_eff);
+    (*nn_indices)[qi].resize(k_eff);
+    for (int j = 0; j < k_eff; ++j) {
+      (*nn_distances)[qi][j] = scores[j].first;
+      (*nn_indices)[qi][j] =
+          candidate_feature_indices[scores[j].second];
     }
   }
 }

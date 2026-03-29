@@ -41,7 +41,7 @@ namespace theia {
 
 class Reconstruction;
 
-// Imports an NVM file that has been output from VisualSfM and converts it to a
+// Imports an NVM_V3 text bundle (.nvm) and converts it to a
 // Theia reconstruction. This file contains a 3D reconstruction along with
 // correspondence information. More information on NVM files can be found at
 // http://ccwu.me/vsfm/

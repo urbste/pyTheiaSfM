@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytheia"
+dynamic = ["version"]
+description = "A performant Structure from Motion library for Python"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "BSD" }
+authors = [
+    { name = "Steffen Urban", email = "urbste@googlemail.com" },
+]
+
+[project.urls]
+Homepage = "https://github.com/urbste/pyTheiaSfM.git"
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[project.optional-dependencies]
+dev = [
+    "pybind11-stubgen>=2.0",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "pymdown-extensions>=10.0",
+]
+examples = [
+    "vismatch>=1.0",
+    "rerun-sdk>=0.15",
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "opencv-python-headless>=4.8",
+    "numpy>=1.21",
+    "Pillow>=9.0",
+]

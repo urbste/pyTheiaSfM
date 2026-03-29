@@ -38,7 +38,6 @@
 #include <glog/logging.h>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/math/polynomial.h"
 
 namespace theia {

@@ -42,7 +42,6 @@
 #include <limits>
 #include <math.h>
 
-#include "theia/alignment/alignment.h"
 #include "theia/sfm/pose/util.h"
 
 namespace theia {

@@ -37,7 +37,6 @@
 
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/matching/indexed_feature_match.h"
 #include "theia/matching/keypoints_and_descriptors.h"
 #include "theia/sfm/camera/camera.h"

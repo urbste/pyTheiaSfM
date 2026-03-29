@@ -5,6 +5,7 @@ import setuptools
 import subprocess
 import sys
 from glob import glob
+from pathlib import Path
 from wheel.bdist_wheel import bdist_wheel
 
 import distutils.sysconfig as sysconfig
@@ -12,6 +13,14 @@ import os
 from distutils.sysconfig import get_python_inc
 python_lib_location = os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY'))
 python_include_dir = get_python_inc()
+
+_REPO_ROOT = Path(__file__).resolve().parent
+
+
+def _package_version():
+    """Must match CMake project() and pyproject dynamic version (root VERSION)."""
+    return (_REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+
 
 class platform_bdist_wheel(bdist_wheel):
     """Patched bdist_well to make sure wheels include platform tag."""
@@ -77,28 +86,32 @@ def generate_stubs():
     try:
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath('src') + os.pathsep + env.get('PYTHONPATH', '')
-        cmd = [sys.executable, '-m', 'pybind11_stubgen', 'pytheia', '-o', 'src']
+        cmd = [
+            sys.executable, '-m', 'pybind11_stubgen', 'pytheia.pytheia', '-o', 'src',
+        ]
         print('Generating .pyi stubs:', ' '.join(cmd))
         subprocess.check_call(cmd, env=env)
-        # Move stubs into src/pytheia regardless of output layout
         import shutil
-        out_variants = [
-            os.path.join('src', 'pytheia'),
-            os.path.join('src', 'pytheia-stubs'),
-        ]
-        target_dir = os.path.join('src', 'pytheia')
-        os.makedirs(target_dir, exist_ok=True)
-        for out_dir in out_variants:
-            if os.path.isdir(out_dir):
-                # Copy over .pyi files (and submodule .pyi) but do not overwrite .py/.so
-                for root, dirs, files in os.walk(out_dir):
-                    rel_root = os.path.relpath(root, out_dir)
-                    dest_root = os.path.join(target_dir, rel_root) if rel_root != '.' else target_dir
-                    os.makedirs(dest_root, exist_ok=True)
-                    for fname in files:
-                        if fname.endswith('.pyi'):
-                            shutil.copy2(os.path.join(root, fname), os.path.join(dest_root, fname))
-        print('Stub files copied into src/pytheia')
+        # Alternate output layout (older stubgen / different module paths)
+        alt = os.path.join('src', 'pytheia-stubs')
+        target_pkg = os.path.join('src', 'pytheia', 'pytheia')
+        if os.path.isdir(alt):
+            for root, _, files in os.walk(alt):
+                rel = os.path.relpath(root, alt)
+                dest_root = os.path.join(target_pkg, rel) if rel != '.' else target_pkg
+                os.makedirs(dest_root, exist_ok=True)
+                for fname in files:
+                    if fname.endswith('.pyi'):
+                        shutil.copy2(
+                            os.path.join(root, fname),
+                            os.path.join(dest_root, fname),
+                        )
+        init_pyi = os.path.join(target_pkg, '__init__.pyi')
+        flat_pyi = os.path.join('src', 'pytheia', 'pytheia.pyi')
+        if os.path.isfile(init_pyi):
+            # Single-file stub next to the extension module for Pylance/mypy (pytheia.pytheia)
+            shutil.copy2(init_pyi, flat_pyi)
+        print('Stub files updated under src/pytheia (see pytheia.pyi and pytheia/*.pyi)')
     except Exception as e:
         print('Stub generation skipped (tool missing or failed):', e)
 
@@ -109,7 +122,7 @@ generate_stubs()
 
 setuptools.setup(
     name='pytheia',
-    version='0.5.0',
+    version=_package_version(),
     description='A performant Structure from Motion library for Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',

@@ -1,0 +1,79 @@
+site_name: pyTheia / Theia Vision Library
+site_description: Structure from Motion library — Python wrappers and C++ reference
+site_url: https://urbste.github.io/pyTheiaSfM/
+repo_url: https://github.com/urbste/pyTheiaSfM
+edit_uri: edit/master/docs/content/
+
+docs_dir: content
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.arithmatex:
+      generic: true
+  - attr_list
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Examples: examples_showcase.md
+  - Building: building.md
+  - Python API overview: python_wrapper.md
+  - API Reference:
+      - Overview: api.md
+      - Image (Python): image.md
+      - Ransac: ransac.md
+      - Pose: pose.md
+      - Estimators: estimators.md
+      - Global pose estimation: global_pose_estimation.md
+      - Math: math.md
+      - Cameras: cameras.md
+      - SfM: sfm.md
+      - Triangulation: triangulation.md
+      - View graph: view_graph.md
+      - Matching: matching.md
+      - MVS: mvs.md
+      - Bundle adjustment: bundle_adjustment.md
+      - Transformations: transformations.md
+      - IO: io.md
+  - FAQ: faq.md
+  - Performance: performance.md
+  - Contributing: contributions.md
+  - Releases: releases.md
+  - Bibliography: bibliography.md
+  - License: license.md
+
+extra:
+  copyright: Copyright &copy; 2016 Chris Sweeney

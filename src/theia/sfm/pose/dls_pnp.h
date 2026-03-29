@@ -39,7 +39,6 @@
 #include <Eigen/Geometry>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 
 namespace theia {
 // Computes the camera pose using the Perspective N-point method from "A Direct

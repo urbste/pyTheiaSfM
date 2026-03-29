@@ -4,11 +4,8 @@
 #include "theia/io/populate_image_sizes.h"
 #include "theia/io/read_1dsfm.h"
 #include "theia/io/read_bundler_files.h"
-#include "theia/io/read_keypoints_and_descriptors.h"
 #include "theia/io/read_strecha_dataset.h"
 #include "theia/io/reconstruction_reader.h"
-#include "theia/io/sift_binary_file.h"
-#include "theia/io/sift_text_file.h"
 
 namespace theia {
 
@@ -42,15 +39,6 @@ std::tuple<bool, Reconstruction> ReadBundlerFilesWrapper(
   return std::make_tuple(success, reconstr);
 }
 
-std::tuple<bool, std::vector<Keypoint>, std::vector<Eigen::VectorXf>>
-ReadKeypointsAndDescriptorsWrapper(const std::string& features_file) {
-  std::vector<Eigen::VectorXf> descriptors;
-  std::vector<Keypoint> keypoints;
-  const bool success =
-      ReadKeypointsAndDescriptors(features_file, &keypoints, &descriptors);
-  return std::make_tuple(success, keypoints, descriptors);
-}
-
 std::tuple<bool, Reconstruction> ReadStrechaDatasetWrapper(
     const std::string& dataset_directory) {
   Reconstruction reconstr = Reconstruction();
@@ -63,24 +51,6 @@ std::tuple<bool, Reconstruction> ReadReconstructionWrapper(
   Reconstruction reconstr = Reconstruction();
   const bool success = ReadReconstruction(input_file, &reconstr);
   return std::make_tuple(success, reconstr);
-}
-
-std::tuple<bool, std::vector<Eigen::VectorXf>, std::vector<Keypoint>>
-ReadSiftKeyBinaryFileWrapper(const std::string& input_sift_key_file) {
-  std::vector<Eigen::VectorXf> descriptor;
-  std::vector<Keypoint> keypoint;
-  const bool success =
-      ReadSiftKeyBinaryFile(input_sift_key_file, &descriptor, &keypoint);
-  return std::make_tuple(success, descriptor, keypoint);
-}
-
-std::tuple<bool, std::vector<Eigen::VectorXf>, std::vector<Keypoint>>
-ReadSiftKeyTextFileWrapper(const std::string& sift_key_file) {
-  std::vector<Eigen::VectorXf> descriptor;
-  std::vector<Keypoint> keypoint;
-  const bool success =
-      ReadSiftKeyTextFile(sift_key_file, &descriptor, &keypoint);
-  return std::make_tuple(success, descriptor, keypoint);
 }
 
 }  // namespace theia

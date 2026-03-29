@@ -39,7 +39,7 @@
 #include <string>
 #include <vector>
 
-#include "theia/image/keypoint_detector/keypoint.h"
+#include "theia/matching/keypoint.h"
 
 namespace theia {
 

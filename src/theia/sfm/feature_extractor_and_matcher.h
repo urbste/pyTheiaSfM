@@ -41,7 +41,7 @@
 #include <thread>  // NOLINT
 #include <vector>
 
-#include "theia/image/descriptor/create_descriptor_extractor.h"
+#include "theia/sfm/descriptor_extractor_types.h"
 #include "theia/matching/create_feature_matcher.h"
 #include "theia/matching/feature_matcher.h"
 #include "theia/matching/feature_matcher_options.h"

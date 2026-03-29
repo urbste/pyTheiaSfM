@@ -1,0 +1,9 @@
+# Optional dependencies for examples/ (vismatch + Rerun + OpenCV).
+# Install pyTheia separately (wheel or editable from repo root).
+vismatch>=1.0
+rerun-sdk>=0.15
+torch>=2.0
+torchvision>=0.15
+opencv-python-headless>=4.8
+numpy>=1.21
+Pillow>=9.0

@@ -39,7 +39,6 @@
 #include <glog/logging.h>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/math/util.h"
 #include "theia/sfm/pose/test_util.h"
 #include "theia/sfm/transformation/gdls_similarity_transform.h"

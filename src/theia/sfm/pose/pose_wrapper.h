@@ -111,6 +111,12 @@ PoseFromThreePointsWrapper(
     const std::vector<Eigen::Vector2d>& feature_points_in,
     const std::vector<Eigen::Vector3d>& points_3d_in);
 
+// Maximum-likelihood PnP (Urban et al., 2016). Single (R, t) world-to-camera.
+std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d> MLPnPWrapper(
+    const std::vector<Eigen::Vector2d>& norm_feature_points,
+    const std::vector<Eigen::Matrix3d>& feature_covariances,
+    const std::vector<Eigen::Vector3d>& world_points);
+
 std::tuple<bool, Eigen::Vector3d> PositionFromTwoRaysWrapper(
     const Eigen::Vector2d& rotated_feature1,
     const Eigen::Vector3d& point1,

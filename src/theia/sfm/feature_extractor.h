@@ -38,8 +38,7 @@
 #include <Eigen/Core>
 #include <string>
 
-#include "theia/alignment/alignment.h"
-#include "theia/image/descriptor/create_descriptor_extractor.h"
+#include "theia/sfm/descriptor_extractor_types.h"
 #include "theia/util/util.h"
 //#include "theia/image/image.h"
 

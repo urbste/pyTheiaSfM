@@ -40,7 +40,6 @@
 #include <Eigen/Geometry>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 
 namespace theia {
 // Solves for the limited transformation between correspondences from two sets

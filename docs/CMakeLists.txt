@@ -26,4 +26,19 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-ADD_SUBDIRECTORY(source)
+find_program(MKDOCS_EXECUTABLE mkdocs)
+
+if(NOT MKDOCS_EXECUTABLE)
+  message(WARNING "mkdocs not found in PATH; skipping documentation target theia_docs")
+else()
+  set(MKDOCS_SITE_DIR "${CMAKE_BINARY_DIR}/docs/site")
+  add_custom_target(theia_docs ALL
+    COMMAND "${MKDOCS_EXECUTABLE}" build --strict
+            -f "${CMAKE_SOURCE_DIR}/docs/mkdocs.yml"
+            -d "${MKDOCS_SITE_DIR}"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Building HTML documentation with MkDocs")
+  install(DIRECTORY ${MKDOCS_SITE_DIR}/
+          DESTINATION share/doc/theia
+          COMPONENT Doc)
+endif()

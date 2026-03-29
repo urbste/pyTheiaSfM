@@ -38,7 +38,6 @@
 #include <ceres/rotation.h>
 #include <math.h>
 
-#include "theia/alignment/alignment.h"
 #include "theia/math/util.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/division_undistortion_camera_model.h"

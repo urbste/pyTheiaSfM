@@ -47,8 +47,7 @@
 
 namespace theia {
 
-// Writes an NVM file that may then be inspected with Visual SfM or other
-// software packages.
+// Writes an NVM_V3 text bundle (.nvm) for interchange with other tools.
 bool WriteNVMFile(const std::string& nvm_filepath,
                   const Reconstruction& reconstruction) {
   std::ofstream nvm_file;

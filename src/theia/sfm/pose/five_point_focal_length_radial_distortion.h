@@ -36,9 +36,10 @@
 #define THEIA_SFM_POSE_FIVE_POINT_FOCAL_LENGTH_RADIAL_DISTORTION_H_
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <Eigen/QR>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 
 namespace theia {
 

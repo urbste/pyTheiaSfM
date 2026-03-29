@@ -91,10 +91,8 @@
 #include "theia/sfm/global_pose_estimation/rotation_estimator.h"
 
 // reconstruction view track
-#include "theia/matching/keypoints_and_descriptors.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/track.h"
-#include "theia/sfm/two_view_match_geometric_verification.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/view.h"
 #include "theia/sfm/view_graph/remove_disconnected_view_pairs.h"
@@ -142,7 +140,6 @@
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
 #include "theia/sfm/sfm_wrapper.h"
-#include "theia/sfm/undistort_image.h"
 
 // for overloaded function in CameraInstrinsicsModel
 template <typename... Args>
@@ -517,6 +514,7 @@ void pytheia_sfm_classes(py::module& m) {
 
   // pose
   m.def("PoseFromThreePoints", theia::PoseFromThreePointsWrapper);
+  m.def("MLPnP", theia::MLPnPWrapper);
   m.def("NormalizedEightPointFundamentalMatrix",
         theia::NormalizedEightPointFundamentalMatrixWrapper);
   m.def("FivePointRelativePose", theia::FivePointRelativePoseWrapper);
@@ -923,64 +921,6 @@ void pytheia_sfm_classes(py::module& m) {
       .def("AddPoint", &theia::VisibilityPyramid::AddPoint)
       .def("ComputeScore", &theia::VisibilityPyramid::ComputeScore);
 
-  // TwoViewMatchGeometricVerification Options
-  py::class_<theia::TwoViewMatchGeometricVerification::Options>(
-      m, "TwoViewMatchGeometricVerificationOptions")
-      .def(py::init<>())
-      .def_readwrite("estimate_twoview_info_options",
-                     &theia::TwoViewMatchGeometricVerification::Options::
-                         estimate_twoview_info_options)
-      .def_readwrite("min_num_inlier_matches",
-                     &theia::TwoViewMatchGeometricVerification::Options::
-                         min_num_inlier_matches)
-      .def_readwrite(
-          "guided_matching",
-          &theia::TwoViewMatchGeometricVerification::Options::guided_matching)
-      .def_readwrite("guided_matching_max_distance_pixels",
-                     &theia::TwoViewMatchGeometricVerification::Options::
-                         guided_matching_max_distance_pixels)
-      .def_readwrite("guided_matching_lowes_ratio",
-                     &theia::TwoViewMatchGeometricVerification::Options::
-                         guided_matching_lowes_ratio)
-      .def_readwrite(
-          "bundle_adjustment",
-          &theia::TwoViewMatchGeometricVerification::Options::bundle_adjustment)
-      .def_readwrite("triangulation_max_reprojection_error",
-                     &theia::TwoViewMatchGeometricVerification::Options::
-                         triangulation_max_reprojection_error)
-      .def_readwrite("min_triangulation_angle_degrees",
-                     &theia::TwoViewMatchGeometricVerification::Options::
-                         min_triangulation_angle_degrees)
-      .def_readwrite("final_max_reprojection_error",
-                     &theia::TwoViewMatchGeometricVerification::Options::
-                         final_max_reprojection_error)
-
-      ;
-
-  /*
-    // KeypointsAndDescriptors
-    py::class_<theia::KeypointsAndDescriptors>(m, "KeypointsAndDescriptors")
-      .def(py::init<>())
-      .def_readwrite("image_name", &theia::KeypointsAndDescriptors::image_name)
-      .def_readwrite("keypoints", &theia::KeypointsAndDescriptors::keypoints)
-      .def_readwrite("descriptors",
-    &theia::KeypointsAndDescriptors::descriptors)
-    ;
-
-    */
-
-  // TwoViewMatchGeometricVerification
-  py::class_<theia::TwoViewMatchGeometricVerification>(
-      m, "TwoViewMatchGeometricVerification")
-      .def(py::init<theia::TwoViewMatchGeometricVerification::Options,
-                    theia::CameraIntrinsicsPrior,
-                    theia::CameraIntrinsicsPrior,
-                    theia::KeypointsAndDescriptors,
-                    theia::KeypointsAndDescriptors,
-                    std::vector<theia::IndexedFeatureMatch>>())
-      .def("VerifyMatches",
-           &theia::TwoViewMatchGeometricVerification::VerifyMatches);
-
   // Track class
   py::class_<theia::Track>(m, "Track")
       .def(py::init<>())
@@ -1187,10 +1127,6 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite(
           "min_num_inlier_matches",
           &theia::ReconstructionBuilderOptions::min_num_inlier_matches)
-      .def_readwrite("descriptor_type",
-                     &theia::ReconstructionBuilderOptions::descriptor_type)
-      .def_readwrite("feature_density",
-                     &theia::ReconstructionBuilderOptions::feature_density)
       .def_readwrite("matching_strategy",
                      &theia::ReconstructionBuilderOptions::matching_strategy)
       .def_readwrite("matching_options",
@@ -1200,23 +1136,7 @@ void pytheia_sfm_classes(py::module& m) {
                          reconstruction_estimator_options)
       .def_readwrite("features_and_matches_database_directory",
                      &theia::ReconstructionBuilderOptions::
-                         features_and_matches_database_directory)
-      .def_readwrite(
-          "select_image_pairs_with_global_image_descriptor_matching",
-          &theia::ReconstructionBuilderOptions::
-              select_image_pairs_with_global_image_descriptor_matching)
-      .def_readwrite("num_nearest_neighbors_for_global_descriptor_matching",
-                     &theia::ReconstructionBuilderOptions::
-                         num_nearest_neighbors_for_global_descriptor_matching)
-      .def_readwrite("num_gmm_clusters_for_fisher_vector",
-                     &theia::ReconstructionBuilderOptions::
-                         num_gmm_clusters_for_fisher_vector)
-      .def_readwrite("max_num_features_for_fisher_vector_training",
-                     &theia::ReconstructionBuilderOptions::
-                         max_num_features_for_fisher_vector_training)
-      .def_readwrite("reconstruction_estimator_options",
-                     &theia::ReconstructionBuilderOptions::
-                         reconstruction_estimator_options);
+                         features_and_matches_database_directory);
 
   // Reconstruction Builder
   py::class_<theia::ReconstructionBuilder>(m, "ReconstructionBuilder")

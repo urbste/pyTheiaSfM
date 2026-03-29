@@ -35,7 +35,6 @@
 #ifndef THEIA_SFM_POSE_UTIL_H_
 #define THEIA_SFM_POSE_UTIL_H_
 
-#include "theia/alignment/alignment.h"
 #include <Eigen/Core>
 
 namespace theia {

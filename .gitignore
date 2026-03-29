@@ -12,7 +12,7 @@ pyelf*
 elftools*
 debug_out*
 build*
-cmake_build
+cmake_build*
 *.csv
 
 *.ply
@@ -33,13 +33,13 @@ pytheia.egg-info
 pytheia_build/*
 dist/*
 
-src/pytheia/pytheia/
+# Native extension + optional local CMake copies (never commit binaries)
+src/pytheia/pytheia.cpython-*.so
+src/pytheia/pytheia.*.so
+src/pytheia/libflann_cpp*.so
 
-src/pytheia/pytheia/math
-src/pytheia/pytheia/*.pyi
-src/pytheia/pytheia/*/*.pyi
-src/pytheia/__init__.pyi
-src/pytheia/**/*.pyi
-
-# Generated stub directories
+# Generated stub directories (alternate tool output)
 typings/
+
+# MkDocs output (built locally or by CI before artifact upload)
+docs/site/

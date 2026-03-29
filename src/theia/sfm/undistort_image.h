@@ -34,35 +34,21 @@
 
 #ifndef THEIA_SFM_UNDISTORT_IMAGE_H_
 #define THEIA_SFM_UNDISTORT_IMAGE_H_
-#include <memory>
 
 namespace theia {
 class Camera;
-class FloatImage;
 class Reconstruction;
 
-// Given an image with lens distortion distortion described by the camera
-// parameters, undistort the image according to the parameters of the
-// undistorted camera to produce an image free of lens distortion. This is
-// accomplished by mapping distorted pixels to undistorted pixels, then cropping
-// the image so that no unmapped pixels will be present (i.e. no black pixels
-// are present).
-//
-// The implementation of this method was inspired by the library
-// COLMAP: https://colmap.github.io/
-bool UndistortImage(const Camera& distorted_camera,
-                    const FloatImage& distorted_image,
-                    const Camera& undistorted_camera,
-                    FloatImage* undistorted_image);
-
 // Create the undistorted camera by removing radial distortion parameters.
-bool UndistortCamera(const Camera& distorted_camera,
-                     std::shared_ptr<Camera> undistorted_camera);
+bool UndistortCamera(const Camera& distorted_camera, Camera* undistorted_camera);
 
 // Undistorts the entire reconstruction. All features in all views are
 // undistorted, but only the features which would survive the crop of the
-// undistorted image (see description above) are kept. This will modify the
-// reconstruction in place and potentially remove observations or tracks.
+// undistorted image are kept. This will modify the reconstruction in place and
+// potentially remove observations or tracks.
+//
+// Raster image undistortion is not part of pyTheia; apply OpenCV or similar in
+// Python if pixel grids are required.
 bool UndistortReconstruction(Reconstruction* reconstruction);
 
 }  // namespace theia

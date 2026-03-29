@@ -1,7 +1,6 @@
 #include <Eigen/Core>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/division_undistortion_camera_model.h"
 #include "theia/sfm/create_and_initialize_ransac_variant.h"

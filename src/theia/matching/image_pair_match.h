@@ -42,7 +42,6 @@
 #include <string>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/twoview_info.h"
 

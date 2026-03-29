@@ -44,7 +44,7 @@
 #include <utility>
 #include <vector>
 
-#include "theia/image/keypoint_detector/keypoint.h"
+#include "theia/matching/keypoint.h"
 
 #include "theia/matching/feature_correspondence.h"
 #include "theia/matching/feature_matcher_options.h"

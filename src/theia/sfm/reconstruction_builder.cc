@@ -41,7 +41,6 @@
 
 #include "theia/matching/features_and_matches_database.h"
 #include "theia/matching/image_pair_match.h"
-#include "theia/matching/rocksdb_features_and_matches_database.h"
 #include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/feature_extractor_and_matcher.h"
 #include "theia/sfm/reconstruction.h"

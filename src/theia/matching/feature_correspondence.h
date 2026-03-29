@@ -40,7 +40,6 @@
 #include <cereal/cereal.hpp>
 #include <stdint.h>
 
-#include "theia/alignment/alignment.h"
 #include "theia/sfm/feature.h"
 
 namespace theia {

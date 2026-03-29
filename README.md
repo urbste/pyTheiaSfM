@@ -5,6 +5,8 @@ pyTheia - A Python Structure-from-Motion and Geometric Vision Swiss Knife
 pyTheia is based on [TheiaSfM](http://www.theia-sfm.org).
 It contains Python bindings for most of the functionalities of TheiaSfM and more.
 
+**Documentation:** [https://urbste.github.io/pyTheiaSfM/](https://urbste.github.io/pyTheiaSfM/) (MkDocs; build locally with `pip install -r docs/requirements.txt` and `mkdocs serve -f docs/mkdocs.yml`).
+
 **The library is still in active development and the interfaces are not yet all fixed**
 
 With pyTheia you have access to a variety of different camera models, structure-from-motion pipelines and geometric vision algorithms.
@@ -19,8 +21,7 @@ For example SOTA feature detection & matching, place recognition algorithms are 
 Compared to the original TheiaSfM:
 * SuiteSparse: Optional for Ceres; GPL-dependent code was removed in src/math/matrix/sparse_cholesky_llt.cc (cholmod -> Eigen::SimplicialLDLT), which may be slower for very large problems and slightly less stable numerically.
 * RapidJSON: No separate dependency; RapidJSON is vendored via cereal headers.
-* RocksDB: Feature/match database remains available but is optional behind the WITH_ROCKSDB CMake option.
-* OpenImageIO: Still used internally for image I/O.
+* OpenImageIO / `theia/image`: Not used. Raster images and EXIF are handled in Python (OpenCV, Pillow, etc.); C++ focuses on geometry, matching structures, and SfM pipelines once correspondences exist.
 
 ## Changes to the original TheiaSfM library
 

@@ -40,8 +40,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include "theia/io/read_keypoints_and_descriptors.h"
-#include "theia/io/write_keypoints_and_descriptors.h"
 #include "theia/matching/features_and_matches_database.h"
 #include "theia/matching/image_pair_match.h"
 #include "theia/matching/keypoints_and_descriptors.h"

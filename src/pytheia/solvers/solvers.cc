@@ -44,8 +44,6 @@
 #include <pybind11/numpy.h>
 #include <vector>
 
-#include "theia/solvers/evsac.h"
-#include "theia/solvers/evsac_sampler.h"
 #include "theia/solvers/exhaustive_ransac.h"
 #include "theia/solvers/exhaustive_sampler.h"
 #include "theia/solvers/inlier_support.h"
@@ -103,13 +101,6 @@ void pytheia_solvers_classes(py::module& m) {
                      &theia::RansacParameters::lo_start_iterations)
       .def_readwrite("use_Tdd_test", &theia::RansacParameters::use_Tdd_test);
   /*
-  py::enum_<theia::FittingMethod>(m, "FittingMethod")
-    .value("MLE", theia::FittingMethod::MLE)
-    .value("QUANTILE_NLS", theia::FittingMethod::QUANTILE_NLS)
-    .export_values()
-  ;
-
-
   py::class_<theia::Sampler> sampler(m, "Sampler");
 
 
@@ -132,16 +123,6 @@ void pytheia_solvers_classes(py::module& m) {
     .def(py::init<std::shared_ptr<theia::RandomNumberGenerator>, int>())
     .def("Sample", &theia::RandomSampler::Sample)
     .def("Initialize", &theia::RandomSampler::Initialize)
-
-  ;
-
-
-  // templated subclass
-
-  py::class_<theia::EvsacSampler<Eigen::Vector2d>>(m, "EvsacSampler", sampler)
-    .def(py::init<int, Eigen::MatrixXd, double, theia::FittingMethod>())
-    .def("Initialize", &theia::EvsacSampler<Eigen::Vector2d>::Initialize)
-    .def("Sample", &theia::EvsacSampler<Eigen::Vector2d>::Sample)
 
   ;
 

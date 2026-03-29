@@ -38,7 +38,6 @@
 #include <Eigen/Core>
 #include <vector>
 
-#include "theia/alignment/alignment.h"
 
 namespace theia {
 

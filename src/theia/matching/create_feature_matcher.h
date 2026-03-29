@@ -42,11 +42,8 @@ class FeatureMatcher;
 class FeaturesAndMatchesDatabase;
 struct FeatureMatcherOptions;
 
-// The type of matching to perform.
-enum class MatchingStrategy {
-  BRUTE_FORCE = 0,
-  CASCADE_HASHING = 1,
-};
+// The type of matching to perform (only brute-force L2 is implemented).
+enum class MatchingStrategy { BRUTE_FORCE = 0 };
 
 // A factory method for creating an L2-based feature matcher (i.e. for float
 // descriptors).

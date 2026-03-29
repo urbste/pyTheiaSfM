@@ -35,59 +35,28 @@
 #ifndef THEIA_SFM_EXIF_READER_H_
 #define THEIA_SFM_EXIF_READER_H_
 
-#include <OpenImageIO/imageio.h>
 #include <string>
-#include <unordered_map>
 
-#include "theia/util/hash.h"
 #include "theia/util/util.h"
 
 namespace theia {
-// Aliasing oiio to whatever the correct Open Image IO namesace is.
-// The macro OIIO_NAMESPACE is defined in OpenImageIO/oiioversion.h.
-namespace oiio = OIIO_NAMESPACE;
 
 struct CameraIntrinsicsPrior;
 
-// The focal length is set from the EXIF data. We attempt to set the focal
-// length from the EXIF focal length plane resolutions. If the plane resolutions
-// are not available then we use a sensor database to determine the sensor
-// width.
-//
-// NOTE: Reading in the sensor database is an expensive operation. When
-// calibrating many cameras it is best to create a single ExifReader object to
-// read the EXIF information of all cameras. This way, the database is only
-// loaded once.
+// EXIF metadata extraction is not implemented in pyTheia. Use Python (e.g.
+// Pillow, exifread, or OpenCV) to populate CameraIntrinsicsPrior and pass it
+// into reconstruction APIs. This class remains for API compatibility.
 class ExifReader {
  public:
-  ExifReader();
+  ExifReader() = default;
 
-  // Extracts EXIF metadata from the image file and populates the intrinsics
-  // prior object. If the file could not be opened then the function returns
-  // false. If no EXIF data is found in the image, then it will be a valid
-  // CameraIntrinsicsPrior object with the is_set field set to false for all
-  // metadata field. The function will return true in this case.
-  bool ExtractEXIFMetadata(
-      const std::string& image_file,
-      CameraIntrinsicsPrior* camera_intrinsics_prior) const;
+  // If the file cannot be opened, returns false. Otherwise resets `prior` to a
+  // default state (no fields set) and returns true. EXIF is not read in C++;
+  // use Python to populate intrinsics priors when needed.
+  bool ExtractEXIFMetadata(const std::string& image_file,
+                           CameraIntrinsicsPrior* camera_intrinsics_prior) const;
 
  private:
-  void LoadSensorWidthDatabase();
-
-  // Sets the focal length from the focal plane resolution. Returns true if a
-  // valid focal length is found and false otherwise.
-  bool SetFocalLengthFromExif(
-      const oiio::ImageSpec& image_spec,
-      CameraIntrinsicsPrior* camera_intrinsics_prior) const;
-
-  // Sets the focal length from a look up in the sensor width database. Returns
-  // true if a valid focal length is found and false otherwise.
-  bool SetFocalLengthFromSensorDatabase(
-      const oiio::ImageSpec& image_spec,
-      CameraIntrinsicsPrior* camera_intrinsics_prior) const;
-
-  std::unordered_map<std::string, double> sensor_width_database_;
-
   DISALLOW_COPY_AND_ASSIGN(ExifReader);
 };
 

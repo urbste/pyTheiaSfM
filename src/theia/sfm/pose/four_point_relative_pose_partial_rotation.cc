@@ -43,7 +43,6 @@
 #include <limits>
 #include <math.h>
 
-#include "theia/alignment/alignment.h"
 
 namespace theia {
 

@@ -39,7 +39,7 @@
 #include <string>
 #include <vector>
 
-#include "theia/image/descriptor/create_descriptor_extractor.h"
+#include "theia/sfm/descriptor_extractor_types.h"
 #include "theia/matching/create_feature_matcher.h"
 #include "theia/matching/feature_matcher_options.h"
 #include "theia/sfm/reconstruction_estimator_options.h"
@@ -88,8 +88,7 @@ struct ReconstructionBuilderOptions {
   // in order to be considered a good match.
   int min_num_inlier_matches = 30;
 
-  // Descriptor type for extracting features.
-  // See //theia/image/descriptor/create_descriptor_extractor.h
+  // Descriptor type for extracting features (options only; extraction in Python).
   DescriptorExtractorType descriptor_type = DescriptorExtractorType::SIFT;
 
   // The density of features to extract. DENSE means more features are

@@ -161,16 +161,14 @@ int AddTracksToReconstruction(const BundlerFileReader& reader,
     for (int j = 0; j < num_views; j++) {
       // TODO(vfragoso): Should we store SIFT indices in Theia? It is useful for
       // img-based localization.
-      const FeatureInfo& feature_info = point.view_list[j];
+      const BundlerObservation& obs = point.view_list[j];
 
       // NOTE: We flip the pixel directions to compensate for Bundlers different
       // coordinate system in images.
-      const Feature feature(
-          Eigen::Vector2d(feature_info.kpt_x, -feature_info.kpt_y));
+      const Feature feature(Eigen::Vector2d(obs.x, -obs.y));
 
-      // Push the sift key correspondence to the view list if the view is valid.
-      if (!ContainsKey(views_to_remove, feature_info.camera_index)) {
-        track.emplace_back(feature_info.camera_index, feature);
+      if (!ContainsKey(views_to_remove, obs.camera_index)) {
+        track.emplace_back(obs.camera_index, feature);
       }
     }
 

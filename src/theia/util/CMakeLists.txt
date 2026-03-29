@@ -16,14 +16,7 @@ set(THEIA_UTIL_LIBRARY_DEPENDENCIES
   ${CERES_LIBRARIES}
   ${GFLAGS_LIBRARIES}
   ${GLOG_LIBRARIES}
-  ${OPENIMAGEIO_LIBRARIES}
-  ${ROCKSDB_LIBRARIES}
-  akaze
-  flann_cpp
-  statx
   stlplus3
-  vlfeat
-  visual_sfm
 )
 
 set(THEIA_UTIL_LIBRARY_SOURCE

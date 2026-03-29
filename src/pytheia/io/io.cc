@@ -34,11 +34,7 @@
 
 #include "pytheia/io/io.h"
 
-#include <iostream>
-#include <vector>
-
 #include <pybind11/eigen.h>
-#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -48,15 +44,11 @@
 #include "theia/io/populate_image_sizes.h"
 #include "theia/io/read_1dsfm.h"
 #include "theia/io/read_bundler_files.h"
-#include "theia/io/read_keypoints_and_descriptors.h"
 #include "theia/io/read_strecha_dataset.h"
 #include "theia/io/reconstruction_reader.h"
 #include "theia/io/reconstruction_writer.h"
-#include "theia/io/sift_binary_file.h"
-#include "theia/io/sift_text_file.h"
 #include "theia/io/write_bundler_files.h"
 #include "theia/io/write_colmap_files.h"
-#include "theia/io/write_keypoints_and_descriptors.h"
 #include "theia/io/write_nerfstudio.h"
 #include "theia/io/write_nvm_file.h"
 #include "theia/io/write_ply_file.h"
@@ -68,9 +60,19 @@ namespace pytheia {
 namespace io {
 
 void pytheia_io_classes(py::module& m) {
-  // PYBIND11_MODULE(io, m) {
-  //     m.attr("__name__") = "pytheia.io";
-  // BundleFileReader
+  py::class_<theia::BundlerObservation>(m, "BundlerObservation")
+      .def(py::init<>())
+      .def_readwrite("camera_index", &theia::BundlerObservation::camera_index)
+      .def_readwrite("feature_index", &theia::BundlerObservation::feature_index)
+      .def_readwrite("x", &theia::BundlerObservation::x)
+      .def_readwrite("y", &theia::BundlerObservation::y);
+
+  py::class_<theia::BundlerPoint>(m, "BundlerPoint")
+      .def(py::init<>())
+      .def_readwrite("position", &theia::BundlerPoint::position)
+      .def_readwrite("color", &theia::BundlerPoint::color)
+      .def_readwrite("view_list", &theia::BundlerPoint::view_list);
+
   py::class_<theia::BundlerFileReader>(m, "BundlerFileReader")
       .def(py::init<std::string, std::string>())
       .def("cameras", &theia::BundlerFileReader::cameras)
@@ -87,13 +89,6 @@ void pytheia_io_classes(py::module& m) {
       .def_readwrite("radial_coeff_1", &theia::BundlerCamera::radial_coeff_1)
       .def_readwrite("radial_coeff_2", &theia::BundlerCamera::radial_coeff_2);
 
-  py::class_<theia::FeatureInfo>(m, "FeatureInfo")
-      .def(py::init())
-      .def_readwrite("camera_index", &theia::FeatureInfo::camera_index)
-      .def_readwrite("sift_index", &theia::FeatureInfo::sift_index)
-      .def_readwrite("kpt_x", &theia::FeatureInfo::kpt_x)
-      .def_readwrite("kpt_y", &theia::FeatureInfo::kpt_y);
-
   py::class_<theia::ListImgEntry>(m, "ListImgEntry")
       .def(py::init())
       .def_readwrite("filename", &theia::ListImgEntry::filename)
@@ -105,19 +100,13 @@ void pytheia_io_classes(py::module& m) {
         theia::PopulateImageSizesAndPrincipalPointsWrapper);
   m.def("Read1DSFM", theia::Read1DSFMWrapper);
   m.def("ReadBundlerFiles", theia::ReadBundlerFilesWrapper);
-  m.def("ReadKeypointsAndDescriptors",
-        theia::ReadKeypointsAndDescriptorsWrapper);
 
   m.def("ReadStrechaDataset", theia::ReadStrechaDatasetWrapper);
   m.def("ReadReconstruction", theia::ReadReconstructionWrapper);
   m.def("WriteReconstruction", theia::WriteReconstruction);
   m.def("WriteReconstructionJson", theia::WriteReconstructionJson);
-  m.def("WriteSiftKeyBinaryFile", theia::WriteSiftKeyBinaryFile);
-  m.def("ReadSiftKeyBinaryFile", theia::ReadSiftKeyBinaryFileWrapper);
-  m.def("ReadSiftKeyTextFile", theia::ReadSiftKeyTextFileWrapper);
   m.def("WriteBundlerFiles", theia::WriteBundlerFiles);
   m.def("WriteColmapFiles", theia::WriteColmapFiles);
-  m.def("WriteKeypointsAndDescriptors", theia::WriteKeypointsAndDescriptors);
   m.def("WriteNVMFile", theia::WriteNVMFile);
   m.def("WritePlyFile", theia::WritePlyFile);
   m.def("WriteNerfStudio", theia::WriteNerfStudio);

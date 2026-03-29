@@ -38,7 +38,6 @@
 #include <ceres/rotation.h>
 #include <math.h>
 
-#include "theia/alignment/alignment.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/test/test_utils.h"
 #include "theia/util/random.h"
