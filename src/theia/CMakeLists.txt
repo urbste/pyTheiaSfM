@@ -244,11 +244,20 @@ else (PYTHON_BUILD)
 endif (PYTHON_BUILD)
 
 add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
-# PUBLIC: link requirements are written into the installed IMPORTED target so
-# consumers of libTHEIA get Ceres/gflags/glog/stlplus3 transitively.
-target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC
-  theia_build_includes
-  ${THEIA_LIBRARY_DEPENDENCIES})
+# Build-tree includes only ($<BUILD_INTERFACE:...>); not exported via
+# TheiaExport (avoid linking a separate INTERFACE target into the export set).
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/spectra>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/Sophus>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/cereal/include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/stlplus3>
+)
+# PUBLIC: consumers of libTHEIA get Ceres/gflags/glog/stlplus3 transitively.
+target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC ${THEIA_LIBRARY_DEPENDENCIES})
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
   VERSION ${THEIA_VERSION}

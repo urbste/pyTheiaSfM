@@ -1,5 +1,5 @@
 """
-Python binding for TheiaSfM
+Low-level native module for pyTheia (Theia SfM). Import the public API via ``import pytheia`` or ``import pytheia as pt``; that package re-exports submodules ``io``, ``math``, ``matching``, ``mvs``, ``sfm``, and ``solvers`` from this extension. Type hints ship as ``.pyi`` stubs next to the binary (PEP 561).
 """
 from __future__ import annotations
 from . import io

@@ -12,7 +12,7 @@ Use these when you want a quick sanity check without installing Torch-based matc
 
 ## `examples/` (showcase)
 
-- **[vismatch + SfM](https://github.com/urbste/pyTheiaSfM/tree/master/examples/vismatch_sfm)** — [vismatch](https://github.com/gmberton/vismatch) for correspondence extraction, **pyTheia** for geometry and reconstruction, optional **[Rerun](https://rerun.io/)** point cloud / camera visualization.
+- **[vismatch + SfM](examples_vismatch_sfm.md)** — step-by-step: **Strecha scene root** (`images/` + `K.txt`, `gt_dense_cameras/*.camera`), Sim3 alignment to GT, and **Rerun**. Sources: [`examples/vismatch_sfm/`](https://github.com/urbste/pyTheiaSfM/tree/master/examples/vismatch_sfm) ([vismatch](https://github.com/gmberton/vismatch), optional [Rerun](https://rerun.io/)).
 - **[Gaussian splatting export](https://github.com/urbste/pyTheiaSfM/tree/master/examples/gaussian_splatting)** — export to Nerfstudio **`transforms.json`** and notes for **Splatfacto** / other 3DGS trainers (training happens in external projects).
 
 Install optional dependencies:

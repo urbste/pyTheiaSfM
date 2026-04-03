@@ -1,269 +1,231 @@
 from __future__ import annotations
-import collections.abc
-import numpy
-import numpy.typing
-import typing
 from . import Sophus
 __all__: list[str] = ['AlignOrientations', 'AlignRotations', 'ApplyRelativeRotation', 'FindQuadraticPolynomialRoots', 'MultiplyRotations', 'RelativeRotationFromTwoRotations', 'RelativeTranslationFromTwoPositions', 'SE3FromRotationTranslation', 'SE3d', 'Sim3FromRotationTranslationScale', 'Sim3d', 'Sophus']
 class SE3d:
     @staticmethod
-    @typing.overload
-    def __init__(*args, **kwargs) -> None:
+    def __init__(*args, **kwargs):
         """
+        Default constructor
         Constructor from SO3 and translation
-        """
-    @staticmethod
-    @typing.overload
-    def __init__(*args, **kwargs) -> None:
-        """
         Constructor from quaternion and translation
+        Constructor from rotation matrix and translation
+        Constructor from rotation matrix and translation
+        Constructor from quaternion [w, x, y, z] and translation
         """
     @staticmethod
-    def exp(tangent: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[6, 1]"]) -> SE3d:
+    def __mul__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __repr__(*args, **kwargs):
+        ...
+    @staticmethod
+    def adjoint(*args, **kwargs):
+        """
+        Get adjoint matrix
+        """
+    @staticmethod
+    def exp(*args, **kwargs):
         """
         Exponential map
         """
     @staticmethod
-    def rot_x(x: typing.SupportsFloat) -> SE3d:
+    def inverse(*args, **kwargs):
+        """
+        Get inverse transformation
+        """
+    @staticmethod
+    def log(*args, **kwargs):
+        """
+        Get Lie algebra (tangent vector)
+        """
+    @staticmethod
+    def matrix(*args, **kwargs):
+        """
+        Get 4x4 transformation matrix
+        """
+    @staticmethod
+    def matrix3x4(*args, **kwargs):
+        """
+        Get 3x4 matrix
+        """
+    @staticmethod
+    def params(*args, **kwargs):
+        """
+        Get internal parameters
+        """
+    @staticmethod
+    def rot_x(*args, **kwargs):
         """
         Rotation around X axis
         """
     @staticmethod
-    def rot_y(y: typing.SupportsFloat) -> SE3d:
+    def rot_y(*args, **kwargs):
         """
         Rotation around Y axis
         """
     @staticmethod
-    def rot_z(z: typing.SupportsFloat) -> SE3d:
+    def rot_z(*args, **kwargs):
         """
         Rotation around Z axis
         """
     @staticmethod
-    def set_quaternion(*args, **kwargs) -> None:
+    def rotation_matrix(*args, **kwargs):
+        """
+        Get 3x3 rotation matrix
+        """
+    @staticmethod
+    def set_quaternion(*args, **kwargs):
         """
         Set quaternion
         """
     @staticmethod
-    @typing.overload
-    def trans(xyz: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> SE3d:
+    def set_rotation_matrix(*args, **kwargs):
         """
+        Set rotation matrix
+        """
+    @staticmethod
+    def trans(*args, **kwargs):
+        """
+        Translation
         Translation
         """
     @staticmethod
-    @typing.overload
-    def trans(x: typing.SupportsFloat, y: typing.SupportsFloat, z: typing.SupportsFloat) -> SE3d:
-        """
-        Translation
-        """
-    @staticmethod
-    def trans_x(x: typing.SupportsFloat) -> SE3d:
+    def trans_x(*args, **kwargs):
         """
         Translation along X axis
         """
     @staticmethod
-    def trans_y(y: typing.SupportsFloat) -> SE3d:
+    def trans_y(*args, **kwargs):
         """
         Translation along Y axis
         """
     @staticmethod
-    def trans_z(z: typing.SupportsFloat) -> SE3d:
+    def trans_z(*args, **kwargs):
         """
         Translation along Z axis
         """
-    @typing.overload
-    def __init__(self) -> None:
-        """
-        Default constructor
-        """
-    @typing.overload
-    def __init__(self, rotation_matrix: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], translation: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
-        """
-        Constructor from rotation matrix and translation
-        """
-    @typing.overload
-    def __init__(self, rotation_matrix: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], translation: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
-        """
-        Constructor from rotation matrix and translation
-        """
-    @typing.overload
-    def __init__(self, quaternion: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[4, 1]"], translation: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
-        """
-        Constructor from quaternion [w, x, y, z] and translation
-        """
-    @typing.overload
-    def __mul__(self, arg0: SE3d) -> SE3d:
-        ...
-    @typing.overload
-    def __mul__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
-        ...
-    @typing.overload
-    def __mul__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[4, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]:
-        ...
-    def __repr__(self) -> str:
-        ...
-    def adjoint(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[6, 6]"]:
-        """
-        Get adjoint matrix
-        """
-    def inverse(self) -> SE3d:
-        """
-        Get inverse transformation
-        """
-    def log(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[6, 1]"]:
-        """
-        Get Lie algebra (tangent vector)
-        """
-    def matrix(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 4]"]:
-        """
-        Get 4x4 transformation matrix
-        """
-    def matrix3x4(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 4]"]:
-        """
-        Get 3x4 matrix
-        """
-    def params(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[7, 1]"]:
-        """
-        Get internal parameters
-        """
-    def rotation_matrix(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
-        """
-        Get 3x3 rotation matrix
-        """
-    def set_rotation_matrix(self, R: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
-        """
-        Set rotation matrix
-        """
-    def translation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def translation(*args, **kwargs):
         """
         Get translation vector
         """
 class Sim3d:
     @staticmethod
-    @typing.overload
-    def __init__(*args, **kwargs) -> None:
+    def __init__(*args, **kwargs):
         """
+        Default constructor
         Constructor from quaternion and translation
+        Constructor from rotation matrix, translation, and scale
+        Constructor from quaternion [w, x, y, z], translation, and scale
+        Constructor from tangent vector using exponential map
         """
     @staticmethod
-    def exp(tangent: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[7, 1]"]) -> Sim3d:
+    def __mul__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __repr__(*args, **kwargs):
+        ...
+    @staticmethod
+    def adjoint(*args, **kwargs):
+        """
+        Get adjoint matrix
+        """
+    @staticmethod
+    def exp(*args, **kwargs):
         """
         Exponential map
         """
     @staticmethod
-    def set_quaternion(*args, **kwargs) -> None:
-        """
-        Set quaternion
-        """
-    @typing.overload
-    def __init__(self) -> None:
-        """
-        Default constructor
-        """
-    @typing.overload
-    def __init__(self, rotation_matrix: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], translation: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], scale: typing.SupportsFloat) -> None:
-        """
-        Constructor from rotation matrix, translation, and scale
-        """
-    @typing.overload
-    def __init__(self, quaternion: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[4, 1]"], translation: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], scale: typing.SupportsFloat) -> None:
-        """
-        Constructor from quaternion [w, x, y, z], translation, and scale
-        """
-    @typing.overload
-    def __init__(self, tangent_vector: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[7, 1]"]) -> None:
-        """
-        Constructor from tangent vector using exponential map
-        """
-    @typing.overload
-    def __mul__(self, arg0: Sim3d) -> Sim3d:
-        ...
-    @typing.overload
-    def __mul__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
-        ...
-    @typing.overload
-    def __mul__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[4, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]:
-        ...
-    def __repr__(self) -> str:
-        ...
-    def adjoint(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[7, 7]"]:
-        """
-        Get adjoint matrix
-        """
-    def inverse(self) -> Sim3d:
+    def inverse(*args, **kwargs):
         """
         Get inverse transformation
         """
-    def log(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[7, 1]"]:
+    @staticmethod
+    def log(*args, **kwargs):
         """
         Get Lie algebra (tangent vector)
         """
-    def matrix(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 4]"]:
+    @staticmethod
+    def matrix(*args, **kwargs):
         """
         Get 4x4 transformation matrix
         """
-    def matrix3x4(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 4]"]:
+    @staticmethod
+    def matrix3x4(*args, **kwargs):
         """
         Get 3x4 matrix
         """
-    def params(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[7, 1]"]:
+    @staticmethod
+    def params(*args, **kwargs):
         """
         Get internal parameters
         """
-    def quaternion(self) -> ...:
+    @staticmethod
+    def quaternion(*args, **kwargs):
         """
         Get quaternion
         """
-    def scale(self) -> float:
+    @staticmethod
+    def scale(*args, **kwargs):
         """
         Get scale factor
         """
-    def set_rotation_matrix(self, R: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def set_quaternion(*args, **kwargs):
+        """
+        Set quaternion
+        """
+    @staticmethod
+    def set_rotation_matrix(*args, **kwargs):
         """
         Set rotation matrix
         """
-    def set_scale(self, scale: typing.SupportsFloat) -> None:
+    @staticmethod
+    def set_scale(*args, **kwargs):
         """
         Set scale factor
         """
-    def set_scaled_rotation_matrix(self, sR: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def set_scaled_rotation_matrix(*args, **kwargs):
         """
         Set scaled rotation matrix
         """
-    def translation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def translation(*args, **kwargs):
         """
         Get translation vector
         """
-def AlignOrientations(arg0: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> dict[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def AlignOrientations(*args, **kwargs):
     """
     This functions takes as input a dictionary of view_ids to global orientations that should be aligned. Then it calls AlignRotations internally.
     """
-def AlignRotations(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> None:
+def AlignRotations(*args, **kwargs):
     """
     Solves a nonlinear least squares problem so that: rotations * R = gt_rotations.
     """
-def ApplyRelativeRotation(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+def ApplyRelativeRotation(*args, **kwargs):
     """
     returns R2 = R12 * R1
     """
-def FindQuadraticPolynomialRoots(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[m, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[m, 1]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[m, 1]"]) -> None:
+def FindQuadraticPolynomialRoots(*args, **kwargs):
     ...
-def MultiplyRotations(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+def MultiplyRotations(*args, **kwargs):
     """
     return R = R1 * R2
     """
-def RelativeRotationFromTwoRotations(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+def RelativeRotationFromTwoRotations(*args, **kwargs):
     """
     returns R12 = R2 * R1^T
     """
-def RelativeTranslationFromTwoPositions(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+def RelativeTranslationFromTwoPositions(*args, **kwargs):
     """
     returns t12 = R1*(p2-p1)
     """
-def SE3FromRotationTranslation(rotation: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], translation: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> SE3d:
+def SE3FromRotationTranslation(*args, **kwargs):
     """
     Create SE3 from rotation matrix and translation vector
     """
-def Sim3FromRotationTranslationScale(rotation: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], translation: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], scale: typing.SupportsFloat) -> Sim3d:
+def Sim3FromRotationTranslationScale(*args, **kwargs):
     """
     Create Sim3 from rotation matrix, translation vector, and scale factor
     """

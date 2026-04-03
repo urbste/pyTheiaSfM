@@ -1,94 +1,110 @@
 from __future__ import annotations
-import collections.abc
-import typing
 __all__: list[str] = ['RandomNumberGenerator', 'RansacParameters', 'RansacSummary']
 class RandomNumberGenerator:
-    def RandDouble(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> float:
+    @staticmethod
+    def RandDouble(*args, **kwargs):
         ...
-    def RandFloat(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> float:
+    @staticmethod
+    def RandFloat(*args, **kwargs):
         ...
-    def RandGaussian(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> float:
+    @staticmethod
+    def RandGaussian(*args, **kwargs):
         ...
-    def RandInt(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt) -> int:
+    @staticmethod
+    def RandInt(*args, **kwargs):
         ...
-    def Seed(self, arg0: typing.SupportsInt) -> None:
+    @staticmethod
+    def Seed(*args, **kwargs):
         ...
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class RansacParameters:
-    use_Tdd_test: bool
-    use_lo: bool
-    use_mle: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def error_thresh(self) -> float:
+    def error_thresh(*args, **kwargs):
         ...
     @error_thresh.setter
-    def error_thresh(self, arg0: typing.SupportsFloat) -> None:
+    def error_thresh(*args, **kwargs):
         ...
     @property
-    def failure_probability(self) -> float:
+    def failure_probability(*args, **kwargs):
         ...
     @failure_probability.setter
-    def failure_probability(self, arg0: typing.SupportsFloat) -> None:
+    def failure_probability(*args, **kwargs):
         ...
     @property
-    def lo_start_iterations(self) -> int:
+    def lo_start_iterations(*args, **kwargs):
         ...
     @lo_start_iterations.setter
-    def lo_start_iterations(self, arg0: typing.SupportsInt) -> None:
+    def lo_start_iterations(*args, **kwargs):
         ...
     @property
-    def max_iterations(self) -> int:
+    def max_iterations(*args, **kwargs):
         ...
     @max_iterations.setter
-    def max_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_iterations(*args, **kwargs):
         ...
     @property
-    def min_inlier_ratio(self) -> float:
+    def min_inlier_ratio(*args, **kwargs):
         ...
     @min_inlier_ratio.setter
-    def min_inlier_ratio(self, arg0: typing.SupportsFloat) -> None:
+    def min_inlier_ratio(*args, **kwargs):
         ...
     @property
-    def min_iterations(self) -> int:
+    def min_iterations(*args, **kwargs):
         ...
     @min_iterations.setter
-    def min_iterations(self, arg0: typing.SupportsInt) -> None:
+    def min_iterations(*args, **kwargs):
+        ...
+    @property
+    def use_Tdd_test(*args, **kwargs):
+        ...
+    @use_Tdd_test.setter
+    def use_Tdd_test(*args, **kwargs):
+        ...
+    @property
+    def use_lo(*args, **kwargs):
+        ...
+    @use_lo.setter
+    def use_lo(*args, **kwargs):
+        ...
+    @property
+    def use_mle(*args, **kwargs):
+        ...
+    @use_mle.setter
+    def use_mle(*args, **kwargs):
         ...
 class RansacSummary:
     @property
-    def confidence(self) -> float:
+    def confidence(*args, **kwargs):
         ...
     @confidence.setter
-    def confidence(self, arg0: typing.SupportsFloat) -> None:
+    def confidence(*args, **kwargs):
         ...
     @property
-    def inliers(self) -> list[int]:
+    def inliers(*args, **kwargs):
         ...
     @inliers.setter
-    def inliers(self, arg0: collections.abc.Sequence[typing.SupportsInt]) -> None:
+    def inliers(*args, **kwargs):
         ...
     @property
-    def num_input_data_points(self) -> int:
+    def num_input_data_points(*args, **kwargs):
         ...
     @num_input_data_points.setter
-    def num_input_data_points(self, arg0: typing.SupportsInt) -> None:
+    def num_input_data_points(*args, **kwargs):
         ...
     @property
-    def num_iterations(self) -> int:
+    def num_iterations(*args, **kwargs):
         ...
     @num_iterations.setter
-    def num_iterations(self, arg0: typing.SupportsInt) -> None:
+    def num_iterations(*args, **kwargs):
         ...
     @property
-    def num_lo_iterations(self) -> int:
+    def num_lo_iterations(*args, **kwargs):
         ...
     @num_lo_iterations.setter
-    def num_lo_iterations(self, arg0: typing.SupportsInt) -> None:
+    def num_lo_iterations(*args, **kwargs):
         ...

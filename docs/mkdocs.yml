@@ -48,7 +48,9 @@ extra_javascript:
 
 nav:
   - Home: index.md
-  - Examples: examples_showcase.md
+  - Examples:
+      - Overview: examples_showcase.md
+      - "vismatch + SfM": examples_vismatch_sfm.md
   - Building: building.md
   - Python API overview: python_wrapper.md
   - API Reference:

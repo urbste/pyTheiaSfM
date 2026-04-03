@@ -47,6 +47,18 @@ using Eigen::Matrix3d;
 using Eigen::Vector3d;
 
 namespace {
+
+// Explicit 3x3 determinant avoids GCC + Eigen emitting an unresolved
+// MatrixBase<Matrix3d>::determinant() symbol in shared-library links.
+inline double determinant3x3(const Matrix3d& m) {
+  return m.coeff(0, 0) *
+             (m.coeff(1, 1) * m.coeff(2, 2) - m.coeff(1, 2) * m.coeff(2, 1)) -
+         m.coeff(0, 1) *
+             (m.coeff(1, 0) * m.coeff(2, 2) - m.coeff(1, 2) * m.coeff(2, 0)) +
+         m.coeff(0, 2) *
+             (m.coeff(1, 0) * m.coeff(2, 1) - m.coeff(1, 1) * m.coeff(2, 0));
+}
+
 void GetRigidTransform(const Matrix<double, 3, 4>& points1,
                        const Matrix<double, 3, 4>& points2,
                        const bool left_handed_coordinates,
@@ -73,9 +85,8 @@ void GetRigidTransform(const Matrix<double, 3, 4>& points1,
   Matrix3d s = Matrix3d::Zero();
   s(0, 0) = svd.singularValues()(0) < 0 ? -1.0 : 1.0;
   s(1, 1) = svd.singularValues()(1) < 0 ? -1.0 : 1.0;
-  const double sign =
-      (svd.matrixU() * svd.matrixV().transpose()).determinant() < 0 ? -1.0
-                                                                    : 1.0;
+  const Matrix3d uvt = (svd.matrixU() * svd.matrixV().transpose()).eval();
+  const double sign = determinant3x3(uvt) < 0 ? -1.0 : 1.0;
 
   if (left_handed_coordinates) {
     s(2, 2) = -sign;

@@ -31,4 +31,4 @@ pip install -r examples/requirements.txt
 
 ## Documentation
 
-The MkDocs manual includes an [Examples showcase](../docs/content/examples_showcase.md) chapter mapping `pyexamples/` vs `examples/`.
+The MkDocs manual includes an [Examples overview](../docs/content/examples_showcase.md) and a full page on [vismatch + SfM](../docs/content/examples_vismatch_sfm.md) (generic runs, SFM eval datasets, Rerun).

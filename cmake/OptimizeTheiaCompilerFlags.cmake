@@ -112,7 +112,7 @@ macro(OptimizeTheiaCompilerFlags)
         endif (GCC_VERSION VERSION_LESS 4.3)
       endif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     endif (CMAKE_COMPILER_IS_GNUCXX)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT PYTHON_BUILD)
       # Use of -O3 requires use of gold linker & LLVM-gold plugin, which might
       # well not be present / in use and without which files will compile, but
       # not link ('file not recognized') so explicitly check for support

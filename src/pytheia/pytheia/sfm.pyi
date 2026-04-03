@@ -1,240 +1,384 @@
 from __future__ import annotations
-import collections.abc
-import numpy
-import numpy.typing
-import pytheia.pytheia.matching
 import typing
-__all__: list[str] = ['ACCELERATE_SPARSE', 'ALL', 'ARCTAN', 'ASPECT_RATIO', 'AddFeatureCorrespondencesToTrackBuilder', 'AddFullFeatureCorrespondencesToTrackBuilder', 'AddObservations', 'AddTracks', 'AlignPointCloudsUmeyama', 'AlignPointCloudsUmeyamaWithWeights', 'AlignReconstructions', 'AlignReconstructionsRobust', 'AlignRotations', 'BundleAdjustPartialReconstruction', 'BundleAdjustPartialViewsConstant', 'BundleAdjustReconstruction', 'BundleAdjustTrack', 'BundleAdjustTrackWithCov', 'BundleAdjustTracks', 'BundleAdjustTracksWithCov', 'BundleAdjustTwoViewsAngular', 'BundleAdjustView', 'BundleAdjustViewWithCov', 'BundleAdjustViews', 'BundleAdjustViewsWithCov', 'BundleAdjuster', 'BundleAdjustmentOptions', 'BundleAdjustmentSummary', 'CANONICAL_VIEWS', 'CAUCHY', 'CGNR', 'CLUSTER_JACOBI', 'CLUSTER_TRIDIAGONAL', 'CalibratedAbsolutePose', 'CalibrationMatrixToIntrinsics', 'Camera', 'CameraAndFeatureCorrespondence2D3D', 'CameraIntrinsicsModel', 'CameraIntrinsicsModelType', 'CameraIntrinsicsPrior', 'ColorizeReconstruction', 'ComposeFundamentalMatrix', 'ComposeProjectionMatrix', 'ComputeTripletBaselineRatios', 'CreateEstimatedSubreconstruction', 'DENSE_NORMAL_CHOLESKY', 'DENSE_QR', 'DENSE_SCHUR', 'DISTORTION', 'DIVISION_UNDISTORTION', 'DLS', 'DOUBLE_SPHERE', 'DecomposeEssentialMatrix', 'DecomposeProjectionMatrix', 'DenseLinearAlgebraLibraryType', 'DivisionUndistortionCameraModel', 'DlsPnp', 'EIGEN', 'EIGEN_SPARSE', 'EXHAUSTIVE', 'EXTENDED_UNIFIED', 'EssentialMatrixFromFundamentalMatrix', 'EssentialMatrixFromTwoProjectionMatrices', 'EstimateAbsolutePoseWithKnownOrientation', 'EstimateCalibratedAbsolutePose', 'EstimateDominantPlaneFromPoints', 'EstimateEssentialMatrix', 'EstimateFundamentalMatrix', 'EstimateHomography', 'EstimateRadialHomographyMatrix', 'EstimateRelativePose', 'EstimateRelativePoseWithKnownOrientation', 'EstimateRigidTransformation2D3D', 'EstimateRigidTransformation2D3DNormalized', 'EstimateTriangulation', 'EstimateTwoViewInfo', 'EstimateTwoViewInfoOptions', 'EstimateUncalibratedAbsolutePose', 'EstimateUncalibratedRelativePose', 'ExtractMaximallyParallelRigidSubgraph', 'FISHEYE', 'FOCAL_LENGTH', 'FOCAL_LENGTH_DISTORTION', 'FOCAL_LENGTH_RADIAL_DISTORTION', 'FOV', 'FOVCameraModel', 'Feature', 'FeatureCorrespondence2D3D', 'FilterViewGraphCyclesByRotation', 'FilterViewPairsFromOrientation', 'FilterViewPairsFromRelativeTranslation', 'FilterViewPairsFromRelativeTranslationOptions', 'FindCommonTracksByFeatureInReconstructions', 'FindCommonTracksInViews', 'FindCommonViewsByName', 'FisheyeCameraModel', 'FivePointFocalLengthRadialDistortion', 'FivePointRelativePose', 'FocalLengthsFromFundamentalMatrix', 'FourPointHomography', 'FourPointPoseAndFocalLength', 'FourPointRelativePosePartialRotation', 'FourPointsPoseFocalLengthRadialDistortion', 'FundamentalMatrixFromProjectionMatrices', 'GLOBAL', 'GPSConverter', 'GdlsSimilarityTransform', 'GetBestPoseFromEssentialMatrix', 'GetEstimatedTracksFromReconstruction', 'GetEstimatedViewsFromReconstruction', 'GlobalPositionEstimatorType', 'GlobalReconstructionEstimator', 'GlobalRotationEstimatorType', 'HUBER', 'HYBRID', 'HybridReconstructionEstimator', 'HybridRotationEstimator', 'IDENTITY', 'INCREMENTAL', 'INVALID', 'INVERSE_DEPTH', 'ITERATIVE_SCHUR', 'IncrementalReconstructionEstimator', 'IntrinsicsToCalibrationMatrix', 'IsTriangulatedPointInFrontOfCameras', 'JACOBI', 'KNEIP', 'L2_MINIMIZATION', 'LAGRANGE_DUAL', 'LAPACK', 'LEAST_UNSQUARED_DEVIATION', 'LIGT', 'LINEAR', 'LINEAR_TRIPLET', 'LMED', 'LagrangeDualRotationEstimator', 'LeastUnsquaredDeviationPositionEstimator', 'LeastUnsquaredDeviationPositionEstimatorOptions', 'LiGTPositionEstimator', 'LiGTPositionEstimatorOptions', 'LinearPositionEstimator', 'LinearPositionEstimatorOptions', 'LinearRotationEstimator', 'LinearSolverType', 'LocalizeViewToReconstruction', 'LocalizeViewToReconstructionOptions', 'LossFunctionType', 'MIDPOINT', 'NONE', 'NONLINEAR', 'NonlinearPositionEstimator', 'NonlinearPositionEstimatorOptions', 'NonlinearRotationEstimator', 'NormalizedEightPointFundamentalMatrix', 'NumEstimatedTracks', 'NumEstimatedViews', 'ORTHOGRAPHIC', 'OptimizeAbsolutePoseOnNormFeatures', 'OptimizeAlignmentSim3', 'OptimizeIntrinsicsType', 'OptimizeRelativePositionWithKnownRotation', 'OrthographicCameraModel', 'PINHOLE', 'PINHOLE_RADIAL_TANGENTIAL', 'POINT_TO_PLANE', 'POINT_TO_POINT', 'PRINCIPAL_POINTS', 'PROSAC', 'PinholeCameraModel', 'PinholeRadialTangentialCameraModel', 'PlanarUncalibratedOrthographicPose', 'Plane', 'PnPType', 'MLPnP', 'PoseFromThreePoints', 'PositionEstimator', 'PositionFromTwoRays', 'PreconditionerType', 'PriorScalar', 'PriorVector2d', 'PriorVector3d', 'PriorVector4d', 'ProjectionMatricesFromFundamentalMatrix', 'RADIAL_DISTORTION', 'RANSAC', 'ROBUST_L1L2', 'ROBUST_POINT_TO_POINT', 'RadialDistUncalibratedAbsolutePoseMetaData', 'RadialDistortionFeatureCorrespondence', 'RansacType', 'Reconstruction', 'ReconstructionBuilder', 'ReconstructionBuilderOptions', 'ReconstructionEstimator', 'ReconstructionEstimatorOptions', 'ReconstructionEstimatorSummary', 'ReconstructionEstimatorType', 'RelativePose', 'RelativePoseFromTwoPointsWithKnownRotation', 'RelativeRotationsFromViewGraph', 'RemoveDisconnectedViewPairs', 'RigidTransformation', 'RobustRotationEstimator', 'RobustRotationEstimatorOptions', 'RotationEstimator', 'SCHUR_JACOBI', 'SINGLE_LINKAGE', 'SKEW', 'SOFTLONE', 'SPARSE_NORMAL_CHOLESKY', 'SPARSE_SCHUR', 'SQPnP', 'SUITE_SPARSE', 'SVD', 'SelectGoodTracksForBundleAdjustment', 'SetCameraIntrinsicsFromPriors', 'SetOutlierTracksToUnestimated', 'SetReconstructionFromEstimatedPoses', 'SetUnderconstrainedTracksToUnestimated', 'SetUnderconstrainedViewsToUnestimated', 'SevenPointFundamentalMatrix', 'SharedFocalLengthsFromFundamentalMatrix', 'Sim3AlignmentOptions', 'Sim3AlignmentSummary', 'Sim3AlignmentType', 'Sim3FromRotationTranslationScale', 'Sim3ToHomogeneousMatrix', 'Sim3ToRotationTranslationScale', 'SimTransformPartialRotation', 'SimilarityTransformation', 'SparseLinearAlgebraLibraryType', 'SufficientTriangulationAngle', 'SwapCameras', 'TANGENTIAL_DISTORTION', 'TRIVIAL', 'TUKEY', 'ThreePointRelativePosePartialRotation', 'Track', 'TrackBuilder', 'TrackEstimator', 'TrackEstimatorOptions', 'TrackEstimatorSummary', 'TrackParametrizationType', 'TransformReconstruction', 'TransformReconstruction4', 'Triangulate', 'TriangulateDLT', 'TriangulateMidpoint', 'TriangulateNView', 'TriangulateNViewSVD', 'TriangulationMethodType', 'TwoPointPosePartialRotation', 'TwoViewBundleAdjustmentOptions', 'TwoViewInfo', 'UncalibratedAbsolutePose', 'UncalibratedRelativePose', 'UpdateFeaturesInView', 'View', 'ViewGraph', 'VisibilityClusteringType', 'VisibilityPyramid', 'XYZW', 'XYZW_MANIFOLD', 'kInvalidTrackId', 'kInvalidViewId']
+__all__: list[str] = ['ACCELERATE_SPARSE', 'ALL', 'ARCTAN', 'ASPECT_RATIO', 'AddFeatureCorrespondencesToTrackBuilder', 'AddFullFeatureCorrespondencesToTrackBuilder', 'AddObservations', 'AddTracks', 'AlignPointCloudsUmeyama', 'AlignPointCloudsUmeyamaWithWeights', 'AlignReconstructions', 'AlignReconstructionsRobust', 'AlignRotations', 'BundleAdjustPartialReconstruction', 'BundleAdjustPartialViewsConstant', 'BundleAdjustReconstruction', 'BundleAdjustTrack', 'BundleAdjustTrackWithCov', 'BundleAdjustTracks', 'BundleAdjustTracksWithCov', 'BundleAdjustTwoViewsAngular', 'BundleAdjustView', 'BundleAdjustViewWithCov', 'BundleAdjustViews', 'BundleAdjustViewsWithCov', 'BundleAdjuster', 'BundleAdjustmentOptions', 'BundleAdjustmentSummary', 'CANONICAL_VIEWS', 'CAUCHY', 'CGNR', 'CLUSTER_JACOBI', 'CLUSTER_TRIDIAGONAL', 'CUDA', 'CUDA_SPARSE', 'CalibratedAbsolutePose', 'CalibrationMatrixToIntrinsics', 'Camera', 'CameraAndFeatureCorrespondence2D3D', 'CameraIntrinsicsModel', 'CameraIntrinsicsModelType', 'CameraIntrinsicsPrior', 'ColorizeReconstruction', 'ComposeFundamentalMatrix', 'ComposeProjectionMatrix', 'ComputeTripletBaselineRatios', 'CreateEstimatedSubreconstruction', 'DENSE_NORMAL_CHOLESKY', 'DENSE_QR', 'DENSE_SCHUR', 'DISTORTION', 'DIVISION_UNDISTORTION', 'DLS', 'DOUBLE_SPHERE', 'DecomposeEssentialMatrix', 'DecomposeProjectionMatrix', 'DenseLinearAlgebraLibraryType', 'DivisionUndistortionCameraModel', 'DlsPnp', 'EIGEN', 'EIGEN_SPARSE', 'EXHAUSTIVE', 'EXTENDED_UNIFIED', 'EssentialMatrixFromFundamentalMatrix', 'EssentialMatrixFromTwoProjectionMatrices', 'EstimateAbsolutePoseWithKnownOrientation', 'EstimateCalibratedAbsolutePose', 'EstimateDominantPlaneFromPoints', 'EstimateEssentialMatrix', 'EstimateFundamentalMatrix', 'EstimateHomography', 'EstimateRadialHomographyMatrix', 'EstimateRelativePose', 'EstimateRelativePoseWithKnownOrientation', 'EstimateRigidTransformation2D3D', 'EstimateRigidTransformation2D3DNormalized', 'EstimateTriangulation', 'EstimateTwoViewInfo', 'EstimateTwoViewInfoOptions', 'EstimateUncalibratedAbsolutePose', 'EstimateUncalibratedRelativePose', 'ExtractMaximallyParallelRigidSubgraph', 'FISHEYE', 'FOCAL_LENGTH', 'FOCAL_LENGTH_DISTORTION', 'FOCAL_LENGTH_RADIAL_DISTORTION', 'FOV', 'FOVCameraModel', 'Feature', 'FeatureCorrespondence2D3D', 'FilterViewGraphCyclesByRotation', 'FilterViewPairsFromOrientation', 'FilterViewPairsFromRelativeTranslation', 'FilterViewPairsFromRelativeTranslationOptions', 'FindCommonTracksByFeatureInReconstructions', 'FindCommonTracksInViews', 'FindCommonViewsByName', 'FisheyeCameraModel', 'FivePointFocalLengthRadialDistortion', 'FivePointRelativePose', 'FocalLengthsFromFundamentalMatrix', 'FourPointHomography', 'FourPointPoseAndFocalLength', 'FourPointRelativePosePartialRotation', 'FourPointsPoseFocalLengthRadialDistortion', 'FundamentalMatrixFromProjectionMatrices', 'GLOBAL', 'GPSConverter', 'GdlsSimilarityTransform', 'GetBestPoseFromEssentialMatrix', 'GetEstimatedTracksFromReconstruction', 'GetEstimatedViewsFromReconstruction', 'GlobalPositionEstimatorType', 'GlobalReconstructionEstimator', 'GlobalRotationEstimatorType', 'HUBER', 'HYBRID', 'HybridReconstructionEstimator', 'HybridRotationEstimator', 'IDENTITY', 'INCREMENTAL', 'INVALID', 'INVERSE_DEPTH', 'ITERATIVE_SCHUR', 'IncrementalReconstructionEstimator', 'IntrinsicsToCalibrationMatrix', 'IsTriangulatedPointInFrontOfCameras', 'JACOBI', 'KNEIP', 'L2_MINIMIZATION', 'LAGRANGE_DUAL', 'LAPACK', 'LEAST_UNSQUARED_DEVIATION', 'LIGT', 'LINEAR', 'LINEAR_TRIPLET', 'LMED', 'LagrangeDualRotationEstimator', 'LeastUnsquaredDeviationPositionEstimator', 'LeastUnsquaredDeviationPositionEstimatorOptions', 'LiGTPositionEstimator', 'LiGTPositionEstimatorOptions', 'LinearPositionEstimator', 'LinearPositionEstimatorOptions', 'LinearRotationEstimator', 'LinearSolverType', 'LocalizeViewToReconstruction', 'LocalizeViewToReconstructionOptions', 'LossFunctionType', 'MIDPOINT', 'MLPnP', 'NONE', 'NONLINEAR', 'NonlinearPositionEstimator', 'NonlinearPositionEstimatorOptions', 'NonlinearRotationEstimator', 'NormalizedEightPointFundamentalMatrix', 'NumEstimatedTracks', 'NumEstimatedViews', 'ORTHOGRAPHIC', 'OptimizeAbsolutePoseOnNormFeatures', 'OptimizeAlignmentSim3', 'OptimizeIntrinsicsType', 'OptimizeRelativePositionWithKnownRotation', 'OrthographicCameraModel', 'PINHOLE', 'PINHOLE_RADIAL_TANGENTIAL', 'POINT_TO_PLANE', 'POINT_TO_POINT', 'PRINCIPAL_POINTS', 'PROSAC', 'PinholeCameraModel', 'PinholeRadialTangentialCameraModel', 'PlanarUncalibratedOrthographicPose', 'Plane', 'PnPType', 'PoseFromThreePoints', 'PositionEstimator', 'PositionFromTwoRays', 'PreconditionerType', 'PriorScalar', 'PriorVector2d', 'PriorVector3d', 'PriorVector4d', 'ProjectionMatricesFromFundamentalMatrix', 'RADIAL_DISTORTION', 'RANSAC', 'ROBUST_L1L2', 'ROBUST_POINT_TO_POINT', 'RadialDistUncalibratedAbsolutePoseMetaData', 'RadialDistortionFeatureCorrespondence', 'RansacType', 'Reconstruction', 'ReconstructionBuilder', 'ReconstructionBuilderOptions', 'ReconstructionEstimator', 'ReconstructionEstimatorOptions', 'ReconstructionEstimatorSummary', 'ReconstructionEstimatorType', 'RelativePose', 'RelativePoseFromTwoPointsWithKnownRotation', 'RelativeRotationsFromViewGraph', 'RemoveDisconnectedViewPairs', 'RigidTransformation', 'RobustRotationEstimator', 'RobustRotationEstimatorOptions', 'RotationEstimator', 'SCHUR_JACOBI', 'SINGLE_LINKAGE', 'SKEW', 'SOFTLONE', 'SPARSE_NORMAL_CHOLESKY', 'SPARSE_SCHUR', 'SQPnP', 'SUITE_SPARSE', 'SVD', 'SelectGoodTracksForBundleAdjustment', 'SetCameraIntrinsicsFromPriors', 'SetOutlierTracksToUnestimated', 'SetReconstructionFromEstimatedPoses', 'SetUnderconstrainedTracksToUnestimated', 'SetUnderconstrainedViewsToUnestimated', 'SevenPointFundamentalMatrix', 'SharedFocalLengthsFromFundamentalMatrix', 'Sim3AlignmentOptions', 'Sim3AlignmentSummary', 'Sim3AlignmentType', 'Sim3FromRotationTranslationScale', 'Sim3ToHomogeneousMatrix', 'Sim3ToRotationTranslationScale', 'SimTransformPartialRotation', 'SimilarityTransformation', 'SparseLinearAlgebraLibraryType', 'SufficientTriangulationAngle', 'SwapCameras', 'TANGENTIAL_DISTORTION', 'TRIVIAL', 'TUKEY', 'ThreePointRelativePosePartialRotation', 'Track', 'TrackBuilder', 'TrackEstimator', 'TrackEstimatorOptions', 'TrackEstimatorSummary', 'TrackParametrizationType', 'TransformReconstruction', 'TransformReconstruction4', 'Triangulate', 'TriangulateDLT', 'TriangulateMidpoint', 'TriangulateNView', 'TriangulateNViewSVD', 'TriangulationMethodType', 'TwoPointPosePartialRotation', 'TwoViewBundleAdjustmentOptions', 'TwoViewInfo', 'UncalibratedAbsolutePose', 'UncalibratedRelativePose', 'UpdateFeaturesInView', 'View', 'ViewGraph', 'VisibilityClusteringType', 'VisibilityPyramid', 'XYZW', 'XYZW_MANIFOLD', 'kInvalidTrackId', 'kInvalidViewId']
 class BundleAdjuster:
-    def AddTrack(self, arg0: typing.SupportsInt) -> None:
+    @staticmethod
+    def AddTrack(*args, **kwargs):
         ...
-    def AddView(self, arg0: typing.SupportsInt) -> None:
+    @staticmethod
+    def AddView(*args, **kwargs):
         ...
-    def Optimize(self) -> BundleAdjustmentSummary:
+    @staticmethod
+    def Optimize(*args, **kwargs):
         ...
 class BundleAdjustmentOptions:
-    constant_camera_orientation: bool
-    constant_camera_position: bool
-    dense_linear_algebra_library_type: ...
-    intrinsics_to_optimize: ...
-    linear_solver_type: ...
-    loss_function_type: ...
-    optimize_for_forward_facing_trajectory: bool
-    orthographic_camera: bool
-    preconditioner_type: ...
-    sparse_linear_algebra_library_type: ...
-    use_depth_priors: bool
-    use_gravity_priors: bool
-    use_homogeneous_point_parametrization: bool
-    use_inner_iterations: bool
-    use_inverse_depth_parametrization: bool
-    use_mixed_precision_solves: bool
-    use_orientation_priors: bool
-    use_position_priors: bool
-    verbose: bool
-    visibility_clustering_type: ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def function_tolerance(self) -> float:
+    def constant_camera_orientation(*args, **kwargs):
+        ...
+    @constant_camera_orientation.setter
+    def constant_camera_orientation(*args, **kwargs):
+        ...
+    @property
+    def constant_camera_position(*args, **kwargs):
+        ...
+    @constant_camera_position.setter
+    def constant_camera_position(*args, **kwargs):
+        ...
+    @property
+    def dense_linear_algebra_library_type(*args, **kwargs):
+        ...
+    @dense_linear_algebra_library_type.setter
+    def dense_linear_algebra_library_type(*args, **kwargs):
+        ...
+    @property
+    def function_tolerance(*args, **kwargs):
         ...
     @function_tolerance.setter
-    def function_tolerance(self, arg0: typing.SupportsFloat) -> None:
+    def function_tolerance(*args, **kwargs):
         ...
     @property
-    def gradient_tolerance(self) -> float:
+    def gradient_tolerance(*args, **kwargs):
         ...
     @gradient_tolerance.setter
-    def gradient_tolerance(self, arg0: typing.SupportsFloat) -> None:
+    def gradient_tolerance(*args, **kwargs):
         ...
     @property
-    def max_num_iterations(self) -> int:
+    def intrinsics_to_optimize(*args, **kwargs):
+        ...
+    @intrinsics_to_optimize.setter
+    def intrinsics_to_optimize(*args, **kwargs):
+        ...
+    @property
+    def linear_solver_type(*args, **kwargs):
+        ...
+    @linear_solver_type.setter
+    def linear_solver_type(*args, **kwargs):
+        ...
+    @property
+    def loss_function_type(*args, **kwargs):
+        ...
+    @loss_function_type.setter
+    def loss_function_type(*args, **kwargs):
+        ...
+    @property
+    def max_num_iterations(*args, **kwargs):
         ...
     @max_num_iterations.setter
-    def max_num_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_num_iterations(*args, **kwargs):
         ...
     @property
-    def max_num_refinement_iterations(self) -> int:
+    def max_num_refinement_iterations(*args, **kwargs):
         ...
     @max_num_refinement_iterations.setter
-    def max_num_refinement_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_num_refinement_iterations(*args, **kwargs):
         ...
     @property
-    def max_solver_time_in_seconds(self) -> float:
+    def max_solver_time_in_seconds(*args, **kwargs):
         ...
     @max_solver_time_in_seconds.setter
-    def max_solver_time_in_seconds(self, arg0: typing.SupportsFloat) -> None:
+    def max_solver_time_in_seconds(*args, **kwargs):
         ...
     @property
-    def max_trust_region_radius(self) -> float:
+    def max_trust_region_radius(*args, **kwargs):
         ...
     @max_trust_region_radius.setter
-    def max_trust_region_radius(self, arg0: typing.SupportsFloat) -> None:
+    def max_trust_region_radius(*args, **kwargs):
         ...
     @property
-    def num_threads(self) -> int:
+    def num_threads(*args, **kwargs):
         ...
     @num_threads.setter
-    def num_threads(self, arg0: typing.SupportsInt) -> None:
+    def num_threads(*args, **kwargs):
         ...
     @property
-    def parameter_tolerance(self) -> float:
+    def optimize_for_forward_facing_trajectory(*args, **kwargs):
+        ...
+    @optimize_for_forward_facing_trajectory.setter
+    def optimize_for_forward_facing_trajectory(*args, **kwargs):
+        ...
+    @property
+    def orthographic_camera(*args, **kwargs):
+        ...
+    @orthographic_camera.setter
+    def orthographic_camera(*args, **kwargs):
+        ...
+    @property
+    def parameter_tolerance(*args, **kwargs):
         ...
     @parameter_tolerance.setter
-    def parameter_tolerance(self, arg0: typing.SupportsFloat) -> None:
+    def parameter_tolerance(*args, **kwargs):
         ...
     @property
-    def robust_loss_width(self) -> float:
+    def preconditioner_type(*args, **kwargs):
+        ...
+    @preconditioner_type.setter
+    def preconditioner_type(*args, **kwargs):
+        ...
+    @property
+    def robust_loss_width(*args, **kwargs):
         ...
     @robust_loss_width.setter
-    def robust_loss_width(self, arg0: typing.SupportsFloat) -> None:
+    def robust_loss_width(*args, **kwargs):
         ...
     @property
-    def robust_loss_width_depth_prior(self) -> float:
+    def robust_loss_width_depth_prior(*args, **kwargs):
         ...
     @robust_loss_width_depth_prior.setter
-    def robust_loss_width_depth_prior(self, arg0: typing.SupportsFloat) -> None:
+    def robust_loss_width_depth_prior(*args, **kwargs):
+        ...
+    @property
+    def sparse_linear_algebra_library_type(*args, **kwargs):
+        ...
+    @sparse_linear_algebra_library_type.setter
+    def sparse_linear_algebra_library_type(*args, **kwargs):
+        ...
+    @property
+    def use_depth_priors(*args, **kwargs):
+        ...
+    @use_depth_priors.setter
+    def use_depth_priors(*args, **kwargs):
+        ...
+    @property
+    def use_gravity_priors(*args, **kwargs):
+        ...
+    @use_gravity_priors.setter
+    def use_gravity_priors(*args, **kwargs):
+        ...
+    @property
+    def use_homogeneous_point_parametrization(*args, **kwargs):
+        ...
+    @use_homogeneous_point_parametrization.setter
+    def use_homogeneous_point_parametrization(*args, **kwargs):
+        ...
+    @property
+    def use_inner_iterations(*args, **kwargs):
+        ...
+    @use_inner_iterations.setter
+    def use_inner_iterations(*args, **kwargs):
+        ...
+    @property
+    def use_inverse_depth_parametrization(*args, **kwargs):
+        ...
+    @use_inverse_depth_parametrization.setter
+    def use_inverse_depth_parametrization(*args, **kwargs):
+        ...
+    @property
+    def use_mixed_precision_solves(*args, **kwargs):
+        ...
+    @use_mixed_precision_solves.setter
+    def use_mixed_precision_solves(*args, **kwargs):
+        ...
+    @property
+    def use_orientation_priors(*args, **kwargs):
+        ...
+    @use_orientation_priors.setter
+    def use_orientation_priors(*args, **kwargs):
+        ...
+    @property
+    def use_position_priors(*args, **kwargs):
+        ...
+    @use_position_priors.setter
+    def use_position_priors(*args, **kwargs):
+        ...
+    @property
+    def verbose(*args, **kwargs):
+        ...
+    @verbose.setter
+    def verbose(*args, **kwargs):
+        ...
+    @property
+    def visibility_clustering_type(*args, **kwargs):
+        ...
+    @visibility_clustering_type.setter
+    def visibility_clustering_type(*args, **kwargs):
         ...
 class BundleAdjustmentSummary:
-    success: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def final_cost(self) -> float:
+    def final_cost(*args, **kwargs):
         ...
     @final_cost.setter
-    def final_cost(self, arg0: typing.SupportsFloat) -> None:
+    def final_cost(*args, **kwargs):
         ...
     @property
-    def initial_cost(self) -> float:
+    def initial_cost(*args, **kwargs):
         ...
     @initial_cost.setter
-    def initial_cost(self, arg0: typing.SupportsFloat) -> None:
+    def initial_cost(*args, **kwargs):
         ...
     @property
-    def setup_time_in_seconds(self) -> float:
+    def setup_time_in_seconds(*args, **kwargs):
         ...
     @setup_time_in_seconds.setter
-    def setup_time_in_seconds(self, arg0: typing.SupportsFloat) -> None:
+    def setup_time_in_seconds(*args, **kwargs):
         ...
     @property
-    def solve_time_in_seconds(self) -> float:
+    def solve_time_in_seconds(*args, **kwargs):
         ...
     @solve_time_in_seconds.setter
-    def solve_time_in_seconds(self, arg0: typing.SupportsFloat) -> None:
+    def solve_time_in_seconds(*args, **kwargs):
+        ...
+    @property
+    def success(*args, **kwargs):
+        ...
+    @success.setter
+    def success(*args, **kwargs):
         ...
 class CalibratedAbsolutePose:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def position(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def position(*args, **kwargs):
         ...
     @position.setter
-    def position(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def position(*args, **kwargs):
         ...
     @property
-    def rotation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    def rotation(*args, **kwargs):
         ...
     @rotation.setter
-    def rotation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    def rotation(*args, **kwargs):
         ...
 class Camera:
-    def CameraIntrinsics(self) -> CameraIntrinsicsModel:
+    @staticmethod
+    def CameraIntrinsics(*args, **kwargs):
         ...
-    def CameraIntrinsicsPriorFromIntrinsics(self) -> ...:
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
         ...
-    def DeepCopy(self, arg0: Camera) -> None:
+    @staticmethod
+    def DeepCopy(*args, **kwargs):
         ...
-    def FocalLength(self) -> float:
+    @staticmethod
+    def FocalLength(*args, **kwargs):
         ...
-    def GetCalibrationMatrix(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
         ...
-    def GetCameraIntrinsicsModelType(self) -> ...:
+    @staticmethod
+    def GetCameraIntrinsicsModelType(*args, **kwargs):
         ...
-    def GetOrientationAsAngleAxis(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def GetOrientationAsAngleAxis(*args, **kwargs):
         ...
-    def GetOrientationAsRotationMatrix(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    @staticmethod
+    def GetOrientationAsRotationMatrix(*args, **kwargs):
         ...
-    def GetPosition(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def GetPosition(*args, **kwargs):
         ...
-    def GetProjectionMatrix(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 4]"]:
+    @staticmethod
+    def GetProjectionMatrix(*args, **kwargs):
         ...
-    def ImageHeight(self) -> int:
+    @staticmethod
+    def ImageHeight(*args, **kwargs):
         ...
-    def ImageWidth(self) -> int:
+    @staticmethod
+    def ImageWidth(*args, **kwargs):
         ...
-    def InitializeFromProjectionMatrix(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt, arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"]) -> bool:
+    @staticmethod
+    def InitializeFromProjectionMatrix(*args, **kwargs):
         ...
-    def PixelToNormalizedCoordinates(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def PixelToNormalizedCoordinates(*args, **kwargs):
         ...
-    def PixelToUnitDepthRay(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def PixelToUnitDepthRay(*args, **kwargs):
         ...
-    def PrincipalPointX(self) -> float:
+    @staticmethod
+    def PrincipalPointX(*args, **kwargs):
         ...
-    def PrincipalPointY(self) -> float:
+    @staticmethod
+    def PrincipalPointY(*args, **kwargs):
         ...
-    def PrintCameraIntrinsics(self) -> None:
+    @staticmethod
+    def PrintCameraIntrinsics(*args, **kwargs):
         ...
-    @typing.overload
-    def ProjectPoint(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[4, 1]"]) -> tuple[float, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]]:
+    @staticmethod
+    def ProjectPoint(*args, **kwargs):
         ...
-    @typing.overload
-    def ProjectPoint(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> tuple[float, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]]:
+    @staticmethod
+    def SetCameraIntrinsicsModelType(*args, **kwargs):
         ...
-    def SetCameraIntrinsicsModelType(self, arg0: ...) -> None:
+    @staticmethod
+    def SetFocalLength(*args, **kwargs):
         ...
-    def SetFocalLength(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
         ...
-    def SetFromCameraIntrinsicsPriors(self, arg0: ...) -> None:
+    @staticmethod
+    def SetImageSize(*args, **kwargs):
         ...
-    def SetImageSize(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt) -> None:
+    @staticmethod
+    def SetOrientationFromAngleAxis(*args, **kwargs):
         ...
-    def SetOrientationFromAngleAxis(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    @staticmethod
+    def SetOrientationFromRotationMatrix(*args, **kwargs):
         ...
-    def SetOrientationFromRotationMatrix(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def SetPosition(*args, **kwargs):
         ...
-    def SetPosition(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    @staticmethod
+    def SetPrincipalPoint(*args, **kwargs):
         ...
-    def SetPrincipalPoint(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> None:
-        ...
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: Camera) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: ...) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class CameraAndFeatureCorrespondence2D3D:
-    camera: Camera
-    observation: Feature
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def point3d(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]:
+    def camera(*args, **kwargs):
+        ...
+    @camera.setter
+    def camera(*args, **kwargs):
+        ...
+    @property
+    def observation(*args, **kwargs):
+        ...
+    @observation.setter
+    def observation(*args, **kwargs):
+        ...
+    @property
+    def point3d(*args, **kwargs):
         ...
     @point3d.setter
-    def point3d(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[4, 1]"]) -> None:
+    def point3d(*args, **kwargs):
         ...
 class CameraIntrinsicsModel:
-    def CameraToImageCoordinates(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]:
+    @staticmethod
+    def CameraToImageCoordinates(*args, **kwargs):
         ...
-    def FocalLength(self) -> float:
+    @staticmethod
+    def FocalLength(*args, **kwargs):
         ...
-    def GetParameter(self, arg0: typing.SupportsInt) -> float:
+    @staticmethod
+    def GetParameter(*args, **kwargs):
         ...
-    def ImageToCameraCoordinates(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def ImageToCameraCoordinates(*args, **kwargs):
         ...
-    def PrincipalPointX(self) -> float:
+    @staticmethod
+    def PrincipalPointX(*args, **kwargs):
         ...
-    def PrincipalPointY(self) -> float:
+    @staticmethod
+    def PrincipalPointY(*args, **kwargs):
         ...
-    def SetFocalLength(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetFocalLength(*args, **kwargs):
         ...
-    def SetParameter(self, arg0: typing.SupportsInt, arg1: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetParameter(*args, **kwargs):
         ...
-    def SetPrincipalPoint(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetPrincipalPoint(*args, **kwargs):
         ...
 class CameraIntrinsicsModelType:
     """
@@ -268,58 +412,129 @@ class CameraIntrinsicsModelType:
     PINHOLE: typing.ClassVar[CameraIntrinsicsModelType]  # value = <CameraIntrinsicsModelType.PINHOLE: 0>
     PINHOLE_RADIAL_TANGENTIAL: typing.ClassVar[CameraIntrinsicsModelType]  # value = <CameraIntrinsicsModelType.PINHOLE_RADIAL_TANGENTIAL: 1>
     __members__: typing.ClassVar[dict[str, CameraIntrinsicsModelType]]  # value = {'INVALID': <CameraIntrinsicsModelType.INVALID: -1>, 'PINHOLE': <CameraIntrinsicsModelType.PINHOLE: 0>, 'PINHOLE_RADIAL_TANGENTIAL': <CameraIntrinsicsModelType.PINHOLE_RADIAL_TANGENTIAL: 1>, 'FISHEYE': <CameraIntrinsicsModelType.FISHEYE: 2>, 'FOV': <CameraIntrinsicsModelType.FOV: 3>, 'DIVISION_UNDISTORTION': <CameraIntrinsicsModelType.DIVISION_UNDISTORTION: 4>, 'DOUBLE_SPHERE': <CameraIntrinsicsModelType.DOUBLE_SPHERE: 5>, 'EXTENDED_UNIFIED': <CameraIntrinsicsModelType.EXTENDED_UNIFIED: 6>, 'ORTHOGRAPHIC': <CameraIntrinsicsModelType.ORTHOGRAPHIC: 7>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class CameraIntrinsicsPrior:
-    altitude: PriorScalar
-    aspect_ratio: PriorScalar
-    camera_intrinsics_model_type: str
-    focal_length: PriorScalar
-    latitude: PriorScalar
-    longitude: PriorScalar
-    orientation: PriorVector3d
-    position: PriorVector3d
-    principal_point: PriorVector2d
-    radial_distortion: PriorVector4d
-    skew: PriorScalar
-    tangential_distortion: PriorVector2d
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def image_height(self) -> int:
+    def altitude(*args, **kwargs):
+        ...
+    @altitude.setter
+    def altitude(*args, **kwargs):
+        ...
+    @property
+    def aspect_ratio(*args, **kwargs):
+        ...
+    @aspect_ratio.setter
+    def aspect_ratio(*args, **kwargs):
+        ...
+    @property
+    def camera_intrinsics_model_type(*args, **kwargs):
+        ...
+    @camera_intrinsics_model_type.setter
+    def camera_intrinsics_model_type(*args, **kwargs):
+        ...
+    @property
+    def focal_length(*args, **kwargs):
+        ...
+    @focal_length.setter
+    def focal_length(*args, **kwargs):
+        ...
+    @property
+    def image_height(*args, **kwargs):
         ...
     @image_height.setter
-    def image_height(self, arg0: typing.SupportsInt) -> None:
+    def image_height(*args, **kwargs):
         ...
     @property
-    def image_width(self) -> int:
+    def image_width(*args, **kwargs):
         ...
     @image_width.setter
-    def image_width(self, arg0: typing.SupportsInt) -> None:
+    def image_width(*args, **kwargs):
+        ...
+    @property
+    def latitude(*args, **kwargs):
+        ...
+    @latitude.setter
+    def latitude(*args, **kwargs):
+        ...
+    @property
+    def longitude(*args, **kwargs):
+        ...
+    @longitude.setter
+    def longitude(*args, **kwargs):
+        ...
+    @property
+    def orientation(*args, **kwargs):
+        ...
+    @orientation.setter
+    def orientation(*args, **kwargs):
+        ...
+    @property
+    def position(*args, **kwargs):
+        ...
+    @position.setter
+    def position(*args, **kwargs):
+        ...
+    @property
+    def principal_point(*args, **kwargs):
+        ...
+    @principal_point.setter
+    def principal_point(*args, **kwargs):
+        ...
+    @property
+    def radial_distortion(*args, **kwargs):
+        ...
+    @radial_distortion.setter
+    def radial_distortion(*args, **kwargs):
+        ...
+    @property
+    def skew(*args, **kwargs):
+        ...
+    @skew.setter
+    def skew(*args, **kwargs):
+        ...
+    @property
+    def tangential_distortion(*args, **kwargs):
+        ...
+    @tangential_distortion.setter
+    def tangential_distortion(*args, **kwargs):
         ...
 class DenseLinearAlgebraLibraryType:
     """
@@ -328,280 +543,335 @@ class DenseLinearAlgebraLibraryType:
       EIGEN
     
       LAPACK
+    
+      CUDA
     """
+    CUDA: typing.ClassVar[DenseLinearAlgebraLibraryType]  # value = <DenseLinearAlgebraLibraryType.CUDA: 2>
     EIGEN: typing.ClassVar[DenseLinearAlgebraLibraryType]  # value = <DenseLinearAlgebraLibraryType.EIGEN: 0>
     LAPACK: typing.ClassVar[DenseLinearAlgebraLibraryType]  # value = <DenseLinearAlgebraLibraryType.LAPACK: 1>
-    __members__: typing.ClassVar[dict[str, DenseLinearAlgebraLibraryType]]  # value = {'EIGEN': <DenseLinearAlgebraLibraryType.EIGEN: 0>, 'LAPACK': <DenseLinearAlgebraLibraryType.LAPACK: 1>}
-    def __eq__(self, other: typing.Any) -> bool:
+    __members__: typing.ClassVar[dict[str, DenseLinearAlgebraLibraryType]]  # value = {'EIGEN': <DenseLinearAlgebraLibraryType.EIGEN: 0>, 'LAPACK': <DenseLinearAlgebraLibraryType.LAPACK: 1>, 'CUDA': <DenseLinearAlgebraLibraryType.CUDA: 2>}
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class DivisionUndistortionCameraModel(CameraIntrinsicsModel):
-    def AspectRatio(self) -> float:
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
         ...
-    def CameraIntrinsicsPriorFromIntrinsics(self) -> ...:
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
         ...
-    def GetCalibrationMatrix(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
         ...
-    def GetSubsetFromOptimizeIntrinsicsType(self, arg0: ...) -> list[int]:
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
         ...
-    def NumParameters(self) -> int:
+    @staticmethod
+    def NumParameters(*args, **kwargs):
         ...
-    def PrintIntrinsics(self) -> None:
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
         ...
-    def RadialDistortion1(self) -> float:
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
         ...
-    def SetAspectRatio(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
         ...
-    def SetFromCameraIntrinsicsPriors(self, arg0: ...) -> None:
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
         ...
-    def SetRadialDistortion(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
         ...
-    def Type(self) -> ...:
+    @staticmethod
+    def Type(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def kIntrinsicsSize(self) -> int:
+    def kIntrinsicsSize(*args, **kwargs):
         ...
 class EstimateTwoViewInfoOptions:
-    ransac_type: RansacType
-    use_lo: bool
-    use_mle: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def expected_ransac_confidence(self) -> float:
+    def expected_ransac_confidence(*args, **kwargs):
         ...
     @expected_ransac_confidence.setter
-    def expected_ransac_confidence(self, arg0: typing.SupportsFloat) -> None:
+    def expected_ransac_confidence(*args, **kwargs):
         ...
     @property
-    def lo_start_iterations(self) -> int:
+    def lo_start_iterations(*args, **kwargs):
         ...
     @lo_start_iterations.setter
-    def lo_start_iterations(self, arg0: typing.SupportsInt) -> None:
+    def lo_start_iterations(*args, **kwargs):
         ...
     @property
-    def max_focal_length(self) -> float:
+    def max_focal_length(*args, **kwargs):
         ...
     @max_focal_length.setter
-    def max_focal_length(self, arg0: typing.SupportsFloat) -> None:
+    def max_focal_length(*args, **kwargs):
         ...
     @property
-    def max_ransac_iterations(self) -> int:
+    def max_ransac_iterations(*args, **kwargs):
         ...
     @max_ransac_iterations.setter
-    def max_ransac_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_ransac_iterations(*args, **kwargs):
         ...
     @property
-    def max_sampson_error_pixels(self) -> float:
+    def max_sampson_error_pixels(*args, **kwargs):
         ...
     @max_sampson_error_pixels.setter
-    def max_sampson_error_pixels(self, arg0: typing.SupportsFloat) -> None:
+    def max_sampson_error_pixels(*args, **kwargs):
         ...
     @property
-    def min_focal_length(self) -> float:
+    def min_focal_length(*args, **kwargs):
         ...
     @min_focal_length.setter
-    def min_focal_length(self, arg0: typing.SupportsFloat) -> None:
+    def min_focal_length(*args, **kwargs):
         ...
     @property
-    def min_ransac_iterations(self) -> int:
+    def min_ransac_iterations(*args, **kwargs):
         ...
     @min_ransac_iterations.setter
-    def min_ransac_iterations(self, arg0: typing.SupportsInt) -> None:
+    def min_ransac_iterations(*args, **kwargs):
+        ...
+    @property
+    def ransac_type(*args, **kwargs):
+        ...
+    @ransac_type.setter
+    def ransac_type(*args, **kwargs):
+        ...
+    @property
+    def use_lo(*args, **kwargs):
+        ...
+    @use_lo.setter
+    def use_lo(*args, **kwargs):
+        ...
+    @property
+    def use_mle(*args, **kwargs):
+        ...
+    @use_mle.setter
+    def use_mle(*args, **kwargs):
         ...
 class FOVCameraModel(CameraIntrinsicsModel):
-    def AspectRatio(self) -> float:
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
         ...
-    def CameraIntrinsicsPriorFromIntrinsics(self) -> ...:
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
         ...
-    def GetCalibrationMatrix(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
         ...
-    def GetSubsetFromOptimizeIntrinsicsType(self, arg0: ...) -> list[int]:
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
         ...
-    def NumParameters(self) -> int:
+    @staticmethod
+    def NumParameters(*args, **kwargs):
         ...
-    def PrintIntrinsics(self) -> None:
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
         ...
-    def RadialDistortion1(self) -> float:
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
         ...
-    def SetAspectRatio(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
         ...
-    def SetFromCameraIntrinsicsPriors(self, arg0: ...) -> None:
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
         ...
-    def SetRadialDistortion(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
         ...
-    def Type(self) -> ...:
+    @staticmethod
+    def Type(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def kIntrinsicsSize(self) -> int:
+    def kIntrinsicsSize(*args, **kwargs):
         ...
 class Feature:
-    @typing.overload
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    @typing.overload
-    def __init__(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> None:
+    @staticmethod
+    def get_depth_prior(*args, **kwargs):
         ...
-    @typing.overload
-    def __init__(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat, arg2: typing.SupportsFloat) -> None:
+    @staticmethod
+    def get_depth_prior_variance(*args, **kwargs):
         ...
-    @typing.overload
-    def __init__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> None:
+    @staticmethod
+    def x(*args, **kwargs):
         ...
-    @typing.overload
-    def __init__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"], arg1: typing.SupportsFloat) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 2]"]) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 2]"], arg2: typing.SupportsFloat, arg3: typing.SupportsFloat) -> None:
-        ...
-    def get_depth_prior(self) -> float:
-        ...
-    def get_depth_prior_variance(self) -> float:
-        ...
-    def x(self) -> float:
-        ...
-    def y(self) -> float:
+    @staticmethod
+    def y(*args, **kwargs):
         ...
     @property
-    def covariance(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 2]"]:
+    def covariance(*args, **kwargs):
         ...
     @covariance.setter
-    def covariance(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 2]"]) -> None:
+    def covariance(*args, **kwargs):
         ...
     @property
-    def depth_prior(self) -> float:
+    def depth_prior(*args, **kwargs):
         ...
     @depth_prior.setter
-    def depth_prior(self, arg0: typing.SupportsFloat) -> None:
+    def depth_prior(*args, **kwargs):
         ...
     @property
-    def depth_prior_variance(self) -> float:
+    def depth_prior_variance(*args, **kwargs):
         ...
     @depth_prior_variance.setter
-    def depth_prior_variance(self, arg0: typing.SupportsFloat) -> None:
+    def depth_prior_variance(*args, **kwargs):
         ...
     @property
-    def point(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]:
+    def point(*args, **kwargs):
         ...
     @point.setter
-    def point(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> None:
+    def point(*args, **kwargs):
         ...
 class FeatureCorrespondence2D3D:
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def feature(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]:
+    def feature(*args, **kwargs):
         ...
     @feature.setter
-    def feature(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> None:
+    def feature(*args, **kwargs):
         ...
     @property
-    def world_point(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def world_point(*args, **kwargs):
         ...
     @world_point.setter
-    def world_point(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def world_point(*args, **kwargs):
         ...
 class FilterViewPairsFromRelativeTranslationOptions:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def num_iterations(self) -> int:
+    def num_iterations(*args, **kwargs):
         ...
     @num_iterations.setter
-    def num_iterations(self, arg0: typing.SupportsInt) -> None:
+    def num_iterations(*args, **kwargs):
         ...
     @property
-    def num_threads(self) -> int:
+    def num_threads(*args, **kwargs):
         ...
     @num_threads.setter
-    def num_threads(self, arg0: typing.SupportsInt) -> None:
+    def num_threads(*args, **kwargs):
         ...
     @property
-    def translation_projection_tolerance(self) -> float:
+    def translation_projection_tolerance(*args, **kwargs):
         ...
     @translation_projection_tolerance.setter
-    def translation_projection_tolerance(self, arg0: typing.SupportsFloat) -> None:
+    def translation_projection_tolerance(*args, **kwargs):
         ...
 class FisheyeCameraModel(CameraIntrinsicsModel):
-    def AspectRatio(self) -> float:
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
         ...
-    def CameraIntrinsicsPriorFromIntrinsics(self) -> ...:
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
         ...
-    def GetCalibrationMatrix(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
         ...
-    def GetSubsetFromOptimizeIntrinsicsType(self, arg0: ...) -> list[int]:
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
         ...
-    def NumParameters(self) -> int:
+    @staticmethod
+    def NumParameters(*args, **kwargs):
         ...
-    def PrintIntrinsics(self) -> None:
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
         ...
-    def RadialDistortion1(self) -> float:
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
         ...
-    def RadialDistortion2(self) -> float:
+    @staticmethod
+    def RadialDistortion2(*args, **kwargs):
         ...
-    def RadialDistortion3(self) -> float:
+    @staticmethod
+    def RadialDistortion3(*args, **kwargs):
         ...
-    def RadialDistortion4(self) -> float:
+    @staticmethod
+    def RadialDistortion4(*args, **kwargs):
         ...
-    def SetAspectRatio(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
         ...
-    def SetFromCameraIntrinsicsPriors(self, arg0: ...) -> None:
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
         ...
-    def SetRadialDistortion(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat, arg2: typing.SupportsFloat, arg3: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
         ...
-    def SetSkew(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetSkew(*args, **kwargs):
         ...
-    def Skew(self) -> float:
+    @staticmethod
+    def Skew(*args, **kwargs):
         ...
-    def Type(self) -> ...:
+    @staticmethod
+    def Type(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def kIntrinsicsSize(self) -> int:
+    def kIntrinsicsSize(*args, **kwargs):
         ...
 class GPSConverter:
     @staticmethod
-    def ECEFToLLA(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def ECEFToLLA(*args, **kwargs):
         ...
     @staticmethod
-    def LLAToECEF(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def LLAToECEF(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class GlobalPositionEstimatorType:
     """
@@ -620,36 +890,48 @@ class GlobalPositionEstimatorType:
     LINEAR_TRIPLET: typing.ClassVar[GlobalPositionEstimatorType]  # value = <GlobalPositionEstimatorType.LINEAR_TRIPLET: 1>
     NONLINEAR: typing.ClassVar[GlobalPositionEstimatorType]  # value = <GlobalPositionEstimatorType.NONLINEAR: 0>
     __members__: typing.ClassVar[dict[str, GlobalPositionEstimatorType]]  # value = {'NONLINEAR': <GlobalPositionEstimatorType.NONLINEAR: 0>, 'LINEAR_TRIPLET': <GlobalPositionEstimatorType.LINEAR_TRIPLET: 1>, 'LEAST_UNSQUARED_DEVIATION': <GlobalPositionEstimatorType.LEAST_UNSQUARED_DEVIATION: 2>, 'LIGT': <GlobalPositionEstimatorType.LIGT: 3>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class GlobalReconstructionEstimator(ReconstructionEstimator):
-    def Estimate(self, arg0: ..., arg1: ...) -> ReconstructionEstimatorSummary:
+    @staticmethod
+    def Estimate(*args, **kwargs):
         ...
-    def __init__(self, arg0: ...) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class GlobalRotationEstimatorType:
     """
@@ -671,142 +953,172 @@ class GlobalRotationEstimatorType:
     NONLINEAR: typing.ClassVar[GlobalRotationEstimatorType]  # value = <GlobalRotationEstimatorType.NONLINEAR: 1>
     ROBUST_L1L2: typing.ClassVar[GlobalRotationEstimatorType]  # value = <GlobalRotationEstimatorType.ROBUST_L1L2: 0>
     __members__: typing.ClassVar[dict[str, GlobalRotationEstimatorType]]  # value = {'ROBUST_L1L2': <GlobalRotationEstimatorType.ROBUST_L1L2: 0>, 'NONLINEAR': <GlobalRotationEstimatorType.NONLINEAR: 1>, 'LINEAR': <GlobalRotationEstimatorType.LINEAR: 2>, 'LAGRANGE_DUAL': <GlobalRotationEstimatorType.LAGRANGE_DUAL: 3>, 'HYBRID': <GlobalRotationEstimatorType.HYBRID: 4>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class HybridReconstructionEstimator(ReconstructionEstimator):
-    def Estimate(self, arg0: ..., arg1: ...) -> ReconstructionEstimatorSummary:
+    @staticmethod
+    def Estimate(*args, **kwargs):
         ...
-    def __init__(self, arg0: ...) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class HybridRotationEstimator(RotationEstimator):
-    def EstimateRotations(self, arg0: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> None:
+    @staticmethod
+    def EstimateRotations(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class IncrementalReconstructionEstimator(ReconstructionEstimator):
-    def Estimate(self, arg0: ..., arg1: ...) -> ReconstructionEstimatorSummary:
+    @staticmethod
+    def Estimate(*args, **kwargs):
         ...
-    def __init__(self, arg0: ...) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class LagrangeDualRotationEstimator(RotationEstimator):
-    def EstimateRotations(self, arg0: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> None:
+    @staticmethod
+    def EstimateRotations(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class LeastUnsquaredDeviationPositionEstimator(PositionEstimator):
-    def EstimatePositions(self, arg0: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> dict[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+    @staticmethod
+    def EstimatePositions(*args, **kwargs):
         ...
-    def __init__(self, arg0: LeastUnsquaredDeviationPositionEstimatorOptions) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class LeastUnsquaredDeviationPositionEstimatorOptions:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def convergence_criterion(self) -> float:
+    def convergence_criterion(*args, **kwargs):
         ...
     @convergence_criterion.setter
-    def convergence_criterion(self, arg0: typing.SupportsFloat) -> None:
+    def convergence_criterion(*args, **kwargs):
         ...
     @property
-    def max_num_iterations(self) -> int:
+    def max_num_iterations(*args, **kwargs):
         ...
     @max_num_iterations.setter
-    def max_num_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_num_iterations(*args, **kwargs):
         ...
     @property
-    def max_num_reweighted_iterations(self) -> int:
+    def max_num_reweighted_iterations(*args, **kwargs):
         ...
     @max_num_reweighted_iterations.setter
-    def max_num_reweighted_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_num_reweighted_iterations(*args, **kwargs):
         ...
 class LiGTPositionEstimator(PositionEstimator):
-    def EstimatePositions(self, arg0: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> dict[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+    @staticmethod
+    def EstimatePositions(*args, **kwargs):
         ...
-    def __init__(self, arg0: LiGTPositionEstimatorOptions, arg1: Reconstruction) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class LiGTPositionEstimatorOptions:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def eigensolver_threshold(self) -> float:
+    def eigensolver_threshold(*args, **kwargs):
         ...
     @eigensolver_threshold.setter
-    def eigensolver_threshold(self, arg0: typing.SupportsFloat) -> None:
+    def eigensolver_threshold(*args, **kwargs):
         ...
     @property
-    def max_num_views_svd(self) -> int:
+    def max_num_views_svd(*args, **kwargs):
         ...
     @max_num_views_svd.setter
-    def max_num_views_svd(self, arg0: typing.SupportsInt) -> None:
+    def max_num_views_svd(*args, **kwargs):
         ...
     @property
-    def max_power_iterations(self) -> int:
+    def max_power_iterations(*args, **kwargs):
         ...
     @max_power_iterations.setter
-    def max_power_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_power_iterations(*args, **kwargs):
         ...
     @property
-    def num_threads(self) -> int:
+    def num_threads(*args, **kwargs):
         ...
     @num_threads.setter
-    def num_threads(self, arg0: typing.SupportsInt) -> None:
+    def num_threads(*args, **kwargs):
         ...
 class LinearPositionEstimator(PositionEstimator):
-    def EstimatePositions(self, arg0: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> dict[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+    @staticmethod
+    def EstimatePositions(*args, **kwargs):
         ...
-    def __init__(self, arg0: LinearPositionEstimatorOptions, arg1: Reconstruction) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class LinearPositionEstimatorOptions:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def eigensolver_threshold(self) -> float:
+    def eigensolver_threshold(*args, **kwargs):
         ...
     @eigensolver_threshold.setter
-    def eigensolver_threshold(self, arg0: typing.SupportsFloat) -> None:
+    def eigensolver_threshold(*args, **kwargs):
         ...
     @property
-    def max_power_iterations(self) -> int:
+    def max_power_iterations(*args, **kwargs):
         ...
     @max_power_iterations.setter
-    def max_power_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_power_iterations(*args, **kwargs):
         ...
     @property
-    def num_threads(self) -> int:
+    def num_threads(*args, **kwargs):
         ...
     @num_threads.setter
-    def num_threads(self, arg0: typing.SupportsInt) -> None:
+    def num_threads(*args, **kwargs):
         ...
 class LinearRotationEstimator(RotationEstimator):
-    def AddRelativeRotationConstraint(self, arg0: tuple[typing.SupportsInt, typing.SupportsInt], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    @staticmethod
+    def AddRelativeRotationConstraint(*args, **kwargs):
         ...
-    def EstimateRotations(self, arg0: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> bool:
+    @staticmethod
+    def EstimateRotations(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class LinearSolverType:
     """
@@ -834,51 +1146,87 @@ class LinearSolverType:
     SPARSE_NORMAL_CHOLESKY: typing.ClassVar[LinearSolverType]  # value = <LinearSolverType.SPARSE_NORMAL_CHOLESKY: 2>
     SPARSE_SCHUR: typing.ClassVar[LinearSolverType]  # value = <LinearSolverType.SPARSE_SCHUR: 4>
     __members__: typing.ClassVar[dict[str, LinearSolverType]]  # value = {'DENSE_QR': <LinearSolverType.DENSE_QR: 1>, 'DENSE_NORMAL_CHOLESKY': <LinearSolverType.DENSE_NORMAL_CHOLESKY: 0>, 'DENSE_SCHUR': <LinearSolverType.DENSE_SCHUR: 3>, 'SPARSE_NORMAL_CHOLESKY': <LinearSolverType.SPARSE_NORMAL_CHOLESKY: 2>, 'SPARSE_SCHUR': <LinearSolverType.SPARSE_SCHUR: 4>, 'ITERATIVE_SCHUR': <LinearSolverType.ITERATIVE_SCHUR: 5>, 'CGNR': <LinearSolverType.CGNR: 6>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class LocalizeViewToReconstructionOptions:
-    assume_known_orientation: bool
-    ba_options: ...
-    bundle_adjust_view: bool
-    pnp_type: PnPType
-    ransac_params: ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def min_num_inliers(self) -> int:
+    def assume_known_orientation(*args, **kwargs):
+        ...
+    @assume_known_orientation.setter
+    def assume_known_orientation(*args, **kwargs):
+        ...
+    @property
+    def ba_options(*args, **kwargs):
+        ...
+    @ba_options.setter
+    def ba_options(*args, **kwargs):
+        ...
+    @property
+    def bundle_adjust_view(*args, **kwargs):
+        ...
+    @bundle_adjust_view.setter
+    def bundle_adjust_view(*args, **kwargs):
+        ...
+    @property
+    def min_num_inliers(*args, **kwargs):
         ...
     @min_num_inliers.setter
-    def min_num_inliers(self, arg0: typing.SupportsInt) -> None:
+    def min_num_inliers(*args, **kwargs):
         ...
     @property
-    def reprojection_error_threshold_pixels(self) -> float:
+    def pnp_type(*args, **kwargs):
+        ...
+    @pnp_type.setter
+    def pnp_type(*args, **kwargs):
+        ...
+    @property
+    def ransac_params(*args, **kwargs):
+        ...
+    @ransac_params.setter
+    def ransac_params(*args, **kwargs):
+        ...
+    @property
+    def reprojection_error_threshold_pixels(*args, **kwargs):
         ...
     @reprojection_error_threshold_pixels.setter
-    def reprojection_error_threshold_pixels(self, arg0: typing.SupportsFloat) -> None:
+    def reprojection_error_threshold_pixels(*args, **kwargs):
         ...
 class LossFunctionType:
     """
@@ -903,80 +1251,92 @@ class LossFunctionType:
     TRIVIAL: typing.ClassVar[LossFunctionType]  # value = <LossFunctionType.TRIVIAL: 0>
     TUKEY: typing.ClassVar[LossFunctionType]  # value = <LossFunctionType.TUKEY: 5>
     __members__: typing.ClassVar[dict[str, LossFunctionType]]  # value = {'TRIVIAL': <LossFunctionType.TRIVIAL: 0>, 'HUBER': <LossFunctionType.HUBER: 1>, 'SOFTLONE': <LossFunctionType.SOFTLONE: 2>, 'CAUCHY': <LossFunctionType.CAUCHY: 3>, 'ARCTAN': <LossFunctionType.ARCTAN: 4>, 'TUKEY': <LossFunctionType.TUKEY: 5>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class NonlinearPositionEstimator(PositionEstimator):
-    def EstimatePositions(self, arg0: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> dict[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+    @staticmethod
+    def EstimatePositions(*args, **kwargs):
         ...
-    def EstimateRemainingPositionsInRecon(self, arg0: collections.abc.Set[typing.SupportsInt], arg1: collections.abc.Set[typing.SupportsInt], arg2: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo]) -> tuple[bool, dict[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]]:
+    @staticmethod
+    def EstimateRemainingPositionsInRecon(*args, **kwargs):
         ...
-    def __init__(self, arg0: NonlinearPositionEstimatorOptions, arg1: Reconstruction) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class NonlinearPositionEstimatorOptions:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def eigensolver_threshold(self) -> float:
+    def eigensolver_threshold(*args, **kwargs):
         ...
     @eigensolver_threshold.setter
-    def eigensolver_threshold(self, arg0: typing.SupportsFloat) -> None:
+    def eigensolver_threshold(*args, **kwargs):
         ...
     @property
-    def max_power_iterations(self) -> int:
+    def max_power_iterations(*args, **kwargs):
         ...
     @max_power_iterations.setter
-    def max_power_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_power_iterations(*args, **kwargs):
         ...
     @property
-    def min_num_points_per_view(self) -> int:
+    def min_num_points_per_view(*args, **kwargs):
         ...
     @min_num_points_per_view.setter
-    def min_num_points_per_view(self, arg0: typing.SupportsInt) -> None:
+    def min_num_points_per_view(*args, **kwargs):
         ...
     @property
-    def num_threads(self) -> int:
+    def num_threads(*args, **kwargs):
         ...
     @num_threads.setter
-    def num_threads(self, arg0: typing.SupportsInt) -> None:
+    def num_threads(*args, **kwargs):
         ...
     @property
-    def point_to_camera_weight(self) -> int:
+    def point_to_camera_weight(*args, **kwargs):
         ...
     @point_to_camera_weight.setter
-    def point_to_camera_weight(self, arg0: typing.SupportsInt) -> None:
+    def point_to_camera_weight(*args, **kwargs):
         ...
 class NonlinearRotationEstimator(RotationEstimator):
-    def EstimateRotations(self, arg0: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> bool:
+    @staticmethod
+    def EstimateRotations(*args, **kwargs):
         ...
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class OptimizeIntrinsicsType:
     """
@@ -1016,156 +1376,216 @@ class OptimizeIntrinsicsType:
     SKEW: typing.ClassVar[OptimizeIntrinsicsType]  # value = <OptimizeIntrinsicsType.SKEW: 4>
     TANGENTIAL_DISTORTION: typing.ClassVar[OptimizeIntrinsicsType]  # value = <OptimizeIntrinsicsType.TANGENTIAL_DISTORTION: 32>
     __members__: typing.ClassVar[dict[str, OptimizeIntrinsicsType]]  # value = {'NONE': <OptimizeIntrinsicsType.NONE: 0>, 'FOCAL_LENGTH': <OptimizeIntrinsicsType.FOCAL_LENGTH: 1>, 'ASPECT_RATIO': <OptimizeIntrinsicsType.ASPECT_RATIO: 2>, 'SKEW': <OptimizeIntrinsicsType.SKEW: 4>, 'PRINCIPAL_POINTS': <OptimizeIntrinsicsType.PRINCIPAL_POINTS: 8>, 'RADIAL_DISTORTION': <OptimizeIntrinsicsType.RADIAL_DISTORTION: 16>, 'TANGENTIAL_DISTORTION': <OptimizeIntrinsicsType.TANGENTIAL_DISTORTION: 32>, 'DISTORTION': <OptimizeIntrinsicsType.DISTORTION: 48>, 'FOCAL_LENGTH_DISTORTION': <OptimizeIntrinsicsType.FOCAL_LENGTH_DISTORTION: 49>, 'FOCAL_LENGTH_RADIAL_DISTORTION': <OptimizeIntrinsicsType.FOCAL_LENGTH_RADIAL_DISTORTION: 17>, 'ALL': <OptimizeIntrinsicsType.ALL: 63>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class OrthographicCameraModel(CameraIntrinsicsModel):
-    def AspectRatio(self) -> float:
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
         ...
-    def CameraIntrinsicsPriorFromIntrinsics(self) -> ...:
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
         ...
-    def GetCalibrationMatrix(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
         ...
-    def GetSubsetFromOptimizeIntrinsicsType(self, arg0: ...) -> list[int]:
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
         ...
-    def NumParameters(self) -> int:
+    @staticmethod
+    def NumParameters(*args, **kwargs):
         ...
-    def PrintIntrinsics(self) -> None:
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
         ...
-    def RadialDistortion1(self) -> float:
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
         ...
-    def RadialDistortion2(self) -> float:
+    @staticmethod
+    def RadialDistortion2(*args, **kwargs):
         ...
-    def SetAspectRatio(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
         ...
-    def SetFromCameraIntrinsicsPriors(self, arg0: ...) -> None:
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
         ...
-    def SetRadialDistortion(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
         ...
-    def SetSkew(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetSkew(*args, **kwargs):
         ...
-    def Skew(self) -> float:
+    @staticmethod
+    def Skew(*args, **kwargs):
         ...
-    def Type(self) -> ...:
+    @staticmethod
+    def Type(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def kIntrinsicsSize(self) -> int:
+    def kIntrinsicsSize(*args, **kwargs):
         ...
 class PinholeCameraModel(CameraIntrinsicsModel):
-    def AspectRatio(self) -> float:
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
         ...
-    def CameraIntrinsicsPriorFromIntrinsics(self) -> ...:
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
         ...
-    def GetCalibrationMatrix(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
         ...
-    def GetSubsetFromOptimizeIntrinsicsType(self, arg0: ...) -> list[int]:
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
         ...
-    def NumParameters(self) -> int:
+    @staticmethod
+    def NumParameters(*args, **kwargs):
         ...
-    def PrintIntrinsics(self) -> None:
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
         ...
-    def RadialDistortion1(self) -> float:
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
         ...
-    def RadialDistortion2(self) -> float:
+    @staticmethod
+    def RadialDistortion2(*args, **kwargs):
         ...
-    def SetAspectRatio(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
         ...
-    def SetFromCameraIntrinsicsPriors(self, arg0: ...) -> None:
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
         ...
-    def SetRadialDistortion(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
         ...
-    def SetSkew(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetSkew(*args, **kwargs):
         ...
-    def Skew(self) -> float:
+    @staticmethod
+    def Skew(*args, **kwargs):
         ...
-    def Type(self) -> ...:
+    @staticmethod
+    def Type(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def kIntrinsicsSize(self) -> int:
+    def kIntrinsicsSize(*args, **kwargs):
         ...
 class PinholeRadialTangentialCameraModel(CameraIntrinsicsModel):
-    def AspectRatio(self) -> float:
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
         ...
-    def CameraIntrinsicsPriorFromIntrinsics(self) -> ...:
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
         ...
-    def GetCalibrationMatrix(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
         ...
-    def GetSubsetFromOptimizeIntrinsicsType(self, arg0: ...) -> list[int]:
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
         ...
-    def NumParameters(self) -> int:
+    @staticmethod
+    def NumParameters(*args, **kwargs):
         ...
-    def PrintIntrinsics(self) -> None:
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
         ...
-    def RadialDistortion1(self) -> float:
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
         ...
-    def RadialDistortion2(self) -> float:
+    @staticmethod
+    def RadialDistortion2(*args, **kwargs):
         ...
-    def RadialDistortion3(self) -> float:
+    @staticmethod
+    def RadialDistortion3(*args, **kwargs):
         ...
-    def SetAspectRatio(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
         ...
-    def SetFromCameraIntrinsicsPriors(self, arg0: ...) -> None:
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
         ...
-    def SetRadialDistortion(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat, arg2: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
         ...
-    def SetSkew(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetSkew(*args, **kwargs):
         ...
-    def SetTangentialDistortion(self, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetTangentialDistortion(*args, **kwargs):
         ...
-    def Skew(self) -> float:
+    @staticmethod
+    def Skew(*args, **kwargs):
         ...
-    def TangentialDistortion1(self) -> float:
+    @staticmethod
+    def TangentialDistortion1(*args, **kwargs):
         ...
-    def TangentialDistortion2(self) -> float:
+    @staticmethod
+    def TangentialDistortion2(*args, **kwargs):
         ...
-    def Type(self) -> ...:
+    @staticmethod
+    def Type(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def kIntrinsicsSize(self) -> int:
+    def kIntrinsicsSize(*args, **kwargs):
         ...
 class Plane:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def point(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def point(*args, **kwargs):
         ...
     @point.setter
-    def point(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def point(*args, **kwargs):
         ...
     @property
-    def unit_normal(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def unit_normal(*args, **kwargs):
         ...
     @unit_normal.setter
-    def unit_normal(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def unit_normal(*args, **kwargs):
         ...
 class PnPType:
     """
@@ -1181,31 +1601,41 @@ class PnPType:
     KNEIP: typing.ClassVar[PnPType]  # value = <PnPType.KNEIP: 0>
     SQPnP: typing.ClassVar[PnPType]  # value = <PnPType.SQPnP: 1>
     __members__: typing.ClassVar[dict[str, PnPType]]  # value = {'KNEIP': <PnPType.KNEIP: 0>, 'DLS': <PnPType.DLS: 2>, 'SQPnP': <PnPType.SQPnP: 1>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class PositionEstimator:
     pass
@@ -1223,155 +1653,191 @@ class PreconditionerType:
     
       CLUSTER_TRIDIAGONAL
     """
-    CLUSTER_JACOBI: typing.ClassVar[PreconditionerType]  # value = <PreconditionerType.CLUSTER_JACOBI: 3>
-    CLUSTER_TRIDIAGONAL: typing.ClassVar[PreconditionerType]  # value = <PreconditionerType.CLUSTER_TRIDIAGONAL: 4>
+    CLUSTER_JACOBI: typing.ClassVar[PreconditionerType]  # value = <PreconditionerType.CLUSTER_JACOBI: 4>
+    CLUSTER_TRIDIAGONAL: typing.ClassVar[PreconditionerType]  # value = <PreconditionerType.CLUSTER_TRIDIAGONAL: 5>
     IDENTITY: typing.ClassVar[PreconditionerType]  # value = <PreconditionerType.IDENTITY: 0>
     JACOBI: typing.ClassVar[PreconditionerType]  # value = <PreconditionerType.JACOBI: 1>
     SCHUR_JACOBI: typing.ClassVar[PreconditionerType]  # value = <PreconditionerType.SCHUR_JACOBI: 2>
-    __members__: typing.ClassVar[dict[str, PreconditionerType]]  # value = {'IDENTITY': <PreconditionerType.IDENTITY: 0>, 'JACOBI': <PreconditionerType.JACOBI: 1>, 'SCHUR_JACOBI': <PreconditionerType.SCHUR_JACOBI: 2>, 'CLUSTER_JACOBI': <PreconditionerType.CLUSTER_JACOBI: 3>, 'CLUSTER_TRIDIAGONAL': <PreconditionerType.CLUSTER_TRIDIAGONAL: 4>}
-    def __eq__(self, other: typing.Any) -> bool:
+    __members__: typing.ClassVar[dict[str, PreconditionerType]]  # value = {'IDENTITY': <PreconditionerType.IDENTITY: 0>, 'JACOBI': <PreconditionerType.JACOBI: 1>, 'SCHUR_JACOBI': <PreconditionerType.SCHUR_JACOBI: 2>, 'CLUSTER_JACOBI': <PreconditionerType.CLUSTER_JACOBI: 4>, 'CLUSTER_TRIDIAGONAL': <PreconditionerType.CLUSTER_TRIDIAGONAL: 5>}
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class PriorScalar:
-    is_set: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def value(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[1, 1]"]:
+    def is_set(*args, **kwargs):
+        ...
+    @is_set.setter
+    def is_set(*args, **kwargs):
+        ...
+    @property
+    def value(*args, **kwargs):
         ...
     @value.setter
-    def value(self, arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[1, 1]"]) -> None:
+    def value(*args, **kwargs):
         ...
 class PriorVector2d:
-    is_set: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def value(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]:
+    def is_set(*args, **kwargs):
+        ...
+    @is_set.setter
+    def is_set(*args, **kwargs):
+        ...
+    @property
+    def value(*args, **kwargs):
         ...
     @value.setter
-    def value(self, arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> None:
+    def value(*args, **kwargs):
         ...
 class PriorVector3d:
-    is_set: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def value(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def is_set(*args, **kwargs):
+        ...
+    @is_set.setter
+    def is_set(*args, **kwargs):
+        ...
+    @property
+    def value(*args, **kwargs):
         ...
     @value.setter
-    def value(self, arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def value(*args, **kwargs):
         ...
 class PriorVector4d:
-    is_set: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def value(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]:
+    def is_set(*args, **kwargs):
+        ...
+    @is_set.setter
+    def is_set(*args, **kwargs):
+        ...
+    @property
+    def value(*args, **kwargs):
         ...
     @value.setter
-    def value(self, arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[4, 1]"]) -> None:
+    def value(*args, **kwargs):
         ...
 class RadialDistUncalibratedAbsolutePoseMetaData:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def max_focal_length(self) -> float:
+    def max_focal_length(*args, **kwargs):
         ...
     @max_focal_length.setter
-    def max_focal_length(self, arg0: typing.SupportsFloat) -> None:
+    def max_focal_length(*args, **kwargs):
         ...
     @property
-    def max_radial_distortion(self) -> float:
+    def max_radial_distortion(*args, **kwargs):
         ...
     @max_radial_distortion.setter
-    def max_radial_distortion(self, arg0: typing.SupportsFloat) -> None:
+    def max_radial_distortion(*args, **kwargs):
         ...
     @property
-    def min_focal_length(self) -> float:
+    def min_focal_length(*args, **kwargs):
         ...
     @min_focal_length.setter
-    def min_focal_length(self, arg0: typing.SupportsFloat) -> None:
+    def min_focal_length(*args, **kwargs):
         ...
     @property
-    def min_radial_distortion(self) -> float:
+    def min_radial_distortion(*args, **kwargs):
         ...
     @min_radial_distortion.setter
-    def min_radial_distortion(self, arg0: typing.SupportsFloat) -> None:
+    def min_radial_distortion(*args, **kwargs):
         ...
 class RadialDistortionFeatureCorrespondence:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def feature_left(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]:
+    def feature_left(*args, **kwargs):
         ...
     @feature_left.setter
-    def feature_left(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> None:
+    def feature_left(*args, **kwargs):
         ...
     @property
-    def feature_right(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]:
+    def feature_right(*args, **kwargs):
         ...
     @feature_right.setter
-    def feature_right(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> None:
+    def feature_right(*args, **kwargs):
         ...
     @property
-    def focal_length_estimate_left(self) -> float:
+    def focal_length_estimate_left(*args, **kwargs):
         ...
     @focal_length_estimate_left.setter
-    def focal_length_estimate_left(self, arg0: typing.SupportsFloat) -> None:
+    def focal_length_estimate_left(*args, **kwargs):
         ...
     @property
-    def focal_length_estimate_right(self) -> float:
+    def focal_length_estimate_right(*args, **kwargs):
         ...
     @focal_length_estimate_right.setter
-    def focal_length_estimate_right(self, arg0: typing.SupportsFloat) -> None:
+    def focal_length_estimate_right(*args, **kwargs):
         ...
     @property
-    def max_radial_distortion(self) -> float:
+    def max_radial_distortion(*args, **kwargs):
         ...
     @max_radial_distortion.setter
-    def max_radial_distortion(self, arg0: typing.SupportsFloat) -> None:
+    def max_radial_distortion(*args, **kwargs):
         ...
     @property
-    def min_radial_distortion(self) -> float:
+    def min_radial_distortion(*args, **kwargs):
         ...
     @min_radial_distortion.setter
-    def min_radial_distortion(self, arg0: typing.SupportsFloat) -> None:
+    def min_radial_distortion(*args, **kwargs):
         ...
     @property
-    def normalized_feature_left(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]:
+    def normalized_feature_left(*args, **kwargs):
         ...
     @normalized_feature_left.setter
-    def normalized_feature_left(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> None:
+    def normalized_feature_left(*args, **kwargs):
         ...
     @property
-    def normalized_feature_right(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[2, 1]"]:
+    def normalized_feature_right(*args, **kwargs):
         ...
     @normalized_feature_right.setter
-    def normalized_feature_right(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> None:
+    def normalized_feature_right(*args, **kwargs):
         ...
 class RansacType:
     """
@@ -1390,364 +1856,548 @@ class RansacType:
     PROSAC: typing.ClassVar[RansacType]  # value = <RansacType.PROSAC: 1>
     RANSAC: typing.ClassVar[RansacType]  # value = <RansacType.RANSAC: 0>
     __members__: typing.ClassVar[dict[str, RansacType]]  # value = {'RANSAC': <RansacType.RANSAC: 0>, 'PROSAC': <RansacType.PROSAC: 1>, 'LMED': <RansacType.LMED: 2>, 'EXHAUSTIVE': <RansacType.EXHAUSTIVE: 3>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class Reconstruction:
-    def AddObservation(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt, arg2: Feature) -> bool:
+    @staticmethod
+    def AddObservation(*args, **kwargs):
         ...
-    @typing.overload
-    def AddTrack(self) -> int:
+    @staticmethod
+    def AddTrack(*args, **kwargs):
         ...
-    @typing.overload
-    def AddTrack(self, arg0: typing.SupportsInt) -> None:
+    @staticmethod
+    def AddView(*args, **kwargs):
         ...
-    @typing.overload
-    def AddTrack(self, arg0: collections.abc.Sequence[tuple[typing.SupportsInt, Feature]]) -> int:
+    @staticmethod
+    def CameraIntrinsicsGroupIdFromViewId(*args, **kwargs):
         ...
-    @typing.overload
-    def AddView(self, arg0: str, arg1: typing.SupportsFloat) -> int:
+    @staticmethod
+    def CameraIntrinsicsGroupIds(*args, **kwargs):
         ...
-    @typing.overload
-    def AddView(self, arg0: str, arg1: typing.SupportsInt, arg2: typing.SupportsFloat) -> int:
+    @staticmethod
+    def GetViewsInCameraIntrinsicGroup(*args, **kwargs):
         ...
-    def CameraIntrinsicsGroupIdFromViewId(self, arg0: typing.SupportsInt) -> int:
+    @staticmethod
+    def InitializeInverseDepth(*args, **kwargs):
         ...
-    def CameraIntrinsicsGroupIds(self) -> set[int]:
+    @staticmethod
+    def MutableTrack(*args, **kwargs):
         ...
-    def GetViewsInCameraIntrinsicGroup(self, arg0: typing.SupportsInt) -> set[int]:
+    @staticmethod
+    def MutableView(*args, **kwargs):
         ...
-    def InitializeInverseDepth(self) -> None:
+    @staticmethod
+    def Normalize(*args, **kwargs):
         ...
-    def MutableTrack(self, arg0: typing.SupportsInt) -> Track:
+    @staticmethod
+    def NumCameraIntrinsicGroups(*args, **kwargs):
         ...
-    def MutableView(self, arg0: typing.SupportsInt) -> View:
+    @staticmethod
+    def NumTracks(*args, **kwargs):
         ...
-    def Normalize(self) -> None:
+    @staticmethod
+    def NumViews(*args, **kwargs):
         ...
-    def NumCameraIntrinsicGroups(self) -> int:
+    @staticmethod
+    def RemoveTrack(*args, **kwargs):
         ...
-    def NumTracks(self) -> int:
+    @staticmethod
+    def RemoveView(*args, **kwargs):
         ...
-    def NumViews(self) -> int:
+    @staticmethod
+    def Track(*args, **kwargs):
         ...
-    def RemoveTrack(self, arg0: typing.SupportsInt) -> bool:
+    @staticmethod
+    def TrackIds(*args, **kwargs):
         ...
-    def RemoveView(self, arg0: typing.SupportsInt) -> bool:
+    @staticmethod
+    def View(*args, **kwargs):
         ...
-    def Track(self, arg0: typing.SupportsInt) -> Track:
+    @staticmethod
+    def ViewIdFromName(*args, **kwargs):
         ...
-    def TrackIds(self) -> list[int]:
+    @staticmethod
+    def ViewIds(*args, **kwargs):
         ...
-    def View(self, arg0: typing.SupportsInt) -> View:
-        ...
-    def ViewIdFromName(self, arg0: str) -> int:
-        ...
-    def ViewIds(self) -> list[int]:
-        ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class ReconstructionBuilder:
-    @typing.overload
-    def AddImage(self, arg0: str, arg1: typing.SupportsFloat) -> bool:
+    @staticmethod
+    def AddImage(*args, **kwargs):
         ...
-    @typing.overload
-    def AddImage(self, arg0: str, arg1: typing.SupportsInt, arg2: typing.SupportsFloat) -> bool:
+    @staticmethod
+    def AddImageWithCameraIntrinsicsPrior(*args, **kwargs):
         ...
-    @typing.overload
-    def AddImageWithCameraIntrinsicsPrior(self, arg0: str, arg1: CameraIntrinsicsPrior, arg2: typing.SupportsFloat) -> bool:
+    @staticmethod
+    def AddMaskForFeaturesExtraction(*args, **kwargs):
         ...
-    @typing.overload
-    def AddImageWithCameraIntrinsicsPrior(self, arg0: str, arg1: CameraIntrinsicsPrior, arg2: typing.SupportsInt, arg3: typing.SupportsFloat) -> bool:
+    @staticmethod
+    def ExtractAndMatchFeatures(*args, **kwargs):
         ...
-    def AddMaskForFeaturesExtraction(self, arg0: str, arg1: str) -> bool:
-        ...
-    def ExtractAndMatchFeatures(self) -> bool:
-        ...
-    def __init__(self, arg0: ReconstructionBuilderOptions, arg1: pytheia.pytheia.matching.FeaturesAndMatchesDatabase) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class ReconstructionBuilderOptions:
-    features_and_matches_database_directory: str
-    matching_options: pytheia.pytheia.matching.FeatureMatcherOptions
-    matching_strategy: pytheia.pytheia.matching.MatchingStrategy
-    only_calibrated_views: bool
-    reconstruct_largest_connected_component: bool
-    reconstruction_estimator_options: ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def max_track_length(self) -> int:
+    def features_and_matches_database_directory(*args, **kwargs):
+        ...
+    @features_and_matches_database_directory.setter
+    def features_and_matches_database_directory(*args, **kwargs):
+        ...
+    @property
+    def matching_options(*args, **kwargs):
+        ...
+    @matching_options.setter
+    def matching_options(*args, **kwargs):
+        ...
+    @property
+    def matching_strategy(*args, **kwargs):
+        ...
+    @matching_strategy.setter
+    def matching_strategy(*args, **kwargs):
+        ...
+    @property
+    def max_track_length(*args, **kwargs):
         ...
     @max_track_length.setter
-    def max_track_length(self, arg0: typing.SupportsInt) -> None:
+    def max_track_length(*args, **kwargs):
         ...
     @property
-    def min_num_inlier_matches(self) -> int:
+    def min_num_inlier_matches(*args, **kwargs):
         ...
     @min_num_inlier_matches.setter
-    def min_num_inlier_matches(self, arg0: typing.SupportsInt) -> None:
+    def min_num_inlier_matches(*args, **kwargs):
         ...
     @property
-    def min_track_length(self) -> int:
+    def min_track_length(*args, **kwargs):
         ...
     @min_track_length.setter
-    def min_track_length(self, arg0: typing.SupportsInt) -> None:
+    def min_track_length(*args, **kwargs):
+        ...
+    @property
+    def only_calibrated_views(*args, **kwargs):
+        ...
+    @only_calibrated_views.setter
+    def only_calibrated_views(*args, **kwargs):
+        ...
+    @property
+    def reconstruct_largest_connected_component(*args, **kwargs):
+        ...
+    @reconstruct_largest_connected_component.setter
+    def reconstruct_largest_connected_component(*args, **kwargs):
+        ...
+    @property
+    def reconstruction_estimator_options(*args, **kwargs):
+        ...
+    @reconstruction_estimator_options.setter
+    def reconstruction_estimator_options(*args, **kwargs):
         ...
 class ReconstructionEstimator:
     @staticmethod
-    def Create(arg0: ...) -> ReconstructionEstimator:
+    def Create(*args, **kwargs):
         ...
 class ReconstructionEstimatorOptions:
-    bundle_adjust_tracks: bool
-    bundle_adjustment_loss_function_type: ...
-    dense_linear_algebra_library_type: ...
-    extract_maximal_rigid_subgraph: bool
-    filter_relative_translations_with_1dsfm: bool
-    global_position_estimator_type: GlobalPositionEstimatorType
-    global_rotation_estimator_type: GlobalRotationEstimatorType
-    intrinsics_to_optimize: ...
-    least_unsquared_deviation_position_estimator_options: ...
-    linear_solver_type: ...
-    linear_triplet_position_estimator_options: ...
-    localization_pnp_type: PnPType
-    nonlinear_position_estimator_options: ...
-    optimize_for_forward_facing_trajectory: bool
-    preconditioner_type: ...
-    ransac_use_lo: bool
-    ransac_use_mle: bool
-    reconstruction_estimator_type: ReconstructionEstimatorType
-    refine_camera_positions_and_points_after_position_estimation: bool
-    refine_relative_translations_after_rotation_estimation: bool
-    sparse_linear_algebra_library_type: ...
-    subsample_tracks_for_bundle_adjustment: bool
-    track_parametrization_type: ...
-    triangulation_method: TriangulationMethodType
-    visibility_clustering_type: ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def absolute_pose_reprojection_error_threshold(self) -> float:
+    def absolute_pose_reprojection_error_threshold(*args, **kwargs):
         ...
     @absolute_pose_reprojection_error_threshold.setter
-    def absolute_pose_reprojection_error_threshold(self, arg0: typing.SupportsFloat) -> None:
+    def absolute_pose_reprojection_error_threshold(*args, **kwargs):
         ...
     @property
-    def bundle_adjustment_robust_loss_width(self) -> float:
+    def bundle_adjust_tracks(*args, **kwargs):
+        ...
+    @bundle_adjust_tracks.setter
+    def bundle_adjust_tracks(*args, **kwargs):
+        ...
+    @property
+    def bundle_adjustment_loss_function_type(*args, **kwargs):
+        ...
+    @bundle_adjustment_loss_function_type.setter
+    def bundle_adjustment_loss_function_type(*args, **kwargs):
+        ...
+    @property
+    def bundle_adjustment_robust_loss_width(*args, **kwargs):
         ...
     @bundle_adjustment_robust_loss_width.setter
-    def bundle_adjustment_robust_loss_width(self, arg0: typing.SupportsFloat) -> None:
+    def bundle_adjustment_robust_loss_width(*args, **kwargs):
         ...
     @property
-    def full_bundle_adjustment_growth_percent(self) -> float:
+    def dense_linear_algebra_library_type(*args, **kwargs):
+        ...
+    @dense_linear_algebra_library_type.setter
+    def dense_linear_algebra_library_type(*args, **kwargs):
+        ...
+    @property
+    def extract_maximal_rigid_subgraph(*args, **kwargs):
+        ...
+    @extract_maximal_rigid_subgraph.setter
+    def extract_maximal_rigid_subgraph(*args, **kwargs):
+        ...
+    @property
+    def filter_relative_translations_with_1dsfm(*args, **kwargs):
+        ...
+    @filter_relative_translations_with_1dsfm.setter
+    def filter_relative_translations_with_1dsfm(*args, **kwargs):
+        ...
+    @property
+    def full_bundle_adjustment_growth_percent(*args, **kwargs):
         ...
     @full_bundle_adjustment_growth_percent.setter
-    def full_bundle_adjustment_growth_percent(self, arg0: typing.SupportsFloat) -> None:
+    def full_bundle_adjustment_growth_percent(*args, **kwargs):
         ...
     @property
-    def max_num_iterations(self) -> int:
+    def global_position_estimator_type(*args, **kwargs):
+        ...
+    @global_position_estimator_type.setter
+    def global_position_estimator_type(*args, **kwargs):
+        ...
+    @property
+    def global_rotation_estimator_type(*args, **kwargs):
+        ...
+    @global_rotation_estimator_type.setter
+    def global_rotation_estimator_type(*args, **kwargs):
+        ...
+    @property
+    def intrinsics_to_optimize(*args, **kwargs):
+        ...
+    @intrinsics_to_optimize.setter
+    def intrinsics_to_optimize(*args, **kwargs):
+        ...
+    @property
+    def least_unsquared_deviation_position_estimator_options(*args, **kwargs):
+        ...
+    @least_unsquared_deviation_position_estimator_options.setter
+    def least_unsquared_deviation_position_estimator_options(*args, **kwargs):
+        ...
+    @property
+    def linear_solver_type(*args, **kwargs):
+        ...
+    @linear_solver_type.setter
+    def linear_solver_type(*args, **kwargs):
+        ...
+    @property
+    def linear_triplet_position_estimator_options(*args, **kwargs):
+        ...
+    @linear_triplet_position_estimator_options.setter
+    def linear_triplet_position_estimator_options(*args, **kwargs):
+        ...
+    @property
+    def localization_pnp_type(*args, **kwargs):
+        ...
+    @localization_pnp_type.setter
+    def localization_pnp_type(*args, **kwargs):
+        ...
+    @property
+    def max_num_iterations(*args, **kwargs):
         ...
     @max_num_iterations.setter
-    def max_num_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_num_iterations(*args, **kwargs):
         ...
     @property
-    def max_reprojection_error_in_pixels(self) -> float:
+    def max_reprojection_error_in_pixels(*args, **kwargs):
         ...
     @max_reprojection_error_in_pixels.setter
-    def max_reprojection_error_in_pixels(self, arg0: typing.SupportsFloat) -> None:
+    def max_reprojection_error_in_pixels(*args, **kwargs):
         ...
     @property
-    def min_cameras_for_iterative_solver(self) -> int:
+    def min_cameras_for_iterative_solver(*args, **kwargs):
         ...
     @min_cameras_for_iterative_solver.setter
-    def min_cameras_for_iterative_solver(self, arg0: typing.SupportsInt) -> None:
+    def min_cameras_for_iterative_solver(*args, **kwargs):
         ...
     @property
-    def min_num_absolute_pose_inliers(self) -> int:
+    def min_num_absolute_pose_inliers(*args, **kwargs):
         ...
     @min_num_absolute_pose_inliers.setter
-    def min_num_absolute_pose_inliers(self, arg0: typing.SupportsInt) -> None:
+    def min_num_absolute_pose_inliers(*args, **kwargs):
         ...
     @property
-    def min_num_optimized_tracks_per_view(self) -> int:
+    def min_num_optimized_tracks_per_view(*args, **kwargs):
         ...
     @min_num_optimized_tracks_per_view.setter
-    def min_num_optimized_tracks_per_view(self, arg0: typing.SupportsInt) -> None:
+    def min_num_optimized_tracks_per_view(*args, **kwargs):
         ...
     @property
-    def min_num_two_view_inliers(self) -> int:
+    def min_num_two_view_inliers(*args, **kwargs):
         ...
     @min_num_two_view_inliers.setter
-    def min_num_two_view_inliers(self, arg0: typing.SupportsInt) -> None:
+    def min_num_two_view_inliers(*args, **kwargs):
         ...
     @property
-    def min_triangulation_angle_degrees(self) -> float:
+    def min_triangulation_angle_degrees(*args, **kwargs):
         ...
     @min_triangulation_angle_degrees.setter
-    def min_triangulation_angle_degrees(self, arg0: typing.SupportsFloat) -> None:
+    def min_triangulation_angle_degrees(*args, **kwargs):
         ...
     @property
-    def multiple_view_localization_ratio(self) -> float:
+    def multiple_view_localization_ratio(*args, **kwargs):
         ...
     @multiple_view_localization_ratio.setter
-    def multiple_view_localization_ratio(self, arg0: typing.SupportsFloat) -> None:
+    def multiple_view_localization_ratio(*args, **kwargs):
         ...
     @property
-    def num_retriangulation_iterations(self) -> int:
+    def nonlinear_position_estimator_options(*args, **kwargs):
+        ...
+    @nonlinear_position_estimator_options.setter
+    def nonlinear_position_estimator_options(*args, **kwargs):
+        ...
+    @property
+    def num_retriangulation_iterations(*args, **kwargs):
         ...
     @num_retriangulation_iterations.setter
-    def num_retriangulation_iterations(self, arg0: typing.SupportsInt) -> None:
+    def num_retriangulation_iterations(*args, **kwargs):
         ...
     @property
-    def num_threads(self) -> int:
+    def num_threads(*args, **kwargs):
         ...
     @num_threads.setter
-    def num_threads(self, arg0: typing.SupportsInt) -> None:
+    def num_threads(*args, **kwargs):
         ...
     @property
-    def partial_bundle_adjustment_num_views(self) -> int:
+    def optimize_for_forward_facing_trajectory(*args, **kwargs):
+        ...
+    @optimize_for_forward_facing_trajectory.setter
+    def optimize_for_forward_facing_trajectory(*args, **kwargs):
+        ...
+    @property
+    def partial_bundle_adjustment_num_views(*args, **kwargs):
         ...
     @partial_bundle_adjustment_num_views.setter
-    def partial_bundle_adjustment_num_views(self, arg0: typing.SupportsInt) -> None:
+    def partial_bundle_adjustment_num_views(*args, **kwargs):
         ...
     @property
-    def ransac_confidence(self) -> float:
+    def preconditioner_type(*args, **kwargs):
+        ...
+    @preconditioner_type.setter
+    def preconditioner_type(*args, **kwargs):
+        ...
+    @property
+    def ransac_confidence(*args, **kwargs):
         ...
     @ransac_confidence.setter
-    def ransac_confidence(self, arg0: typing.SupportsFloat) -> None:
+    def ransac_confidence(*args, **kwargs):
         ...
     @property
-    def ransac_lo_start_iterations(self) -> int:
+    def ransac_lo_start_iterations(*args, **kwargs):
         ...
     @ransac_lo_start_iterations.setter
-    def ransac_lo_start_iterations(self, arg0: typing.SupportsInt) -> None:
+    def ransac_lo_start_iterations(*args, **kwargs):
         ...
     @property
-    def ransac_max_iterations(self) -> int:
+    def ransac_max_iterations(*args, **kwargs):
         ...
     @ransac_max_iterations.setter
-    def ransac_max_iterations(self, arg0: typing.SupportsInt) -> None:
+    def ransac_max_iterations(*args, **kwargs):
         ...
     @property
-    def ransac_min_iterations(self) -> int:
+    def ransac_min_iterations(*args, **kwargs):
         ...
     @ransac_min_iterations.setter
-    def ransac_min_iterations(self, arg0: typing.SupportsInt) -> None:
+    def ransac_min_iterations(*args, **kwargs):
         ...
     @property
-    def relative_position_estimation_max_sampson_error_pixels(self) -> float:
+    def ransac_use_lo(*args, **kwargs):
+        ...
+    @ransac_use_lo.setter
+    def ransac_use_lo(*args, **kwargs):
+        ...
+    @property
+    def ransac_use_mle(*args, **kwargs):
+        ...
+    @ransac_use_mle.setter
+    def ransac_use_mle(*args, **kwargs):
+        ...
+    @property
+    def reconstruction_estimator_type(*args, **kwargs):
+        ...
+    @reconstruction_estimator_type.setter
+    def reconstruction_estimator_type(*args, **kwargs):
+        ...
+    @property
+    def refine_camera_positions_and_points_after_position_estimation(*args, **kwargs):
+        ...
+    @refine_camera_positions_and_points_after_position_estimation.setter
+    def refine_camera_positions_and_points_after_position_estimation(*args, **kwargs):
+        ...
+    @property
+    def refine_relative_translations_after_rotation_estimation(*args, **kwargs):
+        ...
+    @refine_relative_translations_after_rotation_estimation.setter
+    def refine_relative_translations_after_rotation_estimation(*args, **kwargs):
+        ...
+    @property
+    def relative_position_estimation_max_sampson_error_pixels(*args, **kwargs):
         ...
     @relative_position_estimation_max_sampson_error_pixels.setter
-    def relative_position_estimation_max_sampson_error_pixels(self, arg0: typing.SupportsFloat) -> None:
+    def relative_position_estimation_max_sampson_error_pixels(*args, **kwargs):
         ...
     @property
-    def rotation_estimation_robust_loss_scale(self) -> float:
+    def rotation_estimation_robust_loss_scale(*args, **kwargs):
         ...
     @rotation_estimation_robust_loss_scale.setter
-    def rotation_estimation_robust_loss_scale(self, arg0: typing.SupportsFloat) -> None:
+    def rotation_estimation_robust_loss_scale(*args, **kwargs):
         ...
     @property
-    def rotation_filtering_max_difference_degrees(self) -> float:
+    def rotation_filtering_max_difference_degrees(*args, **kwargs):
         ...
     @rotation_filtering_max_difference_degrees.setter
-    def rotation_filtering_max_difference_degrees(self, arg0: typing.SupportsFloat) -> None:
+    def rotation_filtering_max_difference_degrees(*args, **kwargs):
         ...
     @property
-    def track_selection_image_grid_cell_size_pixels(self) -> int:
+    def sparse_linear_algebra_library_type(*args, **kwargs):
+        ...
+    @sparse_linear_algebra_library_type.setter
+    def sparse_linear_algebra_library_type(*args, **kwargs):
+        ...
+    @property
+    def subsample_tracks_for_bundle_adjustment(*args, **kwargs):
+        ...
+    @subsample_tracks_for_bundle_adjustment.setter
+    def subsample_tracks_for_bundle_adjustment(*args, **kwargs):
+        ...
+    @property
+    def track_parametrization_type(*args, **kwargs):
+        ...
+    @track_parametrization_type.setter
+    def track_parametrization_type(*args, **kwargs):
+        ...
+    @property
+    def track_selection_image_grid_cell_size_pixels(*args, **kwargs):
         ...
     @track_selection_image_grid_cell_size_pixels.setter
-    def track_selection_image_grid_cell_size_pixels(self, arg0: typing.SupportsInt) -> None:
+    def track_selection_image_grid_cell_size_pixels(*args, **kwargs):
         ...
     @property
-    def track_subset_selection_long_track_length_threshold(self) -> int:
+    def track_subset_selection_long_track_length_threshold(*args, **kwargs):
         ...
     @track_subset_selection_long_track_length_threshold.setter
-    def track_subset_selection_long_track_length_threshold(self, arg0: typing.SupportsInt) -> None:
+    def track_subset_selection_long_track_length_threshold(*args, **kwargs):
         ...
     @property
-    def translation_filtering_num_iterations(self) -> int:
+    def translation_filtering_num_iterations(*args, **kwargs):
         ...
     @translation_filtering_num_iterations.setter
-    def translation_filtering_num_iterations(self, arg0: typing.SupportsInt) -> None:
+    def translation_filtering_num_iterations(*args, **kwargs):
         ...
     @property
-    def translation_filtering_projection_tolerance(self) -> float:
+    def translation_filtering_projection_tolerance(*args, **kwargs):
         ...
     @translation_filtering_projection_tolerance.setter
-    def translation_filtering_projection_tolerance(self, arg0: typing.SupportsFloat) -> None:
+    def translation_filtering_projection_tolerance(*args, **kwargs):
         ...
     @property
-    def use_inner_iterations(self) -> int:
+    def triangulation_method(*args, **kwargs):
+        ...
+    @triangulation_method.setter
+    def triangulation_method(*args, **kwargs):
+        ...
+    @property
+    def use_inner_iterations(*args, **kwargs):
         ...
     @use_inner_iterations.setter
-    def use_inner_iterations(self, arg0: typing.SupportsInt) -> None:
+    def use_inner_iterations(*args, **kwargs):
+        ...
+    @property
+    def visibility_clustering_type(*args, **kwargs):
+        ...
+    @visibility_clustering_type.setter
+    def visibility_clustering_type(*args, **kwargs):
         ...
 class ReconstructionEstimatorSummary:
-    message: str
-    success: bool
     @property
-    def bundle_adjustment_time(self) -> float:
+    def bundle_adjustment_time(*args, **kwargs):
         ...
     @bundle_adjustment_time.setter
-    def bundle_adjustment_time(self, arg0: typing.SupportsFloat) -> None:
+    def bundle_adjustment_time(*args, **kwargs):
         ...
     @property
-    def camera_intrinsics_calibration_time(self) -> float:
+    def camera_intrinsics_calibration_time(*args, **kwargs):
         ...
     @camera_intrinsics_calibration_time.setter
-    def camera_intrinsics_calibration_time(self, arg0: typing.SupportsFloat) -> None:
+    def camera_intrinsics_calibration_time(*args, **kwargs):
         ...
     @property
-    def estimated_tracks(self) -> set[int]:
+    def estimated_tracks(*args, **kwargs):
         ...
     @estimated_tracks.setter
-    def estimated_tracks(self, arg0: collections.abc.Set[typing.SupportsInt]) -> None:
+    def estimated_tracks(*args, **kwargs):
         ...
     @property
-    def estimated_views(self) -> set[int]:
+    def estimated_views(*args, **kwargs):
         ...
     @estimated_views.setter
-    def estimated_views(self, arg0: collections.abc.Set[typing.SupportsInt]) -> None:
+    def estimated_views(*args, **kwargs):
         ...
     @property
-    def pose_estimation_time(self) -> float:
+    def message(*args, **kwargs):
+        ...
+    @message.setter
+    def message(*args, **kwargs):
+        ...
+    @property
+    def pose_estimation_time(*args, **kwargs):
         ...
     @pose_estimation_time.setter
-    def pose_estimation_time(self, arg0: typing.SupportsFloat) -> None:
+    def pose_estimation_time(*args, **kwargs):
         ...
     @property
-    def total_time(self) -> float:
+    def success(*args, **kwargs):
+        ...
+    @success.setter
+    def success(*args, **kwargs):
+        ...
+    @property
+    def total_time(*args, **kwargs):
         ...
     @total_time.setter
-    def total_time(self, arg0: typing.SupportsFloat) -> None:
+    def total_time(*args, **kwargs):
         ...
     @property
-    def triangulation_time(self) -> float:
+    def triangulation_time(*args, **kwargs):
         ...
     @triangulation_time.setter
-    def triangulation_time(self, arg0: typing.SupportsFloat) -> None:
+    def triangulation_time(*args, **kwargs):
         ...
 class ReconstructionEstimatorType:
     """
@@ -1763,193 +2413,238 @@ class ReconstructionEstimatorType:
     HYBRID: typing.ClassVar[ReconstructionEstimatorType]  # value = <ReconstructionEstimatorType.HYBRID: 2>
     INCREMENTAL: typing.ClassVar[ReconstructionEstimatorType]  # value = <ReconstructionEstimatorType.INCREMENTAL: 1>
     __members__: typing.ClassVar[dict[str, ReconstructionEstimatorType]]  # value = {'GLOBAL': <ReconstructionEstimatorType.GLOBAL: 0>, 'INCREMENTAL': <ReconstructionEstimatorType.INCREMENTAL: 1>, 'HYBRID': <ReconstructionEstimatorType.HYBRID: 2>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class RelativePose:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def essential_matrix(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    def essential_matrix(*args, **kwargs):
         ...
     @essential_matrix.setter
-    def essential_matrix(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    def essential_matrix(*args, **kwargs):
         ...
     @property
-    def position(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def position(*args, **kwargs):
         ...
     @position.setter
-    def position(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def position(*args, **kwargs):
         ...
     @property
-    def rotation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    def rotation(*args, **kwargs):
         ...
     @rotation.setter
-    def rotation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    def rotation(*args, **kwargs):
         ...
 class RigidTransformation:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def rotation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    def rotation(*args, **kwargs):
         ...
     @rotation.setter
-    def rotation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    def rotation(*args, **kwargs):
         ...
     @property
-    def translation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def translation(*args, **kwargs):
         ...
     @translation.setter
-    def translation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def translation(*args, **kwargs):
         ...
 class RobustRotationEstimator(RotationEstimator):
-    def AddRelativeRotationConstraint(self, arg0: tuple[typing.SupportsInt, typing.SupportsInt], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    @staticmethod
+    def AddRelativeRotationConstraint(*args, **kwargs):
         ...
-    def EstimateRotations(self, arg0: collections.abc.Mapping[tuple[typing.SupportsInt, typing.SupportsInt], TwoViewInfo], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> dict[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+    @staticmethod
+    def EstimateRotations(*args, **kwargs):
         ...
-    def SetFixedGlobalRotations(self, arg0: collections.abc.Set[typing.SupportsInt]) -> None:
+    @staticmethod
+    def SetFixedGlobalRotations(*args, **kwargs):
         ...
-    def __init__(self, arg0: RobustRotationEstimatorOptions) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class RobustRotationEstimatorOptions:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def irls_loss_parameter_sigma(self) -> float:
+    def irls_loss_parameter_sigma(*args, **kwargs):
         ...
     @irls_loss_parameter_sigma.setter
-    def irls_loss_parameter_sigma(self, arg0: typing.SupportsFloat) -> None:
+    def irls_loss_parameter_sigma(*args, **kwargs):
         ...
     @property
-    def irls_step_convergence_threshold(self) -> float:
+    def irls_step_convergence_threshold(*args, **kwargs):
         ...
     @irls_step_convergence_threshold.setter
-    def irls_step_convergence_threshold(self, arg0: typing.SupportsFloat) -> None:
+    def irls_step_convergence_threshold(*args, **kwargs):
         ...
     @property
-    def l1_step_convergence_threshold(self) -> float:
+    def l1_step_convergence_threshold(*args, **kwargs):
         ...
     @l1_step_convergence_threshold.setter
-    def l1_step_convergence_threshold(self, arg0: typing.SupportsFloat) -> None:
+    def l1_step_convergence_threshold(*args, **kwargs):
         ...
     @property
-    def max_num_irls_iterations(self) -> int:
+    def max_num_irls_iterations(*args, **kwargs):
         ...
     @max_num_irls_iterations.setter
-    def max_num_irls_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_num_irls_iterations(*args, **kwargs):
         ...
     @property
-    def max_num_l1_iterations(self) -> int:
+    def max_num_l1_iterations(*args, **kwargs):
         ...
     @max_num_l1_iterations.setter
-    def max_num_l1_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_num_l1_iterations(*args, **kwargs):
         ...
 class RotationEstimator:
     pass
 class Sim3AlignmentOptions:
-    alignment_type: Sim3AlignmentType
-    perform_optimization: bool
-    verbose: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def clear_initial_sim3_params(self) -> None:
+    @staticmethod
+    def clear_initial_sim3_params(*args, **kwargs):
         """
         Clear initial SIM3 parameters
         """
-    def clear_point_weights(self) -> None:
+    @staticmethod
+    def clear_point_weights(*args, **kwargs):
         """
         Clear point weights
         """
-    def clear_target_normals(self) -> None:
+    @staticmethod
+    def clear_target_normals(*args, **kwargs):
         """
         Clear target normals
         """
-    def set_initial_sim3_params(self, params: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[7, 1]"]) -> None:
+    @staticmethod
+    def set_initial_sim3_params(*args, **kwargs):
         """
         Set initial SIM3 parameters
         """
-    def set_point_weights(self, weights: collections.abc.Sequence[typing.SupportsFloat]) -> None:
+    @staticmethod
+    def set_point_weights(*args, **kwargs):
         """
         Set point weights
         """
-    def set_target_normals(self, normals: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> None:
+    @staticmethod
+    def set_target_normals(*args, **kwargs):
         """
         Set target normals for point-to-plane alignment
         """
     @property
-    def huber_threshold(self) -> float:
+    def alignment_type(*args, **kwargs):
+        ...
+    @alignment_type.setter
+    def alignment_type(*args, **kwargs):
+        ...
+    @property
+    def huber_threshold(*args, **kwargs):
         ...
     @huber_threshold.setter
-    def huber_threshold(self, arg0: typing.SupportsFloat) -> None:
+    def huber_threshold(*args, **kwargs):
         ...
     @property
-    def max_iterations(self) -> int:
+    def max_iterations(*args, **kwargs):
         ...
     @max_iterations.setter
-    def max_iterations(self, arg0: typing.SupportsInt) -> None:
+    def max_iterations(*args, **kwargs):
         ...
     @property
-    def outlier_threshold(self) -> float:
+    def outlier_threshold(*args, **kwargs):
         ...
     @outlier_threshold.setter
-    def outlier_threshold(self, arg0: typing.SupportsFloat) -> None:
+    def outlier_threshold(*args, **kwargs):
         ...
     @property
-    def point_weight(self) -> float:
+    def perform_optimization(*args, **kwargs):
+        ...
+    @perform_optimization.setter
+    def perform_optimization(*args, **kwargs):
+        ...
+    @property
+    def point_weight(*args, **kwargs):
         ...
     @point_weight.setter
-    def point_weight(self, arg0: typing.SupportsFloat) -> None:
+    def point_weight(*args, **kwargs):
+        ...
+    @property
+    def verbose(*args, **kwargs):
+        ...
+    @verbose.setter
+    def verbose(*args, **kwargs):
         ...
 class Sim3AlignmentSummary:
-    success: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def alignment_error(self) -> float:
+    def alignment_error(*args, **kwargs):
         ...
     @alignment_error.setter
-    def alignment_error(self, arg0: typing.SupportsFloat) -> None:
+    def alignment_error(*args, **kwargs):
         ...
     @property
-    def final_cost(self) -> float:
+    def final_cost(*args, **kwargs):
         ...
     @final_cost.setter
-    def final_cost(self, arg0: typing.SupportsFloat) -> None:
+    def final_cost(*args, **kwargs):
         ...
     @property
-    def num_iterations(self) -> int:
+    def num_iterations(*args, **kwargs):
         ...
     @num_iterations.setter
-    def num_iterations(self, arg0: typing.SupportsInt) -> None:
+    def num_iterations(*args, **kwargs):
         ...
     @property
-    def sim3_params(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[7, 1]"]:
+    def sim3_params(*args, **kwargs):
         ...
     @sim3_params.setter
-    def sim3_params(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[7, 1]"]) -> None:
+    def sim3_params(*args, **kwargs):
+        ...
+    @property
+    def success(*args, **kwargs):
+        ...
+    @success.setter
+    def success(*args, **kwargs):
         ...
 class Sim3AlignmentType:
     """
@@ -1965,52 +2660,63 @@ class Sim3AlignmentType:
     POINT_TO_POINT: typing.ClassVar[Sim3AlignmentType]  # value = <Sim3AlignmentType.POINT_TO_POINT: 0>
     ROBUST_POINT_TO_POINT: typing.ClassVar[Sim3AlignmentType]  # value = <Sim3AlignmentType.ROBUST_POINT_TO_POINT: 1>
     __members__: typing.ClassVar[dict[str, Sim3AlignmentType]]  # value = {'POINT_TO_POINT': <Sim3AlignmentType.POINT_TO_POINT: 0>, 'ROBUST_POINT_TO_POINT': <Sim3AlignmentType.ROBUST_POINT_TO_POINT: 1>, 'POINT_TO_PLANE': <Sim3AlignmentType.POINT_TO_PLANE: 2>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class SimilarityTransformation:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def rotation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    def rotation(*args, **kwargs):
         ...
     @rotation.setter
-    def rotation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    def rotation(*args, **kwargs):
         ...
     @property
-    def scale(self) -> float:
+    def scale(*args, **kwargs):
         ...
     @scale.setter
-    def scale(self, arg0: typing.SupportsFloat) -> None:
+    def scale(*args, **kwargs):
         ...
     @property
-    def translation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def translation(*args, **kwargs):
         ...
     @translation.setter
-    def translation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def translation(*args, **kwargs):
         ...
 class SparseLinearAlgebraLibraryType:
     """
@@ -2021,137 +2727,186 @@ class SparseLinearAlgebraLibraryType:
       EIGEN_SPARSE
     
       ACCELERATE_SPARSE
+    
+      CUDA_SPARSE
     """
-    ACCELERATE_SPARSE: typing.ClassVar[SparseLinearAlgebraLibraryType]  # value = <SparseLinearAlgebraLibraryType.ACCELERATE_SPARSE: 3>
-    EIGEN_SPARSE: typing.ClassVar[SparseLinearAlgebraLibraryType]  # value = <SparseLinearAlgebraLibraryType.EIGEN_SPARSE: 2>
+    ACCELERATE_SPARSE: typing.ClassVar[SparseLinearAlgebraLibraryType]  # value = <SparseLinearAlgebraLibraryType.ACCELERATE_SPARSE: 2>
+    CUDA_SPARSE: typing.ClassVar[SparseLinearAlgebraLibraryType]  # value = <SparseLinearAlgebraLibraryType.CUDA_SPARSE: 3>
+    EIGEN_SPARSE: typing.ClassVar[SparseLinearAlgebraLibraryType]  # value = <SparseLinearAlgebraLibraryType.EIGEN_SPARSE: 1>
     SUITE_SPARSE: typing.ClassVar[SparseLinearAlgebraLibraryType]  # value = <SparseLinearAlgebraLibraryType.SUITE_SPARSE: 0>
-    __members__: typing.ClassVar[dict[str, SparseLinearAlgebraLibraryType]]  # value = {'SUITE_SPARSE': <SparseLinearAlgebraLibraryType.SUITE_SPARSE: 0>, 'EIGEN_SPARSE': <SparseLinearAlgebraLibraryType.EIGEN_SPARSE: 2>, 'ACCELERATE_SPARSE': <SparseLinearAlgebraLibraryType.ACCELERATE_SPARSE: 3>}
-    def __eq__(self, other: typing.Any) -> bool:
+    __members__: typing.ClassVar[dict[str, SparseLinearAlgebraLibraryType]]  # value = {'SUITE_SPARSE': <SparseLinearAlgebraLibraryType.SUITE_SPARSE: 0>, 'EIGEN_SPARSE': <SparseLinearAlgebraLibraryType.EIGEN_SPARSE: 1>, 'ACCELERATE_SPARSE': <SparseLinearAlgebraLibraryType.ACCELERATE_SPARSE: 2>, 'CUDA_SPARSE': <SparseLinearAlgebraLibraryType.CUDA_SPARSE: 3>}
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class Track:
-    def AddView(self, arg0: typing.SupportsInt) -> None:
+    @staticmethod
+    def AddView(*args, **kwargs):
         ...
-    def Color(self) -> typing.Annotated[numpy.typing.NDArray[numpy.uint8], "[3, 1]"]:
+    @staticmethod
+    def Color(*args, **kwargs):
         ...
-    def InverseDepth(self) -> float:
+    @staticmethod
+    def InverseDepth(*args, **kwargs):
         ...
-    def IsEstimated(self) -> bool:
+    @staticmethod
+    def IsEstimated(*args, **kwargs):
         ...
-    def NumViews(self) -> int:
+    @staticmethod
+    def NumViews(*args, **kwargs):
         ...
-    def Point(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]:
+    @staticmethod
+    def Point(*args, **kwargs):
         ...
-    def ReferenceBearingVector(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def ReferenceBearingVector(*args, **kwargs):
         ...
-    def ReferenceDescriptor(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float32], "[m, 1]"]:
+    @staticmethod
+    def ReferenceDescriptor(*args, **kwargs):
         ...
-    def ReferenceViewId(self) -> int:
+    @staticmethod
+    def ReferenceViewId(*args, **kwargs):
         ...
-    def RemoveView(self, arg0: typing.SupportsInt) -> bool:
+    @staticmethod
+    def RemoveView(*args, **kwargs):
         ...
-    def SetColor(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.uint8, "[3, 1]"]) -> None:
+    @staticmethod
+    def SetColor(*args, **kwargs):
         ...
-    def SetInverseDepth(self, arg0: typing.SupportsFloat) -> None:
+    @staticmethod
+    def SetInverseDepth(*args, **kwargs):
         ...
-    def SetIsEstimated(self, arg0: bool) -> None:
+    @staticmethod
+    def SetIsEstimated(*args, **kwargs):
         ...
-    def SetPoint(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[4, 1]"]) -> None:
+    @staticmethod
+    def SetPoint(*args, **kwargs):
         ...
-    def SetReferenceBearingVector(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    @staticmethod
+    def SetReferenceBearingVector(*args, **kwargs):
         ...
-    def SetReferenceDescriptor(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float32, "[m, 1]"]) -> None:
+    @staticmethod
+    def SetReferenceDescriptor(*args, **kwargs):
         ...
-    def ViewIds(self) -> set[int]:
+    @staticmethod
+    def ViewIds(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class TrackBuilder:
-    def AddFeatureCorrespondence(self, arg0: typing.SupportsInt, arg1: Feature, arg2: typing.SupportsInt, arg3: Feature) -> None:
+    @staticmethod
+    def AddFeatureCorrespondence(*args, **kwargs):
         ...
-    def BuildTracks(self, arg0: ...) -> None:
+    @staticmethod
+    def BuildTracks(*args, **kwargs):
         ...
-    def BuildTracksIncremental(self, arg0: ...) -> None:
+    @staticmethod
+    def BuildTracksIncremental(*args, **kwargs):
         ...
-    def __init__(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class TrackEstimator:
-    def EstimateAllTracks(self) -> TrackEstimatorSummary:
+    @staticmethod
+    def EstimateAllTracks(*args, **kwargs):
         ...
-    def EstimateTracks(self, arg0: collections.abc.Set[typing.SupportsInt]) -> TrackEstimatorSummary:
+    @staticmethod
+    def EstimateTracks(*args, **kwargs):
         ...
-    def __init__(self, arg0: TrackEstimatorOptions, arg1: ...) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class TrackEstimatorOptions:
-    bundle_adjustment: bool
-    triangulation_method: TriangulationMethodType
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def max_acceptable_reprojection_error_pixels(self) -> float:
+    def bundle_adjustment(*args, **kwargs):
+        ...
+    @bundle_adjustment.setter
+    def bundle_adjustment(*args, **kwargs):
+        ...
+    @property
+    def max_acceptable_reprojection_error_pixels(*args, **kwargs):
         ...
     @max_acceptable_reprojection_error_pixels.setter
-    def max_acceptable_reprojection_error_pixels(self, arg0: typing.SupportsFloat) -> None:
+    def max_acceptable_reprojection_error_pixels(*args, **kwargs):
         ...
     @property
-    def min_triangulation_angle_degrees(self) -> float:
+    def min_triangulation_angle_degrees(*args, **kwargs):
         ...
     @min_triangulation_angle_degrees.setter
-    def min_triangulation_angle_degrees(self, arg0: typing.SupportsFloat) -> None:
+    def min_triangulation_angle_degrees(*args, **kwargs):
         ...
     @property
-    def multithreaded_step_size(self) -> int:
+    def multithreaded_step_size(*args, **kwargs):
         ...
     @multithreaded_step_size.setter
-    def multithreaded_step_size(self, arg0: typing.SupportsInt) -> None:
+    def multithreaded_step_size(*args, **kwargs):
         ...
     @property
-    def num_threads(self) -> int:
+    def num_threads(*args, **kwargs):
         ...
     @num_threads.setter
-    def num_threads(self, arg0: typing.SupportsInt) -> None:
+    def num_threads(*args, **kwargs):
+        ...
+    @property
+    def triangulation_method(*args, **kwargs):
+        ...
+    @triangulation_method.setter
+    def triangulation_method(*args, **kwargs):
         ...
 class TrackEstimatorSummary:
     @property
-    def estimated_tracks(self) -> set[int]:
+    def estimated_tracks(*args, **kwargs):
         ...
     @estimated_tracks.setter
-    def estimated_tracks(self, arg0: collections.abc.Set[typing.SupportsInt]) -> None:
+    def estimated_tracks(*args, **kwargs):
         ...
     @property
-    def input_num_estimated_tracks(self) -> int:
+    def input_num_estimated_tracks(*args, **kwargs):
         ...
     @input_num_estimated_tracks.setter
-    def input_num_estimated_tracks(self, arg0: typing.SupportsInt) -> None:
+    def input_num_estimated_tracks(*args, **kwargs):
         ...
     @property
-    def num_triangulation_attempts(self) -> int:
+    def num_triangulation_attempts(*args, **kwargs):
         ...
     @num_triangulation_attempts.setter
-    def num_triangulation_attempts(self, arg0: typing.SupportsInt) -> None:
+    def num_triangulation_attempts(*args, **kwargs):
         ...
 class TrackParametrizationType:
     """
@@ -2167,31 +2922,41 @@ class TrackParametrizationType:
     XYZW: typing.ClassVar[TrackParametrizationType]  # value = <TrackParametrizationType.XYZW: 0>
     XYZW_MANIFOLD: typing.ClassVar[TrackParametrizationType]  # value = <TrackParametrizationType.XYZW_MANIFOLD: 1>
     __members__: typing.ClassVar[dict[str, TrackParametrizationType]]  # value = {'XYZW': <TrackParametrizationType.XYZW: 0>, 'XYZW_MANIFOLD': <TrackParametrizationType.XYZW_MANIFOLD: 1>, 'INVERSE_DEPTH': <TrackParametrizationType.INVERSE_DEPTH: 2>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class TriangulationMethodType:
     """
@@ -2207,228 +2972,295 @@ class TriangulationMethodType:
     MIDPOINT: typing.ClassVar[TriangulationMethodType]  # value = <TriangulationMethodType.MIDPOINT: 0>
     SVD: typing.ClassVar[TriangulationMethodType]  # value = <TriangulationMethodType.SVD: 1>
     __members__: typing.ClassVar[dict[str, TriangulationMethodType]]  # value = {'MIDPOINT': <TriangulationMethodType.MIDPOINT: 0>, 'SVD': <TriangulationMethodType.SVD: 1>, 'L2_MINIMIZATION': <TriangulationMethodType.L2_MINIMIZATION: 2>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class TwoViewBundleAdjustmentOptions:
-    ba_options: BundleAdjustmentOptions
-    constant_camera1_intrinsics: bool
-    constant_camera2_intrinsics: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def ba_options(*args, **kwargs):
+        ...
+    @ba_options.setter
+    def ba_options(*args, **kwargs):
+        ...
+    @property
+    def constant_camera1_intrinsics(*args, **kwargs):
+        ...
+    @constant_camera1_intrinsics.setter
+    def constant_camera1_intrinsics(*args, **kwargs):
+        ...
+    @property
+    def constant_camera2_intrinsics(*args, **kwargs):
+        ...
+    @constant_camera2_intrinsics.setter
+    def constant_camera2_intrinsics(*args, **kwargs):
         ...
 class TwoViewInfo:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def focal_length_1(self) -> float:
+    def focal_length_1(*args, **kwargs):
         ...
     @focal_length_1.setter
-    def focal_length_1(self, arg0: typing.SupportsFloat) -> None:
+    def focal_length_1(*args, **kwargs):
         ...
     @property
-    def focal_length_2(self) -> float:
+    def focal_length_2(*args, **kwargs):
         ...
     @focal_length_2.setter
-    def focal_length_2(self, arg0: typing.SupportsFloat) -> None:
+    def focal_length_2(*args, **kwargs):
         ...
     @property
-    def num_homography_inliers(self) -> int:
+    def num_homography_inliers(*args, **kwargs):
         ...
     @num_homography_inliers.setter
-    def num_homography_inliers(self, arg0: typing.SupportsInt) -> None:
+    def num_homography_inliers(*args, **kwargs):
         ...
     @property
-    def num_verified_matches(self) -> int:
+    def num_verified_matches(*args, **kwargs):
         ...
     @num_verified_matches.setter
-    def num_verified_matches(self, arg0: typing.SupportsInt) -> None:
+    def num_verified_matches(*args, **kwargs):
         ...
     @property
-    def position_2(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def position_2(*args, **kwargs):
         ...
     @position_2.setter
-    def position_2(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def position_2(*args, **kwargs):
         ...
     @property
-    def rotation_2(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def rotation_2(*args, **kwargs):
         ...
     @rotation_2.setter
-    def rotation_2(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def rotation_2(*args, **kwargs):
         ...
     @property
-    def scale_estimate(self) -> float:
+    def scale_estimate(*args, **kwargs):
         ...
     @scale_estimate.setter
-    def scale_estimate(self, arg0: typing.SupportsFloat) -> None:
+    def scale_estimate(*args, **kwargs):
         ...
     @property
-    def visibility_score(self) -> int:
+    def visibility_score(*args, **kwargs):
         ...
     @visibility_score.setter
-    def visibility_score(self, arg0: typing.SupportsInt) -> None:
+    def visibility_score(*args, **kwargs):
         ...
 class UncalibratedAbsolutePose:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def position(self) -> float:
+    def position(*args, **kwargs):
         ...
     @position.setter
-    def position(self, arg0: typing.SupportsFloat) -> None:
+    def position(*args, **kwargs):
         ...
     @property
-    def rotation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    def rotation(*args, **kwargs):
         ...
     @rotation.setter
-    def rotation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    def rotation(*args, **kwargs):
         ...
 class UncalibratedRelativePose:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def focal_length1(self) -> float:
+    def focal_length1(*args, **kwargs):
         ...
     @focal_length1.setter
-    def focal_length1(self, arg0: typing.SupportsFloat) -> None:
+    def focal_length1(*args, **kwargs):
         ...
     @property
-    def focal_length2(self) -> float:
+    def focal_length2(*args, **kwargs):
         ...
     @focal_length2.setter
-    def focal_length2(self, arg0: typing.SupportsFloat) -> None:
+    def focal_length2(*args, **kwargs):
         ...
     @property
-    def fundamental_matrix(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    def fundamental_matrix(*args, **kwargs):
         ...
     @fundamental_matrix.setter
-    def fundamental_matrix(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    def fundamental_matrix(*args, **kwargs):
         ...
     @property
-    def position(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def position(*args, **kwargs):
         ...
     @position.setter
-    def position(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def position(*args, **kwargs):
         ...
     @property
-    def rotation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    def rotation(*args, **kwargs):
         ...
     @rotation.setter
-    def rotation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    def rotation(*args, **kwargs):
         ...
 class View:
-    def AddFeature(self, arg0: typing.SupportsInt, arg1: Feature) -> None:
+    @staticmethod
+    def AddFeature(*args, **kwargs):
         ...
-    def Camera(self) -> Camera:
+    @staticmethod
+    def Camera(*args, **kwargs):
         """
         Camera class object
         """
-    def CameraIntrinsicsPrior(self) -> CameraIntrinsicsPrior:
+    @staticmethod
+    def CameraIntrinsicsPrior(*args, **kwargs):
         ...
-    def GetFeature(self, arg0: typing.SupportsInt) -> Feature:
+    @staticmethod
+    def GetFeature(*args, **kwargs):
         ...
-    def GetGravityPrior(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def GetGravityPrior(*args, **kwargs):
         ...
-    def GetGravityPriorSqrtInformation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    @staticmethod
+    def GetGravityPriorSqrtInformation(*args, **kwargs):
         ...
-    def GetOrientationPrior(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def GetOrientationPrior(*args, **kwargs):
         ...
-    def GetOrientationPriorSqrtInformation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    @staticmethod
+    def GetOrientationPriorSqrtInformation(*args, **kwargs):
         ...
-    def GetPositionPrior(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    @staticmethod
+    def GetPositionPrior(*args, **kwargs):
         ...
-    def GetPositionPriorSqrtInformation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    @staticmethod
+    def GetPositionPriorSqrtInformation(*args, **kwargs):
         ...
-    def GetTimestamp(self) -> float:
+    @staticmethod
+    def GetTimestamp(*args, **kwargs):
         ...
-    def GetTrack(self, arg0: Feature) -> int:
+    @staticmethod
+    def GetTrack(*args, **kwargs):
         ...
-    def HasGravityPrior(self) -> bool:
+    @staticmethod
+    def HasGravityPrior(*args, **kwargs):
         ...
-    def HasOrientationPrior(self) -> bool:
+    @staticmethod
+    def HasOrientationPrior(*args, **kwargs):
         ...
-    def HasPositionPrior(self) -> bool:
+    @staticmethod
+    def HasPositionPrior(*args, **kwargs):
         ...
-    def IsEstimated(self) -> bool:
+    @staticmethod
+    def IsEstimated(*args, **kwargs):
         ...
-    def MutableCamera(self) -> Camera:
+    @staticmethod
+    def MutableCamera(*args, **kwargs):
         ...
-    def MutableCameraIntrinsicsPrior(self) -> CameraIntrinsicsPrior:
+    @staticmethod
+    def MutableCameraIntrinsicsPrior(*args, **kwargs):
         ...
-    def Name(self) -> str:
+    @staticmethod
+    def Name(*args, **kwargs):
         ...
-    def NumFeatures(self) -> int:
+    @staticmethod
+    def NumFeatures(*args, **kwargs):
         ...
-    def RemoveFeature(self, arg0: typing.SupportsInt) -> bool:
+    @staticmethod
+    def RemoveFeature(*args, **kwargs):
         ...
-    def SetCameraIntrinsicsPrior(self, arg0: CameraIntrinsicsPrior) -> None:
+    @staticmethod
+    def SetCameraIntrinsicsPrior(*args, **kwargs):
         ...
-    def SetGravityPrior(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def SetGravityPrior(*args, **kwargs):
         ...
-    def SetIsEstimated(self, arg0: bool) -> None:
+    @staticmethod
+    def SetIsEstimated(*args, **kwargs):
         ...
-    def SetOrientationPrior(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def SetOrientationPrior(*args, **kwargs):
         ...
-    def SetPositionPrior(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    @staticmethod
+    def SetPositionPrior(*args, **kwargs):
         ...
-    def TrackIds(self) -> list[int]:
+    @staticmethod
+    def TrackIds(*args, **kwargs):
         ...
-    def UpdateFeature(self, arg0: typing.SupportsInt, arg1: Feature) -> None:
+    @staticmethod
+    def UpdateFeature(*args, **kwargs):
         ...
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: str) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class ViewGraph:
-    def AddEdge(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt, arg2: TwoViewInfo) -> None:
+    @staticmethod
+    def AddEdge(*args, **kwargs):
         ...
-    def GetAllEdges(self) -> dict[tuple[int, int], TwoViewInfo]:
+    @staticmethod
+    def GetAllEdges(*args, **kwargs):
         ...
-    def GetEdge(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt) -> TwoViewInfo:
+    @staticmethod
+    def GetEdge(*args, **kwargs):
         ...
-    def GetNeighborIdsForView(self, arg0: typing.SupportsInt) -> set[int]:
+    @staticmethod
+    def GetNeighborIdsForView(*args, **kwargs):
         ...
-    def HasEdge(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt) -> bool:
+    @staticmethod
+    def HasEdge(*args, **kwargs):
         ...
-    def HasView(self, arg0: typing.SupportsInt) -> bool:
+    @staticmethod
+    def HasView(*args, **kwargs):
         ...
-    def NumEdges(self) -> int:
+    @staticmethod
+    def NumEdges(*args, **kwargs):
         ...
-    def NumViews(self) -> int:
+    @staticmethod
+    def NumViews(*args, **kwargs):
         ...
-    def ReadFromDisk(self, arg0: str) -> bool:
+    @staticmethod
+    def ReadFromDisk(*args, **kwargs):
         ...
-    def RemoveEdge(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt) -> bool:
+    @staticmethod
+    def RemoveEdge(*args, **kwargs):
         ...
-    def RemoveView(self, arg0: typing.SupportsInt) -> bool:
+    @staticmethod
+    def RemoveView(*args, **kwargs):
         ...
-    def WriteToDisk(self, arg0: str) -> bool:
+    @staticmethod
+    def WriteToDisk(*args, **kwargs):
         ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
 class VisibilityClusteringType:
     """
@@ -2441,262 +3273,277 @@ class VisibilityClusteringType:
     CANONICAL_VIEWS: typing.ClassVar[VisibilityClusteringType]  # value = <VisibilityClusteringType.CANONICAL_VIEWS: 0>
     SINGLE_LINKAGE: typing.ClassVar[VisibilityClusteringType]  # value = <VisibilityClusteringType.SINGLE_LINKAGE: 1>
     __members__: typing.ClassVar[dict[str, VisibilityClusteringType]]  # value = {'SINGLE_LINKAGE': <VisibilityClusteringType.SINGLE_LINKAGE: 1>, 'CANONICAL_VIEWS': <VisibilityClusteringType.CANONICAL_VIEWS: 0>}
-    def __eq__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
 class VisibilityPyramid:
-    def AddPoint(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> None:
+    @staticmethod
+    def AddPoint(*args, **kwargs):
         ...
-    def ComputeScore(self) -> int:
+    @staticmethod
+    def ComputeScore(*args, **kwargs):
         ...
-    def __init__(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt, arg2: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-def AddFeatureCorrespondencesToTrackBuilder(arg0: typing.SupportsInt, arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg2: typing.SupportsInt, arg3: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg4: ...) -> None:
+def AddFeatureCorrespondencesToTrackBuilder(*args, **kwargs):
     ...
-def AddFullFeatureCorrespondencesToTrackBuilder(arg0: typing.SupportsInt, arg1: collections.abc.Sequence[Feature], arg2: typing.SupportsInt, arg3: collections.abc.Sequence[Feature], arg4: ...) -> None:
+def AddFullFeatureCorrespondencesToTrackBuilder(*args, **kwargs):
     ...
-def AddObservations(arg0: typing.SupportsInt, arg1: collections.abc.Sequence[typing.SupportsInt], arg2: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg3: ...) -> None:
+def AddObservations(*args, **kwargs):
     ...
-def AddTracks(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.uint8, "[3, 1]"]], arg2: ...) -> list[int]:
+def AddTracks(*args, **kwargs):
     ...
-def AlignPointCloudsUmeyama(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"], float]:
+def AlignPointCloudsUmeyama(*args, **kwargs):
     ...
-def AlignPointCloudsUmeyamaWithWeights(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: collections.abc.Sequence[typing.SupportsFloat]) -> tuple[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"], float]:
+def AlignPointCloudsUmeyamaWithWeights(*args, **kwargs):
     ...
-def AlignReconstructions(arg0: ..., arg1: ...) -> tuple[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"], float]:
+def AlignReconstructions(*args, **kwargs):
     ...
-def AlignReconstructionsRobust(arg0: typing.SupportsFloat, arg1: ..., arg2: ...) -> tuple[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"], float]:
+def AlignReconstructionsRobust(*args, **kwargs):
     ...
-def AlignRotations(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def AlignRotations(*args, **kwargs):
     ...
-def BundleAdjustPartialReconstruction(arg0: BundleAdjustmentOptions, arg1: collections.abc.Set[typing.SupportsInt], arg2: collections.abc.Set[typing.SupportsInt], arg3: Reconstruction) -> BundleAdjustmentSummary:
+def BundleAdjustPartialReconstruction(*args, **kwargs):
     ...
-def BundleAdjustPartialViewsConstant(arg0: BundleAdjustmentOptions, arg1: collections.abc.Sequence[typing.SupportsInt], arg2: collections.abc.Sequence[typing.SupportsInt], arg3: Reconstruction) -> BundleAdjustmentSummary:
+def BundleAdjustPartialViewsConstant(*args, **kwargs):
     ...
-def BundleAdjustReconstruction(arg0: BundleAdjustmentOptions, arg1: Reconstruction) -> BundleAdjustmentSummary:
+def BundleAdjustReconstruction(*args, **kwargs):
     ...
-def BundleAdjustTrack(arg0: Reconstruction, arg1: BundleAdjustmentOptions, arg2: typing.SupportsInt) -> BundleAdjustmentSummary:
+def BundleAdjustTrack(*args, **kwargs):
     ...
-def BundleAdjustTrackWithCov(arg0: Reconstruction, arg1: BundleAdjustmentOptions, arg2: typing.SupportsInt) -> tuple[BundleAdjustmentSummary, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], float]:
+def BundleAdjustTrackWithCov(*args, **kwargs):
     ...
-def BundleAdjustTracks(arg0: Reconstruction, arg1: BundleAdjustmentOptions, arg2: collections.abc.Sequence[typing.SupportsInt]) -> BundleAdjustmentSummary:
+def BundleAdjustTracks(*args, **kwargs):
     ...
-def BundleAdjustTracksWithCov(arg0: Reconstruction, arg1: BundleAdjustmentOptions, arg2: collections.abc.Sequence[typing.SupportsInt]) -> tuple[BundleAdjustmentSummary, dict[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]], float]:
+def BundleAdjustTracksWithCov(*args, **kwargs):
     ...
-def BundleAdjustTwoViewsAngular(arg0: BundleAdjustmentOptions, arg1: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence], arg2: TwoViewInfo) -> BundleAdjustmentSummary:
+def BundleAdjustTwoViewsAngular(*args, **kwargs):
     ...
-def BundleAdjustView(arg0: Reconstruction, arg1: BundleAdjustmentOptions, arg2: typing.SupportsInt) -> BundleAdjustmentSummary:
+def BundleAdjustView(*args, **kwargs):
     ...
-def BundleAdjustViewWithCov(arg0: Reconstruction, arg1: BundleAdjustmentOptions, arg2: typing.SupportsInt) -> tuple[BundleAdjustmentSummary, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[6, 6]"], float]:
+def BundleAdjustViewWithCov(*args, **kwargs):
     ...
-def BundleAdjustViews(arg0: Reconstruction, arg1: BundleAdjustmentOptions, arg2: collections.abc.Sequence[typing.SupportsInt]) -> BundleAdjustmentSummary:
+def BundleAdjustViews(*args, **kwargs):
     ...
-def BundleAdjustViewsWithCov(arg0: Reconstruction, arg1: BundleAdjustmentOptions, arg2: collections.abc.Sequence[typing.SupportsInt]) -> tuple[BundleAdjustmentSummary, dict[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[6, 6]"]], float]:
+def BundleAdjustViewsWithCov(*args, **kwargs):
     ...
-def CalibrationMatrixToIntrinsics(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> tuple[float, float, float, float, float]:
+def CalibrationMatrixToIntrinsics(*args, **kwargs):
     ...
-def ColorizeReconstruction(arg0: str, arg1: typing.SupportsInt, arg2: ...) -> None:
+def ColorizeReconstruction(*args, **kwargs):
     ...
-def ComposeFundamentalMatrix(arg0: typing.SupportsFloat, arg1: typing.SupportsFloat, arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], arg3: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+def ComposeFundamentalMatrix(*args, **kwargs):
     ...
-def ComposeProjectionMatrix(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 4]"]]:
+def ComposeProjectionMatrix(*args, **kwargs):
     ...
-def ComputeTripletBaselineRatios(arg0: ..., arg1: collections.abc.Sequence[Feature], arg2: collections.abc.Sequence[Feature], arg3: collections.abc.Sequence[Feature]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def ComputeTripletBaselineRatios(*args, **kwargs):
     ...
-def CreateEstimatedSubreconstruction(arg0: Reconstruction, arg1: Reconstruction) -> None:
+def CreateEstimatedSubreconstruction(*args, **kwargs):
     ...
-def DecomposeEssentialMatrix(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> tuple[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def DecomposeEssentialMatrix(*args, **kwargs):
     ...
-def DecomposeProjectionMatrix(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def DecomposeProjectionMatrix(*args, **kwargs):
     ...
-def DlsPnp(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]]:
+def DlsPnp(*args, **kwargs):
     ...
-def EssentialMatrixFromFundamentalMatrix(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], arg1: typing.SupportsFloat, arg2: typing.SupportsFloat) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+def EssentialMatrixFromFundamentalMatrix(*args, **kwargs):
     ...
-def EssentialMatrixFromTwoProjectionMatrices(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+def EssentialMatrixFromTwoProjectionMatrices(*args, **kwargs):
     ...
-def EstimateAbsolutePoseWithKnownOrientation(arg0: ..., arg1: RansacType, arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg3: collections.abc.Sequence[FeatureCorrespondence2D3D]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"], ...]:
+def EstimateAbsolutePoseWithKnownOrientation(*args, **kwargs):
     ...
-def EstimateCalibratedAbsolutePose(arg0: ..., arg1: RansacType, arg2: PnPType, arg3: collections.abc.Sequence[FeatureCorrespondence2D3D]) -> tuple[bool, CalibratedAbsolutePose, ...]:
+def EstimateCalibratedAbsolutePose(*args, **kwargs):
     ...
-def EstimateDominantPlaneFromPoints(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[bool, Plane, ...]:
+def EstimateDominantPlaneFromPoints(*args, **kwargs):
     ...
-def EstimateEssentialMatrix(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], ...]:
+def EstimateEssentialMatrix(*args, **kwargs):
     ...
-def EstimateFundamentalMatrix(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], ...]:
+def EstimateFundamentalMatrix(*args, **kwargs):
     ...
-def EstimateHomography(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], ...]:
+def EstimateHomography(*args, **kwargs):
     ...
-def EstimateRadialHomographyMatrix(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[RadialDistortionFeatureCorrespondence]) -> tuple[bool, ..., ...]:
+def EstimateRadialHomographyMatrix(*args, **kwargs):
     ...
-def EstimateRelativePose(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence]) -> tuple[bool, RelativePose, ...]:
+def EstimateRelativePose(*args, **kwargs):
     ...
-def EstimateRelativePoseWithKnownOrientation(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"], ...]:
+def EstimateRelativePoseWithKnownOrientation(*args, **kwargs):
     ...
-def EstimateRigidTransformation2D3D(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[CameraAndFeatureCorrespondence2D3D]) -> tuple[bool, RigidTransformation, ...]:
+def EstimateRigidTransformation2D3D(*args, **kwargs):
     ...
-def EstimateRigidTransformation2D3DNormalized(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[FeatureCorrespondence2D3D]) -> tuple[bool, RigidTransformation, ...]:
+def EstimateRigidTransformation2D3DNormalized(*args, **kwargs):
     ...
-def EstimateTriangulation(arg0: ..., arg1: collections.abc.Sequence[Camera], arg2: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"], ...]:
+def EstimateTriangulation(*args, **kwargs):
     ...
-def EstimateTwoViewInfo(arg0: EstimateTwoViewInfoOptions, arg1: CameraIntrinsicsPrior, arg2: CameraIntrinsicsPrior, arg3: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence]) -> tuple[bool, ..., list[int]]:
+def EstimateTwoViewInfo(*args, **kwargs):
     ...
-def EstimateUncalibratedAbsolutePose(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[FeatureCorrespondence2D3D]) -> tuple[bool, UncalibratedAbsolutePose, ...]:
+def EstimateUncalibratedAbsolutePose(*args, **kwargs):
     ...
-def EstimateUncalibratedRelativePose(arg0: ..., arg1: RansacType, arg2: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence], arg3: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> tuple[bool, UncalibratedRelativePose, ...]:
+def EstimateUncalibratedRelativePose(*args, **kwargs):
     ...
-def ExtractMaximallyParallelRigidSubgraph(arg0: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: ...) -> None:
+def ExtractMaximallyParallelRigidSubgraph(*args, **kwargs):
     ...
-def FilterViewGraphCyclesByRotation(arg0: typing.SupportsFloat, arg1: ...) -> None:
+def FilterViewGraphCyclesByRotation(*args, **kwargs):
     ...
-def FilterViewPairsFromOrientation(arg0: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: typing.SupportsFloat, arg2: ...) -> None:
+def FilterViewPairsFromOrientation(*args, **kwargs):
     ...
-def FilterViewPairsFromRelativeTranslation(arg0: FilterViewPairsFromRelativeTranslationOptions, arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: ...) -> None:
+def FilterViewPairsFromRelativeTranslation(*args, **kwargs):
     ...
-def FindCommonTracksByFeatureInReconstructions(arg0: ..., arg1: ..., arg2: collections.abc.Sequence[tuple[typing.SupportsInt, typing.SupportsInt]]) -> tuple[list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]], list[tuple[int, int]]]:
+def FindCommonTracksByFeatureInReconstructions(*args, **kwargs):
     ...
-def FindCommonTracksInViews(arg0: ..., arg1: collections.abc.Sequence[typing.SupportsInt]) -> list[int]:
+def FindCommonTracksInViews(*args, **kwargs):
     ...
-def FindCommonViewsByName(arg0: ..., arg1: ...) -> list[str]:
+def FindCommonViewsByName(*args, **kwargs):
     ...
-def FivePointFocalLengthRadialDistortion(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: typing.SupportsInt) -> tuple[bool, list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 4]"]], list[list[float]]]:
+def FivePointFocalLengthRadialDistortion(*args, **kwargs):
     ...
-def FivePointRelativePose(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]]) -> tuple[bool, list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]]]:
+def FivePointRelativePose(*args, **kwargs):
     ...
-def FocalLengthsFromFundamentalMatrix(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> tuple[bool, float, float]:
+def FocalLengthsFromFundamentalMatrix(*args, **kwargs):
     ...
-def FourPointHomography(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]]:
+def FourPointHomography(*args, **kwargs):
     ...
-def FourPointPoseAndFocalLength(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[int, list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 4]"]]]:
+def FourPointPoseAndFocalLength(*args, **kwargs):
     ...
-def FourPointRelativePosePartialRotation(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg3: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg4: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]]:
+def FourPointRelativePosePartialRotation(*args, **kwargs):
     ...
-def FourPointsPoseFocalLengthRadialDistortion(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: ...) -> tuple[bool, list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]], list[float], list[float]]:
+def FourPointsPoseFocalLengthRadialDistortion(*args, **kwargs):
     ...
-def FundamentalMatrixFromProjectionMatrices(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+def FundamentalMatrixFromProjectionMatrices(*args, **kwargs):
     ...
-def GdlsSimilarityTransform(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]], list[float]]:
+def GdlsSimilarityTransform(*args, **kwargs):
     ...
-def GetBestPoseFromEssentialMatrix(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], arg1: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence]) -> tuple[int, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def GetBestPoseFromEssentialMatrix(*args, **kwargs):
     ...
-def GetEstimatedTracksFromReconstruction(arg0: Reconstruction) -> set[int]:
+def GetEstimatedTracksFromReconstruction(*args, **kwargs):
     ...
-def GetEstimatedViewsFromReconstruction(arg0: Reconstruction) -> set[int]:
+def GetEstimatedViewsFromReconstruction(*args, **kwargs):
     ...
-def IntrinsicsToCalibrationMatrix(arg0: typing.SupportsFloat, arg1: typing.SupportsFloat, arg2: typing.SupportsFloat, arg3: typing.SupportsFloat, arg4: typing.SupportsFloat) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+def IntrinsicsToCalibrationMatrix(*args, **kwargs):
     ...
-def IsTriangulatedPointInFrontOfCameras(arg0: pytheia.pytheia.matching.FeatureCorrespondence, arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> bool:
+def IsTriangulatedPointInFrontOfCameras(*args, **kwargs):
     ...
-def LocalizeViewToReconstruction(arg0: typing.SupportsInt, arg1: LocalizeViewToReconstructionOptions, arg2: ..., arg3: ...) -> bool:
+def LocalizeViewToReconstruction(*args, **kwargs):
     ...
-def NormalizedEightPointFundamentalMatrix(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]]:
+def MLPnP(*args, **kwargs):
     ...
-def NumEstimatedTracks(arg0: Reconstruction) -> int:
+def NormalizedEightPointFundamentalMatrix(*args, **kwargs):
     ...
-def NumEstimatedViews(arg0: Reconstruction) -> int:
+def NumEstimatedTracks(*args, **kwargs):
     ...
-def OptimizeAbsolutePoseOnNormFeatures(arg0: collections.abc.Sequence[FeatureCorrespondence2D3D], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg3: BundleAdjustmentOptions) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def NumEstimatedViews(*args, **kwargs):
     ...
-def OptimizeAlignmentSim3(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: Sim3AlignmentOptions) -> Sim3AlignmentSummary:
+def OptimizeAbsolutePoseOnNormFeatures(*args, **kwargs):
     ...
-def OptimizeRelativePositionWithKnownRotation(arg0: collections.abc.Sequence[pytheia.pytheia.matching.FeatureCorrespondence], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def OptimizeAlignmentSim3(*args, **kwargs):
     ...
-def PlanarUncalibratedOrthographicPose(arg0: collections.abc.Sequence[...], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> tuple[bool, list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]], float]:
+def OptimizeRelativePositionWithKnownRotation(*args, **kwargs):
     ...
-def PoseFromThreePoints(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[bool, list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]]:
+def PlanarUncalibratedOrthographicPose(*args, **kwargs):
     ...
-def MLPnP(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]], arg2: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def PoseFromThreePoints(*args, **kwargs):
     ...
-def PositionFromTwoRays(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"], arg3: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def PositionFromTwoRays(*args, **kwargs):
     ...
-def ProjectionMatricesFromFundamentalMatrix(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> tuple[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 4]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 4]"]]:
+def ProjectionMatricesFromFundamentalMatrix(*args, **kwargs):
     ...
-def RelativePoseFromTwoPointsWithKnownRotation(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def RelativePoseFromTwoPointsWithKnownRotation(*args, **kwargs):
     ...
-def RelativeRotationsFromViewGraph(arg0: ...) -> dict[tuple[int, int], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]:
+def RelativeRotationsFromViewGraph(*args, **kwargs):
     ...
-def RemoveDisconnectedViewPairs(arg0: ...) -> set[int]:
+def RemoveDisconnectedViewPairs(*args, **kwargs):
     ...
-def SelectGoodTracksForBundleAdjustment(arg0: ..., arg1: collections.abc.Set[typing.SupportsInt], arg2: typing.SupportsInt, arg3: typing.SupportsInt, arg4: typing.SupportsInt) -> tuple[bool, set[int]]:
+def SelectGoodTracksForBundleAdjustment(*args, **kwargs):
     ...
-def SetCameraIntrinsicsFromPriors(arg0: ...) -> None:
+def SetCameraIntrinsicsFromPriors(*args, **kwargs):
     ...
-def SetOutlierTracksToUnestimated(arg0: collections.abc.Set[typing.SupportsInt], arg1: typing.SupportsFloat, arg2: typing.SupportsFloat, arg3: ...) -> int:
+def SetOutlierTracksToUnestimated(*args, **kwargs):
     ...
-def SetReconstructionFromEstimatedPoses(arg0: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: collections.abc.Mapping[typing.SupportsInt, typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: Reconstruction) -> None:
+def SetReconstructionFromEstimatedPoses(*args, **kwargs):
     ...
-def SetUnderconstrainedTracksToUnestimated(arg0: Reconstruction) -> int:
+def SetUnderconstrainedTracksToUnestimated(*args, **kwargs):
     ...
-def SetUnderconstrainedViewsToUnestimated(arg0: Reconstruction) -> int:
+def SetUnderconstrainedViewsToUnestimated(*args, **kwargs):
     ...
-def SevenPointFundamentalMatrix(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]]) -> tuple[bool, list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]]]:
+def SevenPointFundamentalMatrix(*args, **kwargs):
     ...
-def SharedFocalLengthsFromFundamentalMatrix(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> tuple[bool, float]:
+def SharedFocalLengthsFromFundamentalMatrix(*args, **kwargs):
     ...
-def Sim3FromRotationTranslationScale(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg2: typing.SupportsFloat) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[7, 1]"]:
+def Sim3FromRotationTranslationScale(*args, **kwargs):
     ...
-def Sim3ToHomogeneousMatrix(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[7, 1]"]) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 4]"]:
+def Sim3ToHomogeneousMatrix(*args, **kwargs):
     ...
-def Sim3ToRotationTranslationScale(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[7, 1]"]) -> tuple[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"], typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"], float]:
+def Sim3ToRotationTranslationScale(*args, **kwargs):
     ...
-def SimTransformPartialRotation(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg3: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg4: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]], list[float]]:
+def SimTransformPartialRotation(*args, **kwargs):
     ...
-def SufficientTriangulationAngle(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: typing.SupportsFloat) -> bool:
+def SufficientTriangulationAngle(*args, **kwargs):
     ...
-def SwapCameras(arg0: TwoViewInfo) -> None:
+def SwapCameras(*args, **kwargs):
     ...
-def ThreePointRelativePosePartialRotation(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg2: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]]:
+def ThreePointRelativePosePartialRotation(*args, **kwargs):
     ...
-def TransformReconstruction(arg0: ..., arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg3: typing.SupportsFloat) -> None:
+def TransformReconstruction(*args, **kwargs):
     ...
-def TransformReconstruction4(arg0: ..., arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[4, 4]"]) -> None:
+def TransformReconstruction4(*args, **kwargs):
     ...
-def Triangulate(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"], arg3: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]]:
+def Triangulate(*args, **kwargs):
     ...
-def TriangulateDLT(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"], arg3: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]]:
+def TriangulateDLT(*args, **kwargs):
     ...
-def TriangulateMidpoint(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]]:
+def TriangulateMidpoint(*args, **kwargs):
     ...
-def TriangulateNView(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]]:
+def TriangulateNView(*args, **kwargs):
     ...
-def TriangulateNViewSVD(arg0: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 4]"]], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]]) -> tuple[bool, typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]]:
+def TriangulateNViewSVD(*args, **kwargs):
     ...
-def TwoPointPosePartialRotation(arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg1: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg3: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"], arg4: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> tuple[int, list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[4, 1]"]], list[typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]]]:
+def TwoPointPosePartialRotation(*args, **kwargs):
     ...
-def UpdateFeaturesInView(arg0: typing.SupportsInt, arg1: collections.abc.Sequence[typing.SupportsInt], arg2: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 1]"]], arg3: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[2, 2]"]], arg4: ...) -> None:
+def UpdateFeaturesInView(*args, **kwargs):
     ...
-ACCELERATE_SPARSE: SparseLinearAlgebraLibraryType  # value = <SparseLinearAlgebraLibraryType.ACCELERATE_SPARSE: 3>
+ACCELERATE_SPARSE: SparseLinearAlgebraLibraryType  # value = <SparseLinearAlgebraLibraryType.ACCELERATE_SPARSE: 2>
 ALL: OptimizeIntrinsicsType  # value = <OptimizeIntrinsicsType.ALL: 63>
 ARCTAN: LossFunctionType  # value = <LossFunctionType.ARCTAN: 4>
 ASPECT_RATIO: OptimizeIntrinsicsType  # value = <OptimizeIntrinsicsType.ASPECT_RATIO: 2>
 CANONICAL_VIEWS: VisibilityClusteringType  # value = <VisibilityClusteringType.CANONICAL_VIEWS: 0>
 CAUCHY: LossFunctionType  # value = <LossFunctionType.CAUCHY: 3>
 CGNR: LinearSolverType  # value = <LinearSolverType.CGNR: 6>
-CLUSTER_JACOBI: PreconditionerType  # value = <PreconditionerType.CLUSTER_JACOBI: 3>
-CLUSTER_TRIDIAGONAL: PreconditionerType  # value = <PreconditionerType.CLUSTER_TRIDIAGONAL: 4>
+CLUSTER_JACOBI: PreconditionerType  # value = <PreconditionerType.CLUSTER_JACOBI: 4>
+CLUSTER_TRIDIAGONAL: PreconditionerType  # value = <PreconditionerType.CLUSTER_TRIDIAGONAL: 5>
+CUDA: DenseLinearAlgebraLibraryType  # value = <DenseLinearAlgebraLibraryType.CUDA: 2>
+CUDA_SPARSE: SparseLinearAlgebraLibraryType  # value = <SparseLinearAlgebraLibraryType.CUDA_SPARSE: 3>
 DENSE_NORMAL_CHOLESKY: LinearSolverType  # value = <LinearSolverType.DENSE_NORMAL_CHOLESKY: 0>
 DENSE_QR: LinearSolverType  # value = <LinearSolverType.DENSE_QR: 1>
 DENSE_SCHUR: LinearSolverType  # value = <LinearSolverType.DENSE_SCHUR: 3>
@@ -2705,7 +3552,7 @@ DIVISION_UNDISTORTION: CameraIntrinsicsModelType  # value = <CameraIntrinsicsMod
 DLS: PnPType  # value = <PnPType.DLS: 2>
 DOUBLE_SPHERE: CameraIntrinsicsModelType  # value = <CameraIntrinsicsModelType.DOUBLE_SPHERE: 5>
 EIGEN: DenseLinearAlgebraLibraryType  # value = <DenseLinearAlgebraLibraryType.EIGEN: 0>
-EIGEN_SPARSE: SparseLinearAlgebraLibraryType  # value = <SparseLinearAlgebraLibraryType.EIGEN_SPARSE: 2>
+EIGEN_SPARSE: SparseLinearAlgebraLibraryType  # value = <SparseLinearAlgebraLibraryType.EIGEN_SPARSE: 1>
 EXHAUSTIVE: RansacType  # value = <RansacType.EXHAUSTIVE: 3>
 EXTENDED_UNIFIED: CameraIntrinsicsModelType  # value = <CameraIntrinsicsModelType.EXTENDED_UNIFIED: 6>
 FISHEYE: CameraIntrinsicsModelType  # value = <CameraIntrinsicsModelType.FISHEYE: 2>

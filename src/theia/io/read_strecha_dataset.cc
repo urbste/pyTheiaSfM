@@ -34,6 +34,7 @@
 
 #include "theia/io/read_strecha_dataset.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -47,7 +48,8 @@
 namespace theia {
 
 void AddCameraToReconstruction(const std::string& camera_filepath,
-                               Reconstruction* reconstruction) {
+                               Reconstruction* reconstruction,
+                               int idx) {
   static const int kCameraIntrinsicsGroup = 0;
 
   std::ifstream ifs(camera_filepath, std::ios::in);
@@ -66,7 +68,7 @@ void AddCameraToReconstruction(const std::string& camera_filepath,
 
   // Add the view and ensure that the camera intrinsics are all the same.
   const ViewId view_id =
-      reconstruction->AddView(image_name, kCameraIntrinsicsGroup);
+      reconstruction->AddView(image_name, kCameraIntrinsicsGroup, (double)idx);
   CHECK_NE(view_id, kInvalidViewId)
       << "The image " << image_name
       << " could not be added to the reconstruction.";
@@ -137,9 +139,15 @@ bool ReadStrechaDataset(const std::string& dataset_directory,
   CHECK_GT(camera_files.size(), 0)
       << "No cameras found in: " << camera_wildcard;
 
+  // Deterministic order: wildcard enumeration is filesystem-defined; sorted
+  // paths keep view timestamps and logs stable across platforms.
+  std::sort(camera_files.begin(), camera_files.end());
+
   // Add each camera in the Strecha MVS dataset to the reconstruciton.
+  int idx = 0;
   for (const std::string camera_file : camera_files) {
-    AddCameraToReconstruction(camera_file, reconstruction);
+    AddCameraToReconstruction(camera_file, reconstruction, idx);
+    idx++;
   }
   return true;
 }

@@ -154,23 +154,29 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   endif(HAVE_RETURN_TYPE_C_LINKAGE)
 endif ()
 
-# Enable Link Time Optimization (LTO) for better performance
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto=auto")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto=auto")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto=auto")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto=auto")
-  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -flto=auto")
-  message(STATUS "Link Time Optimization (LTO): ENABLED with -flto=auto")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GL")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /GL")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LTCG")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LTCG")
-  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /LTCG")
-  message(STATUS "Link Time Optimization (LTO): ENABLED with /GL for MSVC")
+# Enable Link Time Optimization (LTO) for better performance.
+# Skip for PYTHON_BUILD: LTO on libTHEIA.a linked into pytheia.so often produces
+# undefined Eigen (and similar) template symbols at dlopen with GCC/Clang.
+if (NOT PYTHON_BUILD)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto=auto")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto=auto")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto=auto")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto=auto")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -flto=auto")
+    message(STATUS "Link Time Optimization (LTO): ENABLED with -flto=auto")
+  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GL")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /GL")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LTCG")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LTCG")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /LTCG")
+    message(STATUS "Link Time Optimization (LTO): ENABLED with /GL for MSVC")
+  else()
+    message(STATUS "Link Time Optimization (LTO): NOT SUPPORTED for this compiler")
+  endif()
 else()
-  message(STATUS "Link Time Optimization (LTO): NOT SUPPORTED for this compiler")
+  message(STATUS "Link Time Optimization (LTO): DISABLED (PYTHON_BUILD)")
 endif()
 
 # GFlags. The namespace patch is borrow from Ceres Solver (see license in
@@ -266,27 +272,6 @@ endif ()
 # build Third party libraries included in distro.
 add_subdirectory(libraries)
 
-# In-tree and vendored header paths only ($<BUILD_INTERFACE:...> so they are
-# not written into installed TheiaTargets.cmake). Third-party includes come
-# from Ceres::ceres / gflags / glog targets linked against THEIA.
-add_library(theia_build_includes INTERFACE)
-target_include_directories(theia_build_includes INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/spectra>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/Sophus>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/cereal/include>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/stlplus3>
-)
-if(BUILD_TESTING)
-  target_include_directories(theia_build_includes INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/gtest/include>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/gtest>
-  )
-endif()
-
 # Eigen as global SYSTEM include (same as historic Theia): avoids embedding
 # machine-specific paths in exported TheiaTargets. Consumers get Eigen via
 # find_package in TheiaConfig.cmake.
@@ -379,5 +364,9 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TheiaConfig.cmake"
 
 # python build
 if (PYTHON_BUILD)
+  # pybind11_add_module() pulls in pybind11::lto unless IPO is explicitly set.
+  # That re-enables LTO on pytheia.so and breaks Eigen across libTHEIA.a (undefined
+  # symbols at import time). Force IPO/LTO off for the extension build tree.
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
   add_subdirectory(src/pytheia)
 endif (PYTHON_BUILD)

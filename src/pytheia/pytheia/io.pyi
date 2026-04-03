@@ -1,171 +1,155 @@
 from __future__ import annotations
-import collections.abc
-import typing
-import numpy
-import numpy.typing
-
-__all__: list[str] = [
-    'BundlerCamera',
-    'BundlerFileReader',
-    'BundlerObservation',
-    'BundlerPoint',
-    'ImportNVMFile',
-    'ListImgEntry',
-    'PopulateImageSizesAndPrincipalPoints',
-    'Read1DSFM',
-    'ReadBundlerFiles',
-    'ReadReconstruction',
-    'ReadStrechaDataset',
-    'WriteBundlerFiles',
-    'WriteColmapFiles',
-    'WriteNVMFile',
-    'WriteNerfStudio',
-    'WritePlyFile',
-    'WriteReconstruction',
-    'WriteReconstructionJson',
-    'WriteSdfStudio',
-]
-
-class BundlerObservation:
-    def __init__(self) -> None:
-        ...
-    @property
-    def camera_index(self) -> int:
-        ...
-    @camera_index.setter
-    def camera_index(self, arg0: typing.SupportsInt) -> None:
-        ...
-    @property
-    def feature_index(self) -> int:
-        ...
-    @feature_index.setter
-    def feature_index(self, arg0: typing.SupportsInt) -> None:
-        ...
-    @property
-    def x(self) -> int:
-        ...
-    @x.setter
-    def x(self, arg0: typing.SupportsInt) -> None:
-        ...
-    @property
-    def y(self) -> int:
-        ...
-    @y.setter
-    def y(self, arg0: typing.SupportsInt) -> None:
-        ...
-
-class BundlerPoint:
-    def __init__(self) -> None:
-        ...
-    @property
-    def color(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
-        ...
-    @color.setter
-    def color(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
-        ...
-    @property
-    def position(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
-        ...
-    @position.setter
-    def position(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
-        ...
-    @property
-    def view_list(self) -> list[BundlerObservation]:
-        ...
-    @view_list.setter
-    def view_list(self, arg0: collections.abc.Sequence[BundlerObservation]) -> None:
-        ...
-
+__all__: list[str] = ['BundlerCamera', 'BundlerFileReader', 'BundlerObservation', 'BundlerPoint', 'ImportNVMFile', 'ListImgEntry', 'PopulateImageSizesAndPrincipalPoints', 'Read1DSFM', 'ReadBundlerFiles', 'ReadReconstruction', 'ReadStrechaDataset', 'WriteBundlerFiles', 'WriteColmapFiles', 'WriteNVMFile', 'WriteNerfStudio', 'WritePlyFile', 'WriteReconstruction', 'WriteReconstructionJson', 'WriteSdfStudio']
 class BundlerCamera:
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def focal_length(self) -> float:
+    def focal_length(*args, **kwargs):
         ...
     @focal_length.setter
-    def focal_length(self, arg0: typing.SupportsFloat) -> None:
+    def focal_length(*args, **kwargs):
         ...
     @property
-    def radial_coeff_1(self) -> float:
+    def radial_coeff_1(*args, **kwargs):
         ...
     @radial_coeff_1.setter
-    def radial_coeff_1(self, arg0: typing.SupportsFloat) -> None:
+    def radial_coeff_1(*args, **kwargs):
         ...
     @property
-    def radial_coeff_2(self) -> float:
+    def radial_coeff_2(*args, **kwargs):
         ...
     @radial_coeff_2.setter
-    def radial_coeff_2(self, arg0: typing.SupportsFloat) -> None:
+    def radial_coeff_2(*args, **kwargs):
         ...
     @property
-    def rotation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 3]"]:
+    def rotation(*args, **kwargs):
         ...
     @rotation.setter
-    def rotation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 3]"]) -> None:
+    def rotation(*args, **kwargs):
         ...
     @property
-    def translation(self) -> typing.Annotated[numpy.typing.NDArray[numpy.float64], "[3, 1]"]:
+    def translation(*args, **kwargs):
         ...
     @translation.setter
-    def translation(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64, "[3, 1]"]) -> None:
+    def translation(*args, **kwargs):
         ...
-
 class BundlerFileReader:
-    def ParseBundleFile(self) -> bool:
+    @staticmethod
+    def ParseBundleFile(*args, **kwargs):
         ...
-    def ParseListsFile(self) -> bool:
+    @staticmethod
+    def ParseListsFile(*args, **kwargs):
         ...
-    def __init__(self, arg0: str, arg1: str) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def cameras(self) -> list[BundlerCamera]:
+    @staticmethod
+    def cameras(*args, **kwargs):
         ...
-    def img_entries(self) -> list[ListImgEntry]:
+    @staticmethod
+    def img_entries(*args, **kwargs):
         ...
-    def points(self) -> list[BundlerPoint]:
+    @staticmethod
+    def points(*args, **kwargs):
         ...
-
-class ListImgEntry:
-    filename: str
-    def __init__(self) -> None:
+class BundlerObservation:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def focal_length(self) -> float:
+    def camera_index(*args, **kwargs):
+        ...
+    @camera_index.setter
+    def camera_index(*args, **kwargs):
+        ...
+    @property
+    def feature_index(*args, **kwargs):
+        ...
+    @feature_index.setter
+    def feature_index(*args, **kwargs):
+        ...
+    @property
+    def x(*args, **kwargs):
+        ...
+    @x.setter
+    def x(*args, **kwargs):
+        ...
+    @property
+    def y(*args, **kwargs):
+        ...
+    @y.setter
+    def y(*args, **kwargs):
+        ...
+class BundlerPoint:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def color(*args, **kwargs):
+        ...
+    @color.setter
+    def color(*args, **kwargs):
+        ...
+    @property
+    def position(*args, **kwargs):
+        ...
+    @position.setter
+    def position(*args, **kwargs):
+        ...
+    @property
+    def view_list(*args, **kwargs):
+        ...
+    @view_list.setter
+    def view_list(*args, **kwargs):
+        ...
+class ListImgEntry:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def filename(*args, **kwargs):
+        ...
+    @filename.setter
+    def filename(*args, **kwargs):
+        ...
+    @property
+    def focal_length(*args, **kwargs):
         ...
     @focal_length.setter
-    def focal_length(self, arg0: typing.SupportsFloat) -> None:
+    def focal_length(*args, **kwargs):
         ...
     @property
-    def second_entry(self) -> float:
+    def second_entry(*args, **kwargs):
         ...
     @second_entry.setter
-    def second_entry(self, arg0: typing.SupportsFloat) -> None:
+    def second_entry(*args, **kwargs):
         ...
-
-def ImportNVMFile(arg0: str) -> tuple[bool, ...]:
+def ImportNVMFile(*args, **kwargs):
     ...
-def PopulateImageSizesAndPrincipalPoints(arg0: str) -> tuple[bool, ...]:
+def PopulateImageSizesAndPrincipalPoints(*args, **kwargs):
     ...
-def Read1DSFM(arg0: str) -> tuple[bool, ..., ...]:
+def Read1DSFM(*args, **kwargs):
     ...
-def ReadBundlerFiles(arg0: str, arg1: str) -> tuple[bool, ...]:
+def ReadBundlerFiles(*args, **kwargs):
     ...
-def ReadReconstruction(arg0: str) -> tuple[bool, ...]:
+def ReadReconstruction(*args, **kwargs):
     ...
-def ReadStrechaDataset(arg0: str) -> tuple[bool, ...]:
+def ReadStrechaDataset(*args, **kwargs):
     ...
-def WriteBundlerFiles(arg0: ..., arg1: str, arg2: str) -> bool:
+def WriteBundlerFiles(*args, **kwargs):
     ...
-def WriteColmapFiles(arg0: ..., arg1: str) -> bool:
+def WriteColmapFiles(*args, **kwargs):
     ...
-def WriteNVMFile(arg0: str, arg1: ...) -> bool:
+def WriteNVMFile(*args, **kwargs):
     ...
-def WriteNerfStudio(arg0: str, arg1: ..., arg2: typing.SupportsInt, arg3: str) -> bool:
+def WriteNerfStudio(*args, **kwargs):
     ...
-def WritePlyFile(arg0: str, arg1: ..., arg2: typing.Annotated[numpy.typing.ArrayLike, numpy.int32, "[3, 1]"], arg3: typing.SupportsInt) -> bool:
+def WritePlyFile(*args, **kwargs):
     ...
-def WriteReconstruction(arg0: ..., arg1: str) -> bool:
+def WriteReconstruction(*args, **kwargs):
     ...
-def WriteReconstructionJson(arg0: ..., arg1: str) -> bool:
+def WriteReconstructionJson(*args, **kwargs):
     ...
-def WriteSdfStudio(arg0: str, arg1: ..., arg2: tuple[typing.SupportsFloat, typing.SupportsFloat], arg3: typing.SupportsFloat) -> bool:
+def WriteSdfStudio(*args, **kwargs):
     ...

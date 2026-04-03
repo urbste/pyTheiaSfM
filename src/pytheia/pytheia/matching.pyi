@@ -1,160 +1,199 @@
 from __future__ import annotations
-import collections.abc
-import numpy
-import numpy.typing
 import typing
-
-__all__: list[str] = [
-    'FeatureCorrespondence',
-    'FeatureMatcherOptions',
-    'FeaturesAndMatchesDatabase',
-    'GLOBAL',
-    'GraphMatch',
-    'INCREMENTAL',
-    'ImagePairMatch',
-    'InMemoryFeaturesAndMatchesDatabase',
-    'IndexedFeatureMatch',
-    'MatchingStrategy',
-]
-
+__all__: list[str] = ['FeatureCorrespondence', 'FeatureMatcherOptions', 'FeaturesAndMatchesDatabase', 'GLOBAL', 'GraphMatch', 'INCREMENTAL', 'ImagePairMatch', 'InMemoryFeaturesAndMatchesDatabase', 'IndexedFeatureMatch', 'MatchingStrategy']
 class FeatureCorrespondence:
-    feature1: ...
-    feature2: ...
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: ..., arg1: ...) -> None:
-        ...
-
-class FeatureMatcherOptions:
-    geometric_verification_options: ...
-    keep_only_symmetric_matches: bool
-    perform_geometric_verification: bool
-    use_lowes_ratio: bool
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def lowes_ratio(self) -> float:
+    def feature1(*args, **kwargs):
+        ...
+    @feature1.setter
+    def feature1(*args, **kwargs):
+        ...
+    @property
+    def feature2(*args, **kwargs):
+        ...
+    @feature2.setter
+    def feature2(*args, **kwargs):
+        ...
+class FeatureMatcherOptions:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def geometric_verification_options(*args, **kwargs):
+        ...
+    @geometric_verification_options.setter
+    def geometric_verification_options(*args, **kwargs):
+        ...
+    @property
+    def keep_only_symmetric_matches(*args, **kwargs):
+        ...
+    @keep_only_symmetric_matches.setter
+    def keep_only_symmetric_matches(*args, **kwargs):
+        ...
+    @property
+    def lowes_ratio(*args, **kwargs):
         ...
     @lowes_ratio.setter
-    def lowes_ratio(self, arg0: typing.SupportsFloat) -> None:
+    def lowes_ratio(*args, **kwargs):
         ...
     @property
-    def min_num_feature_matches(self) -> int:
+    def min_num_feature_matches(*args, **kwargs):
         ...
     @min_num_feature_matches.setter
-    def min_num_feature_matches(self, arg0: typing.SupportsInt) -> None:
+    def min_num_feature_matches(*args, **kwargs):
         ...
     @property
-    def num_threads(self) -> int:
+    def num_threads(*args, **kwargs):
         ...
     @num_threads.setter
-    def num_threads(self, arg0: typing.SupportsInt) -> None:
+    def num_threads(*args, **kwargs):
         ...
-
+    @property
+    def perform_geometric_verification(*args, **kwargs):
+        ...
+    @perform_geometric_verification.setter
+    def perform_geometric_verification(*args, **kwargs):
+        ...
+    @property
+    def use_lowes_ratio(*args, **kwargs):
+        ...
+    @use_lowes_ratio.setter
+    def use_lowes_ratio(*args, **kwargs):
+        ...
 class FeaturesAndMatchesDatabase:
     pass
-
 class ImagePairMatch:
-    image1: str
-    image2: str
-    twoview_info: ...
-    def __init__(self) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
     @property
-    def correspondences(self) -> list[...]:
+    def correspondences(*args, **kwargs):
         ...
     @correspondences.setter
-    def correspondences(self, arg0: collections.abc.Sequence[...]) -> None:
-        ...
-
-class InMemoryFeaturesAndMatchesDatabase(FeaturesAndMatchesDatabase):
-    def ContainsCameraIntrinsicsPrior(self, arg0: str) -> bool:
-        ...
-    def GetCameraIntrinsicsPrior(self, arg0: str) -> ...:
-        ...
-    def GetImagePairMatch(self, arg0: str, arg1: str) -> ...:
-        ...
-    def ImageNamesOfCameraIntrinsicsPriors(self) -> list[str]:
-        ...
-    def ImageNamesOfMatches(self) -> list[tuple[str, str]]:
-        ...
-    def NumCameraIntrinsicsPrior(self) -> int:
-        ...
-    def NumMatches(self) -> int:
-        ...
-    def PutCameraIntrinsicsPrior(self, arg0: str, arg1: ...) -> None:
-        ...
-    def PutImagePairMatch(self, arg0: str, arg1: str, arg2: ...) -> None:
-        ...
-    def __init__(self) -> None:
-        ...
-
-class IndexedFeatureMatch:
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: typing.SupportsInt, arg1: typing.SupportsInt, arg2: typing.SupportsFloat) -> None:
+    def correspondences(*args, **kwargs):
         ...
     @property
-    def distance(self) -> float:
+    def image1(*args, **kwargs):
+        ...
+    @image1.setter
+    def image1(*args, **kwargs):
+        ...
+    @property
+    def image2(*args, **kwargs):
+        ...
+    @image2.setter
+    def image2(*args, **kwargs):
+        ...
+    @property
+    def twoview_info(*args, **kwargs):
+        ...
+    @twoview_info.setter
+    def twoview_info(*args, **kwargs):
+        ...
+class InMemoryFeaturesAndMatchesDatabase(FeaturesAndMatchesDatabase):
+    @staticmethod
+    def ContainsCameraIntrinsicsPrior(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetCameraIntrinsicsPrior(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetImagePairMatch(*args, **kwargs):
+        ...
+    @staticmethod
+    def ImageNamesOfCameraIntrinsicsPriors(*args, **kwargs):
+        ...
+    @staticmethod
+    def ImageNamesOfMatches(*args, **kwargs):
+        ...
+    @staticmethod
+    def NumCameraIntrinsicsPrior(*args, **kwargs):
+        ...
+    @staticmethod
+    def NumMatches(*args, **kwargs):
+        ...
+    @staticmethod
+    def PutCameraIntrinsicsPrior(*args, **kwargs):
+        ...
+    @staticmethod
+    def PutImagePairMatch(*args, **kwargs):
+        ...
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+class IndexedFeatureMatch:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def distance(*args, **kwargs):
         ...
     @distance.setter
-    def distance(self, arg0: typing.SupportsFloat) -> None:
+    def distance(*args, **kwargs):
         ...
     @property
-    def feature1_ind(self) -> int:
+    def feature1_ind(*args, **kwargs):
         ...
     @feature1_ind.setter
-    def feature1_ind(self, arg0: typing.SupportsInt) -> None:
+    def feature1_ind(*args, **kwargs):
         ...
     @property
-    def feature2_ind(self) -> int:
+    def feature2_ind(*args, **kwargs):
         ...
     @feature2_ind.setter
-    def feature2_ind(self, arg0: typing.SupportsInt) -> None:
+    def feature2_ind(*args, **kwargs):
         ...
-
 class MatchingStrategy:
     """
     Members:
+    
       GLOBAL
+    
       INCREMENTAL
     """
-    GLOBAL: typing.ClassVar[MatchingStrategy]
-    INCREMENTAL: typing.ClassVar[MatchingStrategy]
-    __members__: typing.ClassVar[dict[str, MatchingStrategy]]
-    def __eq__(self, other: typing.Any) -> bool:
+    GLOBAL: typing.ClassVar[MatchingStrategy]  # value = <MatchingStrategy.GLOBAL: 0>
+    INCREMENTAL: typing.ClassVar[MatchingStrategy]  # value = <MatchingStrategy.GLOBAL: 0>
+    __members__: typing.ClassVar[dict[str, MatchingStrategy]]  # value = {'GLOBAL': <MatchingStrategy.GLOBAL: 0>, 'INCREMENTAL': <MatchingStrategy.GLOBAL: 0>}
+    @staticmethod
+    def __eq__(*args, **kwargs):
         ...
-    def __getstate__(self) -> int:
+    @staticmethod
+    def __getstate__(*args, **kwargs):
         ...
-    def __hash__(self) -> int:
+    @staticmethod
+    def __hash__(*args, **kwargs):
         ...
-    def __index__(self) -> int:
+    @staticmethod
+    def __index__(*args, **kwargs):
         ...
-    def __init__(self, value: typing.SupportsInt) -> None:
+    @staticmethod
+    def __init__(*args, **kwargs):
         ...
-    def __int__(self) -> int:
+    @staticmethod
+    def __int__(*args, **kwargs):
         ...
-    def __ne__(self, other: typing.Any) -> bool:
+    @staticmethod
+    def __ne__(*args, **kwargs):
         ...
-    def __repr__(self) -> str:
+    @staticmethod
+    def __repr__(*args, **kwargs):
         ...
-    def __setstate__(self, state: typing.SupportsInt) -> None:
+    @staticmethod
+    def __setstate__(*args, **kwargs):
         ...
-    def __str__(self) -> str:
+    @staticmethod
+    def __str__(*args, **kwargs):
         ...
     @property
-    def name(self) -> str:
+    def name(*args, **kwargs):
         ...
     @property
-    def value(self) -> int:
+    def value(*args, **kwargs):
         ...
-
-def GraphMatch(arg0: collections.abc.Sequence[str], arg1: collections.abc.Sequence[typing.Annotated[numpy.typing.ArrayLike, numpy.float32, "[m, 1]"]], arg2: typing.SupportsInt) -> list[tuple[str, str]]:
+def GraphMatch(*args, **kwargs):
     ...
-
-GLOBAL: MatchingStrategy
-INCREMENTAL: MatchingStrategy
+GLOBAL: MatchingStrategy  # value = <MatchingStrategy.GLOBAL: 0>
+INCREMENTAL: MatchingStrategy  # value = <MatchingStrategy.GLOBAL: 0>

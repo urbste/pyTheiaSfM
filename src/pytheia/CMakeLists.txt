@@ -23,6 +23,18 @@ set(PY_ALL_HEADER_FILES
 pybind11_add_module(${PACKAGE_NAME}
     ${PY_ALL_HEADER_FILES} ${PY_ALL_SOURCE_FILES})
 
+# Same build-tree paths as libTHEIA (PRIVATE there, so they do not propagate).
+target_include_directories(${PACKAGE_NAME} PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/spectra>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/Sophus>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/cereal/include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/stlplus3>
+)
+
 target_link_libraries(${PACKAGE_NAME} PRIVATE ${CMAKE_PROJECT_NAME})
 target_compile_definitions(${PACKAGE_NAME} PRIVATE
   THEIA_CERES_HAS_CUDA_DENSE=${THEIA_CERES_HAS_CUDA_DENSE_VALUE}
