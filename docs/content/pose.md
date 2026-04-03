@@ -415,7 +415,9 @@ bool FourPointsPoseFocalLengthRadialDistortion(
 
 Solves for pose, focal length, and radial distortion from **four** correspondences, with focal length and distortion bounded by the min/max parameters (Python wraps these in `RadialDistUncalibratedAbsolutePoseMetaData`).
 
-**pyTheia:** `success, rotations, translations, radial_distortions, focal_lengths = pytheia.sfm.FourPointsPoseFocalLengthRadialDistortion(features, world_points, meta)` where `meta` is `pytheia.sfm.RadialDistUncalibratedAbsolutePoseMetaData` (`min_focal_length`, `max_focal_length`, `min_radial_distortion`, `max_radial_distortion`).
+**pyTheia (minimal solver):** `success, rotations, translations, radial_distortions, focal_lengths = pytheia.sfm.FourPointsPoseFocalLengthRadialDistortion(features, world_points, meta)` where `meta` is `pytheia.sfm.RadialDistUncalibratedAbsolutePoseMetaData` (`min_focal_length`, `max_focal_length`, `min_radial_distortion`, `max_radial_distortion`).
+
+**pyTheia (RANSAC wrapper):** for **many** normalized `FeatureCorrespondence2D3D` and the same `meta`, use **`pytheia.sfm.EstimateRadialDistUncalibratedAbsolutePose(ransac_params, ransac_type, correspondences, meta)`** — returns `(success, RadialDistUncalibratedAbsolutePose, RansacSummary)` with a single best model (`rotation`, `translation`, `focal_length`, `radial_distortion`). See [Geometric estimators — `EstimateRadialDistUncalibratedAbsolutePose`](estimators.md#estimate-radial-dist-uncalibrated-absolute-pose).
 
 === "Python"
 

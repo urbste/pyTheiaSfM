@@ -199,64 +199,58 @@ pt.io.WriteSdfStudio("/path/to/images", recon, (2.0, 6.0), 1.0)
 More complete examples are in `pyexamples/nerfstudio_export_reconstruction.py` and `pyexamples/sdfstudio_export_reconstruction.py`.
 
 ## Building
-This section describes how to build on Ubuntu locally or on WSL2 both with sudo rights.
-The basic dependency is:
-* [http://ceres-solver.org/](ceres-solver)
+This section describes how to build on Ubuntu locally or on WSL2 (with sudo where noted).
 
-Installing the ceres-solver will also install the neccessary dependencies for pyTheia:
-* gflags
-* glog
-* Eigen
+**Core dependency:** [Ceres Solver](http://ceres-solver.org/) (non-linear least squares for bundle adjustment and many solvers). A normal Ceres install also pulls in **Eigen**, **glog**, and **gflags** (or your distro equivalents).
+
+- Use a **current Ceres 2.x** release (see [Ceres installation](http://ceres-solver.org/installation.html)). Older **2.1.x** is still fine for CPU-only builds.
+- **Optional — GPU solvers in Ceres:** build Ceres with **`USE_CUDA=ON`** for **CUDA dense** linear algebra. For **CUDA sparse** (`CUDA_SPARSE` in Ceres), build Ceres with **NVIDIA cuDSS** support so the library includes the **cuDSS** component (details in upstream docs). When you configure **pyTheia**, CMake detects dense CUDA (compile check) and sparse CUDA (`CERES_COMPILED_COMPONENTS`); you can override with `-DTHEIA_CERES_USE_CUDA` / `-DTHEIA_CERES_USE_CUDA_SPARSE` if needed. Runtime selection of GPU backends is via **`BundleAdjustmentOptions`** (`dense_linear_algebra_library_type`, `sparse_linear_algebra_library_type`); see the MkDocs chapter **Bundle adjustment**. Pre-built **manylinux** wheels typically link a **CPU** Ceres — use a **local** build against GPU-enabled Ceres for CUDA backends.
+
+### Example: system install (sudo)
 
 ```bash
-sudo apt install cmake build-essential 
+sudo apt install cmake build-essential libgflags-dev libgoogle-glog-dev libatlas-base-dev
 
-# cd to your favourite library folder
-mkdir LIBS
-cd LIBS
+mkdir LIBS && cd LIBS
 
-# eigen
-git clone https://gitlab.com/libeigen/eigen
+# Eigen (example 3.4.x)
+git clone https://gitlab.com/libeigen/eigen.git
 cd eigen && git checkout 3.4.0
-mkdir -p build && cd build && cmake .. && sudo make install
+mkdir -p build && cd build && cmake .. && sudo cmake --install .
 
-# libgflags libglog libatlas-base-dev
-sudo apt install libgflags-dev libgoogle-glog-dev libatlas-base-dev
-
-# ceres solver
-cd LIBS
-git clone https://ceres-solver.googlesource.com/ceres-solver
-cd ceres-solver && git checkout 2.1.0 && mkdir build && cd build
+# Ceres — latest 2.x tag; add -DUSE_CUDA=ON / cuDSS CMake variables per Ceres docs for GPU
+cd ../..
+git clone https://github.com/ceres-solver/ceres-solver.git
+cd ceres-solver && git fetch --tags && git checkout "$(git tag -l '2.*' | sort -V | tail -1)"
+mkdir build && cd build
 cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF
-make -j && make install
+cmake --build . -j"$(nproc)"
+sudo cmake --install .
 ```
 
 ### Local build without sudo
-To build it locally it is best to set the EXPORT_BUILD_DIR flag for the ceres-solver.
-You will still need ```sudo apt install libgflags-dev libgoogle-glog-dev libatlas-base-dev```. 
-So go ask your admin ;)
+Prefer Ceres **`EXPORT_BUILD_DIR=ON`** so `find_package(Ceres)` can use the build tree. You still need development packages for gflags/glog/atlas (or ask your admin).
 
 ```bash
-# cd to your favourite library folder. The local installation will be all relative to this path!
-mkdir /home/LIBS
-cd /home/LIBS
+mkdir /home/LIBS && cd /home/LIBS
 
-# eigen
-git clone https://gitlab.com/libeigen/eigen
+git clone https://gitlab.com/libeigen/eigen.git
 cd eigen && git checkout 3.4.0
-mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/home/LIBS/eigen/build && make -j install
+mkdir -p build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/home/LIBS/eigen/build && cmake --build . -j"$(nproc)" && cmake --install .
 
 cd /home/LIBS
-git clone https://ceres-solver.googlesource.com/ceres-solver
-cd ceres-solver && git checkout 2.1.0 && mkdir build && cd build
+git clone https://github.com/ceres-solver/ceres-solver.git
+cd ceres-solver && git fetch --tags && git checkout "$(git tag -l '2.*' | sort -V | tail -1)"
+mkdir build && cd build
 cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DEXPORT_BUILD_DIR=ON
-make -j
+cmake --build . -j"$(nproc)"
 
-# cd to the pyTheiaSfM folder
-cd pyTheiaSfM && mkdir build && cd build 
-cmake -DEigen3_DIR=/home/LIBS/eigen/build/share/eigen3/cmake/ .. 
-make -j
+cd /path/to/pyTheiaSfM && mkdir build && cd build
+cmake -DEigen3_DIR=/home/LIBS/eigen/build/share/eigen3/cmake/ -DCeres_DIR=/home/LIBS/ceres-solver/build ../
+cmake --build . -j"$(nproc)"
 ```
+
+Full narrative (system deps, CUDA notes, docs build): **`docs/content/building.md`** (also rendered as **Building** on the project docs site).
 
 ## How to build Python wheels
 ### Local build with sudo installed ceres-solver and Eigen

@@ -27,5 +27,5 @@ See [`examples/README.md`](https://github.com/urbste/pyTheiaSfM/blob/master/exam
 
 - [Building](building.md) — compile / install pyTheia  
 - [Python API overview](python_wrapper.md) — imports and stubs  
-- [Matching](matching.md) — `FeatureCorrespondence`, match database types  
+- [Matching](matching.md) — `FeatureCorrespondence`, `ImagePairMatch`, pairing helpers  
 - [IO](io.md) — `WriteNerfStudio`, `WriteColmapFiles`, PLY  

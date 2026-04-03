@@ -48,6 +48,20 @@ Single focal length (shared \(f\) for \(K \sim \mathrm{diag}(f,f,1)\)) plus rota
 
 ---
 
+### `EstimateRadialDistUncalibratedAbsolutePose` {#estimate-radial-dist-uncalibrated-absolute-pose}
+
+**Header:** [`estimate_radial_dist_uncalibrated_absolute_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h)
+
+**Uncalibrated absolute pose with one radial distortion parameter** (division model), estimated with RANSAC / PROSAC / LMED / exhaustive sampling. Minimal sample size is **four** normalized 2D–3D correspondences (principal point at origin), same normalization as other PnP-style estimators.
+
+Pass bounds and filtering limits via **`RadialDistUncalibratedAbsolutePoseMetaData`**: `min_focal_length`, `max_focal_length`, `min_radial_distortion`, `max_radial_distortion` (defaults in the header are often tightened in application code).
+
+**Returns:** `(success, RadialDistUncalibratedAbsolutePose, RansacSummary)` — pose has `rotation`, `translation`, `focal_length`, and `radial_distortion` (compatible with **division undistortion** interpretation; see the four-point helper in [`pose.md`](pose.md)).
+
+**pyTheia:** `success, pose, summary = pt.sfm.EstimateRadialDistUncalibratedAbsolutePose(ransac_params, ransac_type, correspondences, meta)` with `ransac_type` in `pt.sfm.RansacType` and each correspondence a `pt.sfm.FeatureCorrespondence2D3D`.
+
+---
+
 ### `EstimateAbsolutePoseWithKnownOrientation` {#estimate-absolute-pose-known-orientation}
 
 **Header:** [`estimate_absolute_pose_with_known_orientation.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_absolute_pose_with_known_orientation.h)
@@ -200,11 +214,10 @@ For 2D–2D relative pose, build `pt.matching.FeatureCorrespondence()` objects w
 
 ## C++-only and related headers {#estimators-cpp-only}
 
-These sources live in the same folder and participate in the C++ library but **do not** have pyTheia `Estimate*` bindings at the time of writing:
+These sources participate in the C++ library but **do not** add a separate top-level `Estimate*` Python entry beyond what is listed above (bindings use the same types):
 
 | Header | Role |
 |--------|------|
-| [`estimate_radial_dist_uncalibrated_absolute_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h) | Uncalibrated absolute pose with radial distortion (metadata + RANSAC) |
 | [`feature_correspondence_2d_3d.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/feature_correspondence_2d_3d.h) | `FeatureCorrespondence2D3D` struct |
 | [`camera_and_feature_correspondence_2d_3d.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/camera_and_feature_correspondence_2d_3d.h) | Multi-camera 2D–3D datum |
 

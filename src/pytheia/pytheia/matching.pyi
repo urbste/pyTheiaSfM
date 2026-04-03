@@ -1,6 +1,6 @@
 from __future__ import annotations
 import typing
-__all__: list[str] = ['FeatureCorrespondence', 'FeatureMatcherOptions', 'FeaturesAndMatchesDatabase', 'GLOBAL', 'GraphMatch', 'INCREMENTAL', 'ImagePairMatch', 'InMemoryFeaturesAndMatchesDatabase', 'IndexedFeatureMatch', 'MatchingStrategy']
+__all__: list[str] = ['FeatureCorrespondence', 'FeatureMatcherOptions', 'GLOBAL', 'GraphMatch', 'INCREMENTAL', 'ImagePairMatch', 'IndexedFeatureMatch', 'MatchingStrategy']
 class FeatureCorrespondence:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -63,8 +63,6 @@ class FeatureMatcherOptions:
     @use_lowes_ratio.setter
     def use_lowes_ratio(*args, **kwargs):
         ...
-class FeaturesAndMatchesDatabase:
-    pass
 class ImagePairMatch:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -92,37 +90,6 @@ class ImagePairMatch:
         ...
     @twoview_info.setter
     def twoview_info(*args, **kwargs):
-        ...
-class InMemoryFeaturesAndMatchesDatabase(FeaturesAndMatchesDatabase):
-    @staticmethod
-    def ContainsCameraIntrinsicsPrior(*args, **kwargs):
-        ...
-    @staticmethod
-    def GetCameraIntrinsicsPrior(*args, **kwargs):
-        ...
-    @staticmethod
-    def GetImagePairMatch(*args, **kwargs):
-        ...
-    @staticmethod
-    def ImageNamesOfCameraIntrinsicsPriors(*args, **kwargs):
-        ...
-    @staticmethod
-    def ImageNamesOfMatches(*args, **kwargs):
-        ...
-    @staticmethod
-    def NumCameraIntrinsicsPrior(*args, **kwargs):
-        ...
-    @staticmethod
-    def NumMatches(*args, **kwargs):
-        ...
-    @staticmethod
-    def PutCameraIntrinsicsPrior(*args, **kwargs):
-        ...
-    @staticmethod
-    def PutImagePairMatch(*args, **kwargs):
-        ...
-    @staticmethod
-    def __init__(*args, **kwargs):
         ...
 class IndexedFeatureMatch:
     @staticmethod

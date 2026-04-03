@@ -53,7 +53,7 @@ flowchart LR
 
 ### System dependencies
 
-Installing **Ceres Solver** (and its dependencies such as Eigen, gflags, glog) is required for a local compile. **Do not duplicate** the full install instructions here — follow [README.md — Building](README.md).
+Installing **Ceres Solver** (and its dependencies such as Eigen, gflags, glog) is required for a local compile; use a **current Ceres 2.x** build for best compatibility. Optional **CUDA** (dense and, with cuDSS, **CUDA sparse**) backends require building Ceres with GPU support — see [README.md — Building](README.md) and [`docs/content/building.md`](docs/content/building.md). **Do not duplicate** full install steps here.
 
 Convenience script (cleans artifacts, builds wheel, reinstalls): `sh build_and_install.sh`.
 

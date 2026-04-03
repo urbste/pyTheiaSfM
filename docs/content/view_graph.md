@@ -58,6 +58,6 @@ Matching and geometric verification that **create** the initial edges are outsid
 
 ## See also {#view-graph-see-also}
 
-- [SfM](sfm.md) — `ReconstructionBuilder`, view/track types  
+- [SfM](sfm.md) — `ReconstructionEstimator`, view/track types  
 - [Global pose estimation](global_pose_estimation.md) — rotation / position from a view graph  
 - [Triangulation](triangulation.md) — 3D points from known poses  

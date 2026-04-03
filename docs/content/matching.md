@@ -24,18 +24,6 @@ Container for one edge in the view graph:
 - **`twoview_info`** — [`TwoViewInfo`](view_graph.md#twoview-info) after geometric estimation.
 - **`correspondences`** — list of **`FeatureCorrespondence`**.
 
-### `FeaturesAndMatchesDatabase` / `InMemoryFeaturesAndMatchesDatabase`
-
-Abstract store for **`ImagePairMatch`** entries and optional **camera intrinsics priors** per image name.
-
-**`InMemoryFeaturesAndMatchesDatabase`** (Python-concrete):
-
-- **`PutImagePairMatch`**, **`GetImagePairMatch`**, **`NumMatches`**
-- **`ImageNamesOfMatches`**
-- **`PutCameraIntrinsicsPrior`**, **`GetCameraIntrinsicsPrior`**, **`ContainsCameraIntrinsicsPrior`**, **`NumCameraIntrinsicsPrior`**, **`ImageNamesOfCameraIntrinsicsPriors`**
-
-Used by C++ matching pipelines; in Python you can use it to stage matches before reconstruction.
-
 ---
 
 ## `FeatureMatcherOptions`
@@ -57,7 +45,15 @@ Other C++ fields (out-of-core paths, cache directories) exist in [`feature_match
 
 ## `GraphMatch`
 
-**`GraphMatch(image_names, match_list)`** — builds an **image connectivity** structure from a list of string pairs `(name_i, name_j)` that have been matched. Used to schedule which image pairs to process in larger collections.
+**`GraphMatch(image_names, global_descriptors, num_nearest_neighbors_for_global_descriptor_matching)`** — proposes **which image pairs** deserve pairwise (local) feature matching. For each image, it keeps the **k** other images whose **global descriptors** are closest under **squared L2 distance**, then applies **query expansion** (neighbors-of-neighbors). It returns a **deduplicated, sorted** list of **`(name_a, name_b)`** string pairs where **`name_a`** is from the **lower** index and **`name_b`** from the **higher** index in the original `image_names` list (not alphabetical by string).
+
+Arguments:
+
+- **`image_names`** — `list[str]`, one name per image, same length as the descriptor list.
+- **`global_descriptors`** — one floating-point descriptor per image: typically a **2D NumPy array** of shape `(n_images, dim)` or an equivalent sequence of 1D vectors (same `dim` for every row). These are **whole-image** embeddings (e.g. from a place-recognition network), not per-keypoint descriptors.
+- **`num_nearest_neighbors_for_global_descriptor_matching`** — **k**; capped internally at `n_images - 1`.
+
+Use this to avoid an **all-pairs** \(O(n^2)\) local matching schedule on large collections. Example: [`pyexamples/sfm_pipeline_loftr_aqualoc.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/sfm_pipeline_loftr_aqualoc.py) (CosPlace-style global vectors + `GraphMatch`, then LoFTR on the selected pairs).
 
 ---
 

@@ -12,6 +12,7 @@
 #include "theia/sfm/estimators/estimate_dominant_plane_from_points.h"
 #include "theia/sfm/estimators/estimate_radial_distortion_homography.h"
 #include "theia/sfm/estimators/estimate_relative_pose.h"
+#include "theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_absolute_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_relative_pose.h"
 
@@ -105,6 +106,13 @@ EstimateUncalibratedAbsolutePoseWrapper(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
     const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences);
+
+std::tuple<bool, RadialDistUncalibratedAbsolutePose, RansacSummary>
+EstimateRadialDistUncalibratedAbsolutePoseWrapper(
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
+    const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences,
+    const RadialDistUncalibratedAbsolutePoseMetaData& meta_data);
 
 std::tuple<bool, UncalibratedRelativePose, RansacSummary>
 EstimateUncalibratedRelativePoseWrapper(

@@ -48,7 +48,6 @@
 #include "theia/math/polynomial.h"
 #include "theia/sfm/pose/util.h"
 
-#include "theia/matching/features_and_matches_database.h"
 #include "theia/sfm/feature.h"
 
 #include "theia/sfm/pose/pose_wrapper.h"
@@ -63,7 +62,9 @@
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/camera_intrinsics_model.h"
 #include "theia/sfm/camera/camera_wrapper.h"
+#include "theia/sfm/camera/double_sphere_camera_model.h"
 #include "theia/sfm/camera/division_undistortion_camera_model.h"
+#include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/sfm/camera/fisheye_camera_model.h"
 #include "theia/sfm/camera/fov_camera_model.h"
 #include "theia/sfm/camera/orthographic_camera_model.h"
@@ -102,7 +103,6 @@
 #include "theia/sfm/global_reconstruction_estimator.h"
 #include "theia/sfm/hybrid_reconstruction_estimator.h"
 #include "theia/sfm/incremental_reconstruction_estimator.h"
-#include "theia/sfm/reconstruction_builder.h"
 #include "theia/sfm/reconstruction_estimator.h"
 #include "theia/sfm/reconstruction_estimator_options.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
@@ -334,6 +334,63 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::DivisionUndistortionCameraModel::RadialDistortion1)
       .def("SetRadialDistortion",
            &theia::DivisionUndistortionCameraModel::SetRadialDistortion);
+
+  // DoubleSphereCameraModel
+  py::class_<theia::DoubleSphereCameraModel,
+             std::shared_ptr<theia::DoubleSphereCameraModel>>(
+      m, "DoubleSphereCameraModel", camera_intrinsics_model)
+      .def(py::init<>())
+      .def("Type", &theia::DoubleSphereCameraModel::Type)
+      .def("NumParameters", &theia::DoubleSphereCameraModel::NumParameters)
+      .def("SetFromCameraIntrinsicsPriors",
+           &theia::DoubleSphereCameraModel::SetFromCameraIntrinsicsPriors)
+      .def("CameraIntrinsicsPriorFromIntrinsics",
+           &theia::DoubleSphereCameraModel::CameraIntrinsicsPriorFromIntrinsics)
+      .def("GetSubsetFromOptimizeIntrinsicsType",
+           &theia::DoubleSphereCameraModel::GetSubsetFromOptimizeIntrinsicsType)
+      .def("GetCalibrationMatrix",
+           &theia::DoubleSphereCameraModel::GetCalibrationMatrix)
+      .def("PrintIntrinsics", &theia::DoubleSphereCameraModel::PrintIntrinsics)
+      .def_property_readonly("kIntrinsicsSize",
+                               &theia::DoubleSphereCameraModel::NumParameters)
+      .def("AspectRatio", &theia::DoubleSphereCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::DoubleSphereCameraModel::SetAspectRatio)
+      .def("Skew", &theia::DoubleSphereCameraModel::Skew)
+      .def("SetSkew", &theia::DoubleSphereCameraModel::SetSkew)
+      .def("Alpha", &theia::DoubleSphereCameraModel::Alpha)
+      .def("Xi", &theia::DoubleSphereCameraModel::Xi)
+      .def("SetAlphaXiDistortion",
+           &theia::DoubleSphereCameraModel::SetAlphaXiDistortion);
+
+  // ExtendedUnifiedCameraModel
+  py::class_<theia::ExtendedUnifiedCameraModel,
+             std::shared_ptr<theia::ExtendedUnifiedCameraModel>>(
+      m, "ExtendedUnifiedCameraModel", camera_intrinsics_model)
+      .def(py::init<>())
+      .def("Type", &theia::ExtendedUnifiedCameraModel::Type)
+      .def("NumParameters", &theia::ExtendedUnifiedCameraModel::NumParameters)
+      .def("SetFromCameraIntrinsicsPriors",
+           &theia::ExtendedUnifiedCameraModel::SetFromCameraIntrinsicsPriors)
+      .def("CameraIntrinsicsPriorFromIntrinsics",
+           &theia::ExtendedUnifiedCameraModel::CameraIntrinsicsPriorFromIntrinsics)
+      .def("GetSubsetFromOptimizeIntrinsicsType",
+           &theia::ExtendedUnifiedCameraModel::
+               GetSubsetFromOptimizeIntrinsicsType)
+      .def("GetCalibrationMatrix",
+           &theia::ExtendedUnifiedCameraModel::GetCalibrationMatrix)
+      .def("PrintIntrinsics",
+           &theia::ExtendedUnifiedCameraModel::PrintIntrinsics)
+      .def_property_readonly("kIntrinsicsSize",
+                             &theia::ExtendedUnifiedCameraModel::NumParameters)
+      .def("AspectRatio", &theia::ExtendedUnifiedCameraModel::AspectRatio)
+      .def("SetAspectRatio",
+           &theia::ExtendedUnifiedCameraModel::SetAspectRatio)
+      .def("Skew", &theia::ExtendedUnifiedCameraModel::Skew)
+      .def("SetSkew", &theia::ExtendedUnifiedCameraModel::SetSkew)
+      .def("Alpha", &theia::ExtendedUnifiedCameraModel::Alpha)
+      .def("Beta", &theia::ExtendedUnifiedCameraModel::Beta)
+      .def("SetAlphaBetaDistortion",
+           &theia::ExtendedUnifiedCameraModel::SetAlphaBetaDistortion);
 
   // PinholeCameraModel
   py::class_<theia::PinholeCameraModel,
@@ -668,8 +725,22 @@ void pytheia_sfm_classes(py::module& m) {
       .def(py::init<>())
       .def_readwrite("rotation", &theia::UncalibratedAbsolutePose::rotation)
       .def_readwrite("position", &theia::UncalibratedAbsolutePose::position)
-      .def_readwrite("position",
+      .def_readwrite("focal_length",
                      &theia::UncalibratedAbsolutePose::focal_length);
+
+  py::class_<theia::RadialDistUncalibratedAbsolutePose>(
+      m, "RadialDistUncalibratedAbsolutePose")
+      .def(py::init<>())
+      .def_readwrite("rotation",
+                     &theia::RadialDistUncalibratedAbsolutePose::rotation)
+      .def_readwrite("translation",
+                     &theia::RadialDistUncalibratedAbsolutePose::translation)
+      .def_readwrite(
+          "focal_length",
+          &theia::RadialDistUncalibratedAbsolutePose::focal_length)
+      .def_readwrite("radial_distortion",
+                     &theia::RadialDistUncalibratedAbsolutePose::
+                         radial_distortion);
 
   py::class_<theia::UncalibratedRelativePose>(m, "UncalibratedRelativePose")
       .def(py::init<>())
@@ -773,6 +844,8 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("EstimateTriangulation", theia::EstimateTriangulationWrapper);
   m.def("EstimateUncalibratedAbsolutePose",
         theia::EstimateUncalibratedAbsolutePoseWrapper);
+  m.def("EstimateRadialDistUncalibratedAbsolutePose",
+        theia::EstimateRadialDistUncalibratedAbsolutePoseWrapper);
   m.def("EstimateUncalibratedRelativePose",
         theia::EstimateUncalibratedRelativePoseWrapper);
 
@@ -1111,68 +1184,6 @@ void pytheia_sfm_classes(py::module& m) {
       m, "HybridReconstructionEstimator")
       .def(py::init<theia::ReconstructionEstimatorOptions>())
       .def("Estimate", &theia::HybridReconstructionEstimator::Estimate);
-
-  // Reconstruction Builder Options
-  py::class_<theia::ReconstructionBuilderOptions>(
-      m, "ReconstructionBuilderOptions")
-      .def(py::init<>())
-      .def_readwrite("reconstruct_largest_connected_component",
-                     &theia::ReconstructionBuilderOptions::
-                         reconstruct_largest_connected_component)
-      .def_readwrite(
-          "only_calibrated_views",
-          &theia::ReconstructionBuilderOptions::only_calibrated_views)
-      .def_readwrite("min_track_length",
-                     &theia::ReconstructionBuilderOptions::min_track_length)
-      .def_readwrite("max_track_length",
-                     &theia::ReconstructionBuilderOptions::max_track_length)
-      .def_readwrite(
-          "min_num_inlier_matches",
-          &theia::ReconstructionBuilderOptions::min_num_inlier_matches)
-      .def_readwrite("matching_strategy",
-                     &theia::ReconstructionBuilderOptions::matching_strategy)
-      .def_readwrite("matching_options",
-                     &theia::ReconstructionBuilderOptions::matching_options)
-      .def_readwrite("reconstruction_estimator_options",
-                     &theia::ReconstructionBuilderOptions::
-                         reconstruction_estimator_options)
-      .def_readwrite("features_and_matches_database_directory",
-                     &theia::ReconstructionBuilderOptions::
-                         features_and_matches_database_directory);
-
-  // Reconstruction Builder
-  py::class_<theia::ReconstructionBuilder>(m, "ReconstructionBuilder")
-      //.def(py::init<>())
-      .def(py::init<theia::ReconstructionBuilderOptions,
-                    theia::FeaturesAndMatchesDatabase*>())
-      .def("AddImage",
-           (bool(theia::ReconstructionBuilder::*)(const std::string&,
-                                                  const double)) &
-               theia::ReconstructionBuilder::AddImage)
-      .def("AddImage",
-           (bool(theia::ReconstructionBuilder::*)(
-               const std::string&, const unsigned int, const double)) &
-               theia::ReconstructionBuilder::AddImage)
-      .def("AddImageWithCameraIntrinsicsPrior",
-           (bool(theia::ReconstructionBuilder::*)(
-               const std::string&,
-               const theia::CameraIntrinsicsPrior&,
-               const double)) &
-               theia::ReconstructionBuilder::AddImageWithCameraIntrinsicsPrior)
-      .def("AddImageWithCameraIntrinsicsPrior",
-           (bool(theia::ReconstructionBuilder::*)(
-               const std::string&,
-               const theia::CameraIntrinsicsPrior&,
-               const unsigned int,
-               const double)) &
-               theia::ReconstructionBuilder::AddImageWithCameraIntrinsicsPrior)
-      //.def("AddTwoViewMatch", &theia::ReconstructionBuilder::AddTwoViewMatch)
-      .def("AddMaskForFeaturesExtraction",
-           &theia::ReconstructionBuilder::AddMaskForFeaturesExtraction)
-      .def("ExtractAndMatchFeatures",
-           &theia::ReconstructionBuilder::ExtractAndMatchFeatures)
-
-      ;
 
   // Reconstruction Options
   py::enum_<theia::ReconstructionEstimatorType>(m,

@@ -1,56 +1,87 @@
 # Building pyTheia Library {#chapter-building}
 
-Theia source code and documentation are hosted on [Github](https://github.com/urbste/pyTheiaSfM) where you can always grab the latest version
+Source and issues: [pyTheiaSfM on GitHub](https://github.com/urbste/pyTheiaSfM).
 
 ## Dependencies {#section-dependencies}
 
-Theia relies on a number of open source libraries. Luckily, most of the will be included in Ceres
+pyTheia / Theia need a **C++17-capable** toolchain, **CMake 3.15+** (see root `CMakeLists.txt`), and:
 
-1.  C++11 is needed for certain functionality and added models to the stdlib. C++0x will probably work in most cases, but is not guaranteed. As such, you need a compiler that supports C++11 appropriately.
-2.  [CMake](http://www.cmake.org) is a cross platform build system. Theia needs a relatively recent version of CMake (version 2.8.0 or better).
-3.  [eigen3](http://eigen.tuxfamily.org/index.php?title=Main_Page) is used extensively for doing nearly all the matrix and linear algebra operations.
-4.  [Ceres Solver](https://code.google.com/p/ceres-solver/) is a library for solving non-linear least squares problems. In particular, Theia uses it for Bundle Adjustment.
+| Dependency | Role |
+|------------|------|
+| **[Eigen3](https://eigen.tuxfamily.org/)** | Dense linear algebra |
+| **[Ceres Solver](http://ceres-solver.org/)** | Non-linear least squares (bundle adjustment, many pose / alignment solvers) |
+| **glog**, **gflags** | Logging and flags (typical Ceres dependencies) |
 
-**NOTE**: Theia also depends on the following libraries, but they are included in the installation of Ceres so it is likely that you do not need to reinstall them.
+Install Eigen and Ceres from your distribution or build from source. Follow **[Ceres installation](http://ceres-solver.org/installation.html)** for BLAS/LAPACK or **SuiteSparse** choices; this fork does not require SuiteSparse in pyTheia’s math layer, but Ceres may still use it if you enable it there.
 
-6.  [google-glog](http://code.google.com/p/google-glog) is used for error checking and logging. Ceres needs glog version 0.3.1 or later. Version 0.3 (which ships with Fedora 16) has a namespace bug which prevents Ceres from building.
-7.  [gflags](http://code.google.com/p/gflags) is a library for processing command line flags. It is used by some of the examples and tests.
+### Ceres version
 
-Make sure all of these libraries are installed properly before proceeding. Improperly installing any of these libraries can cause Theia to not build.
+Use a **current Ceres 2.x** release (build from the latest stable tag in [ceres-solver/ceres-solver](https://github.com/ceres-solver/ceres-solver/releases)). Older 2.1.x builds remain fine for **CPU-only** workflows; **CUDA sparse** (cuDSS) support needs a Ceres version and build that actually compile the **cuDSS** component (see Ceres release notes and installation guide).
+
+### Optional: Ceres with CUDA (dense and sparse solvers)
+
+Ceres can accelerate **bundle adjustment** (and other solves that use Ceres’ linear algebra backends) on NVIDIA GPUs:
+
+1. **CUDA dense** — Ceres built with **CUDA** enabled (`USE_CUDA=ON` in Ceres; see upstream docs). Exposes Ceres’ **`CUDA`** dense linear algebra backend (`DenseLinearAlgebraLibraryType`). Typical pairing: dense Schur-style solvers with `dense_linear_algebra_library_type = ceres::CUDA`.
+2. **CUDA sparse** — Ceres built with **NVIDIA cuDSS** so the compiled library includes the **cuDSS** component (see Ceres documentation for cuDSS paths and CMake hints). Exposes **`CUDA_SPARSE`** (`SparseLinearAlgebraLibraryType`) for sparse Schur / sparse normal Cholesky–style solves.
+
+When you **configure pyTheia**, CMake detects what your installed Ceres supports:
+
+- **Dense CUDA:** a small `try_compile` check against Ceres headers (or override with `-DTHEIA_CERES_USE_CUDA=ON|OFF`).
+- **Sparse CUDA:** inspection of `CERES_COMPILED_COMPONENTS` for `cuDSS` (or override with `-DTHEIA_CERES_USE_CUDA_SPARSE=ON|OFF`).
+
+Configure log lines look like:
+
+- `Ceres was built with CUDA (dense linear algebra available)` or the fallback message if not.
+- `Ceres was built with CUDA sparse (cuDSS); BA can use CUDA_SPARSE` if cuDSS is present.
+
+These flags are passed into the **pybind11** extension so bindings match your Ceres capabilities. At **runtime**, GPU use is still controlled by **`BundleAdjustmentOptions`** (and the same Ceres enums elsewhere), e.g. `dense_linear_algebra_library_type` / `sparse_linear_algebra_library_type` — see [Bundle adjustment](bundle_adjustment.md).
+
+!!! note
+    Manylinux **wheels** shipped by the project are built against a **CPU** Ceres in the base image. To use **CUDA** dense or **CUDA_SPARSE** in Python, build pyTheia locally against a Ceres that was compiled with the desired GPU options.
 
 ## Building on Linux or WSL2 (on Windows) {#section-building}
 
-This section describes how to build on Ubuntu locally or on WSL2 both with sudo rights. The basic dependency is: First we need the basic libraries: Eigen3 and the ceres-solver
+Example: Eigen and Ceres from source on Ubuntu (adjust paths and generators as needed).
 
-``` bash
+```bash
 sudo apt install cmake build-essential libgflags-dev libgoogle-glog-dev libatlas-base-dev
-# cd to your favourite library folder
-mkdir LIBS && cd LIBS
+# optional: NVIDIA CUDA toolkit + cuDSS for Ceres GPU backends (see Ceres docs)
 
-git clone https://gitlab.com/libeigen/eigen
+mkdir -p LIBS && cd LIBS
+
+# Eigen (example: 3.4.x)
+git clone https://gitlab.com/libeigen/eigen.git
 cd eigen && git checkout 3.4.0
-mkdir -p build && cd build && cmake .. && sudo make install
+mkdir -p build && cd build && cmake .. && sudo cmake --install .
 
-# ceres solver
-cd LIBS
-git clone https://ceres-solver.googlesource.com/ceres-solver
-cd ceres-solver && git checkout 2.1.0 && mkdir build && cd build
-cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF
-make -j && make install
+# Ceres — use a current 2.x release; add -DUSE_CUDA=ON and cuDSS hints per Ceres docs for GPU
+cd ../../
+git clone https://github.com/ceres-solver/ceres-solver.git
+cd ceres-solver && git fetch --tags && git checkout "$(git tag -l '2.*' | sort -V | tail -1)"
+mkdir build && cd build
+cmake .. \
+  -DBUILD_TESTING=OFF \
+  -DBUILD_EXAMPLES=OFF \
+  -DBUILD_BENCHMARKS=OFF
+# Example GPU Ceres line (details in Ceres installation guide):
+# cmake .. ... -DUSE_CUDA=ON
+
+cmake --build . -j"$(nproc)"
+sudo cmake --install .
 ```
 
-Then, navigate to the source directory of the pyTheiaSfM library to build the Python wheel. In your favorite Python environment execute the following commands:
+Then build the **Python** package from the pyTheia repo root (see repository `README.md` for `build_and_install.sh` and wheel flows):
 
-``` bash
-python3 setup.py bdist_wheel
-cd dist && pip install *.whl
+```bash
+python3 -m pip install -e .   # or: python3 setup.py bdist_wheel && pip install dist/*.whl
 ```
 
-Manylinux wheels can also be built using Docker or the helper scripts under `pypackage/` (see repository README for details).
+Manylinux wheels can be built with Docker or scripts under `pypackage/` (see README).
 
 ## Building the documentation (MkDocs) {#section-documentation-mkdocs}
 
-The manual is built with [MkDocs](https://www.mkdocs.org/) and the [Material theme](https://squidfunk.github.io/mkdocs-material/). From the repository root:
+The manual uses [MkDocs](https://www.mkdocs.org/) and the [Material theme](https://squidfunk.github.io/mkdocs-material/). From the repository root:
 
 ```bash
 pip install -r docs/requirements.txt
@@ -58,10 +89,10 @@ pip install -r docs/requirements.txt
 mkdocs serve -f docs/mkdocs.yml
 ```
 
-Open the local URL printed in the terminal (usually [http://127.0.0.1:8000/](http://127.0.0.1:8000/)). To produce a static site under `docs/site/`:
+Open the URL printed in the terminal (usually [http://127.0.0.1:8000/](http://127.0.0.1:8000/)). Static site:
 
 ```bash
 mkdocs build --strict -f docs/mkdocs.yml
 ```
 
-When configuring the C++ project with `-DBUILD_DOCUMENTATION=ON`, CMake generates the `theia_docs` target, which runs MkDocs and installs the built site under `share/doc/theia` when the `Doc` install component is enabled.
+With `-DBUILD_DOCUMENTATION=ON`, CMake can generate the `theia_docs` target (MkDocs; install under `share/doc/theia` when the `Doc` component is enabled).

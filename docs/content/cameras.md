@@ -23,8 +23,8 @@ These are the values of `CameraIntrinsicsModelType` in [`camera_intrinsics_model
 | `FISHEYE` | `FisheyeCameraModel` | 9 | yes | yes |
 | `FOV` | `FOVCameraModel` | 5 | no (diagonal focal lengths only) | yes |
 | `DIVISION_UNDISTORTION` | `DivisionUndistortionCameraModel` | 5 | no | yes |
-| `DOUBLE_SPHERE` | `DoubleSphereCameraModel` | 7 | yes | **C++ only** (not pybind11 yet) |
-| `EXTENDED_UNIFIED` | `ExtendedUnifiedCameraModel` | 7 | yes | **C++ only** (not pybind11 yet) |
+| `DOUBLE_SPHERE` | `DoubleSphereCameraModel` | 7 | yes | yes (`DoubleSphereCameraModel`) |
+| `EXTENDED_UNIFIED` | `ExtendedUnifiedCameraModel` | 7 | yes | yes (`ExtendedUnifiedCameraModel`) |
 | `ORTHOGRAPHIC` | `OrthographicCameraModel` | 7 | yes | yes |
 
 Strings accepted by I/O and `StringToCameraIntrinsicsModelType` match the enum names above (e.g. `"PINHOLE_RADIAL_TANGENTIAL"`, `"DOUBLE_SPHERE"`).

@@ -13,6 +13,7 @@
 #include "theia/sfm/estimators/estimate_rigid_transformation_2d_3d.h"
 #include "theia/sfm/estimators/estimate_similarity_transformation_2d_3d.h"
 #include "theia/sfm/estimators/estimate_triangulation.h"
+#include "theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_absolute_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_relative_pose.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
@@ -230,6 +231,24 @@ EstimateUncalibratedAbsolutePoseWrapper(
                                        normalized_correspondences,
                                        &absolute_pose,
                                        &ransac_summary);
+  return std::make_tuple(success, absolute_pose, ransac_summary);
+}
+
+std::tuple<bool, RadialDistUncalibratedAbsolutePose, RansacSummary>
+EstimateRadialDistUncalibratedAbsolutePoseWrapper(
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
+    const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences,
+    const RadialDistUncalibratedAbsolutePoseMetaData& meta_data) {
+  RadialDistUncalibratedAbsolutePose absolute_pose;
+  RansacSummary ransac_summary;
+  const bool success = EstimateRadialDistUncalibratedAbsolutePose(
+      ransac_params,
+      ransac_type,
+      normalized_correspondences,
+      meta_data,
+      &absolute_pose,
+      &ransac_summary);
   return std::make_tuple(success, absolute_pose, ransac_summary);
 }
 

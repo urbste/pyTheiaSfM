@@ -177,6 +177,8 @@ This information serves the purpose of an edge in the view graph that describes 
 
 Theia implements a generic interface for estimating a `Reconstruction` with the `ReconstructionEstimator`. This class takes in as input a `ViewGraph` with connectivity and relative pose information, and a `Reconstruction` with view and track information and unestimated poses and 3d points. All SfM pipelines are derived directly from the `ReconstructionEstimator` class. This allows for a consistent interface and also the ability to choose the reconstruction pipeline at run-time.
 
+**pyTheia:** `ReconstructionBuilder` and `ReconstructionBuilderOptions` are **not** exposed in Python; assemble a `ViewGraph` / `Reconstruction` and run `ReconstructionEstimator` (or the helper flows in the examples) instead.
+
 However, the most common use case for SfM pipelines is to input images and output SfM reconstructions. As such, Theia implements a `ReconstructionBuilder` utility class. The high-level responsibilities of these classes are:
 
 -   `ReconstructionBuilder` takes as input either images or a set of pre-computed matches (computed with Theia or any other technique). If images are passed in, users may choose the type of feature, feature matching strategy, and more. After matches are computed, the `ReconstructionBuilder` can call a `ReconstructionEstimator` to compute an SfM Reconstruction
@@ -284,7 +286,7 @@ Matching strategy type. Only `BRUTE_FORCE` is supported. See `theia/matching/cre
 
 - FeatureMatcherOptions ReconstructionBuilderOptions::matching_options
 
-Options used by the C++ reconstruction builder when it runs internal matching (pyTheia exposes this for `ReconstructionBuilderOptions`; most Python workflows supply correspondences directly).
+Options used by the C++ reconstruction builder when it runs internal matching (not exposed on the Python API; typical Python workflows supply correspondences and use estimators directly).
 
 - ReconstructionEstimatorOptions ReconstructionBuilderOptions::reconstruction_estimator_options
 

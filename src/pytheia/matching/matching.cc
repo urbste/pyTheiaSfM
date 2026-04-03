@@ -46,10 +46,8 @@
 #include "theia/matching/create_feature_matcher.h"
 #include "theia/matching/feature_correspondence.h"
 #include "theia/matching/feature_matcher_options.h"
-#include "theia/matching/features_and_matches_database.h"
 #include "theia/matching/graph_match.h"
 #include "theia/matching/image_pair_match.h"
-#include "theia/matching/in_memory_features_and_matches_database.h"
 #include "theia/matching/indexed_feature_match.h"
 #include "theia/sfm/feature.h"
 
@@ -59,33 +57,7 @@ namespace pytheia {
 namespace matching {
 
 void pytheia_matching_classes(py::module& m) {
-  py::class_<theia::FeaturesAndMatchesDatabase>(m, "FeaturesAndMatchesDatabase");
-
   m.def("GraphMatch", &theia::GraphMatch);
-
-  py::class_<theia::InMemoryFeaturesAndMatchesDatabase,
-             theia::FeaturesAndMatchesDatabase>(
-      m, "InMemoryFeaturesAndMatchesDatabase")
-      .def(py::init<>())
-      .def("GetImagePairMatch",
-           &theia::InMemoryFeaturesAndMatchesDatabase::GetImagePairMatch)
-      .def("PutImagePairMatch",
-           &theia::InMemoryFeaturesAndMatchesDatabase::PutImagePairMatch)
-      .def("NumMatches", &theia::InMemoryFeaturesAndMatchesDatabase::NumMatches)
-      .def("PutCameraIntrinsicsPrior",
-           &theia::InMemoryFeaturesAndMatchesDatabase::PutCameraIntrinsicsPrior)
-      .def("GetCameraIntrinsicsPrior",
-           &theia::InMemoryFeaturesAndMatchesDatabase::GetCameraIntrinsicsPrior)
-      .def("NumCameraIntrinsicsPrior",
-           &theia::InMemoryFeaturesAndMatchesDatabase::NumCameraIntrinsicsPrior)
-      .def("ImageNamesOfCameraIntrinsicsPriors",
-           &theia::InMemoryFeaturesAndMatchesDatabase::
-               ImageNamesOfCameraIntrinsicsPriors)
-      .def("ImageNamesOfMatches",
-           &theia::InMemoryFeaturesAndMatchesDatabase::ImageNamesOfMatches)
-      .def("ContainsCameraIntrinsicsPrior",
-           &theia::InMemoryFeaturesAndMatchesDatabase::
-               ContainsCameraIntrinsicsPrior);
 
   py::class_<theia::ImagePairMatch>(m, "ImagePairMatch")
       .def(py::init<>())
