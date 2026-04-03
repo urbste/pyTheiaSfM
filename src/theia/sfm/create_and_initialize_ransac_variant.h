@@ -36,6 +36,7 @@
 #define THEIA_SFM_CREATE_AND_INITIALIZE_RANSAC_VARIANT_H_
 
 #include <glog/logging.h>
+#include <memory>
 
 #include "theia/solvers/exhaustive_ransac.h"
 #include "theia/solvers/lmed.h"
@@ -57,23 +58,27 @@ std::unique_ptr<SampleConsensusEstimator<Estimator> >
 CreateAndInitializeRansacVariant(const RansacType& ransac_type,
                                  const RansacParameters& ransac_options,
                                  const Estimator& estimator) {
-  std::unique_ptr<SampleConsensusEstimator<Estimator> > ransac_variant;
+  std::unique_ptr<SampleConsensusEstimator<Estimator>> ransac_variant;
   switch (ransac_type) {
     case RansacType::RANSAC:
-      ransac_variant.reset(new Ransac<Estimator>(ransac_options, estimator));
+      ransac_variant = std::make_unique<Ransac<Estimator>>(ransac_options,
+                                                          estimator);
       break;
     case RansacType::PROSAC:
-      ransac_variant.reset(new Prosac<Estimator>(ransac_options, estimator));
+      ransac_variant = std::make_unique<Prosac<Estimator>>(ransac_options,
+                                                            estimator);
       break;
     case RansacType::LMED:
-      ransac_variant.reset(new LMed<Estimator>(ransac_options, estimator));
+      ransac_variant =
+          std::make_unique<LMed<Estimator>>(ransac_options, estimator);
       break;
     case RansacType::EXHAUSTIVE:
-      ransac_variant.reset(
-          new ExhaustiveRansac<Estimator>(ransac_options, estimator));
+      ransac_variant = std::make_unique<ExhaustiveRansac<Estimator>>(
+          ransac_options, estimator);
       break;
     default:
-      ransac_variant.reset(new Ransac<Estimator>(ransac_options, estimator));
+      ransac_variant = std::make_unique<Ransac<Estimator>>(ransac_options,
+                                                          estimator);
       break;
   }
 

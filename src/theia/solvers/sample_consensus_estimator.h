@@ -176,7 +176,12 @@ class SampleConsensusEstimator {
   //
   // sampler: The class that instantiates the sampling strategy for this
   //   particular type of sampling consensus.
-  bool Initialize(Sampler* sampler);
+  bool Initialize(std::unique_ptr<Sampler> sampler);
+
+  // Installs MLE or inlier-count quality measurement from ransac_params_.
+  bool InitializeDefaultQualityMeasurement();
+
+  void SetSampler(std::unique_ptr<Sampler> sampler);
 
   // Computes the maximum number of iterations required to ensure the inlier
   // ratio is the best with a probability corresponding to log_failure_prob.
@@ -219,10 +224,14 @@ SampleConsensusEstimator<ModelEstimator>::SampleConsensusEstimator(
 }
 
 template <class ModelEstimator>
-bool SampleConsensusEstimator<ModelEstimator>::Initialize(Sampler* sampler) {
-  CHECK_NOTNULL(sampler);
-  sampler_.reset(sampler);
+void SampleConsensusEstimator<ModelEstimator>::SetSampler(
+    std::unique_ptr<Sampler> sampler) {
+  CHECK(sampler != nullptr);
+  sampler_ = std::move(sampler);
+}
 
+template <class ModelEstimator>
+bool SampleConsensusEstimator<ModelEstimator>::InitializeDefaultQualityMeasurement() {
   if (ransac_params_.use_mle) {
     quality_measurement_.reset(
         new MLEQualityMeasurement(ransac_params_.error_thresh));
@@ -230,6 +239,13 @@ bool SampleConsensusEstimator<ModelEstimator>::Initialize(Sampler* sampler) {
     quality_measurement_.reset(new InlierSupport(ransac_params_.error_thresh));
   }
   return quality_measurement_->Initialize();
+}
+
+template <class ModelEstimator>
+bool SampleConsensusEstimator<ModelEstimator>::Initialize(
+    std::unique_ptr<Sampler> sampler) {
+  SetSampler(std::move(sampler));
+  return InitializeDefaultQualityMeasurement();
 }
 
 template <class ModelEstimator>

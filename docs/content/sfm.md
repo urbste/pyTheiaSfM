@@ -308,11 +308,9 @@ Estimates the cameras poses and 3D points from a view graph. The derived classes
 
 Estimates the cameras poses and 3D points from a view graph. The derived classes must implement this method to estimate a 3D reconstruction.
 
-**`static ReconstructionEstimator\* ReconstructionEstimator::Create(const ReconstructionEstimatorOptions& options)`**
+**`static std::unique_ptr<ReconstructionEstimator> ReconstructionEstimator::Create(const ReconstructionEstimatorOptions& options)`**
 
-Creates a derived `ReconstructionEstimator` class from the options passed in. For instance, an `IncrementalReconstructionEstimator` will be returned if incremental SfM is desired.
-
-Creates a derived `ReconstructionEstimator` class from the options passed in. For instance, an `IncrementalReconstructionEstimator` will be returned if incremental SfM is desired.
+Creates a derived `ReconstructionEstimator` instance from the options passed in. For instance, an `IncrementalReconstructionEstimator` will be returned if incremental SfM is desired. Ownership is transferred to the caller; the Python binding holds the object and destroys it when the wrapper is released.
 
 ### Setting Reconstruction Estimator Options
 

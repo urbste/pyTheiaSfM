@@ -378,9 +378,9 @@ bool ReconstructionBuilder::BuildReconstruction(
               << " images from " << view_graph_->NumEdges()
               << " two view matches.";
 
-    std::unique_ptr<ReconstructionEstimator> reconstruction_estimator(
+    std::unique_ptr<ReconstructionEstimator> reconstruction_estimator =
         ReconstructionEstimator::Create(
-            options_.reconstruction_estimator_options));
+            options_.reconstruction_estimator_options);
 
     const auto& summary = reconstruction_estimator->Estimate(
         view_graph_.get(), reconstruction_.get());

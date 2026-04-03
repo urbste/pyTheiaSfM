@@ -35,6 +35,7 @@
 #ifndef THEIA_SFM_RECONSTRUCTION_ESTIMATOR_H_
 #define THEIA_SFM_RECONSTRUCTION_ESTIMATOR_H_
 
+#include <memory>
 #include <string>
 #include <unordered_set>
 
@@ -80,7 +81,7 @@ class ReconstructionEstimator {
   virtual ReconstructionEstimatorSummary Estimate(
       ViewGraph* view_graph, Reconstruction* reconstruction) = 0;
 
-  static ReconstructionEstimator* Create(
+  static std::unique_ptr<ReconstructionEstimator> Create(
       const ReconstructionEstimatorOptions& options);
 };
 

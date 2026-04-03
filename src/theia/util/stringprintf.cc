@@ -85,18 +85,17 @@ void StringAppendV(std::string* dst, const char* format, va_list ap) {
   // Increase the buffer size to the size requested by vsnprintf,
   // plus one for the closing \0.
   int length = result + 1;
-  char* buf = new char[length];
+  std::vector<char> buf(static_cast<size_t>(length));
 
   // Restore the va_list before we use it again
   va_copy(backup_ap, ap);
-  result = vsnprintf(buf, length, format, backup_ap);
+  result = vsnprintf(buf.data(), length, format, backup_ap);
   va_end(backup_ap);
 
   if (result >= 0 && result < length) {
     // It fit
-    dst->append(buf, result);
+    dst->append(buf.data(), static_cast<size_t>(result));
   }
-  delete[] buf;
 }
 
 std::string StringPrintf(const char* format, ...) {

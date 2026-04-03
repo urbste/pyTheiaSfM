@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <math.h>
+#include <memory>
 #include <vector>
 
 #include "theia/solvers/estimator.h"
@@ -59,9 +60,9 @@ class Prosac : public SampleConsensusEstimator<ModelEstimator> {
   ~Prosac() {}
 
   bool Initialize() {
-    Sampler* prosac_sampler = new ProsacSampler(this->ransac_params_.rng,
-                                                this->estimator_.SampleSize());
-    return SampleConsensusEstimator<ModelEstimator>::Initialize(prosac_sampler);
+    return SampleConsensusEstimator<ModelEstimator>::Initialize(
+        std::make_unique<ProsacSampler>(this->ransac_params_.rng,
+                                        this->estimator_.SampleSize()));
   }
 };
 }  // namespace theia

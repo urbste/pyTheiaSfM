@@ -35,6 +35,8 @@
 #ifndef THEIA_SOLVERS_RANSAC_H_
 #define THEIA_SOLVERS_RANSAC_H_
 
+#include <memory>
+
 #include "theia/solvers/random_sampler.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/solvers/sampler.h"
@@ -53,9 +55,9 @@ class Ransac : public SampleConsensusEstimator<ModelEstimator> {
 
   // Initializes the random sampler and inlier support measurement.
   bool Initialize() {
-    Sampler* random_sampler = new RandomSampler(this->ransac_params_.rng,
-                                                this->estimator_.SampleSize());
-    return SampleConsensusEstimator<ModelEstimator>::Initialize(random_sampler);
+    return SampleConsensusEstimator<ModelEstimator>::Initialize(
+        std::make_unique<RandomSampler>(this->ransac_params_.rng,
+                                        this->estimator_.SampleSize()));
   }
 };
 

@@ -35,6 +35,7 @@
 #include "theia/sfm/reconstruction_estimator.h"
 
 #include <glog/logging.h>
+#include <memory>
 
 #include "theia/sfm/global_reconstruction_estimator.h"
 #include "theia/sfm/hybrid_reconstruction_estimator.h"
@@ -43,22 +44,19 @@
 
 namespace theia {
 
-ReconstructionEstimator* ReconstructionEstimator::Create(
+std::unique_ptr<ReconstructionEstimator> ReconstructionEstimator::Create(
     const ReconstructionEstimatorOptions& options) {
   switch (options.reconstruction_estimator_type) {
     case ReconstructionEstimatorType::GLOBAL:
-      return new GlobalReconstructionEstimator(options);
-      break;
+      return std::make_unique<GlobalReconstructionEstimator>(options);
     case ReconstructionEstimatorType::INCREMENTAL:
-      return new IncrementalReconstructionEstimator(options);
-      break;
+      return std::make_unique<IncrementalReconstructionEstimator>(options);
     case ReconstructionEstimatorType::HYBRID:
-      return new HybridReconstructionEstimator(options);
-      break;
+      return std::make_unique<HybridReconstructionEstimator>(options);
     default:
       LOG(FATAL) << "Invalid reconstruction estimator specified.";
+      return nullptr;
   }
-  return nullptr;
 }
 
 }  // namespace theia

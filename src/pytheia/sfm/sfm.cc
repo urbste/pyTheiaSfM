@@ -429,7 +429,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("DeepCopy", &theia::Camera::DeepCopy)
       .def("CameraIntrinsics",
            &theia::Camera::CameraIntrinsics,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("SetFromCameraIntrinsicsPriors",
            &theia::Camera::SetFromCameraIntrinsicsPriors)
       .def("CameraIntrinsicsPriorFromIntrinsics",
@@ -887,7 +887,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("TrackIds", &theia::View::TrackIds)
       .def("GetFeature",
            &theia::View::GetFeature,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("GetTrack", &theia::View::GetTrack)
       .def("GetTimestamp", &theia::View::GetTimestamp)
       .def("Camera", &theia::View::Camera, "Camera class object")
@@ -895,7 +895,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("SetCameraIntrinsicsPrior", &theia::View::SetCameraIntrinsicsPrior)
       .def("MutableCameraIntrinsicsPrior",
            &theia::View::MutableCameraIntrinsicsPrior,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("MutableCamera",
            &theia::View::MutableCamera,
            py::return_value_policy::reference_internal)
@@ -1085,28 +1085,30 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("message",
                      &theia::ReconstructionEstimatorSummary::message);
 
-  // Reconstruction Estimator class
-  py::class_<theia::ReconstructionEstimator>(m, "ReconstructionEstimator")
-      .def_static("Create",
-                  &theia::ReconstructionEstimator::Create,
-                  py::return_value_policy::reference);
+  // Reconstruction Estimator class (unique_ptr holder: Create transfers ownership)
+  py::class_<theia::ReconstructionEstimator,
+             std::unique_ptr<theia::ReconstructionEstimator>>(
+      m, "ReconstructionEstimator")
+      .def_static("Create", &theia::ReconstructionEstimator::Create);
 
-  // not sure about pointer  GlobalReconstructionEstimator
   py::class_<theia::GlobalReconstructionEstimator,
-             theia::ReconstructionEstimator>(m, "GlobalReconstructionEstimator")
+             theia::ReconstructionEstimator,
+             std::unique_ptr<theia::GlobalReconstructionEstimator>>(
+      m, "GlobalReconstructionEstimator")
       .def(py::init<theia::ReconstructionEstimatorOptions>())
       .def("Estimate", &theia::GlobalReconstructionEstimator::Estimate);
 
-  // not sure about pointer  IncrementalReconstructionEstimator
   py::class_<theia::IncrementalReconstructionEstimator,
-             theia::ReconstructionEstimator>(
+             theia::ReconstructionEstimator,
+             std::unique_ptr<theia::IncrementalReconstructionEstimator>>(
       m, "IncrementalReconstructionEstimator")
       .def(py::init<theia::ReconstructionEstimatorOptions>())
       .def("Estimate", &theia::IncrementalReconstructionEstimator::Estimate);
 
-  // not sure about pointer  HybridReconstructionEstimator
   py::class_<theia::HybridReconstructionEstimator,
-             theia::ReconstructionEstimator>(m, "HybridReconstructionEstimator")
+             theia::ReconstructionEstimator,
+             std::unique_ptr<theia::HybridReconstructionEstimator>>(
+      m, "HybridReconstructionEstimator")
       .def(py::init<theia::ReconstructionEstimatorOptions>())
       .def("Estimate", &theia::HybridReconstructionEstimator::Estimate);
 
@@ -1470,10 +1472,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def("NumEdges", &theia::ViewGraph::NumEdges)
       .def("GetNeighborIdsForView",
            &theia::ViewGraph::GetNeighborIdsForView,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("GetEdge",
            &theia::ViewGraph::GetEdge,
-           py::return_value_policy::reference)
+           py::return_value_policy::reference_internal)
       .def("GetAllEdges", &theia::ViewGraph::GetAllEdges)
 
       // not sure pointer as input

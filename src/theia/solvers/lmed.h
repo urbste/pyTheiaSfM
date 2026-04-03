@@ -35,6 +35,8 @@
 #ifndef THEIA_SOLVERS_LMED_H_
 #define THEIA_SOLVERS_LMED_H_
 
+#include <memory>
+
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/lmed_quality_measurement.h"
 #include "theia/solvers/random_sampler.h"
@@ -60,12 +62,11 @@ class LMed : public SampleConsensusEstimator<ModelEstimator> {
   virtual ~LMed() {}
 
   bool Initialize() override {
-    const bool init_status =
-        SampleConsensusEstimator<ModelEstimator>::Initialize(new RandomSampler(
-            this->ransac_params_.rng, this->estimator_.SampleSize()));
+    this->SetSampler(std::make_unique<RandomSampler>(
+        this->ransac_params_.rng, this->estimator_.SampleSize()));
     this->quality_measurement_.reset(
         new LmedQualityMeasurement(this->estimator_.SampleSize()));
-    return init_status;
+    return this->quality_measurement_->Initialize();
   }
 };
 

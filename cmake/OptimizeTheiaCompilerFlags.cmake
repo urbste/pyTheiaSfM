@@ -127,22 +127,16 @@ macro(OptimizeTheiaCompilerFlags)
     endif ()
   endif (CMAKE_BUILD_TYPE STREQUAL "Release")
 
-  # Set c++ standard to c++11
+  # Verify GNU/Clang support for C++17 (CMAKE_CXX_STANDARD is set in CMakeLists).
   if (NOT MSVC)
     include(CheckCXXCompilerFlag)
-    check_cxx_compiler_flag("-std=c++11" COMPILER_HAS_CXX11_FLAG)
-    if (COMPILER_HAS_CXX11_FLAG)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-      if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	# Mac OS X before Mavericks uses libstdc++ by default but does not support
-	# c++11. Force it to use libc++.
-	if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-	endif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-      endif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    else (COMPILER_HAS_CXX11_FLAG)
-      message(FATAL_ERROR "A compiler with C++11 support is required for Theia.")
-    endif (COMPILER_HAS_CXX11_FLAG)
+    check_cxx_compiler_flag("-std=c++17" COMPILER_HAS_CXX17_FLAG)
+    if (NOT COMPILER_HAS_CXX17_FLAG)
+      message(FATAL_ERROR "A compiler with C++17 support is required for Theia.")
+    endif ()
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_SYSTEM_NAME MATCHES "Darwin")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    endif ()
   endif (NOT MSVC)
 
   # Check for the thread_local keyword. If it cannot be used, set the macro to

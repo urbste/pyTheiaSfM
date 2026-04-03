@@ -6,6 +6,6 @@ The upstream Theia library provided a `FloatImage` class built on [OpenImageIO](
 
 - Load and preprocess images in **Python** (for example OpenCV, Pillow, or PyTorch).
 - Do feature extraction and matching in Python (or any external tool), then pass 2D correspondences into pyTheia (`FeatureCorrespondence`, view graphs, incremental/global estimators, etc.).
-- Raster **undistortion** of pixel grids is not exposed from C++; apply `cv2.undistort` (or similar) in Python if you need corrected images. **Geometry-only** undistortion of reconstructions remains available via `UndistortReconstruction` in the C++ core (updates cameras and observation coordinates).
+- Raster **undistortion** of pixel grids is not part of this tree; apply `cv2.undistort` (or similar) in Python if you need corrected images. Adjust intrinsics and feature coordinates yourself if you need a pinhole-consistent representation across the reconstruction.
 
 For historical reference, the old `FloatImage` API lived in upstream [`image.h`](https://github.com/sweeneychris/TheiaSfM/blob/master/src/theia/image/image.h).
