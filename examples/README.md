@@ -6,7 +6,7 @@ Optional, dependency-heavy workflows built around **pyTheia** Structure-from-Mot
 
 | Directory | Purpose |
 |-----------|---------|
-| [`vismatch_sfm/`](vismatch_sfm/) | Image pairs matched with [**vismatch**](https://github.com/gmberton/vismatch) (50+ matchers), geometric verification with **pyTheia**, incremental/global/hybrid reconstruction, optional [**Rerun**](https://rerun.io/) visualization. |
+| [`vismatch_sfm/`](vismatch_sfm/) | [**vismatch**](https://github.com/gmberton/vismatch) matching + **pyTheia** two-view and incremental/global/hybrid SfM on a **Strecha-style** folder layout; Sim3 to GT, **average camera-center error**, PLY exports, optional [**Rerun**](https://rerun.io/). See [`vismatch_sfm/README.md`](vismatch_sfm/README.md). |
 | [`gaussian_splatting/`](gaussian_splatting/) | Export a pyTheia reconstruction to **Nerfstudio** `transforms.json` and notes for training **Splatfacto** / other 3D Gaussian splatting pipelines. |
 
 ## Setup
@@ -31,4 +31,4 @@ pip install -r examples/requirements.txt
 
 ## Documentation
 
-The MkDocs manual includes an [Examples overview](../docs/content/examples_showcase.md) and a full page on [vismatch + SfM](../docs/content/examples_vismatch_sfm.md) (generic runs, SFM eval datasets, Rerun).
+The MkDocs manual includes an [Examples overview](../docs/content/examples_showcase.md) and a full page on [vismatch + SfM](../docs/content/examples_vismatch_sfm.md) (Strecha scene layout, outputs, Rerun, evaluation metrics).

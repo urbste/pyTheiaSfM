@@ -4,7 +4,7 @@ End-to-end demo under [`examples/vismatch_sfm/`](https://github.com/urbste/pyThe
 
 1. **[vismatch](https://github.com/gmberton/vismatch)** extracts putative correspondences (many matchers; default **SuperPoint + LightGlue**).
 2. **pyTheia** runs two-view geometry, builds tracks, and reconstructs with **incremental**, **global**, or **hybrid** estimators.
-3. With a **Strecha-style scene root** (`images/` + `K.txt`, `gt_dense_cameras/*.camera`), the pipeline loads **ground-truth cameras**, optionally **Sim3-aligns** the estimated model to GT, and can open **[Rerun](https://rerun.io/)** for 3D visualization.
+3. With a **Strecha-style scene root** (`images/` + `K.txt`, `gt_dense_cameras/*.camera`), the pipeline loads **ground-truth cameras**, **Sim3-aligns** the estimated model to GT, prints **average camera-center error**, optionally writes **match figures**, and can open **[Rerun](https://rerun.io/)**.
 
 For lighter OpenCV-only flows, use [`pyexamples/`](https://github.com/urbste/pyTheiaSfM/tree/master/pyexamples) instead ([Examples overview](examples_showcase.md)).
 
@@ -24,22 +24,24 @@ This pulls in `vismatch`, `torch`, `opencv-python`, `rerun-sdk`, etc. (see [`pyp
 
 ## Strecha scene root (`--strecha_dir`)
 
-Point **`--strecha_dir`** at the **scene root directory** (not at `images/` alone). The pipeline validates and loads:
+Point **`--strecha_dir`** at the **scene root** (not at `images/` alone). The pipeline validates:
 
 | Path | Contents |
 |------|-----------|
-| `<scene>/images/` | RGB images (default **`*.jpg`**, or set `--img_ext`) and **`K.txt`** (must exist; used as a layout sanity check). |
-| `<scene>/gt_dense_cameras/` | One **`*.camera`** per view (same basename stem as the image file). |
+| `<scene>/images/` | RGB images (default **`*.jpg`**, or `--img_ext`) and **`K.txt`** (must exist; layout sanity check). |
+| `<scene>/gt_dense_cameras/` | One **`*.camera`** per view. |
 
-Ground truth is read with **`ReadStrechaDataset`** on `gt_dense_cameras/`. Image paths are **`images/<stem>.<ext>`** for each stem taken from the `.camera` basenames.
+Ground truth is read with **`ReadStrechaDataset`** on `gt_dense_cameras/`. Images are resolved under `images/` by **view name** (basename of each `.camera` file without the suffix). If the name already ends with an extension (e.g. **`0000.jpg`** from **`0000.jpg.camera`**), the raster is **`images/0000.jpg`**; otherwise **`images/<stem>.<ext>`** with default `ext` from `--img_ext`.
 
-Intrinsics used when building the **running** reconstruction are taken from the **GT cameras** after loading `.camera` files (via Theia priors), not by parsing `K.txt` in this script.
+Intrinsics for the running reconstruction come from **`.camera`** priors, not from `K.txt` in this script.
 
 !!! warning "Pair count"
 
     The script tries **all** image pairs: cost grows as \(O(n^2)\). Start with a small set or extend the script with pair scheduling.
 
-### Run one scene
+### Command line
+
+Full matcher list groups and defaults are in **`python examples/vismatch_sfm/pipeline.py --help`**. Example:
 
 ```bash
 python examples/vismatch_sfm/pipeline.py \
@@ -48,9 +50,10 @@ python examples/vismatch_sfm/pipeline.py \
   --matcher superpoint-lightglue \
   --device cuda \
   --reconstruction incremental \
-  --resize 512 \
   --output_dir /path/to/out
 ```
+
+Default **`--resize`**, **`--min_inliers_twoview`**, and **`--num_threads`** match the current `pipeline.py`; prefer `--help` over hard-coding values here.
 
 Optional 3D viewer after reconstruction:
 
@@ -60,9 +63,7 @@ python examples/vismatch_sfm/pipeline.py \
   --rerun
 ```
 
-Outputs include `reconstruction.ply`, `reconstruction.recon`, and **`gt_reconstruction.ply`** under `--output_dir` (defaults to the Strecha root if omitted).
-
-Robust Sim3 alignment (camera-center threshold in **meters**; tune for outliers):
+Robust Sim3 alignment (camera-center threshold in **meters**):
 
 ```bash
 python examples/vismatch_sfm/pipeline.py \
@@ -71,7 +72,7 @@ python examples/vismatch_sfm/pipeline.py \
   --rerun
 ```
 
-Debug correspondences (full-resolution side-by-side plots under `match_plots/` in the output directory):
+Debug correspondences (`match_plots/` under the output directory):
 
 ```bash
 python examples/vismatch_sfm/pipeline.py \
@@ -79,25 +80,34 @@ python examples/vismatch_sfm/pipeline.py \
   --plot_matches
 ```
 
-### Rerun layers
+### Outputs and metrics
 
-With `--rerun`, entities are split for comparison:
+Under **`--output_dir`** (or **`--strecha_dir`** if unset):
+
+- **`reconstruction.ply`** / **`reconstruction.recon`** — estimate **after** Sim3 alignment to GT.
+- **`gt_reconstruction.ply`** — ground-truth export for comparison.
+
+After alignment, the log includes **average camera center error**: mean Euclidean distance between aligned estimated and GT camera centers over views with the same name (scene units; typically meters on benchmark datasets).
+
+Progress lines summarize preloading, pairwise matching, two-view verification, track count, and reconstruction time.
+
+### Rerun layers (`--rerun`)
 
 | Entity prefix | Meaning |
 |---------------|---------|
-| `world/gt/` | Ground-truth cameras (frustums / centers) |
-| `world/estimated/aligned/` | Triangulated points and cameras **after Sim3** alignment to GT |
+| `world/gt/` | Ground-truth cameras (centers + pinhole frustums) |
+| `world/estimated/aligned/` | Triangulated points and cameras **after Sim3** to GT |
 
-GT provides **cameras** from `.camera` files; **triangulated** points come from the estimated reconstruction.
+Only GT and the **aligned** estimate are shown (no pre-alignment layer). Frustum geometry uses an enlarged depth for visibility in the viewer.
 
 ### Pose convention in `.camera` files
 
-The loader assumes **COLMAP-style** extrinsics in each `.camera` file: \(X_\mathrm{cam} = R\,X_\mathrm{world} + t\) with pinhole \(x \sim K X_\mathrm{cam}\). That is converted to **Theia** camera center and world-to-camera rotation. If your files use another convention, alignment will be wrong until the parser is adjusted.
+The loader assumes **COLMAP-style** extrinsics: \(X_\mathrm{cam} = R\,X_\mathrm{world} + t\) with \(x \sim K X_\mathrm{cam}\). That is converted to **Theia** camera center and world-to-camera rotation. If your files use another convention, alignment will be wrong until the parser is adjusted.
 
 ### Requirements
 
-- Every view in `gt_dense_cameras/` must have **`images/<stem>.<ext>`** (default `jpg`).
-- **`images/K.txt`** must exist (layout check).
+- Every GT view must have a matching raster under **`images/`** (see naming rules above).
+- **`images/K.txt`** must exist.
 
 ## Related docs
 

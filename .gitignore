@@ -12,6 +12,8 @@ pyelf*
 elftools*
 debug_out*
 build*
+# Exception: MkDocs page name matches `build*` but must be versioned (strict link check in CI).
+!docs/content/building.md
 cmake_build*
 *.csv
 
