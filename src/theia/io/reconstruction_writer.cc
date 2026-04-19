@@ -52,21 +52,25 @@
 namespace theia {
 
 bool WriteReconstruction(const Reconstruction& reconstruction,
-                         const std::string& output_file) {
+                         const std::string& output_file,
+                         bool write_full_reconstruction) {
   std::ofstream output_writer(output_file, std::ios::out | std::ios::binary);
   if (!output_writer.is_open()) {
     LOG(ERROR) << "Could not open the file: " << output_file << " for writing.";
     return false;
   }
 
-  // Reconstruction estimated_reconstruction;
-  // CreateEstimatedSubreconstruction(reconstruction,
-  // &estimated_reconstruction);
+  Reconstruction estimated_sub;
+  const Reconstruction* to_write = &reconstruction;
+  if (!write_full_reconstruction) {
+    CreateEstimatedSubreconstruction(reconstruction, &estimated_sub);
+    to_write = &estimated_sub;
+  }
 
   // Make sure that Cereal is able to finish executing before returning.
   {
     cereal::PortableBinaryOutputArchive output_archive(output_writer);
-    output_archive(reconstruction);
+    output_archive(*to_write);
   }
 
   return true;

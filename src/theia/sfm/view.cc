@@ -154,12 +154,14 @@ void View::UpdateFeature(const TrackId track_id, const Feature& feature) {
 }
 
 bool View::RemoveFeature(const TrackId track_id) {
-  const auto feature = FindOrNull(features_, track_id);
-  if (feature) {
-    return features_.erase(track_id) > 0 &&
-           features_to_tracks_.erase(*feature) > 0;
+  const Feature* ptr = FindOrNull(features_, track_id);
+  if (ptr == nullptr) {
+    return false;
   }
-  return false;
+  const Feature feature_copy = *ptr;
+  const bool removed_feature = features_.erase(track_id) > 0;
+  const bool removed_reverse = features_to_tracks_.erase(feature_copy) > 0;
+  return removed_feature && removed_reverse;
 }
 
 double View::GetTimestamp() const { return timestamp_; }

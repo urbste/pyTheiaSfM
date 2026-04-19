@@ -41,13 +41,18 @@ namespace theia {
 
 class Reconstruction;
 
-// Writes the reconstruction to a binary file. Only the estimated views and
-// tracks are output.
+// Writes the reconstruction to a binary file.
+//
+// By default (write_full_reconstruction == false), only estimated views and
+// tracks with at least two observations are written (same filtering as
+// CreateEstimatedSubreconstruction), which greatly reduces file size.
+// Set write_full_reconstruction to true to serialize the entire model.
 //
 // See //theia/sfm/reconstruction.h for more details about the
 // information contained in a reconstruction.
 bool WriteReconstruction(const Reconstruction& reconstruction,
-                         const std::string& output_file);
+                         const std::string& output_file,
+                         bool write_full_reconstruction = false);
 
 // Writes the reconstruction to a json file. Only the estimated views and
 // tracks are output.

@@ -103,7 +103,18 @@ void pytheia_io_classes(py::module& m) {
 
   m.def("ReadStrechaDataset", theia::ReadStrechaDatasetWrapper);
   m.def("ReadReconstruction", theia::ReadReconstructionWrapper);
-  m.def("WriteReconstruction", theia::WriteReconstruction);
+  m.def(
+      "WriteReconstruction",
+      [](const theia::Reconstruction& reconstruction,
+         const std::string& output_file, bool write_full_reconstruction) {
+        return theia::WriteReconstruction(reconstruction, output_file,
+                                        write_full_reconstruction);
+      },
+      py::arg("reconstruction"), py::arg("output_file"),
+      py::arg("write_full_reconstruction") = false,
+      "Write reconstruction to binary file. By default writes only estimated "
+      "views and multi-view tracks (smaller file). Pass "
+      "write_full_reconstruction=True to save the complete model.");
   m.def("WriteReconstructionJson", theia::WriteReconstructionJson);
   m.def("WriteBundlerFiles", theia::WriteBundlerFiles);
   m.def("WriteColmapFiles", theia::WriteColmapFiles);

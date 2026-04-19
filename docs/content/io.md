@@ -47,7 +47,7 @@ List-file row: `filename`, `second_entry`, `focal_length`.
 
 | Function | Returns | Description |
 |----------|---------|-------------|
-| `WriteReconstruction(reconstruction, output_file)` | `bool` | Binary Theia format ([`reconstruction_writer.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/io/reconstruction_writer.h)). |
+| `WriteReconstruction(reconstruction, output_file, write_full_reconstruction=False)` | `bool` | Binary Theia format ([`reconstruction_writer.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/io/reconstruction_writer.h)). By default only estimated views and multi-view tracks are written; pass `write_full_reconstruction=True` for the complete model. |
 | `WriteReconstructionJson(reconstruction, output_json_file)` | `bool` | JSON export of estimated views and tracks. |
 | `WritePlyFile(ply_file, reconstruction, camera_color, min_num_observations_per_point)` | `bool` | PLY point cloud for MeshLab-style viewers ([`write_ply_file.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/io/write_ply_file.h)). `camera_color` is an `Eigen::Vector3i` (RGB); use a NumPy length-3 integer array from Python. |
 | `WriteBundlerFiles(reconstruction, lists_file, bundle_file)` | `bool` | Bundler lists + bundle from a reconstruction. |
