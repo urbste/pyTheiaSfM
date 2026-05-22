@@ -46,6 +46,7 @@
 #include "theia/sfm/filter_view_pairs_from_orientation.h"
 #include "theia/sfm/filter_view_pairs_from_relative_translation.h"
 #include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
+#include "theia/sfm/global_pose_estimation/glomap_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
@@ -120,6 +121,8 @@ GlobalReconstructionEstimator::GlobalReconstructionEstimator(
       options_.num_threads;
   options_.linear_triplet_position_estimator_options.num_threads =
       options_.num_threads;
+  options_.glomap_position_estimator_options.num_threads =
+      options_.num_threads;
   ransac_params_ = SetRansacParameters(options);
 }
 
@@ -187,10 +190,17 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
   global_estimator_timings.rotation_filtering_time =
       timer.ElapsedTimeInSeconds();
 
+  const bool use_glomap_scale_priors =
+      options_.global_position_estimator_type ==
+          GlobalPositionEstimatorType::GLOMAP &&
+      options_.glomap_position_estimator_options.use_pairwise_scale_priors;
   if (options_.global_position_estimator_type ==
-      GlobalPositionEstimatorType::LIGT) {
-    LOG(INFO) << "LIGT selected. Skipping pairwise translation estimation and "
-                 "filtering.";
+          GlobalPositionEstimatorType::LIGT ||
+      (options_.global_position_estimator_type ==
+           GlobalPositionEstimatorType::GLOMAP &&
+       !use_glomap_scale_priors)) {
+    LOG(INFO) << "Track-based position estimator selected. Skipping pairwise "
+                 "translation estimation and filtering.";
   } else {
     // Step 5. Optimize relative translations.
     LOG(INFO) << "Optimizing the pairwise translation estimations.";
@@ -443,6 +453,11 @@ bool GlobalReconstructionEstimator::EstimatePosition() {
           options_.ligt_position_estimator_options, *reconstruction_));
       break;
     }
+    case GlobalPositionEstimatorType::GLOMAP: {
+      position_estimator.reset(new GlomapPositionEstimator(
+          options_.glomap_position_estimator_options, reconstruction_));
+      break;
+    }
     default: {
       LOG(FATAL) << "Invalid type of global position estimation chosen.";
       break;
@@ -462,7 +477,7 @@ void GlobalReconstructionEstimator::EstimateStructure() {
       options_.min_triangulation_angle_degrees;
   triangulation_options.bundle_adjustment = options_.bundle_adjust_tracks;
   triangulation_options.ba_options = SetBundleAdjustmentOptions(options_, 0);
-  triangulation_options.ba_options.num_threads = 2;
+  triangulation_options.ba_options.num_threads = 1;
   triangulation_options.ba_options.dense_linear_algebra_library_type = ceres::EIGEN;
   triangulation_options.ba_options.linear_solver_type = ceres::DENSE_QR;
   triangulation_options.ba_options.verbose = false;

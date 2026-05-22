@@ -2,6 +2,9 @@
 
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/transformation/align_point_clouds.h"
+#include "theia/sfm/transformation/cross_reconstruction_pose_graph_types.h"
+#include "theia/sfm/transformation/cross_reconstruction_sim3_pose_graph_optimizer.h"
+#include "theia/sfm/view.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <tuple>
@@ -64,5 +67,19 @@ Sophus::Vector7d Sim3FromRotationTranslationScaleWrapper(
 // Wrapper that returns homogeneous transformation matrix
 Eigen::Matrix4d Sim3ToHomogeneousMatrixWrapper(
     const Sophus::Vector7d& sim3_params);
+
+// Cross-reconstruction Sim(3) pose graph alignment
+std::pair<bool, CrossReconstructionPoseGraphSummary>
+AlignReconstructionsWithPoseGraphWrapper(
+    const Reconstruction& fixed_reconstruction,
+    Reconstruction& variable_reconstruction,
+    const CrossReconstructionConstraints& constraints,
+    const CrossReconstructionPoseGraphOptions& options,
+    bool apply_to_variable_reconstruction);
+
+Sophus::Vector7d GetSim3LieFromViewWrapper(const View& view);
+
+Sophus::Vector7d RelativeSim3BetweenViewsWrapper(const View& view_i,
+                                                 const View& view_j);
 
 }  // namespace theia

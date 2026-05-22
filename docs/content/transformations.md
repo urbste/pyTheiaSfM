@@ -50,7 +50,8 @@ These wrap [`align_reconstructions.h`](https://github.com/urbste/pyTheiaSfM/blob
 
 !!! note "C++ only"
 
-    [`AlignOverlapReconstructionsWithPointsAndPosesRobust`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/transformation/align_reconstructions.h) and pose-graph–style alignment in [`align_reconstructions_pose_graph_optim.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/transformation/align_reconstructions_pose_graph_optim.h) are **not** currently exposed in pybind.
+    **Cross-reconstruction Sim(3) pose graph** (sparse keyframes, segment fixed): `CrossReconstructionSim3PoseGraphOptimizer`, `AlignReconstructionsWithPoseGraph`, `CrossReconstructionConstraints` — see [`cross_reconstruction_sim3_pose_graph_optimizer.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/transformation/cross_reconstruction_sim3_pose_graph_optimizer.h). Does not modify `BundleAdjustReconstruction` or reconstruction estimators.
+    [`AlignOverlapReconstructionsWithPointsAndPosesRobust`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/transformation/align_reconstructions.h) remains unimplemented (optional thin wrapper later).
 
 ## Applying a known similarity to a reconstruction {#transformations-transform-reconstruction}
 

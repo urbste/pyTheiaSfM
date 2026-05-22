@@ -446,7 +446,7 @@ The position estimation options used for the linear position estimation method. 
 
 - LeastUnsquaredDeviationPositionEstimator::Options least_unsquared_deviation_position_estimator_options
 
-The position estimation options used for the robust least unsquare deviation position estimation method. See below for more details.
+The position estimation options used for the robust least unsquare deviation position estimation method. See below for more details. Set `use_scale_estimates` to apply fixed metric baselines from `TwoViewInfo.scale_estimate` on edges where it is valid.
 
 - double ReconstructorEstimatorOptions::multiple_view_localization_ratio
 

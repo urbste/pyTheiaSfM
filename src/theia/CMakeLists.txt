@@ -124,6 +124,7 @@ set(THEIA_SRC
   sfm/find_common_views_by_name.cc
   sfm/global_pose_estimation/compute_triplet_baseline_ratios.cc
   sfm/global_pose_estimation/bata_position_estimator.cc
+  sfm/global_pose_estimation/glomap_position_estimator.cc
   sfm/global_pose_estimation/hybrid_rotation_estimator.cc
   sfm/global_pose_estimation/irls_rotation_local_refiner.cc
   sfm/global_pose_estimation/l1_rotation_global_estimator.cc
@@ -186,6 +187,8 @@ set(THEIA_SRC
   sfm/transformation/align_point_clouds.cc
   sfm/transformation/align_reconstructions.cc
   sfm/transformation/align_reconstructions_pose_graph_optim.cc
+  sfm/transformation/cross_reconstruction_sim3_pose_graph_optimizer.cc
+  sfm/transformation/sim3_pose_from_view.cc
   sfm/transformation/align_rotations.cc
   sfm/transformation/gdls_similarity_transform.cc
   sfm/transformation/transform_reconstruction.cc
@@ -284,6 +287,11 @@ if (BUILD_TESTING)
       gtest
       ${CMAKE_PROJECT_NAME}
       ${THEIA_LIBRARY_DEPENDENCIES})
+    target_include_directories(${TEST_NAME}_test BEFORE PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/include
+      ${CMAKE_SOURCE_DIR}/src
+      ${CMAKE_SOURCE_DIR}/libraries/cereal/include)
     add_test(NAME ${TEST_NAME}_test
       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TEST_NAME}_test)
   endmacro (GTEST)
@@ -344,9 +352,10 @@ if (BUILD_TESTING)
 #  gtest(sfm/find_common_tracks_in_views)
 #  gtest(sfm/find_common_views_by_name)
 #  gtest(sfm/global_pose_estimation/compute_triplet_baseline_ratios)
+  gtest(sfm/global_pose_estimation/glomap_position_estimator)
 #  gtest(sfm/global_pose_estimation/hybrid_rotation_estimator)
 #  gtest(sfm/global_pose_estimation/lagrange_dual_rotation_estimator)
-#  gtest(sfm/global_pose_estimation/least_unsquared_deviation_position_estimator)
+  gtest(sfm/global_pose_estimation/least_unsquared_deviation_position_estimator)
 #  gtest(sfm/global_pose_estimation/LiGT_position_estimator)
 #  gtest(sfm/global_pose_estimation/linear_position_estimator)
 #  gtest(sfm/global_pose_estimation/linear_rotation_estimator)

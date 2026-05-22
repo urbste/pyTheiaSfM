@@ -38,11 +38,12 @@
 #include <Eigen/SparseCore>
 #include <ceres/rotation.h>
 
-#include <limits>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "theia/math/constrained_l1_solver.h"
+#include "theia/sfm/twoview_info.h"
 #include "theia/sfm/types.h"
 #include "theia/util/map_util.h"
 #include "theia/util/util.h"
@@ -79,34 +80,31 @@ bool LeastUnsquaredDeviationPositionEstimator::EstimatePositions(
   CHECK_NOTNULL(positions)->clear();
 
   InitializeIndexMapping(view_pairs, orientations);
-  const int num_views = view_id_to_index_.size();
-  const int num_view_pairs = view_id_pair_to_index_.size();
+  const int num_views = static_cast<int>(view_id_to_index_.size());
+  const int num_free_scales =
+      static_cast<int>(view_id_pair_to_index_.size());
 
-  // Set up the linear system.
-  SetupConstraintMatrix(view_pairs, orientations);
+  Eigen::VectorXd b;
+  SetupConstraintMatrix(view_pairs, orientations, &b);
+
   Eigen::VectorXd solution;
   solution.setZero(constraint_matrix_.cols());
 
-  // Create the lower bound constraint enforcing that all scales are > 1.
-  Eigen::SparseMatrix<double> geq_mat(num_view_pairs,
+  // For edges without a fixed scale, enforce auxiliary scale >= 1.
+  Eigen::SparseMatrix<double> geq_mat(num_free_scales,
                                       constraint_matrix_.cols());
-  for (int i = 0; i < num_view_pairs; i++) {
+  for (int i = 0; i < num_free_scales; i++) {
     geq_mat.insert(i, 3 * (num_views - 1) + i) = 1.0;
   }
-  Eigen::VectorXd geq_vec(num_view_pairs);
+  Eigen::VectorXd geq_vec(num_free_scales);
   geq_vec.setConstant(1.0);
 
-  Eigen::VectorXd b(constraint_matrix_.rows());
-  b.setZero();
-
-  // Solve for camera positions by solving a constrained L1 problem to enforce
-  // all relative translations scales > 1.
+  // Use `ConstrainedL1Solver` defaults for ADMM (matches pre-change LUD).
   ConstrainedL1Solver::Options l1_options;
-  ConstrainedL1Solver solver(
-      l1_options, constraint_matrix_, b, geq_mat, geq_vec);
+  ConstrainedL1Solver solver(l1_options, constraint_matrix_, b, geq_mat,
+                             geq_vec);
   solver.Solve(&solution);
 
-  // Set the estimated positions.
   for (const auto& view_id_index : view_id_to_index_) {
     const int index = view_id_index.second;
     const ViewId view_id = view_id_index.first;
@@ -123,6 +121,9 @@ bool LeastUnsquaredDeviationPositionEstimator::EstimatePositions(
 void LeastUnsquaredDeviationPositionEstimator::InitializeIndexMapping(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     const std::unordered_map<ViewId, Vector3d>& orientations) {
+  view_id_to_index_.clear();
+  view_id_pair_to_index_.clear();
+
   std::unordered_set<ViewId> views;
   for (const auto& view_pair : view_pairs) {
     if (ContainsKey(orientations, view_pair.first.first) &&
@@ -132,7 +133,6 @@ void LeastUnsquaredDeviationPositionEstimator::InitializeIndexMapping(
     }
   }
 
-  // Create a mapping from the view id to the index of the linear system.
   int index = kConstantViewIndex;
   view_id_to_index_.reserve(views.size());
   for (const ViewId view_id : views) {
@@ -140,11 +140,16 @@ void LeastUnsquaredDeviationPositionEstimator::InitializeIndexMapping(
     index += 3;
   }
 
-  // Create a mapping from the view id pair to the index of the linear system.
   view_id_pair_to_index_.reserve(view_pairs.size());
   for (const auto& view_pair : view_pairs) {
-    if (ContainsKey(view_id_to_index_, view_pair.first.first) &&
-        ContainsKey(view_id_to_index_, view_pair.first.second)) {
+    if (!ContainsKey(view_id_to_index_, view_pair.first.first) ||
+        !ContainsKey(view_id_to_index_, view_pair.first.second)) {
+      continue;
+    }
+    const bool fixed_scale = options_.use_scale_estimates &&
+                             view_pair.second.scale_estimate >
+                                 options_.min_valid_scale_estimate;
+    if (!fixed_scale) {
       view_id_pair_to_index_[view_pair.first] = index;
       ++index;
     }
@@ -153,14 +158,41 @@ void LeastUnsquaredDeviationPositionEstimator::InitializeIndexMapping(
 
 void LeastUnsquaredDeviationPositionEstimator::SetupConstraintMatrix(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-    const std::unordered_map<ViewId, Vector3d>& orientations) {
-  constraint_matrix_.resize(
-      3 * view_id_pair_to_index_.size(),
-      3 * (view_id_to_index_.size() - 1) + view_pairs.size());
+    const std::unordered_map<ViewId, Vector3d>& orientations,
+    Eigen::VectorXd* b) {
+  CHECK_NOTNULL(b);
 
-  // Add the camera to camera constraints.
-  std::vector<Eigen::Triplet<double> > triplet_list;
-  triplet_list.reserve(9 * view_pairs.size());
+  const int num_views = static_cast<int>(view_id_to_index_.size());
+  const int num_position_cols = 3 * (num_views - 1);
+  const int num_free_scales =
+      static_cast<int>(view_id_pair_to_index_.size());
+  // Legacy LUD used `view_pairs.size()` for the width, which can exceed the
+  // number of free-scale columns; unused columns remain all-zero (singular
+  // padding). Preserve that shape when not using fixed-scale edges so behavior
+  // matches older builds.
+  const int num_cols =
+      num_position_cols +
+      (options_.use_scale_estimates
+           ? num_free_scales
+           : static_cast<int>(view_pairs.size()));
+
+  int num_edges = 0;
+  for (const auto& view_pair : view_pairs) {
+    const ViewIdPair& view_id_pair = view_pair.first;
+    if (!ContainsKey(view_id_to_index_, view_id_pair.first) ||
+        !ContainsKey(view_id_to_index_, view_id_pair.second)) {
+      continue;
+    }
+    ++num_edges;
+  }
+
+  const int num_rows = 3 * num_edges;
+  constraint_matrix_.resize(num_rows, num_cols);
+  b->resize(num_rows);
+  b->setZero();
+
+  std::vector<Eigen::Triplet<double>> triplet_list;
+  triplet_list.reserve(12 * num_edges);
   int row = 0;
   for (const auto& view_pair : view_pairs) {
     const ViewIdPair view_id_pair = view_pair.first;
@@ -171,43 +203,46 @@ void LeastUnsquaredDeviationPositionEstimator::SetupConstraintMatrix(
 
     const int view1_index = FindOrDie(view_id_to_index_, view_id_pair.first);
     const int view2_index = FindOrDie(view_id_to_index_, view_id_pair.second);
-    const int scale_index =
-        FindOrDieNoPrint(view_id_pair_to_index_, view_id_pair);
+    const bool fixed_scale = options_.use_scale_estimates &&
+                             view_pair.second.scale_estimate >
+                                 options_.min_valid_scale_estimate;
 
-    // Rotate the relative translation so that it is aligned to the global
-    // orientation frame.
     const Vector3d translation_direction =
         GetRotatedTranslation(FindOrDie(orientations, view_id_pair.first),
                               view_pair.second.position_2);
 
-    // Add the constraint for view 1 in the minimization:
-    //   position2 - position1 - scale_1_2 * translation_direction.
     if (view1_index != kConstantViewIndex) {
       triplet_list.emplace_back(row + 0, view1_index + 0, -1.0);
       triplet_list.emplace_back(row + 1, view1_index + 1, -1.0);
       triplet_list.emplace_back(row + 2, view1_index + 2, -1.0);
     }
 
-    // Add the constraint for view 2 in the minimization:
-    //   position2 - position1 - scale_1_2 * translation_direction.
     if (view2_index != kConstantViewIndex) {
       triplet_list.emplace_back(row + 0, view2_index + 0, 1.0);
       triplet_list.emplace_back(row + 1, view2_index + 1, 1.0);
       triplet_list.emplace_back(row + 2, view2_index + 2, 1.0);
     }
 
-    // Add the constraint for scale in the minimization:
-    //   position2 - position1 - scale_1_2 * translation_direction.
-    triplet_list.emplace_back(row + 0, scale_index, -translation_direction[0]);
-    triplet_list.emplace_back(row + 1, scale_index, -translation_direction[1]);
-    triplet_list.emplace_back(row + 2, scale_index, -translation_direction[2]);
+    if (fixed_scale) {
+      const double s = view_pair.second.scale_estimate;
+      (*b)[row + 0] = s * translation_direction[0];
+      (*b)[row + 1] = s * translation_direction[1];
+      (*b)[row + 2] = s * translation_direction[2];
+    } else {
+      const int scale_index =
+          FindOrDieNoPrint(view_id_pair_to_index_, view_id_pair);
+      triplet_list.emplace_back(row + 0, scale_index, -translation_direction[0]);
+      triplet_list.emplace_back(row + 1, scale_index, -translation_direction[1]);
+      triplet_list.emplace_back(row + 2, scale_index, -translation_direction[2]);
+    }
 
     row += 3;
   }
 
+  CHECK_EQ(row, num_rows);
   constraint_matrix_.setFromTriplets(triplet_list.begin(), triplet_list.end());
 
-  VLOG(2) << view_pairs.size()
+  VLOG(2) << num_edges
           << " camera to camera constraints were added "
              "to the position estimation problem.";
 }

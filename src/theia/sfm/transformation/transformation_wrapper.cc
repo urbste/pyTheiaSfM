@@ -3,7 +3,9 @@
 #include "theia/sfm/transformation/align_point_clouds.h"
 #include "theia/sfm/transformation/align_reconstructions.h"
 #include "theia/sfm/transformation/align_rotations.h"
+#include "theia/sfm/transformation/cross_reconstruction_sim3_pose_graph_optimizer.h"
 #include "theia/sfm/transformation/gdls_similarity_transform.h"
+#include "theia/sfm/transformation/sim3_pose_from_view.h"
 #include "theia/sfm/transformation/transform_reconstruction.h"
 
 namespace theia {
@@ -129,6 +131,35 @@ Eigen::Matrix4d Sim3ToHomogeneousMatrixWrapper(
   
   // Get the 4x4 homogeneous transformation matrix
   return sim3.matrix();
+}
+
+std::pair<bool, CrossReconstructionPoseGraphSummary>
+AlignReconstructionsWithPoseGraphWrapper(
+    const Reconstruction& fixed_reconstruction,
+    Reconstruction& variable_reconstruction,
+    const CrossReconstructionConstraints& constraints,
+    const CrossReconstructionPoseGraphOptions& options,
+    const bool apply_to_variable_reconstruction) {
+  CrossReconstructionPoseGraphSummary summary;
+  const bool ok = AlignReconstructionsWithPoseGraph(
+      fixed_reconstruction,
+      &variable_reconstruction,
+      constraints,
+      options,
+      &summary,
+      apply_to_variable_reconstruction);
+  return std::make_pair(ok, summary);
+}
+
+Sophus::Vector7d GetSim3LieFromViewWrapper(const View& view) {
+  return GetSim3LieFromView(view);
+}
+
+Sophus::Vector7d RelativeSim3BetweenViewsWrapper(const View& view_i,
+                                                 const View& view_j) {
+  const Sophus::Sim3d S_i = GetSim3PoseFromView(view_i);
+  const Sophus::Sim3d S_j = GetSim3PoseFromView(view_j);
+  return (S_i.inverse() * S_j).log();
 }
 
 }  // namespace theia

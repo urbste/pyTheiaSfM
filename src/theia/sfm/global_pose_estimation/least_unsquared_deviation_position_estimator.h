@@ -66,6 +66,16 @@ class LeastUnsquaredDeviationPositionEstimator : public PositionEstimator {
 
     // A measurement for convergence criterion.
     double convergence_criterion = 1e-4;
+
+    // If true, interpret `TwoViewInfo.scale_estimate` as a fixed metric baseline
+    // length for that edge (same as `PairwiseTranslationError` with positive
+    // scale). Edges without a valid scale still use a free auxiliary scale
+    // variable with constraint scale >= 1.
+    bool use_scale_estimates = false;
+
+    // Edges with `scale_estimate` strictly greater than this value are treated
+    // as fixed-scale when `use_scale_estimates` is true.
+    double min_valid_scale_estimate = 0.0;
   };
 
   LeastUnsquaredDeviationPositionEstimator(
@@ -88,10 +98,12 @@ class LeastUnsquaredDeviationPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientations);
 
-  // Creates camera to camera constraints from relative translations.
+  // Creates camera to camera constraints from relative translations and the
+  // L1 right-hand side `b` (nonzero for fixed-scale edges).
   void SetupConstraintMatrix(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d>& orientations);
+      const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
+      Eigen::VectorXd* b);
 
   const LeastUnsquaredDeviationPositionEstimator::Options options_;
 

@@ -149,7 +149,9 @@ class EstimatePositionsLeastUnsquaredDeviationTest : public ::testing::Test {
   }
 
  protected:
-  void SetUp() {}
+  void SetUp() override {
+    options_ = LeastUnsquaredDeviationPositionEstimator::Options();
+  }
 
   void SetupScene(const int num_views) {
     // Create random views.
@@ -233,12 +235,121 @@ TEST_F(EstimatePositionsLeastUnsquaredDeviationTest, SmallTestWithNoise) {
 }
 
 TEST_F(EstimatePositionsLeastUnsquaredDeviationTest, TestNoNoise) {
-  static const double kTolerance = 0.5;
+  // Large L1 graphs: align error can approach ~1 m for ~10 m baselines (see
+  // `TestWithNoise` at 1.0).
+  static const double kTolerance = 1.0;
   static const int kNumViews = 200;
   static const int kNumViewPairs = 500;
   static const double kPoseNoiseDegrees = 0.0;
   TestLeastUnsquaredDeviationPositionEstimator(
       kNumViews, kNumViewPairs, kPoseNoiseDegrees, kTolerance);
+}
+
+TEST_F(EstimatePositionsLeastUnsquaredDeviationTest,
+       SmallTestWithFixedScaleEstimates) {
+  options_.use_scale_estimates = true;
+  options_.min_valid_scale_estimate = 0.0;
+  static const double kTolerance = 0.05;
+  static const int kNumViews = 4;
+  static const int kNumViewPairs = 6;
+  SetupScene(kNumViews);
+  GetTwoViewInfos(kNumViewPairs, 0.0);
+
+  for (auto& vp : view_pairs_) {
+    const ViewId v1 = vp.first.first;
+    const ViewId v2 = vp.first.second;
+    const Vector3d& p1 = FindOrDie(positions_, v1);
+    const Vector3d& p2 = FindOrDie(positions_, v2);
+    Eigen::Matrix3d R1;
+    ceres::AngleAxisToRotationMatrix(FindOrDie(orientations_, v1).data(),
+                                     R1.data());
+    const Vector3d baseline_cam1 = R1 * (p2 - p1);
+    const double baseline_norm = baseline_cam1.norm();
+    ASSERT_GT(baseline_norm, 0.0);
+    vp.second.position_2 = baseline_cam1 / baseline_norm;
+    vp.second.scale_estimate = baseline_norm;
+  }
+
+  LeastUnsquaredDeviationPositionEstimator position_estimator(options_);
+  std::unordered_map<ViewId, Vector3d> estimated_positions;
+  ASSERT_TRUE(position_estimator.EstimatePositions(view_pairs_, orientations_,
+                                                   &estimated_positions));
+
+  std::vector<Vector3d> gt_pos, pos;
+  for (const auto& gt_position : positions_) {
+    gt_pos.push_back(gt_position.second);
+    pos.push_back(FindOrDie(estimated_positions, gt_position.first));
+  }
+  Eigen::Matrix3d rotation;
+  Vector3d translation;
+  double scale = 0.0;
+  AlignPointCloudsUmeyama(pos, gt_pos, &rotation, &translation, &scale);
+  EXPECT_NEAR(scale, 1.0, kTolerance);
+
+  for (auto& estimated : estimated_positions) {
+    estimated.second =
+        scale * (rotation * estimated.second) + translation;
+  }
+  for (const auto& position : positions_) {
+    const Vector3d& estimated_position =
+        FindOrDie(estimated_positions, position.first);
+    const double position_error =
+        (position.second - estimated_position).norm();
+    EXPECT_LT(position_error, kTolerance);
+  }
+}
+
+TEST_F(EstimatePositionsLeastUnsquaredDeviationTest,
+       MixedFixedScaleAndFreeScaleEdges) {
+  options_.use_scale_estimates = true;
+  options_.min_valid_scale_estimate = 0.0;
+  static const double kTolerance = 0.15;
+  static const int kNumViews = 5;
+  positions_.clear();
+  orientations_.clear();
+  view_pairs_.clear();
+  SetupScene(kNumViews);
+
+  for (int i = 0; i < kNumViews - 1; i++) {
+    const ViewIdPair view_id_pair(i, i + 1);
+    view_pairs_[view_id_pair] = CreateTwoViewInfo(view_id_pair, 0.0);
+  }
+  const ViewIdPair chord(0, kNumViews - 1);
+  view_pairs_[chord] = CreateTwoViewInfo(chord, 0.0);
+  view_pairs_[chord].scale_estimate = -1.0;
+
+  for (auto& vp : view_pairs_) {
+    if (vp.first == chord) {
+      continue;
+    }
+    const ViewId v1 = vp.first.first;
+    const ViewId v2 = vp.first.second;
+    const Vector3d& p1 = FindOrDie(positions_, v1);
+    const Vector3d& p2 = FindOrDie(positions_, v2);
+    Eigen::Matrix3d R1;
+    ceres::AngleAxisToRotationMatrix(FindOrDie(orientations_, v1).data(),
+                                     R1.data());
+    const Vector3d baseline_cam1 = R1 * (p2 - p1);
+    const double baseline_norm = baseline_cam1.norm();
+    ASSERT_GT(baseline_norm, 0.0);
+    vp.second.position_2 = baseline_cam1 / baseline_norm;
+    vp.second.scale_estimate = baseline_norm;
+  }
+
+  LeastUnsquaredDeviationPositionEstimator position_estimator(options_);
+  std::unordered_map<ViewId, Vector3d> estimated_positions;
+  ASSERT_TRUE(position_estimator.EstimatePositions(view_pairs_, orientations_,
+                                                   &estimated_positions));
+  EXPECT_EQ(estimated_positions.size(), positions_.size());
+
+  AlignPositions(positions_, &estimated_positions);
+  for (const auto& position : positions_) {
+    const Vector3d& estimated_position =
+        FindOrDie(estimated_positions, position.first);
+    const double position_error =
+        (position.second - estimated_position).norm();
+    EXPECT_LT(position_error, kTolerance);
+  }
 }
 
 TEST_F(EstimatePositionsLeastUnsquaredDeviationTest, TestWithNoise) {

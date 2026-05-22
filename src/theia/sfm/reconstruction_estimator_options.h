@@ -40,6 +40,7 @@
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/estimate_track.h"
+#include "theia/sfm/global_pose_estimation/glomap_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
@@ -81,7 +82,8 @@ enum class GlobalPositionEstimatorType {
   NONLINEAR = 0,
   LINEAR_TRIPLET = 1,
   LEAST_UNSQUARED_DEVIATION = 2,
-  LIGT = 3
+  LIGT = 3,
+  GLOMAP = 4
 };
 
 // Track parametrization type:
@@ -178,6 +180,7 @@ struct ReconstructionEstimatorOptions {
   NonlinearPositionEstimator::Options nonlinear_position_estimator_options;
   LinearPositionEstimator::Options linear_triplet_position_estimator_options;
   LiGTPositionEstimator::Options ligt_position_estimator_options;
+  GlomapPositionEstimator::Options glomap_position_estimator_options;
   LeastUnsquaredDeviationPositionEstimator::Options
       least_unsquared_deviation_position_estimator_options;
 

@@ -44,6 +44,7 @@
 #include <glog/logging.h>
 #include <math.h>
 #include <ceres/types.h>
+#include <Sophus/sophus/sim3.hpp>
 
 #include "theia/math/polynomial.h"
 #include "theia/sfm/pose/util.h"
@@ -57,6 +58,8 @@
 #include "theia/sfm/transformation/align_point_clouds.h"
 #include "theia/sfm/transformation/align_reconstructions.h"
 #include "theia/sfm/transformation/gdls_similarity_transform.h"
+#include "theia/sfm/transformation/cross_reconstruction_pose_graph_types.h"
+#include "theia/sfm/transformation/cross_reconstruction_sim3_pose_graph_optimizer.h"
 #include "theia/sfm/transformation/transformation_wrapper.h"
 
 #include "theia/sfm/camera/camera.h"
@@ -79,6 +82,7 @@
 #include "theia/sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.h"
 
 #include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
+#include "theia/sfm/global_pose_estimation/glomap_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/global_pose_estimation_wrapper.h"
 #include "theia/sfm/global_pose_estimation/hybrid_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/lagrange_dual_rotation_estimator.h"
@@ -669,6 +673,143 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("Sim3ToRotationTranslationScale", theia::Sim3ToRotationTranslationScaleWrapper);
   m.def("Sim3ToHomogeneousMatrix", theia::Sim3ToHomogeneousMatrixWrapper);
 
+  // Cross-reconstruction Sim(3) pose graph alignment
+  py::class_<theia::CrossReconstructionPoseGraphOptions>(
+      m, "CrossReconstructionPoseGraphOptions")
+      .def(py::init<>())
+      .def_readwrite("sequential_weight",
+                     &theia::CrossReconstructionPoseGraphOptions::
+                         sequential_weight)
+      .def_readwrite("anchor_weight",
+                     &theia::CrossReconstructionPoseGraphOptions::anchor_weight)
+      .def_readwrite("scale_smooth_weight",
+                     &theia::CrossReconstructionPoseGraphOptions::
+                         scale_smooth_weight)
+      .def_readwrite("huber_delta_anchor",
+                     &theia::CrossReconstructionPoseGraphOptions::
+                         huber_delta_anchor)
+      .def_readwrite("auto_scale_smoothness",
+                     &theia::CrossReconstructionPoseGraphOptions::
+                         auto_scale_smoothness)
+      .def_readwrite("max_num_iterations",
+                     &theia::CrossReconstructionPoseGraphOptions::
+                         max_num_iterations)
+      .def_readwrite("verbose",
+                     &theia::CrossReconstructionPoseGraphOptions::verbose)
+      .def_readwrite("debug_cost_breakdown",
+                     &theia::CrossReconstructionPoseGraphOptions::
+                         debug_cost_breakdown);
+
+  py::class_<theia::CrossReconstructionPoseGraphSummary>(
+      m, "CrossReconstructionPoseGraphSummary")
+      .def(py::init<>())
+      .def_readwrite("success",
+                     &theia::CrossReconstructionPoseGraphSummary::success)
+      .def_readwrite("initial_cost",
+                     &theia::CrossReconstructionPoseGraphSummary::initial_cost)
+      .def_readwrite("final_cost",
+                     &theia::CrossReconstructionPoseGraphSummary::final_cost)
+      .def_readwrite("num_iterations",
+                     &theia::CrossReconstructionPoseGraphSummary::
+                         num_iterations)
+      .def_readwrite("poses_finite_before",
+                     &theia::CrossReconstructionPoseGraphSummary::
+                         poses_finite_before)
+      .def_readwrite("poses_finite_after",
+                     &theia::CrossReconstructionPoseGraphSummary::
+                         poses_finite_after)
+      .def_readwrite("sequential_residual_cost",
+                     &theia::CrossReconstructionPoseGraphSummary::
+                         sequential_residual_cost)
+      .def_readwrite("anchor_residual_cost",
+                     &theia::CrossReconstructionPoseGraphSummary::
+                         anchor_residual_cost)
+      .def_readwrite("scale_smooth_residual_cost",
+                     &theia::CrossReconstructionPoseGraphSummary::
+                         scale_smooth_residual_cost);
+
+  py::class_<theia::SequentialSim3Edge>(m, "SequentialSim3Edge")
+      .def(py::init<>())
+      .def_readwrite("view_id_i", &theia::SequentialSim3Edge::view_id_i)
+      .def_readwrite("view_id_j", &theia::SequentialSim3Edge::view_id_j)
+      .def_property(
+          "measured_S_ji_log",
+          [](const theia::SequentialSim3Edge& e) {
+            return e.measured_S_ji.log();
+          },
+          [](theia::SequentialSim3Edge& e, const Eigen::Matrix<double, 7, 1>& v) {
+            e.measured_S_ji = Sophus::Sim3d::exp(v);
+          },
+          "Relative Sim3 S_ji as 7-vector lie algebra log");
+
+  py::class_<theia::CrossViewAnchorEdge>(m, "CrossViewAnchorEdge")
+      .def(py::init<>())
+      .def_readwrite("variable_view_id",
+                     &theia::CrossViewAnchorEdge::variable_view_id)
+      .def_property(
+          "measured_S_run_in_seg_log",
+          [](const theia::CrossViewAnchorEdge& e) {
+            return e.measured_S_run_in_seg.log();
+          },
+          [](theia::CrossViewAnchorEdge& e, const Eigen::Matrix<double, 7, 1>& v) {
+            e.measured_S_run_in_seg = Sophus::Sim3d::exp(v);
+          },
+          "PnP Sim3 pose of run camera in segment world (7-vector lie log)")
+      .def_readwrite("weight", &theia::CrossViewAnchorEdge::weight);
+
+  py::class_<theia::CrossReconstructionConstraints>(
+      m, "CrossReconstructionConstraints")
+      .def(py::init<>())
+      .def_readwrite("variable_keyframe_view_ids",
+                     &theia::CrossReconstructionConstraints::
+                         variable_keyframe_view_ids)
+      .def_readwrite("fixed_anchor_view_ids",
+                     &theia::CrossReconstructionConstraints::
+                         fixed_anchor_view_ids)
+      .def_readwrite("sequential_edges",
+                     &theia::CrossReconstructionConstraints::sequential_edges)
+      .def_readwrite("cross_view_edges",
+                     &theia::CrossReconstructionConstraints::cross_view_edges);
+
+  py::class_<theia::CrossReconstructionSim3PoseGraphOptimizer>(
+      m, "CrossReconstructionSim3PoseGraphOptimizer")
+      .def(py::init<const theia::CrossReconstructionPoseGraphOptions&>(),
+           py::arg("options") = theia::CrossReconstructionPoseGraphOptions())
+      .def("set_fixed_reconstruction",
+           &theia::CrossReconstructionSim3PoseGraphOptimizer::
+               SetFixedReconstruction,
+           py::arg("fixed_reconstruction"), py::arg("anchor_view_ids"))
+      .def("set_variable_reconstruction",
+           &theia::CrossReconstructionSim3PoseGraphOptimizer::
+               SetVariableReconstruction,
+           py::arg("variable_reconstruction"), py::arg("keyframe_view_ids"))
+      .def("add_sequential_edge",
+           &theia::CrossReconstructionSim3PoseGraphOptimizer::AddSequentialEdge)
+      .def("add_cross_view_edge",
+           &theia::CrossReconstructionSim3PoseGraphOptimizer::AddCrossViewEdge)
+      .def("set_constraints",
+           &theia::CrossReconstructionSim3PoseGraphOptimizer::SetConstraints)
+      .def("optimize", &theia::CrossReconstructionSim3PoseGraphOptimizer::Optimize)
+      .def("apply_to_variable_reconstruction",
+           &theia::CrossReconstructionSim3PoseGraphOptimizer::
+               ApplyToVariableReconstruction,
+           py::arg("variable_reconstruction"),
+           py::arg("transform_tracks") = true)
+      .def("variable_poses",
+           &theia::CrossReconstructionSim3PoseGraphOptimizer::variable_poses,
+           py::return_value_policy::reference_internal);
+
+  m.def("AlignReconstructionsWithPoseGraph",
+        &theia::AlignReconstructionsWithPoseGraphWrapper,
+        py::arg("fixed_reconstruction"),
+        py::arg("variable_reconstruction"),
+        py::arg("constraints"),
+        py::arg("options") = theia::CrossReconstructionPoseGraphOptions(),
+        py::arg("apply_to_variable_reconstruction") = true);
+
+  m.def("GetSim3LieFromView", &theia::GetSim3LieFromViewWrapper);
+  m.def("RelativeSim3BetweenViews", &theia::RelativeSim3BetweenViewsWrapper);
+
   py::class_<theia::SimilarityTransformation>(m, "SimilarityTransformation")
       .def(py::init<>())
       .def_readwrite("rotation", &theia::SimilarityTransformation::rotation)
@@ -1201,6 +1342,7 @@ void pytheia_sfm_classes(py::module& m) {
       .value("LEAST_UNSQUARED_DEVIATION",
              theia::GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION)
       .value("LIGT", theia::GlobalPositionEstimatorType::LIGT)
+      .value("GLOMAP", theia::GlobalPositionEstimatorType::GLOMAP)
       .export_values();
 
   py::enum_<theia::GlobalRotationEstimatorType>(m,
@@ -1275,6 +1417,12 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("linear_triplet_position_estimator_options",
                      &theia::ReconstructionEstimatorOptions::
                          linear_triplet_position_estimator_options)
+      .def_readwrite("ligt_position_estimator_options",
+                     &theia::ReconstructionEstimatorOptions::
+                         ligt_position_estimator_options)
+      .def_readwrite("glomap_position_estimator_options",
+                     &theia::ReconstructionEstimatorOptions::
+                         glomap_position_estimator_options)
       .def_readwrite("least_unsquared_deviation_position_estimator_options",
                      &theia::ReconstructionEstimatorOptions::
                          least_unsquared_deviation_position_estimator_options)
@@ -1715,7 +1863,13 @@ void pytheia_sfm_classes(py::module& m) {
                          max_num_reweighted_iterations)
       .def_readwrite("convergence_criterion",
                      &theia::LeastUnsquaredDeviationPositionEstimator::Options::
-                         convergence_criterion);
+                         convergence_criterion)
+      .def_readwrite("use_scale_estimates",
+                     &theia::LeastUnsquaredDeviationPositionEstimator::Options::
+                         use_scale_estimates)
+      .def_readwrite("min_valid_scale_estimate",
+                     &theia::LeastUnsquaredDeviationPositionEstimator::Options::
+                         min_valid_scale_estimate);
 
   py::class_<theia::LeastUnsquaredDeviationPositionEstimator,
              theia::PositionEstimator>(
@@ -1745,6 +1899,37 @@ void pytheia_sfm_classes(py::module& m) {
                     const theia::Reconstruction&>())
       .def("EstimatePositions",
            &theia::LiGTPositionEstimator::EstimatePositionsWrapper);
+
+  py::class_<theia::GlomapPositionEstimator::Options>(
+      m, "GlomapPositionEstimatorOptions")
+      .def(py::init<>())
+      .def_readwrite("num_threads",
+                     &theia::GlomapPositionEstimator::Options::num_threads)
+      .def_readwrite(
+          "max_num_iterations",
+          &theia::GlomapPositionEstimator::Options::max_num_iterations)
+      .def_readwrite("robust_loss_width",
+                     &theia::GlomapPositionEstimator::Options::robust_loss_width)
+      .def_readwrite("min_track_length",
+                     &theia::GlomapPositionEstimator::Options::min_track_length)
+      .def_readwrite("max_num_tracks",
+                     &theia::GlomapPositionEstimator::Options::max_num_tracks)
+      .def_readwrite("write_points_to_reconstruction",
+                     &theia::GlomapPositionEstimator::Options::
+                         write_points_to_reconstruction)
+      .def_readwrite("use_pairwise_scale_priors",
+                     &theia::GlomapPositionEstimator::Options::
+                         use_pairwise_scale_priors)
+      .def_readwrite("pairwise_scale_prior_weight",
+                     &theia::GlomapPositionEstimator::Options::
+                         pairwise_scale_prior_weight);
+
+  py::class_<theia::GlomapPositionEstimator, theia::PositionEstimator>(
+      m, "GlomapPositionEstimator")
+      .def(py::init<const theia::GlomapPositionEstimator::Options&,
+                    theia::Reconstruction*>())
+      .def("EstimatePositions",
+           &theia::GlomapPositionEstimator::EstimatePositionsWrapper);
 
   // base RotationEstimator class
   py::class_<theia::RotationEstimator>(m, "RotationEstimator");

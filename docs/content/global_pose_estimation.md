@@ -71,7 +71,7 @@ Implementations derive from `PositionEstimator`. **`GlobalPositionEstimatorType`
 |--------------------|--------------------------------|---------|
 | [`NonlinearPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/nonlinear_position_estimator.h) | `NONLINEAR` (default) | Robust nonlinear alignment to pairwise translation directions; *Robust Global Translations with 1DSfM*, Wilson & Snavely (ECCV 2014). Uses `Reconstruction` for optional point–camera constraints. |
 | [`LinearPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/linear_position_estimator.h) | `LINEAR_TRIPLET` | Linear system from **view triplets** and baseline ratios; Jiang et al. (ICCV 2013). |
-| [`LeastUnsquaredDeviationPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h) | `LEAST_UNSQUARED_DEVIATION` | L1-style via IRLS / ADMM; Ozyesil & Singer (CVPR 2015). |
+| [`LeastUnsquaredDeviationPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h) | `LEAST_UNSQUARED_DEVIATION` | L1-style via IRLS / ADMM; Ozyesil & Singer (CVPR 2015). Optional fixed metric edges via `Options::use_scale_estimates` and `TwoViewInfo::scale_estimate`. |
 | [`LiGTPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/LiGT_position_estimator.h) | `LIGT` | Linear formulation using **pose-only** / triplet constraints (Cai et al., arXiv:2103.01530). Requires `Reconstruction`. |
 
 ---
