@@ -16,7 +16,7 @@ Submodules correspond to the same areas as in the C++ library (see the [API Refe
 | `pt.math` | Math helpers and Sophus Lie-group bindings. |
 | `pt.matching` | Feature matching and correspondence utilities. |
 | `pt.mvs` | Multi-view stereo oriented helpers. |
-| `pt.sfm` | Reconstruction, BA, cameras, tracks, pipelines. |
+| `pt.sfm` | Reconstruction, BA, cameras, tracks, pipelines, alignment and **cross-reconstruction Sim(3) pose graph** (see [Transformations](transformations.md#transformations-pose-graph)). |
 | `pt.solvers` | Geometric estimation and solvers. |
 
 ## Type information (PEP 561)

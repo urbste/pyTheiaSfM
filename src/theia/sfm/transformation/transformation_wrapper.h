@@ -82,4 +82,8 @@ Sophus::Vector7d GetSim3LieFromViewWrapper(const View& view);
 Sophus::Vector7d RelativeSim3BetweenViewsWrapper(const View& view_i,
                                                  const View& view_j);
 
+std::pair<bool, CrossReconstructionPoseGraphSummary>
+CrossReconstructionSim3PoseGraphOptimizerOptimizeWrapper(
+    CrossReconstructionSim3PoseGraphOptimizer& optimizer);
+
 }  // namespace theia

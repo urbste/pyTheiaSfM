@@ -48,10 +48,102 @@ Use this for **loop closure**, **localization**, or other **PnP-with-scale** set
 
 These wrap [`align_reconstructions.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/transformation/align_reconstructions.h).
 
-!!! note "C++ only"
+## Cross-reconstruction Sim(3) pose graph (Python) {#transformations-pose-graph}
 
-    **Cross-reconstruction Sim(3) pose graph** (sparse keyframes, segment fixed): `CrossReconstructionSim3PoseGraphOptimizer`, `AlignReconstructionsWithPoseGraph`, `CrossReconstructionConstraints` — see [`cross_reconstruction_sim3_pose_graph_optimizer.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/transformation/cross_reconstruction_sim3_pose_graph_optimizer.h). Does not modify `BundleAdjustReconstruction` or reconstruction estimators.
-    [`AlignOverlapReconstructionsWithPointsAndPosesRobust`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/transformation/align_reconstructions.h) remains unimplemented (optional thin wrapper later).
+**Pose-graph alignment** fuses a **fixed** reference reconstruction (segment / map) with a **variable** reconstruction (run) using sparse **keyframes** and measured **Sim(3)** constraints. Optimization is a standalone **Ceres** problem; it does **not** call `BundleAdjustReconstruction` or change global SfM estimators.
+
+Typical use: align a localized or partial run to a segment map when you have relative odometry between run keyframes and absolute PnP poses of run cameras in the segment frame.
+
+### One-shot API
+
+| Python (`pt.sfm`) | Meaning |
+|-------------------|---------|
+| `AlignReconstructionsWithPoseGraph(fixed_recon, variable_recon, constraints, options=..., apply_to_variable_reconstruction=True)` | Build optimizer from `constraints`, solve, optionally **update** `variable_recon` (views + tracks). Returns **`(ok, summary)`**. |
+
+### Constraint types
+
+| Type | Python struct | Role |
+|------|---------------|------|
+| Sequential | `SequentialSim3Edge` | Relative Sim(3) \(S_{ji}\) between consecutive **variable** keyframes (`view_id_i`, `view_id_j`, `measured_S_ji_log` as 7-vector). |
+| Cross-view anchor | `CrossViewAnchorEdge` | Absolute pose of a run keyframe in the **segment** world (`variable_view_id`, `measured_S_run_in_seg_log`, `weight`). |
+| Scale smoothness | (automatic) | When `CrossReconstructionPoseGraphOptions.auto_scale_smoothness` is `True` (default), penalizes scale jumps along consecutive keyframes in keyframe order. |
+
+Bundle edges in **`CrossReconstructionConstraints`**: `variable_keyframe_view_ids`, `fixed_anchor_view_ids`, `sequential_edges`, `cross_view_edges`.
+
+### Options and summary
+
+**`CrossReconstructionPoseGraphOptions`** (defaults in parentheses):
+
+| Field | Default | Meaning |
+|-------|---------|---------|
+| `sequential_weight` | `1.0` | Weight on sequential Sim(3) edges. |
+| `anchor_weight` | `1.0` | Weight on cross-view anchor edges. |
+| `scale_smooth_weight` | `0.1` | Weight for auto scale-smoothness edges. |
+| `huber_delta_anchor` | `1.0` | Huber loss on anchors (`0` disables robust loss). |
+| `auto_scale_smoothness` | `True` | Add scale-smoothness along consecutive variable keyframes. |
+| `max_num_iterations` | `50` | Ceres iteration limit. |
+| `verbose` | `False` | Ceres logging. |
+| `debug_cost_breakdown` | `False` | Log per-block costs and finiteness checks. |
+
+**`CrossReconstructionPoseGraphSummary`**: `success`, `initial_cost`, `final_cost`, `num_iterations`, `poses_finite_before` / `poses_finite_after`, and squared residual costs per edge family (`sequential_residual_cost`, `anchor_residual_cost`, `scale_smooth_residual_cost`).
+
+### Low-level optimizer
+
+| Python (`pt.sfm`) | Meaning |
+|-------------------|---------|
+| `CrossReconstructionSim3PoseGraphOptimizer(options=...)` | Incremental builder. |
+| `set_fixed_reconstruction(fixed_recon, anchor_view_ids)` | Constant segment poses for anchor views. |
+| `set_variable_reconstruction(variable_recon, keyframe_view_ids)` | Optimized run keyframe poses (order defines auto scale-smoothness). |
+| `set_constraints(constraints)` | Load edge lists from a `CrossReconstructionConstraints` object. |
+| `add_sequential_edge` / `add_cross_view_edge` / `add_scale_smoothness_edge` | Add edges individually. |
+| `optimize()` | Returns **`(ok, summary)`**. |
+| `apply_to_variable_reconstruction(variable_recon, transform_tracks=True)` | Write optimized Sim(3) poses back into the reconstruction. |
+| `variable_poses` | Map `view_id →` 7-vector lie logs after optimization. |
+
+### Sim(3) helpers for building edges
+
+| Python (`pt.sfm`) | Meaning |
+|-------------------|---------|
+| `GetSim3LieFromView(view)` | Camera pose as Sim(3) lie log (Sophus `Sim3d::exp` parameterization). |
+| `RelativeSim3BetweenViews(view_i, view_j)` | Relative Sim(3) \(S_i^{-1} S_j\) as 7-vector log. |
+
+### Example (sketch)
+
+```python
+import pytheia as pt
+
+constraints = pt.sfm.CrossReconstructionConstraints()
+constraints.variable_keyframe_view_ids = run_keyframe_ids
+constraints.fixed_anchor_view_ids = segment_anchor_ids
+
+seq = pt.sfm.SequentialSim3Edge()
+seq.view_id_i = run_keyframe_ids[0]
+seq.view_id_j = run_keyframe_ids[1]
+seq.measured_S_ji_log = pt.sfm.RelativeSim3BetweenViews(
+    variable_recon.View(seq.view_id_i),
+    variable_recon.View(seq.view_id_j),
+)
+constraints.sequential_edges.append(seq)
+
+anchor = pt.sfm.CrossViewAnchorEdge()
+anchor.variable_view_id = run_keyframe_ids[0]
+anchor.measured_S_run_in_seg_log = pnp_sim3_log_in_segment_frame  # from localization
+anchor.weight = 1.0
+constraints.cross_view_edges.append(anchor)
+
+options = pt.sfm.CrossReconstructionPoseGraphOptions()
+options.verbose = True
+
+ok, summary = pt.sfm.AlignReconstructionsWithPoseGraph(
+    segment_recon, run_recon, constraints, options
+)
+```
+
+C++ reference: [`cross_reconstruction_sim3_pose_graph_optimizer.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/transformation/cross_reconstruction_sim3_pose_graph_optimizer.h).
+
+!!! note "Not yet exposed in Python"
+
+    [`AlignOverlapReconstructionsWithPointsAndPosesRobust`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/transformation/align_reconstructions.h) remains C++ only.
 
 ## Applying a known similarity to a reconstruction {#transformations-transform-reconstruction}
 

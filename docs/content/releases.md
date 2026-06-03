@@ -19,5 +19,6 @@ Major cleanup: smaller surface area, Python-first imaging and features, fewer ve
 ### Still here
 
 - Core **SfM** pipelines, **bundle adjustment**, **cameras**, **pose / triangulation** solvers, **view graph**, **I/O** for reconstructions (binary/JSON, Bundler, NVM, COLMAP text, PLY, Nerfstudio, SDFStudio, etc.), and **pybind11** Python API for the remaining types and functions.
+- **Cross-reconstruction Sim(3) pose graph** alignment on `pt.sfm` (documented under [Transformations → pose graph](transformations.md#transformations-pose-graph)).
 
 If you need the old upstream release notes for academic comparison, see the [TheiaSfM repository](https://github.com/sweeneychris/TheiaSfM) tags and history.

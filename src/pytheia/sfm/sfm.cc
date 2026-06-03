@@ -787,9 +787,14 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::CrossReconstructionSim3PoseGraphOptimizer::AddSequentialEdge)
       .def("add_cross_view_edge",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::AddCrossViewEdge)
+      .def("add_scale_smoothness_edge",
+           &theia::CrossReconstructionSim3PoseGraphOptimizer::AddScaleSmoothnessEdge,
+           py::arg("view_id_i"), py::arg("view_id_j"), py::arg("weight"))
       .def("set_constraints",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::SetConstraints)
-      .def("optimize", &theia::CrossReconstructionSim3PoseGraphOptimizer::Optimize)
+      .def("optimize",
+           &theia::CrossReconstructionSim3PoseGraphOptimizerOptimizeWrapper,
+           "Run Ceres pose-graph optimization; returns (ok, summary).")
       .def("apply_to_variable_reconstruction",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::
                ApplyToVariableReconstruction,
@@ -805,10 +810,15 @@ void pytheia_sfm_classes(py::module& m) {
         py::arg("variable_reconstruction"),
         py::arg("constraints"),
         py::arg("options") = theia::CrossReconstructionPoseGraphOptions(),
-        py::arg("apply_to_variable_reconstruction") = true);
+        py::arg("apply_to_variable_reconstruction") = true,
+        "Align variable_reconstruction to fixed via Sim(3) pose graph; "
+        "returns (ok, CrossReconstructionPoseGraphSummary).");
 
-  m.def("GetSim3LieFromView", &theia::GetSim3LieFromViewWrapper);
-  m.def("RelativeSim3BetweenViews", &theia::RelativeSim3BetweenViewsWrapper);
+  m.def("GetSim3LieFromView", &theia::GetSim3LieFromViewWrapper, py::arg("view"),
+        "Sim(3) camera pose as 7-vector lie algebra log (Sophus convention).");
+  m.def("RelativeSim3BetweenViews", &theia::RelativeSim3BetweenViewsWrapper,
+        py::arg("view_i"), py::arg("view_j"),
+        "Relative Sim(3) S_i^{-1} S_j as 7-vector lie log.");
 
   py::class_<theia::SimilarityTransformation>(m, "SimilarityTransformation")
       .def(py::init<>())
