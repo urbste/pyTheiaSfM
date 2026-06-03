@@ -13,6 +13,50 @@ Changes will be added here periodically from the "Suggested changelog
 entry" block in pull request descriptions.
 
 
+## Version 3.1.0 (this is still a work in progress)
+
+New Features:
+
+- Changed strict-mode numeric conversions for PEP 484 compatibility: `float` now accepts `int`, and `complex` now accepts `int` and `float`.
+  [#5879](https://github.com/pybind/pybind11/pull/5879)
+
+Internal:
+
+- Improved `py::enum_` operator performance by restoring type-specific implementations.
+  [#5887](https://github.com/pybind/pybind11/pull/5887)
+
+- Optimized internal `std::unordered_map`/`std::unordered_set` hashing paths with `noexcept`.
+  [#5960](https://github.com/pybind/pybind11/pull/5960)
+
+
+## Version 3.0.4 (April 18, 2026)
+
+Bug fixes:
+
+- Fixed test builds with installed Eigen 5 by improving `Eigen3` CMake package detection.
+  [#6036](https://github.com/pybind/pybind11/pull/6036)
+
+- Fixed move semantics of `scoped_ostream_redirect` to preserve buffered output and avoid crashes when moved redirects restore stream buffers.
+  [#6033](https://github.com/pybind/pybind11/pull/6033)
+
+- Fixed `py::dynamic_attr()` traversal on Python 3.13+ to correctly propagate `PyObject_VisitManagedDict()` results.
+  [#6032](https://github.com/pybind/pybind11/pull/6032)
+
+- Fixed `std::shared_ptr<T>` fallback casting to avoid unnecessary copy-constructor instantiation in `reference_internal` paths.
+  [#6028](https://github.com/pybind/pybind11/pull/6028)
+
+CI:
+
+- Updated `setup-uv` to the maintained GitHub Action tag scheme.
+  [#6035](https://github.com/pybind/pybind11/pull/6035)
+
+- Updated pre-commit hooks.
+  [#6029](https://github.com/pybind/pybind11/pull/6029)
+
+- Updated GitHub Actions dependencies, including `actions-setup-cmake` and `cibuildwheel`.
+  [#6027](https://github.com/pybind/pybind11/pull/6027)
+
+
 ## Version 3.0.3 (March 31, 2026)
 
 Bug fixes:

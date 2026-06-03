@@ -18,16 +18,16 @@
 // See also: https://github.com/python/cpython/blob/HEAD/Include/patchlevel.h
 /* -- start version constants -- */
 #define PYBIND11_VERSION_MAJOR 3
-#define PYBIND11_VERSION_MINOR 0
-#define PYBIND11_VERSION_MICRO 3
+#define PYBIND11_VERSION_MINOR 1
+#define PYBIND11_VERSION_MICRO 0
 // ALPHA = 0xA, BETA = 0xB, GAMMA = 0xC (release candidate), FINAL = 0xF (stable release)
 // - The release level is set to "alpha" for development versions.
 //   Use 0xA0 (LEVEL=0xA, SERIAL=0) for development versions.
 // - For stable releases, set the serial to 0.
-#define PYBIND11_VERSION_RELEASE_LEVEL PY_RELEASE_LEVEL_FINAL
+#define PYBIND11_VERSION_RELEASE_LEVEL PY_RELEASE_LEVEL_ALPHA
 #define PYBIND11_VERSION_RELEASE_SERIAL 0
 // String version of (micro, release level, release serial), e.g.: 0a0, 0b1, 0rc1, 0
-#define PYBIND11_VERSION_PATCH 3
+#define PYBIND11_VERSION_PATCH 0a0
 /* -- end version constants -- */
 
 #if !defined(Py_PACK_FULL_VERSION)
@@ -1410,9 +1410,9 @@ constexpr
 //                                                                    std::move(args)
 #endif
 
-// Pybind offers detailed error messages by default for all builts that are debug (through the
-// negation of NDEBUG). This can also be manually enabled by users, for any builds, through
-// defining PYBIND11_DETAILED_ERROR_MESSAGES. This information is primarily useful for those
+// Pybind offers detailed error messages by default in debug builds (through the negation of
+// NDEBUG). This can also be manually enabled by users for any build by defining
+// PYBIND11_DETAILED_ERROR_MESSAGES. This information is primarily useful for those
 // who are writing (as opposed to merely using) libraries that use pybind11.
 #if !defined(PYBIND11_DETAILED_ERROR_MESSAGES) && !defined(NDEBUG)
 #    define PYBIND11_DETAILED_ERROR_MESSAGES

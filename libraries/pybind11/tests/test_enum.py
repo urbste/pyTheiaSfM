@@ -277,6 +277,15 @@ def test_str_signature():
         assert enum_type.__str__.__doc__.startswith("__str__")
 
 
+def test_enum_custom_str_keeps_name_property():
+    assert str(m.CustomStrEnum.A) == "CustomStrEnum value 1"
+    assert str(m.CustomStrEnum.B) == "CustomStrEnum value 2"
+    assert m.CustomStrEnum.A.name == "A"
+    assert m.CustomStrEnum.A.value == 1
+    assert m.CustomStrEnum.B.name == "B"
+    assert m.CustomStrEnum.B.value == 2
+
+
 def test_generated_dunder_methods_pos_only():
     for enum_type in [m.ScopedEnum, m.UnscopedEnum]:
         for binary_op in [
@@ -296,9 +305,19 @@ def test_generated_dunder_methods_pos_only():
         ]:
             method = getattr(enum_type, binary_op, None)
             if method is not None:
+                # 1) The docs must start with the name of the op.
                 assert (
                     re.match(
-                        rf"^{binary_op}\(self: [\w\.]+, other: [\w\.]+, /\)",
+                        rf"^{binary_op}\(",
+                        method.__doc__,
+                    )
+                    is not None
+                )
+                # 2) The docs must contain the op's signature. This is a separate check
+                # and not anchored at the start because the op may be overloaded.
+                assert (
+                    re.search(
+                        rf"{binary_op}\(self: [\w\.]+, other: [\w\.]+, /\)",
                         method.__doc__,
                     )
                     is not None
