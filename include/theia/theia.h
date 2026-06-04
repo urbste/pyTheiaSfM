@@ -111,6 +111,7 @@
 #include "theia/sfm/bundle_adjustment/sampson_error.h"
 #include "theia/sfm/bundle_adjustment/homography_error.h"
 #include "theia/sfm/bundle_adjustment/position_error.h"
+#include "theia/sfm/bundle_adjustment/gravity_direction_error.h"
 #include "theia/sfm/bundle_adjustment/gravity_error.h"
 #include "theia/sfm/bundle_adjustment/fundamental_matrix_parameterization.h"
 #include "theia/sfm/bundle_adjustment/unit_norm_three_vector_parameterization.h"

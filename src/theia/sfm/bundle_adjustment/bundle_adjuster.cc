@@ -47,6 +47,7 @@
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/create_reprojection_error_cost_function.h"
 #include "theia/sfm/bundle_adjustment/position_error.h"
+#include "theia/sfm/bundle_adjustment/gravity_direction_error.h"
 #include "theia/sfm/bundle_adjustment/gravity_error.h"
 #include "theia/sfm/bundle_adjustment/depth_prior_error.h"
 #include "theia/sfm/bundle_adjustment/orientation_error.h"
@@ -632,12 +633,23 @@ void BundleAdjuster::AddPositionPriorErrorResidual(View* view, Camera* camera) {
 }
 
 void BundleAdjuster::AddGravityPriorErrorResidual(View* view, Camera* camera) {
-  // Adds a gravity priors to the camera orientation
-  problem_->AddResidualBlock(
-      GravityError::Create(view->GetGravityPrior(),
-                           view->GetGravityPriorSqrtInformation()),
-      NULL,
-      camera->mutable_extrinsics());
+  const Eigen::Vector3d& gravity_prior = view->GetGravityPrior();
+  const Eigen::Matrix3d& gravity_sqrt_information =
+      view->GetGravityPriorSqrtInformation();
+  ceres::CostFunction* cost_function = NULL;
+  if (options_.gravity_prior_error_type ==
+      GravityPriorErrorType::DIRECTION_CROSS) {
+    cost_function = GravityDirectionError::Create(
+        options_.gravity_world_direction,
+        gravity_prior,
+        gravity_sqrt_information);
+  } else {
+    cost_function = GravityError::Create(
+        options_.gravity_world_direction,
+        gravity_prior,
+        gravity_sqrt_information);
+  }
+  problem_->AddResidualBlock(cost_function, NULL, camera->mutable_extrinsics());
 }
 
 void BundleAdjuster::AddDepthPriorErrorResidual(const Feature& feature,

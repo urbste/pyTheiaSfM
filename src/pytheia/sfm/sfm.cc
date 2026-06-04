@@ -1219,6 +1219,10 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::BundleAdjustmentOptions::use_orientation_priors)
       .def_readwrite("use_gravity_priors",
                      &theia::BundleAdjustmentOptions::use_gravity_priors)
+      .def_readwrite("gravity_prior_error_type",
+                     &theia::BundleAdjustmentOptions::gravity_prior_error_type)
+      .def_readwrite("gravity_world_direction",
+                     &theia::BundleAdjustmentOptions::gravity_world_direction)
       .def_readwrite("use_depth_priors",
                      &theia::BundleAdjustmentOptions::use_depth_priors)
       .def_readwrite("orthographic_camera",
@@ -1719,6 +1723,11 @@ void pytheia_sfm_classes(py::module& m) {
       .value("FOCAL_LENGTH_RADIAL_DISTORTION",
              theia::OptimizeIntrinsicsType::FOCAL_LENGTH_RADIAL_DISTORTION)
       .value("ALL", theia::OptimizeIntrinsicsType::ALL)
+      .export_values();
+
+  py::enum_<theia::GravityPriorErrorType>(m, "GravityPriorErrorType")
+      .value("VECTOR_DIFF", theia::GravityPriorErrorType::VECTOR_DIFF)
+      .value("DIRECTION_CROSS", theia::GravityPriorErrorType::DIRECTION_CROSS)
       .export_values();
 
   py::enum_<theia::LossFunctionType>(m, "LossFunctionType")

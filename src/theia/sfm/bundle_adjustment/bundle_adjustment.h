@@ -84,6 +84,14 @@ enum class OptimizeIntrinsicsType {
 };
 ENABLE_ENUM_BITMASK_OPERATORS(OptimizeIntrinsicsType)
 
+// How gravity orientation priors are enforced during bundle adjustment.
+enum class GravityPriorErrorType {
+  // Full 3-vector difference (legacy; over-constrains roll about gravity).
+  VECTOR_DIFF = 0,
+  // Cross product of unit vectors (2-DOF direction error; recommended).
+  DIRECTION_CROSS = 1,
+};
+
 struct BundleAdjustmentOptions {
   // The type of loss function used for BA. By default, we use a standard L2
   // loss function, but robust cost functions could be used.
@@ -164,6 +172,14 @@ struct BundleAdjustmentOptions {
 
   // Use gravity priors
   bool use_gravity_priors = false;
+
+  // Residual form when use_gravity_priors is true.
+  GravityPriorErrorType gravity_prior_error_type =
+      GravityPriorErrorType::DIRECTION_CROSS;
+
+  // World-frame gravity direction used in g_pred = R_c_w * gravity_world_direction.
+  // Default (0, 0, -1); set to (0, 0, 1) when the camera is mounted upside down.
+  Eigen::Vector3d gravity_world_direction = Eigen::Vector3d(0, 0, -1);
 };
 
 // Some important metrics for analyzing bundle adjustment results.

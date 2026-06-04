@@ -164,6 +164,7 @@ When you run **incremental / global** reconstruction, the pipeline sets these fr
 | `use_orientation_priors` | `false` | Orientation priors. |
 | `use_depth_priors` | `false` | Depth priors (uses **`robust_loss_width_depth_prior`** when robust). |
 | `use_gravity_priors` | `false` | Gravity-aligned orientation priors. |
+| `gravity_prior_error_type` | `DIRECTION_CROSS` | `VECTOR_DIFF` (legacy 3-vector) or `DIRECTION_CROSS` (cross product, 2-DOF). |
 
 ### Iterations, stopping, trust region, refinement {#ba-iterations-stopping}
 

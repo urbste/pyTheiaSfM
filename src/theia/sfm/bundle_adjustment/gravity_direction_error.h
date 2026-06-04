@@ -32,21 +32,27 @@
 // Please contact the author of this library if you have any questions.
 // Author: Steffen Urban (urbste@googlemail.com)
 
-#ifndef THEIA_SFM_BUNDLE_ADJUSTMENT_GRAVITY_ERROR_H_
-#define THEIA_SFM_BUNDLE_ADJUSTMENT_GRAVITY_ERROR_H_
+#ifndef THEIA_SFM_BUNDLE_ADJUSTMENT_GRAVITY_DIRECTION_ERROR_H_
+#define THEIA_SFM_BUNDLE_ADJUSTMENT_GRAVITY_DIRECTION_ERROR_H_
 
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
 
 #include <Eigen/Core>
 
+#include "theia/sfm/camera/camera.h"
+
 namespace theia {
 
-struct GravityError {
+// 2-DOF gravity direction error using the cross product of unit vectors.
+// For aligned g_prior and g_pred, g_prior x g_pred = 0. Roll about gravity
+// remains unobservable (rank-2 constraint).
+struct GravityDirectionError {
  public:
-  explicit GravityError(const Eigen::Vector3d& gravity_world_direction,
-                        const Eigen::Vector3d& gravity_prior,
-                        const Eigen::Matrix3d& gravity_prior_sqrt_information)
+  explicit GravityDirectionError(
+      const Eigen::Vector3d& gravity_world_direction,
+      const Eigen::Vector3d& gravity_prior,
+      const Eigen::Matrix3d& gravity_prior_sqrt_information)
       : gravity_world_direction_(gravity_world_direction),
         gravity_prior_(gravity_prior),
         gravity_prior_sqrt_information_(gravity_prior_sqrt_information) {}
@@ -54,14 +60,19 @@ struct GravityError {
   template <typename T>
   bool operator()(const T* camera_extrinsics, T* residual) const {
     Eigen::Map<Eigen::Matrix<T, 3, 1>> res(residual);
+
     Eigen::Matrix<T, 3, 1> g_world = gravity_world_direction_.cast<T>();
-    Eigen::Matrix<T, 3, 1> gravity_in_camera;
+    Eigen::Matrix<T, 3, 1> g_pred;
     ceres::AngleAxisRotatePoint(camera_extrinsics + Camera::ORIENTATION,
                                 g_world.data(),
-                                gravity_in_camera.data());
+                                g_pred.data());
+    NormalizeVector(&g_pred);
 
-    res = gravity_prior_sqrt_information_.cast<T>() * (
-          gravity_in_camera - gravity_prior_.cast<T>());
+    Eigen::Matrix<T, 3, 1> g_prior = gravity_prior_.cast<T>();
+    NormalizeVector(&g_prior);
+
+    const Eigen::Matrix<T, 3, 1> direction_error = g_prior.cross(g_pred);
+    res = gravity_prior_sqrt_information_.cast<T>() * direction_error;
     return true;
   }
 
@@ -71,14 +82,23 @@ struct GravityError {
       const Eigen::Matrix3d& gravity_prior_sqrt_information) {
     static const int kParameterSize = 6;
     static const int kNumResiduals = 3;
-    return new ceres::
-        AutoDiffCostFunction<GravityError, kNumResiduals, kParameterSize>(
-            new GravityError(gravity_world_direction,
-                             gravity_prior,
-                             gravity_prior_sqrt_information));
+    return new ceres::AutoDiffCostFunction<GravityDirectionError,
+                                           kNumResiduals,
+                                           kParameterSize>(
+        new GravityDirectionError(gravity_world_direction,
+                                  gravity_prior,
+                                  gravity_prior_sqrt_information));
   }
 
  private:
+  template <typename T>
+  static void NormalizeVector(Eigen::Matrix<T, 3, 1>* v) {
+    const T norm = v->norm();
+    if (norm > T(1e-12)) {
+      *v /= norm;
+    }
+  }
+
   const Eigen::Vector3d gravity_world_direction_;
   const Eigen::Vector3d gravity_prior_;
   const Eigen::Matrix3d gravity_prior_sqrt_information_;
@@ -86,4 +106,4 @@ struct GravityError {
 
 }  // namespace theia
 
-#endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_GRAVITY_ERROR_H_
+#endif  // THEIA_SFM_BUNDLE_ADJUSTMENT_GRAVITY_DIRECTION_ERROR_H_
