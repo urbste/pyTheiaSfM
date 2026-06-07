@@ -184,6 +184,113 @@ BundleAdjustPartialViewsConstant(const BundleAdjustmentOptions &options,
   return summary;
 }
 
+// Bundle adjust all estimated views and tracks while holding the specified
+// tracks constant. AddView() adds every camera with all its reprojection
+// residuals and marks the observed tracks constant; AddTrack() then promotes a
+// track to a variable. By skipping AddTrack() for the constant tracks those
+// points stay fixed and act as control points pinning the cameras into their
+// coordinate frame through reprojection.
+BundleAdjustmentSummary BundleAdjustReconstructionWithConstantTracks(
+    const BundleAdjustmentOptions& options,
+    const std::unordered_set<TrackId>& constant_track_ids,
+    Reconstruction* reconstruction) {
+  CHECK_NOTNULL(reconstruction);
+
+  const auto& view_ids = reconstruction->ViewIds();
+  const auto& track_ids = reconstruction->TrackIds();
+
+  BundleAdjuster bundle_adjuster(options, reconstruction);
+  for (const ViewId view_id : view_ids) {
+    const View* view = reconstruction->View(view_id);
+    if (view != nullptr && view->IsEstimated()) {
+      bundle_adjuster.AddView(view_id);
+    }
+  }
+  for (const TrackId track_id : track_ids) {
+    if (constant_track_ids.count(track_id) != 0) {
+      continue;
+    }
+    // Skip tracks that were not (re)triangulated; adding an unestimated track
+    // injects an uninitialized 3D point and breaks the solve.
+    const Track* track = reconstruction->Track(track_id);
+    if (track != nullptr && track->IsEstimated()) {
+      bundle_adjuster.AddTrack(track_id);
+    }
+  }
+
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+
+  if (options.use_inverse_depth_parametrization) {
+    UpdateHomogeneousPoint(track_ids, *reconstruction);
+  } else {
+    UpdateInverseDepth(track_ids, *reconstruction);
+  }
+
+  return summary;
+}
+
+// Full reconstruction BA (cameras + points + priors) plus SE3 relative pose
+// edges. AddView()/AddTrack() set up the standard problem (and per-view priors);
+// the relative edges are then added between the requested view pairs, snapshot-
+// ting the current relative poses as their measurements.
+BundleAdjustmentSummary BundleAdjustReconstructionWithRelativePoseEdges(
+    const BundleAdjustmentOptions& options,
+    const std::vector<RelativePoseConstraint>& relative_pose_constraints,
+    Reconstruction* reconstruction) {
+  CHECK_NOTNULL(reconstruction);
+
+  const auto& view_ids = reconstruction->ViewIds();
+  const auto& track_ids = reconstruction->TrackIds();
+
+  // Relative pose edges couple two camera parameter blocks, which breaks the
+  // independent-set requirement for Ceres inner iterations (they assume each
+  // group's blocks share no residual). Disable inner iterations when edges are
+  // present so the solve does not fail during setup.
+  BundleAdjustmentOptions ba_options = options;
+  if (!relative_pose_constraints.empty()) {
+    ba_options.use_inner_iterations = false;
+  }
+
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  for (const ViewId view_id : view_ids) {
+    const View* view = reconstruction->View(view_id);
+    if (view != nullptr && view->IsEstimated()) {
+      bundle_adjuster.AddView(view_id);
+    }
+  }
+  for (const TrackId track_id : track_ids) {
+    const Track* track = reconstruction->Track(track_id);
+    if (track != nullptr && track->IsEstimated()) {
+      bundle_adjuster.AddTrack(track_id);
+    }
+  }
+
+  for (const RelativePoseConstraint& edge : relative_pose_constraints) {
+    const View* view_i = reconstruction->View(edge.view_id_i);
+    const View* view_j = reconstruction->View(edge.view_id_j);
+    if (view_i == nullptr || view_j == nullptr || !view_i->IsEstimated() ||
+        !view_j->IsEstimated()) {
+      continue;
+    }
+    Matrix6d sqrt_information = Matrix6d::Zero();
+    // Sophus SE3 tangent order: [translation(3), rotation(3)].
+    sqrt_information.diagonal().head<3>().setConstant(edge.translation_sqrt_weight);
+    sqrt_information.diagonal().tail<3>().setConstant(edge.rotation_sqrt_weight);
+    bundle_adjuster.AddRelativePoseConstraint(
+        edge.view_id_i, edge.view_id_j, sqrt_information);
+  }
+
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+
+  if (options.use_inverse_depth_parametrization) {
+    UpdateHomogeneousPoint(track_ids, *reconstruction);
+  } else {
+    UpdateInverseDepth(track_ids, *reconstruction);
+  }
+
+  return summary;
+}
+
 // Bundle adjust the entire reconstruction.
 BundleAdjustmentSummary BundleAdjustReconstruction(
     const BundleAdjustmentOptions& options, Reconstruction* reconstruction) {

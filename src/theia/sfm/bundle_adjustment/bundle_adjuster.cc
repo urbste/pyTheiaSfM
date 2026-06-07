@@ -51,6 +51,7 @@
 #include "theia/sfm/bundle_adjustment/gravity_error.h"
 #include "theia/sfm/bundle_adjustment/depth_prior_error.h"
 #include "theia/sfm/bundle_adjustment/orientation_error.h"
+#include "theia/sfm/bundle_adjustment/relative_pose_error.h"
 
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
@@ -667,6 +668,32 @@ void BundleAdjuster::AddOrientationPriorErrorResidual(View* view, Camera* camera
       OrientationPriorError::Create(view->GetOrientationPrior(),
                             view->GetOrientationPriorSqrtInformation()),
       NULL, camera->mutable_extrinsics());
+}
+
+void BundleAdjuster::AddRelativePoseConstraint(
+    const ViewId view_id_i,
+    const ViewId view_id_j,
+    const Matrix6d& sqrt_information) {
+  View* view_i = CHECK_NOTNULL(reconstruction_->MutableView(view_id_i));
+  View* view_j = CHECK_NOTNULL(reconstruction_->MutableView(view_id_j));
+  Camera* camera_i = view_i->MutableCamera();
+  Camera* camera_j = view_j->MutableCamera();
+
+  // Snapshot the measured relative pose (cam_i -> cam_j) from the current world
+  // -> cam poses so the edge preserves the present relative geometry.
+  const auto world_to_cam = [](const Camera& camera) {
+    const Eigen::Matrix3d R = camera.GetOrientationAsRotationMatrix();
+    return Sophus::SE3d(Sophus::SO3d(R), -(R * camera.GetPosition()));
+  };
+  const Sophus::SE3d g_i = world_to_cam(*camera_i);
+  const Sophus::SE3d g_j = world_to_cam(*camera_j);
+  const Sophus::SE3d measured_i_to_j = g_j * g_i.inverse();
+
+  problem_->AddResidualBlock(
+      RelativePoseError::Create(measured_i_to_j, sqrt_information),
+      NULL,
+      camera_i->mutable_extrinsics(),
+      camera_j->mutable_extrinsics());
 }
 
 bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id,

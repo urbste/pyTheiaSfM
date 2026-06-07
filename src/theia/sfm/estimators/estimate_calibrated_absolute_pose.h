@@ -39,6 +39,7 @@
 #include <vector>
 
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
+#include "theia/sfm/pose/mlpnp.h"
 
 namespace theia {
 
@@ -51,13 +52,16 @@ struct CalibratedAbsolutePose {
   Eigen::Vector3d position;
 };
 
-enum class PnPType {KNEIP, SQPnP, DLS};
+// KNEIP, DLS, and SQPnP use 3-point minimal samples in RANSAC. MLPnP requires
+// at least kMLPnPMinimumPoints (6) correspondences per hypothesis.
+enum class PnPType {KNEIP, SQPnP, DLS, MLPnP};
 
 // Estimates the calibrated absolute pose using the ransac variant of choice
 // (e.g. Ransac, Prosac, etc.). Correspondences must be normalized by the camera
 // intrinsics. Returns true if a pose could be succesfully estimated, and false
 // otherwise. The quality of the result depends on the quality of the input
-// data.
+// data. When pnp_type is MLPnP, RANSAC draws kMLPnPMinimumPoints samples per
+// hypothesis and the standalone MLPnP solver rejects fewer than six points.
 bool EstimateCalibratedAbsolutePose(const RansacParameters& ransac_params,
     const RansacType& ransac_type, const theia::PnPType &pnp_type,
     const std::vector<FeatureCorrespondence2D3D>& normalized_correspondences,

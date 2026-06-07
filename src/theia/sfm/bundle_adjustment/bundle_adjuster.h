@@ -102,6 +102,15 @@ class BundleAdjuster {
     
   void SetCameraExtrinsicsConstant(const ViewId view_id);
 
+  // Add an SE3 relative pose-to-pose constraint between two views. The measured
+  // relative pose (cam_i -> cam_j) is snapshotted from the views' current poses,
+  // so the constraint preserves the present relative geometry (odometry). The
+  // 6x6 sqrt-information uses Sophus tangent order [translation(3), rotation(3)].
+  // Both views must already have been added via AddView().
+  void AddRelativePoseConstraint(const ViewId view_id_i,
+                                 const ViewId view_id_j,
+                                 const Matrix6d& sqrt_information);
+
 
  protected:
   // Add all camera extrinsics and intrinsics to the optimization problem.

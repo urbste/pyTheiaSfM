@@ -32,7 +32,7 @@ Minimal closed-form solvers (five-point, eight-point, DLS PnP, …) are document
 
 **Header:** [`estimate_calibrated_absolute_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_calibrated_absolute_pose.h)
 
-Calibrated perspective-*n*-point with RANSAC. Correspondences must be **normalized** by intrinsics. Choose backend via `PnPType`: `KNEIP`, `DLS`, or `SQPnP`.
+Calibrated perspective-*n*-point with RANSAC. Correspondences must be **normalized** by intrinsics. Choose backend via `PnPType`: `KNEIP`, `DLS`, `SQPnP`, or `MLPnP`. The other backends use **3-point** minimal samples; **`MLPnP` requires at least six correspondences per RANSAC hypothesis** (see [`mlpnp.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/mlpnp.h)).
 
 **Returns:** `(success, CalibratedAbsolutePose, RansacSummary)` — pose has `rotation` and `position`.
 

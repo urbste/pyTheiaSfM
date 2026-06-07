@@ -38,7 +38,7 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 - **`world_points`:** `Vector3d` world points; **same length** as `norm_feature_points`.
 - **`feature_covariances`:** either **empty** for uniform weighting, or one **`3×3`** matrix per point (symmetric covariance of the homogeneous image / bearing error). When provided, each covariance is mapped to the 2D null space of the corresponding ray inside the solver (see the paper).
 
-Use enough points for stable disambiguation (unit tests typically use on the order of **6–10+** correspondences). Planar 3D configurations are detected and handled in a separate code path.
+**Requires at least six correspondences.** MLPnP’s pose-disambiguation step needs six points; fewer inputs return `false` from the solver (`kMLPnPMinimumPoints` in `mlpnp.h`). Planar 3D configurations are detected and handled in a separate code path.
 
 **pyTheia:** `ok, R, t = pytheia.sfm.MLPnP(norm_features, covariances, world_points)` with `covariances=[]` if you do not use per-point covariances.
 

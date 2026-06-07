@@ -40,6 +40,9 @@
 
 namespace theia {
 
+// MLPnP requires at least six correspondences for pose disambiguation.
+constexpr int kMLPnPMinimumPoints = 6;
+
 bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
            const std::vector<Eigen::Matrix3d>& feature_covariances,
            const std::vector<Eigen::Vector3d>& world_points,

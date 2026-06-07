@@ -157,6 +157,21 @@ TEST(MLPnP, NoNoiseTest) {
 //                       kMaxAllowedTranslationDifference);
 // }
 
+TEST(MLPnP, RejectsTooFewPoints) {
+  const std::vector<Vector3d> world_points = {
+      Vector3d(-1.0, 3.0, 3.0), Vector3d(1.0, -1.0, 2.0),
+      Vector3d(-1.0, 1.0, 2.0), Vector3d(2.0, 1.0, 3.0),
+      Vector3d(-1.0, -3.0, 2.0)};
+  std::vector<Vector2d> feature_points(world_points.size());
+  for (size_t i = 0; i < world_points.size(); ++i) {
+    feature_points[i] = Vector2d(0.1 * i, -0.2 * i);
+  }
+
+  Matrix3d rotation;
+  Vector3d translation;
+  EXPECT_FALSE(MLPnP(feature_points, {}, world_points, &rotation, &translation));
+}
+
 TEST(MLPnP, NoiseTest) {
   const std::vector<Eigen::Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
                                            Vector3d(1.0, -1.0, 2.0),

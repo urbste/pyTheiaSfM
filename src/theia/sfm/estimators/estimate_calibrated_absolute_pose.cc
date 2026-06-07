@@ -44,6 +44,7 @@
 #include "theia/sfm/pose/perspective_three_point.h"
 #include "theia/sfm/pose/sqpnp.h"
 #include "theia/sfm/pose/dls_pnp.h"
+#include "theia/sfm/pose/mlpnp.h"
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
@@ -68,16 +69,18 @@ class CalibratedAbsolutePoseEstimator
   }
 
   CalibratedAbsolutePoseEstimator(const PnPType& pnp_type) : pnp_type_(pnp_type) {}
-  // 3 correspondences are needed to determine the absolute pose.
-  double SampleSize() const { return 3; }
+  double SampleSize() const {
+    return pnp_type_ == PnPType::MLPnP ? kMLPnPMinimumPoints : 3;
+  }
 
   // Estimates candidate absolute poses from correspondences.
   bool EstimateModel(
       const std::vector<FeatureCorrespondence2D3D>& correspondences,
       std::vector<CalibratedAbsolutePose>* absolute_poses) const {
-    std::vector<Eigen::Vector2d> features(3);
-    std::vector<Eigen::Vector3d> world_points(3);
-    for (int i = 0; i < 3; ++i) {
+    const int sample_size = static_cast<int>(SampleSize());
+    std::vector<Eigen::Vector2d> features(sample_size);
+    std::vector<Eigen::Vector3d> world_points(sample_size);
+    for (int i = 0; i < sample_size; ++i) {
         features[i] = correspondences[i].feature;
         world_points[i] = correspondences[i].world_point;
     }
@@ -105,6 +108,14 @@ class CalibratedAbsolutePoseEstimator
       for (const auto& q : quats) {
           rotations.push_back(q.matrix());
       }
+    } else if (pnp_type_ == PnPType::MLPnP) {
+      Eigen::Matrix3d rotation;
+      Eigen::Vector3d translation;
+      if (!MLPnP(features, {}, world_points, &rotation, &translation)) {
+        return false;
+      }
+      rotations.push_back(rotation);
+      translations.push_back(translation);
     }
 
     for (size_t i = 0; i < rotations.size(); i++) {

@@ -62,9 +62,19 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
            const std::vector<Eigen::Vector3d>& world_points,
            Eigen::Matrix3d* solution_rotation,
            Eigen::Vector3d* solution_translation) {
+  const size_t num_points = norm_feature_points.size();
+  if (num_points < static_cast<size_t>(kMLPnPMinimumPoints) ||
+      world_points.size() != num_points) {
+    return false;
+  }
+  if (!feature_covariances.empty() &&
+      feature_covariances.size() != num_points) {
+    return false;
+  }
 
   bool planar = false;
-  const size_t num_points = norm_feature_points.size();
+  const int num_ambiguity_points =
+      std::min(static_cast<int>(num_points), 6);
   // compute the nullspace of all vectors
   std::vector<Eigen::Matrix<double, 3, 2>> nullspaces(num_points);
   MatrixXd points3(3, num_points);
@@ -281,7 +291,7 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 		for (int i = 0; i < 4; ++i) {
 			Vector3d reproPt;
 			double norms = 0.0;
-			for (int p = 0; p < 6; ++p) {
+			for (int p = 0; p < num_ambiguity_points; ++p) {
 				reproPt = Ts[i].block<3, 3>(0, 0) * points3.col(p) + Ts[i].block<3, 1>(0, 3);
 				reproPt = reproPt / reproPt.norm();
 				norms += 1.0 - reproPt.transpose() * norm_feature_points[p].homogeneous().normalized();
@@ -331,7 +341,7 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
       }
 
 			Ts[s] = Ts[s].inverse();
-			for (int p = 0; p < 6; ++p) {
+			for (int p = 0; p < num_ambiguity_points; ++p) {
 				Vector3d v = Ts[s].block<3, 3>(0, 0) * points3.col(p) + Ts[s].block<3, 1>(0, 3);
 				v = v / v.norm();
 				error[s] += 1.0 - v.transpose() * norm_feature_points[p].homogeneous().normalized();

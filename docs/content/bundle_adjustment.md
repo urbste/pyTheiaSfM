@@ -21,6 +21,8 @@ Optional **priors** in **`BundleAdjustmentOptions`**: position, orientation, gra
 | `BundleAdjustReconstruction` | Full BA: all **estimated** views and tracks in the reconstruction. |
 | `BundleAdjustPartialReconstruction` | Only the given **view** and **track** ID sets (plus their incident residuals). |
 | `BundleAdjustPartialViewsConstant` | Some views **variable**, others **held fixed** (see C++ signature). |
+| `BundleAdjustReconstructionWithConstantTracks` | Full BA on all estimated views and tracks, but **holds the given track IDs fixed** (control points). Useful when importing 3D points from another reconstruction to pin cameras into that frame through reprojection while the points themselves do not move. |
+| `BundleAdjustReconstructionWithRelativePoseEdges` | Full BA (cameras + points + reprojection + view priors) **plus** optional **SE3 relative pose-to-pose edges** between view pairs. See [Relative pose edges](#ba-relative-pose-edges). |
 | `BundleAdjustView` / `BundleAdjustViews` | Local BA around one or more views. |
 | `BundleAdjustTrack` / `BundleAdjustTracks` | Refine selected tracks (and connected cameras). |
 | `BundleAdjustTwoViewsAngular` | Specialized **two-view** angular / relative adjustment. |
@@ -166,6 +168,29 @@ When you run **incremental / global** reconstruction, the pipeline sets these fr
 | `use_gravity_priors` | `false` | Gravity-aligned orientation priors. |
 | `gravity_prior_error_type` | `DIRECTION_CROSS` | `VECTOR_DIFF` (legacy 3-vector) or `DIRECTION_CROSS` (cross product, 2-DOF). |
 
+#### Setting priors on `View` (Python)
+
+Priors are stored per view and only take effect when the matching `use_*_priors` flag is enabled on `BundleAdjustmentOptions`:
+
+```python
+import numpy as np
+import pytheia as pt
+
+view = reconstruction.View(view_id)
+# sqrt-information matrices (not covariance): larger diagonal = stronger pull.
+info_pos = np.eye(3) * 60.0   # units 1/m
+info_rot = np.eye(3) * 40.0   # units 1/rad
+view.SetPositionPrior(target_camera_center, info_pos)
+view.SetOrientationPrior(target_world_to_cam_angle_axis, info_rot)
+
+opts = pt.sfm.BundleAdjustmentOptions()
+opts.use_position_priors = True
+opts.use_orientation_priors = True
+summary = pt.sfm.BundleAdjustReconstruction(opts, reconstruction)
+```
+
+`GetPositionPrior`, `GetPositionPriorSqrtInformation`, `GetOrientationPrior`, `GetOrientationPriorSqrtInformation`, and `HasPositionPrior` / `HasOrientationPrior` are also exposed. Position priors compare against `Camera::GetPosition()`; orientation priors compare against the world→camera angle-axis in `Camera::GetOrientation()`.
+
 ### Iterations, stopping, trust region, refinement {#ba-iterations-stopping}
 
 | Field | Default | Meaning |
@@ -265,6 +290,70 @@ When you use **incremental / global / hybrid** reconstruction, bundle adjustment
 - **`Optimize()`** — run the solver.
 
 Use this when the convenience `BundleAdjust*` functions do not match your scheduling (e.g. sliding-window BA).
+
+- **`AddRelativePoseConstraint(view_id_i, view_id_j, sqrt_information)`** — add an SE3 **relative pose edge** between two views that were already added via `AddView()`. The measured relative pose (camera *i* → camera *j*) is **snapshotted from the current extrinsics** at setup time, so the edge preserves the present local odometry while absolute priors or reprojection terms move the trajectory. The 6×6 `sqrt_information` uses Sophus tangent order **[translation(3), rotation(3)]**.
+
+## Relative pose edges {#ba-relative-pose-edges}
+
+**`BundleAdjustReconstructionWithRelativePoseEdges`** runs the same full reconstruction BA as `BundleAdjustReconstruction` (all estimated views and tracks, plus any view position/orientation priors), and additionally adds **SE3 pose-to-pose constraints** between specified view pairs.
+
+### `RelativePoseConstraint` (Python: `pt.sfm.RelativePoseConstraint`)
+
+| Field | Meaning |
+|-------|---------|
+| `view_id_i` | First view in the edge (camera *i*). |
+| `view_id_j` | Second view (camera *j*). |
+| `translation_sqrt_weight` | Diagonal sqrt-information for the **translation** part of the SE3 log residual (1/m). |
+| `rotation_sqrt_weight` | Diagonal sqrt-information for the **rotation** part (1/rad). |
+
+At solve time the implementation builds world→camera poses from each view’s extrinsics (`[position(3), orientation angle-axis(3)]`), forms the predicted relative pose `g_j · g_i⁻¹`, and compares it to the **fixed** measurement taken from the poses at edge creation.
+
+### Example: stiffen a trajectory during prior-BA
+
+```python
+import pytheia as pt
+
+# ... set position/orientation priors on anchor views, enable use_position_priors /
+# use_orientation_priors on opts as above ...
+
+edges = []
+for vid_i, vid_j in consecutive_frame_pairs:  # your ordering
+    e = pt.sfm.RelativePoseConstraint()
+    e.view_id_i = vid_i
+    e.view_id_j = vid_j
+    e.translation_sqrt_weight = 30.0
+    e.rotation_sqrt_weight = 100.0
+    edges.append(e)
+
+opts = pt.sfm.BundleAdjustmentOptions()
+opts.use_position_priors = True
+opts.use_orientation_priors = True
+opts.use_homogeneous_point_parametrization = True
+opts.loss_function_type = pt.sfm.LossFunctionType.HUBER
+# Relative edges couple two camera blocks; prefer SPARSE_SCHUR + EIGEN_SPARSE
+# for large problems (inner iterations are disabled automatically when edges are present).
+opts.linear_solver_type = pt.sfm.LinearSolverType.SPARSE_SCHUR
+opts.sparse_linear_algebra_library_type = pt.sfm.SparseLinearAlgebraLibraryType.EIGEN_SPARSE
+
+summary = pt.sfm.BundleAdjustReconstructionWithRelativePoseEdges(opts, edges, reconstruction)
+```
+
+**When to use:** absolute anchor priors alone only pull the anchor frames; relative edges keep the **local shape** of the run (its own odometry) so corrections propagate along the chain instead of being absorbed by shared 3D points. Typical pairing: strong priors on anchor views + soft or no dense interpolated priors + relative edges between consecutive frames.
+
+**C++:** [`relative_pose_error.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/bundle_adjustment/relative_pose_error.h), `BundleAdjustReconstructionWithRelativePoseEdges` in [`bundle_adjustment.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/bundle_adjustment/bundle_adjustment.h).
+
+## Control-point BA {#ba-control-points}
+
+**`BundleAdjustReconstructionWithConstantTracks`** optimizes all estimated cameras and **variable** tracks, but **skips** `AddTrack()` for the given track IDs so those 3D points stay fixed. Reprojection residuals for observations of constant tracks still pin the cameras. This is the usual pattern for aligning one reconstruction to another’s map without moving the reference points.
+
+```python
+constant_track_ids = [seg_track_id, ...]  # segment / map points
+summary = pt.sfm.BundleAdjustReconstructionWithConstantTracks(
+    opts, constant_track_ids, run_reconstruction
+)
+```
+
+Only **estimated** views and tracks are added; unestimated tracks (e.g. after a failed retriangulation) are skipped automatically.
 
 ## `BundleAdjustmentSummary` {#bundle-adjustment-summary}
 

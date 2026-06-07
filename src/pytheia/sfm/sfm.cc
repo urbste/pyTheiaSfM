@@ -575,7 +575,9 @@ void pytheia_sfm_classes(py::module& m) {
 
   // pose
   m.def("PoseFromThreePoints", theia::PoseFromThreePointsWrapper);
-  m.def("MLPnP", theia::MLPnPWrapper);
+  m.def("MLPnP", theia::MLPnPWrapper,
+        "Maximum-likelihood PnP. Requires at least six normalized 2D-3D "
+        "correspondences (see kMLPnPMinimumPoints).");
   m.def("NormalizedEightPointFundamentalMatrix",
         theia::NormalizedEightPointFundamentalMatrixWrapper);
   m.def("FivePointRelativePose", theia::FivePointRelativePoseWrapper);
@@ -740,7 +742,11 @@ void pytheia_sfm_classes(py::module& m) {
           [](theia::SequentialSim3Edge& e, const Eigen::Matrix<double, 7, 1>& v) {
             e.measured_S_ji = Sophus::Sim3d::exp(v);
           },
-          "Relative Sim3 S_ji as 7-vector lie algebra log");
+          "Relative Sim3 S_ji as 7-vector lie algebra log")
+      .def_readwrite("sqrt_information",
+                     &theia::SequentialSim3Edge::sqrt_information,
+                     "7x7 sqrt-information for the relative Sim3 residual; "
+                     "tangent order [translation(3), rotation(3), scale(1)]");
 
   py::class_<theia::CrossViewAnchorEdge>(m, "CrossViewAnchorEdge")
       .def(py::init<>())
@@ -756,6 +762,15 @@ void pytheia_sfm_classes(py::module& m) {
           },
           "PnP Sim3 pose of run camera in segment world (7-vector lie log)")
       .def_readwrite("weight", &theia::CrossViewAnchorEdge::weight);
+
+  py::class_<theia::RelativePoseConstraint>(m, "RelativePoseConstraint")
+      .def(py::init<>())
+      .def_readwrite("view_id_i", &theia::RelativePoseConstraint::view_id_i)
+      .def_readwrite("view_id_j", &theia::RelativePoseConstraint::view_id_j)
+      .def_readwrite("translation_sqrt_weight",
+                     &theia::RelativePoseConstraint::translation_sqrt_weight)
+      .def_readwrite("rotation_sqrt_weight",
+                     &theia::RelativePoseConstraint::rotation_sqrt_weight);
 
   py::class_<theia::CrossReconstructionConstraints>(
       m, "CrossReconstructionConstraints")
@@ -971,7 +986,11 @@ void pytheia_sfm_classes(py::module& m) {
       .value("KNEIP", theia::PnPType::KNEIP)
       .value("DLS", theia::PnPType::DLS)
       .value("SQPnP", theia::PnPType::SQPnP)
-      .export_values();
+      .value("MLPnP", theia::PnPType::MLPnP);
+  // Do not export MLPnP at module scope: it would shadow the MLPnP() solver.
+  m.attr("KNEIP") = theia::PnPType::KNEIP;
+  m.attr("DLS") = theia::PnPType::DLS;
+  m.attr("SQPnP") = theia::PnPType::SQPnP;
 
   m.def("EstimateAbsolutePoseWithKnownOrientation",
         theia::EstimateAbsolutePoseWithKnownOrientationWrapper);
@@ -992,6 +1011,8 @@ void pytheia_sfm_classes(py::module& m) {
         theia::EstimateRigidTransformation2D3DWrapper);
   m.def("EstimateRigidTransformation2D3DNormalized",
         theia::EstimateRigidTransformation2D3DNormalizedWrapper);
+  m.def("EstimateSimilarityTransformation2D3D",
+        theia::EstimateSimilarityTransformation2D3DWrapper);
   m.def("EstimateTriangulation", theia::EstimateTriangulationWrapper);
   m.def("EstimateUncalibratedAbsolutePose",
         theia::EstimateUncalibratedAbsolutePoseWrapper);
@@ -1773,6 +1794,10 @@ void pytheia_sfm_classes(py::module& m) {
         theia::BundleAdjustPartialReconstructionWrapper);
   m.def("BundleAdjustPartialViewsConstant",
         theia::BundleAdjustPartialViewsConstantWrapper);
+  m.def("BundleAdjustReconstructionWithConstantTracks",
+        theia::BundleAdjustReconstructionWithConstantTracksWrapper);
+  m.def("BundleAdjustReconstructionWithRelativePoseEdges",
+        theia::BundleAdjustReconstructionWithRelativePoseEdgesWrapper);
   m.def("BundleAdjustReconstruction", theia::BundleAdjustReconstructionWrapper);
   m.def("BundleAdjustView", theia::BundleAdjustViewWrapper);
   m.def("BundleAdjustViews", theia::BundleAdjustViewsWrapper);

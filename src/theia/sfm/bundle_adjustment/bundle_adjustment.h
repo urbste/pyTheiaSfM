@@ -182,6 +182,19 @@ struct BundleAdjustmentOptions {
   Eigen::Vector3d gravity_world_direction = Eigen::Vector3d(0, 0, -1);
 };
 
+// A relative SE3 pose-to-pose constraint between two views, used to stiffen the
+// local trajectory shape during bundle adjustment. The measured relative pose
+// is snapshotted from the current poses (i.e. the existing odometry), so the
+// constraint pulls the optimized relative pose back toward where it is now. The
+// translation / rotation sqrt-information weights (1/m, 1/rad) trade off how
+// rigidly the chain is preserved versus how much absolute priors may bend it.
+struct RelativePoseConstraint {
+  ViewId view_id_i = kInvalidViewId;
+  ViewId view_id_j = kInvalidViewId;
+  double translation_sqrt_weight = 1.0;
+  double rotation_sqrt_weight = 1.0;
+};
+
 // Some important metrics for analyzing bundle adjustment results.
 struct BundleAdjustmentSummary {
   // This only indicates whether the optimization was successfully run and makes
@@ -210,6 +223,26 @@ BundleAdjustPartialViewsConstant(
     const std::vector<ViewId> &var_view_ids,
     const std::vector<ViewId> &const_view_ids,
     Reconstruction *reconstruction);
+
+// Bundle adjust all estimated views and tracks, but hold the given tracks
+// constant. Useful for "control point" alignment where 3D points imported from
+// another reconstruction (e.g. a fixed map/segment) pin the cameras into that
+// coordinate frame through reprojection while remaining unchanged themselves.
+BundleAdjustmentSummary BundleAdjustReconstructionWithConstantTracks(
+    const BundleAdjustmentOptions& options,
+    const std::unordered_set<TrackId>& constant_track_ids,
+    Reconstruction* reconstruction);
+
+// Bundle adjust all estimated views and tracks (cameras + points + their
+// reprojections, plus any view position/orientation priors), and additionally
+// add SE3 relative pose-to-pose constraints between the given view pairs. The
+// relative edges preserve the run's local trajectory shape so that absolute
+// anchor priors propagate smoothly along the chain instead of being absorbed
+// locally by the 3D structure.
+BundleAdjustmentSummary BundleAdjustReconstructionWithRelativePoseEdges(
+    const BundleAdjustmentOptions& options,
+    const std::vector<RelativePoseConstraint>& relative_pose_constraints,
+    Reconstruction* reconstruction);
 
 // Bundle adjust a single view.
 BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,

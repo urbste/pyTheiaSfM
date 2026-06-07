@@ -123,6 +123,28 @@ BundleAdjustmentSummary BundleAdjustPartialViewsConstantWrapper(
     return ba_summary;
 }
 
+BundleAdjustmentSummary BundleAdjustReconstructionWithConstantTracksWrapper(
+    const BundleAdjustmentOptions& options,
+    const std::vector<TrackId>& constant_track_ids,
+    Reconstruction& reconstruction) {
+    const std::unordered_set<TrackId> constant_tracks(
+        constant_track_ids.begin(), constant_track_ids.end());
+    BundleAdjustmentSummary ba_summary =
+        BundleAdjustReconstructionWithConstantTracks(
+            options, constant_tracks, &reconstruction);
+    return ba_summary;
+}
+
+BundleAdjustmentSummary BundleAdjustReconstructionWithRelativePoseEdgesWrapper(
+    const BundleAdjustmentOptions& options,
+    const std::vector<RelativePoseConstraint>& relative_pose_constraints,
+    Reconstruction& reconstruction) {
+    BundleAdjustmentSummary ba_summary =
+        BundleAdjustReconstructionWithRelativePoseEdges(
+            options, relative_pose_constraints, &reconstruction);
+    return ba_summary;
+}
+
 // std::tuple<BundleAdjustmentSummary, Camera, Camera, std::vector<Eigen::Vector4d>> BundleAdjustTwoViewsWrapper(
 //     const TwoViewBundleAdjustmentOptions& options,
 //     const theia::TwoViewInfo& two_view_info,
