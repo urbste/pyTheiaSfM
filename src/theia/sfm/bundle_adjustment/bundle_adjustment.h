@@ -193,6 +193,12 @@ struct RelativePoseConstraint {
   ViewId view_id_j = kInvalidViewId;
   double translation_sqrt_weight = 1.0;
   double rotation_sqrt_weight = 1.0;
+  // When true, translation is penalized via direction + optional log-magnitude
+  // residuals instead of the full SE3 translation log (scale-invariant odometry).
+  bool scale_invariant_translation = false;
+  double translation_direction_sqrt_weight = 1.0;
+  // Zero magnitude weight keeps translation scale free along the chain.
+  double translation_magnitude_sqrt_weight = 0.0;
 };
 
 // Some important metrics for analyzing bundle adjustment results.

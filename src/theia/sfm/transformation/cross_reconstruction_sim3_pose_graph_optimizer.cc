@@ -3,12 +3,12 @@
 
 #include "theia/sfm/transformation/cross_reconstruction_sim3_pose_graph_optimizer.h"
 
+#include <algorithm>
 #include <cmath>
 #include <ceres/ceres.h>
 #include <glog/logging.h>
 
 #include "theia/sfm/track.h"
-#include "theia/sfm/transformation/align_reconstructions_pose_graph_optim.h"
 #include "theia/sfm/transformation/cross_reconstruction_pose_graph_errors.h"
 #include "theia/sfm/transformation/sim3_pose_from_view.h"
 
@@ -19,8 +19,32 @@ bool HasVariablePose(const Sim3LieMap& poses, const ViewId view_id) {
   return poses.find(view_id) != poses.end();
 }
 
-bool HasFixedPose(const Sim3LieMap& poses, const ViewId view_id) {
-  return poses.find(view_id) != poses.end();
+constexpr double kSim3SigmaLowerBound = -20.0;
+constexpr double kSim3SigmaUpperBound = 20.0;
+
+void AddSim3LieParameterBlock(ceres::Problem* problem,
+                              double* data,
+                              bool constant) {
+  problem->AddParameterBlock(data, 7);
+  problem->SetParameterLowerBound(data, 6, kSim3SigmaLowerBound);
+  problem->SetParameterUpperBound(data, 6, kSim3SigmaUpperBound);
+  if (constant) {
+    problem->SetParameterBlockConstant(data);
+  }
+}
+
+double MaxAbsInJacobianRows(const ceres::CRSMatrix& jacobian,
+                            int row_begin,
+                            int row_end) {
+  double max_abs = 0.0;
+  for (int row = row_begin; row < row_end; ++row) {
+    const int start = jacobian.rows[row];
+    const int end = jacobian.rows[row + 1];
+    for (int idx = start; idx < end; ++idx) {
+      max_abs = std::max(max_abs, std::abs(jacobian.values[idx]));
+    }
+  }
+  return max_abs;
 }
 
 }  // namespace
@@ -31,11 +55,8 @@ CrossReconstructionSim3PoseGraphOptimizer::
     : options_(options) {}
 
 void CrossReconstructionSim3PoseGraphOptimizer::ClearProblem() {
-  // Ceres Problem owns manifolds/losses added via SetManifold / AddResidualBlock.
-  // Do not delete them here (avoids double-free on ~Problem).
   problem_.reset();
   anchor_losses_.clear();
-  owned_manifolds_.clear();
   num_sequential_residuals_ = 0;
   num_anchor_residuals_ = 0;
   num_scale_smooth_residuals_ = 0;
@@ -56,6 +77,16 @@ void CrossReconstructionSim3PoseGraphOptimizer::SetVariableReconstruction(
   variable_keyframe_order_ = keyframe_view_ids;
   GetSim3LiesFromReconstruction(
       variable_reconstruction, keyframe_view_ids, &variable_lies_);
+}
+
+void CrossReconstructionSim3PoseGraphOptimizer::SetInitialVariablePoses(
+    const Sim3LieMap& initial_poses) {
+  for (const auto& entry : initial_poses) {
+    auto it = variable_lies_.find(entry.first);
+    if (it != variable_lies_.end()) {
+      it->second = entry.second;
+    }
+  }
 }
 
 void CrossReconstructionSim3PoseGraphOptimizer::AddSequentialEdge(
@@ -133,6 +164,46 @@ void CrossReconstructionSim3PoseGraphOptimizer::LogCostBreakdown(
   }
 }
 
+void CrossReconstructionSim3PoseGraphOptimizer::LogJacobianBreakdown(
+    const char* label) const {
+  if (!problem_) {
+    return;
+  }
+  ceres::Problem::EvaluateOptions eval_options;
+  eval_options.apply_loss_function = false;
+  std::vector<double> residuals;
+  std::vector<double> gradient;
+  ceres::CRSMatrix jacobian;
+  if (!problem_->Evaluate(eval_options, nullptr, &residuals, &gradient,
+                          &jacobian)) {
+    LOG(WARNING) << label << ": Jacobian evaluate failed.";
+    return;
+  }
+
+  double max_grad = 0.0;
+  for (const double g : gradient) {
+    max_grad = std::max(max_grad, std::abs(g));
+  }
+
+  const int seq_rows = num_sequential_residuals_ * 7;
+  const int anchor_rows = num_anchor_residuals_ * 7;
+  const int scale_rows = num_scale_smooth_residuals_;
+  const double max_j_seq =
+      seq_rows > 0 ? MaxAbsInJacobianRows(jacobian, 0, seq_rows) : 0.0;
+  const double max_j_anchor = anchor_rows > 0
+                                  ? MaxAbsInJacobianRows(jacobian, seq_rows,
+                                                         seq_rows + anchor_rows)
+                                  : 0.0;
+  const double max_j_scale =
+      scale_rows > 0 ? MaxAbsInJacobianRows(jacobian, seq_rows + anchor_rows,
+                                            seq_rows + anchor_rows + scale_rows)
+                     : 0.0;
+
+  LOG(INFO) << label << ": max |gradient|=" << max_grad
+            << " max|J| sequential=" << max_j_seq
+            << " anchor=" << max_j_anchor << " scale_smooth=" << max_j_scale;
+}
+
 void CrossReconstructionSim3PoseGraphOptimizer::FillResidualCostSummary(
     CrossReconstructionPoseGraphSummary* summary) const {
   if (!problem_ || summary == nullptr) {
@@ -176,23 +247,11 @@ bool CrossReconstructionSim3PoseGraphOptimizer::BuildProblem() {
   scale_smooth_edges_.clear();
   AddAutoScaleSmoothnessEdges();
 
-  auto add_pose_block = [this](double* data, bool constant) {
-    // Ceres takes ownership of the manifold; keep a owning container only so
-    // pointers stay valid until problem_.reset().
-    Sim3Manifold* manifold = new Sim3Manifold();
-    owned_manifolds_.push_back(manifold);
-    problem_->AddParameterBlock(data, 7);
-    problem_->SetManifold(data, manifold);
-    if (constant) {
-      problem_->SetParameterBlockConstant(data);
-    }
-  };
-
   for (auto& entry : variable_lies_) {
-    add_pose_block(entry.second.data(), false);
+    AddSim3LieParameterBlock(problem_.get(), entry.second.data(), false);
   }
   for (auto& entry : fixed_lies_) {
-    add_pose_block(entry.second.data(), true);
+    AddSim3LieParameterBlock(problem_.get(), entry.second.data(), true);
   }
 
   for (const SequentialSim3Edge& edge : sequential_edges_) {
@@ -203,12 +262,13 @@ bool CrossReconstructionSim3PoseGraphOptimizer::BuildProblem() {
     }
     Eigen::Matrix<double, 7, 7> sqrt_info =
         options_.sequential_weight * edge.sqrt_information;
-    ceres::CostFunction* cost = SelfEdgesErrorTerm::Create(
-        edge.measured_S_ji, sqrt_info);
-    ceres::LossFunction* loss = nullptr;
+    ceres::CostFunction* cost = ScaleFreeSequentialSim3ErrorTerm::Create(
+        edge.measured_S_ji,
+        sqrt_info,
+        options_.sequential_translation_magnitude_weight);
     problem_->AddResidualBlock(
         cost,
-        loss,
+        nullptr,
         variable_lies_.at(edge.view_id_i).data(),
         variable_lies_.at(edge.view_id_j).data());
     ++num_sequential_residuals_;
@@ -278,6 +338,7 @@ bool CrossReconstructionSim3PoseGraphOptimizer::Optimize(
 
   if (options_.debug_cost_breakdown) {
     LogCostBreakdown("PGO before solve");
+    LogJacobianBreakdown("PGO before solve");
     FillResidualCostSummary(summary);
     LOG(INFO) << "PGO residual sq-norms before: sequential="
               << summary->sequential_residual_cost
@@ -289,10 +350,10 @@ bool CrossReconstructionSim3PoseGraphOptimizer::Optimize(
   solver_options.max_num_iterations = options_.max_num_iterations;
   solver_options.minimizer_progress_to_stdout = options_.verbose;
   solver_options.num_threads = 1;
-  solver_options.use_nonmonotonic_steps = true;
+  solver_options.use_nonmonotonic_steps = false;
+  solver_options.initial_trust_region_radius = 10.0;
   solver_options.function_tolerance = 1e-6;
   solver_options.gradient_tolerance = 1e-4;
-  // Full run trajectories can have hundreds of views; use sparse factorization.
   if (variable_lies_.size() > 80) {
     solver_options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
   } else {
@@ -318,6 +379,7 @@ bool CrossReconstructionSim3PoseGraphOptimizer::Optimize(
 
   if (options_.debug_cost_breakdown) {
     LogCostBreakdown("PGO after solve");
+    LogJacobianBreakdown("PGO after solve");
     FillResidualCostSummary(summary);
     LOG(INFO) << "PGO residual sq-norms after: sequential="
               << summary->sequential_residual_cost
@@ -329,8 +391,6 @@ bool CrossReconstructionSim3PoseGraphOptimizer::Optimize(
     LOG(INFO) << ceres_summary.BriefReport();
   }
 
-  // Tear down Ceres problem before returning to Python (avoids teardown
-  // ordering issues with manifolds / shared loss functions).
   ClearProblem();
   return summary->success;
 }

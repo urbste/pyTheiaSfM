@@ -11,7 +11,6 @@
 #include <ceres/ceres.h>
 
 #include "theia/sfm/reconstruction.h"
-#include "theia/sfm/transformation/align_reconstructions_pose_graph_optim.h"
 #include "theia/sfm/transformation/cross_reconstruction_pose_graph_types.h"
 #include "theia/sfm/types.h"
 
@@ -33,6 +32,9 @@ class CrossReconstructionSim3PoseGraphOptimizer {
       const Reconstruction& variable_reconstruction,
       const std::vector<ViewId>& keyframe_view_ids);
 
+  // Override initial optimizer poses without mutating the reconstruction.
+  void SetInitialVariablePoses(const Sim3LieMap& initial_poses);
+
   void AddSequentialEdge(const SequentialSim3Edge& edge);
   void AddCrossViewEdge(const CrossViewAnchorEdge& edge);
   void AddScaleSmoothnessEdge(ViewId view_i, ViewId view_j, double weight);
@@ -52,6 +54,7 @@ class CrossReconstructionSim3PoseGraphOptimizer {
   void AddAutoScaleSmoothnessEdges();
   bool PosesAreFinite(const Sim3LieMap& poses, const char* label) const;
   void LogCostBreakdown(const char* label) const;
+  void LogJacobianBreakdown(const char* label) const;
   void FillResidualCostSummary(CrossReconstructionPoseGraphSummary* summary) const;
 
   CrossReconstructionPoseGraphOptions options_;
@@ -66,7 +69,6 @@ class CrossReconstructionSim3PoseGraphOptimizer {
   std::unique_ptr<ceres::Problem> problem_;
   // Non-owning; ceres::Problem deletes these in ~Problem.
   std::vector<ceres::LossFunction*> anchor_losses_;
-  std::vector<Sim3Manifold*> owned_manifolds_;
 
   int num_sequential_residuals_ = 0;
   int num_anchor_residuals_ = 0;

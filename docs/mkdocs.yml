@@ -68,6 +68,7 @@ nav:
       - Matching: matching.md
       - MVS: mvs.md
       - Bundle adjustment: bundle_adjustment.md
+      - Cross-run alignment: cross_run_alignment.md
       - Transformations: transformations.md
       - IO: io.md
   - FAQ: faq.md

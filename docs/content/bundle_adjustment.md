@@ -303,10 +303,15 @@ Use this when the convenience `BundleAdjust*` functions do not match your schedu
 |-------|---------|
 | `view_id_i` | First view in the edge (camera *i*). |
 | `view_id_j` | Second view (camera *j*). |
-| `translation_sqrt_weight` | Diagonal sqrt-information for the **translation** part of the SE3 log residual (1/m). |
+| `translation_sqrt_weight` | Diagonal sqrt-information for the **translation** part of the SE3 log residual (1/m). Used when `scale_invariant_translation` is `False`. |
 | `rotation_sqrt_weight` | Diagonal sqrt-information for the **rotation** part (1/rad). |
+| `scale_invariant_translation` | If `True`, use [`ScaledRelativePoseError`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/bundle_adjustment/scaled_relative_pose_error.h) instead of the full SE3 translation log. |
+| `translation_direction_sqrt_weight` | Weight on \(\mathbf{t}_{\mathrm{pred}} \times \mathbf{t}_{\mathrm{meas}}\) (unit translation vectors). |
+| `translation_magnitude_sqrt_weight` | Weight on \(\log(\|\mathbf{t}_{\mathrm{pred}}\|/\|\mathbf{t}_{\mathrm{meas}}\|)\); set to `0` for scale-free odometry along the chain. |
 
-At solve time the implementation builds world→camera poses from each view’s extrinsics (`[position(3), orientation angle-axis(3)]`), forms the predicted relative pose `g_j · g_i⁻¹`, and compares it to the **fixed** measurement taken from the poses at edge creation.
+At solve time the implementation builds world→camera poses from each view’s extrinsics (`[position(3), orientation angle-axis(3)]`), forms the predicted relative pose \(\mathbf{g}_{j\leftarrow i} = \mathbf{g}_j\,\mathbf{g}_i^{-1}\), and compares it to the **fixed** measurement \(\hat{\mathbf{g}}_{j\leftarrow i}\) snapshotted at edge creation.
+
+Full motivation and math: [Cross-run alignment](cross_run_alignment.md#cross-run-ba-relative-edges).
 
 ### Example: stiffen a trajectory during prior-BA
 
@@ -340,7 +345,23 @@ summary = pt.sfm.BundleAdjustReconstructionWithRelativePoseEdges(opts, edges, re
 
 **When to use:** absolute anchor priors alone only pull the anchor frames; relative edges keep the **local shape** of the run (its own odometry) so corrections propagate along the chain instead of being absorbed by shared 3D points. Typical pairing: strong priors on anchor views + soft or no dense interpolated priors + relative edges between consecutive frames.
 
-**C++:** [`relative_pose_error.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/bundle_adjustment/relative_pose_error.h), `BundleAdjustReconstructionWithRelativePoseEdges` in [`bundle_adjustment.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/bundle_adjustment/bundle_adjustment.h).
+### Scale-invariant odometry (run-to-segment alignment)
+
+When the run reconstruction may still have **wrong metric scale** after a coarse warp into the segment frame, set `scale_invariant_translation = True` and use direction weights only (`translation_magnitude_sqrt_weight = 0`). Rotation is still penalized via the SE3 log rotation part; translation is matched by **direction** (cross product of unit vectors), not by full \(\mathfrak{se}(3)\) translation components.
+
+```python
+edge = pt.sfm.RelativePoseConstraint()
+edge.view_id_i = vid_i
+edge.view_id_j = vid_j
+edge.rotation_sqrt_weight = 100.0
+edge.scale_invariant_translation = True
+edge.translation_direction_sqrt_weight = 30.0
+edge.translation_magnitude_sqrt_weight = 0.0
+```
+
+See [Cross-run alignment → scale-invariant edges](cross_run_alignment.md#cross-run-ba-relative-edges) and `pytests/sfm/relative_pose_constraint_test.py`.
+
+**C++:** [`relative_pose_error.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/bundle_adjustment/relative_pose_error.h), [`scaled_relative_pose_error.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/bundle_adjustment/scaled_relative_pose_error.h), `BundleAdjustReconstructionWithRelativePoseEdges` in [`bundle_adjustment.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/bundle_adjustment/bundle_adjustment.h).
 
 ## Control-point BA {#ba-control-points}
 

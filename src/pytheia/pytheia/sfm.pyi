@@ -3539,6 +3539,9 @@ class RelativePoseConstraint:
     view_id_j: int
     translation_sqrt_weight: float
     rotation_sqrt_weight: float
+    scale_invariant_translation: bool
+    translation_direction_sqrt_weight: float
+    translation_magnitude_sqrt_weight: float
     def __init__(self) -> None:
         ...
 def BundleAdjustTrack(*args, **kwargs):

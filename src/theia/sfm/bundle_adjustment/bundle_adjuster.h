@@ -111,6 +111,13 @@ class BundleAdjuster {
                                  const ViewId view_id_j,
                                  const Matrix6d& sqrt_information);
 
+  void AddScaledRelativePoseConstraint(
+      const ViewId view_id_i,
+      const ViewId view_id_j,
+      double rotation_sqrt_weight,
+      double translation_direction_sqrt_weight,
+      double translation_magnitude_sqrt_weight);
+
 
  protected:
   // Add all camera extrinsics and intrinsics to the optimization problem.

@@ -18,6 +18,8 @@ using Sim3LieMap = aligned_unordered_map<ViewId, Eigen::Matrix<double, 7, 1>>;
 struct CrossReconstructionPoseGraphOptions {
   double sequential_weight = 1.0;
   double anchor_weight = 1.0;
+  // Weak weight on log(|t_pred| / (exp(sigma_i) * |t_meas|)) in sequential edges.
+  double sequential_translation_magnitude_weight = 0.2;
   double scale_smooth_weight = 0.1;
   double huber_delta_anchor = 1.0;
   bool auto_scale_smoothness = true;

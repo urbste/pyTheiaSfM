@@ -252,16 +252,26 @@ BundleAdjustmentSummary BundleAdjustReconstructionWithRelativePoseEdges(
   }
 
   BundleAdjuster bundle_adjuster(ba_options, reconstruction);
-  for (const ViewId view_id : view_ids) {
-    const View* view = reconstruction->View(view_id);
-    if (view != nullptr && view->IsEstimated()) {
-      bundle_adjuster.AddView(view_id);
+  if (ba_options.use_inverse_depth_parametrization) {
+    for (const TrackId track_id : track_ids) {
+      const Track* track = reconstruction->Track(track_id);
+      if (track != nullptr && track->IsEstimated()) {
+        bundle_adjuster.AddInvTrack(track_id, false);
+      }
     }
-  }
-  for (const TrackId track_id : track_ids) {
-    const Track* track = reconstruction->Track(track_id);
-    if (track != nullptr && track->IsEstimated()) {
-      bundle_adjuster.AddTrack(track_id);
+    bundle_adjuster.AddViewPriors();
+  } else {
+    for (const ViewId view_id : view_ids) {
+      const View* view = reconstruction->View(view_id);
+      if (view != nullptr && view->IsEstimated()) {
+        bundle_adjuster.AddView(view_id);
+      }
+    }
+    for (const TrackId track_id : track_ids) {
+      const Track* track = reconstruction->Track(track_id);
+      if (track != nullptr && track->IsEstimated()) {
+        bundle_adjuster.AddTrack(track_id);
+      }
     }
   }
 
@@ -272,12 +282,23 @@ BundleAdjustmentSummary BundleAdjustReconstructionWithRelativePoseEdges(
         !view_j->IsEstimated()) {
       continue;
     }
-    Matrix6d sqrt_information = Matrix6d::Zero();
-    // Sophus SE3 tangent order: [translation(3), rotation(3)].
-    sqrt_information.diagonal().head<3>().setConstant(edge.translation_sqrt_weight);
-    sqrt_information.diagonal().tail<3>().setConstant(edge.rotation_sqrt_weight);
-    bundle_adjuster.AddRelativePoseConstraint(
-        edge.view_id_i, edge.view_id_j, sqrt_information);
+    if (edge.scale_invariant_translation) {
+      bundle_adjuster.AddScaledRelativePoseConstraint(
+          edge.view_id_i,
+          edge.view_id_j,
+          edge.rotation_sqrt_weight,
+          edge.translation_direction_sqrt_weight,
+          edge.translation_magnitude_sqrt_weight);
+    } else {
+      Matrix6d sqrt_information = Matrix6d::Zero();
+      // Sophus SE3 tangent order: [translation(3), rotation(3)].
+      sqrt_information.diagonal().head<3>().setConstant(
+          edge.translation_sqrt_weight);
+      sqrt_information.diagonal().tail<3>().setConstant(
+          edge.rotation_sqrt_weight);
+      bundle_adjuster.AddRelativePoseConstraint(
+          edge.view_id_i, edge.view_id_j, sqrt_information);
+    }
   }
 
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();

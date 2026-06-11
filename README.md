@@ -49,8 +49,9 @@ Compared to the original TheiaSfM:
 * Absolute Pose solvers
   * SQPnP
   * UncalibratedPlanarOrthographic Pose
-* Transformations / alignment
-  * **Cross-reconstruction Sim(3) pose graph** (`AlignReconstructionsWithPoseGraph`, `CrossReconstructionSim3PoseGraphOptimizer`, …) — Python bindings on `pytheia.sfm`; see [Transformations](https://urbste.github.io/pyTheiaSfM/transformations/#transformations-pose-graph)
+* Transformations / cross-run alignment
+  * **BA relative pose edges** (`BundleAdjustReconstructionWithRelativePoseEdges`, scale-invariant odometry via `RelativePoseConstraint`) — see [Cross-run alignment](https://urbste.github.io/pyTheiaSfM/cross_run_alignment/)
+  * **Cross-reconstruction Sim(3) pose graph** (`AlignReconstructionsWithPoseGraph`, `CrossReconstructionSim3PoseGraphOptimizer`, …) — see [Transformations → pose graph](https://urbste.github.io/pyTheiaSfM/transformations/#transformations-pose-graph) and [Cross-run alignment](https://urbste.github.io/pyTheiaSfM/cross_run_alignment/)
 
 ## Usage Examples
 

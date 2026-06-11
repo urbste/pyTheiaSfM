@@ -52,6 +52,7 @@
 #include "theia/sfm/bundle_adjustment/depth_prior_error.h"
 #include "theia/sfm/bundle_adjustment/orientation_error.h"
 #include "theia/sfm/bundle_adjustment/relative_pose_error.h"
+#include "theia/sfm/bundle_adjustment/scaled_relative_pose_error.h"
 
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
@@ -266,6 +267,7 @@ void BundleAdjuster::AddInvTrack(const TrackId track_id, const bool views_consta
     const CameraIntrinsicsGroupId intrinsics_group_id =
         reconstruction_->CameraIntrinsicsGroupIdFromViewId(view_id);
     potentially_constant_camera_intrinsics_groups_.emplace(intrinsics_group_id);
+    optimized_camera_intrinsics_groups_.emplace(intrinsics_group_id);
 
     SetCameraSchurGroups(view_id);
     if (views_constant) {
@@ -279,6 +281,14 @@ void BundleAdjuster::AddInvTrack(const TrackId track_id, const bool views_consta
     if (!ContainsKey(optimized_views_, reference_view_id)) {
       optimized_views_.emplace(reference_view_id);
     }
+  }
+
+  {
+    const CameraIntrinsicsGroupId ref_intrinsics_group_id =
+        reconstruction_->CameraIntrinsicsGroupIdFromViewId(reference_view_id);
+    potentially_constant_camera_intrinsics_groups_.emplace(
+        ref_intrinsics_group_id);
+    optimized_camera_intrinsics_groups_.emplace(ref_intrinsics_group_id);
   }
 
   SetCameraSchurGroups(reference_view_id);
@@ -430,8 +440,10 @@ void BundleAdjuster::SetCameraIntrinsicsParameterization() {
 
     // Set the constant parameters if any are requested.
     if (constant_intrinsics.size() == camera_intrinsics->NumParameters()) {
-      problem_->SetParameterBlockConstant(
-          camera_intrinsics->mutable_parameters());
+      if (problem_->HasParameterBlock(camera_intrinsics->mutable_parameters())) {
+        problem_->SetParameterBlockConstant(
+            camera_intrinsics->mutable_parameters());
+      }
     } else if (constant_intrinsics.size() > 0) {
       ceres::SubsetManifold* subset_parameterization =
           new ceres::SubsetManifold(camera_intrinsics->NumParameters(),
@@ -455,9 +467,12 @@ void BundleAdjuster::SetCameraIntrinsicsParameterization() {
     std::shared_ptr<CameraIntrinsicsModel> camera_intrinsics =
         GetIntrinsicsForCameraIntrinsicsGroup(camera_intrinsics_group);
 
-    // Set the intrinsics to be constant.
-    problem_->SetParameterBlockConstant(
-        camera_intrinsics->mutable_parameters());
+    // Set the intrinsics to be constant (only if a residual already registered
+    // this shared parameter block with the problem).
+    if (problem_->HasParameterBlock(camera_intrinsics->mutable_parameters())) {
+      problem_->SetParameterBlockConstant(
+          camera_intrinsics->mutable_parameters());
+    }
   }
 }
 
@@ -691,6 +706,35 @@ void BundleAdjuster::AddRelativePoseConstraint(
 
   problem_->AddResidualBlock(
       RelativePoseError::Create(measured_i_to_j, sqrt_information),
+      NULL,
+      camera_i->mutable_extrinsics(),
+      camera_j->mutable_extrinsics());
+}
+
+void BundleAdjuster::AddScaledRelativePoseConstraint(
+    const ViewId view_id_i,
+    const ViewId view_id_j,
+    const double rotation_sqrt_weight,
+    const double translation_direction_sqrt_weight,
+    const double translation_magnitude_sqrt_weight) {
+  View* view_i = CHECK_NOTNULL(reconstruction_->MutableView(view_id_i));
+  View* view_j = CHECK_NOTNULL(reconstruction_->MutableView(view_id_j));
+  Camera* camera_i = view_i->MutableCamera();
+  Camera* camera_j = view_j->MutableCamera();
+
+  const auto world_to_cam = [](const Camera& camera) {
+    const Eigen::Matrix3d R = camera.GetOrientationAsRotationMatrix();
+    return Sophus::SE3d(Sophus::SO3d(R), -(R * camera.GetPosition()));
+  };
+  const Sophus::SE3d g_i = world_to_cam(*camera_i);
+  const Sophus::SE3d g_j = world_to_cam(*camera_j);
+  const Sophus::SE3d measured_i_to_j = g_j * g_i.inverse();
+
+  problem_->AddResidualBlock(
+      ScaledRelativePoseError::Create(measured_i_to_j,
+                                      rotation_sqrt_weight,
+                                      translation_direction_sqrt_weight,
+                                      translation_magnitude_sqrt_weight),
       NULL,
       camera_i->mutable_extrinsics(),
       camera_j->mutable_extrinsics());

@@ -54,6 +54,16 @@ These wrap [`align_reconstructions.h`](https://github.com/urbste/pyTheiaSfM/blob
 
 Typical use: align a localized or partial run to a segment map when you have relative odometry between run keyframes and absolute PnP poses of run cameras in the segment frame.
 
+!!! tip "BA-centric alternative"
+
+    For joint refinement of cameras **and** 3D structure, prefer [Cross-run alignment → BA with relative edges](cross_run_alignment.md#cross-run-ba-relative-edges) (`BundleAdjustReconstructionWithRelativePoseEdges`) instead of—or before/after—the pose graph. The pose graph is best when you need a fast pose-only Sim(3) solve on keyframes.
+
+### Mathematics (residuals)
+
+Each variable keyframe carries a Sim(3) Lie vector \(\boldsymbol{\xi}_k \in \mathbb{R}^7\); \(\mathbf{S}_k = \exp(\boldsymbol{\xi}_k)\). Sequential edges compare \(\mathbf{S}_i^{-1}\mathbf{S}_j\) to a fixed measurement \(\hat{\mathbf{S}}_{j\leftarrow i}\) using rotation, translation-direction, and optional log-magnitude terms (scale tied to \(\sigma_i = \xi_{i,6}\)). Anchor edges pull \(\mathbf{S}_k\) toward a PnP target \(\hat{\mathbf{S}}_{\mathrm{anchor}}\) in the segment frame. Optional scale-smoothness edges penalize \(\sigma_j - \sigma_i\) along the keyframe chain.
+
+Full formulas and workflow comparison: [Cross-run alignment](cross_run_alignment.md).
+
 ### One-shot API
 
 | Python (`pt.sfm`) | Meaning |
@@ -181,6 +191,7 @@ Prefer these **`math`** helpers over any duplicate **`sfm`** binding for rotatio
 
 ## See also {#transformations-see-also}
 
+- [Cross-run alignment](cross_run_alignment.md) — what was added, pose conventions, BA vs pose graph  
 - [SfM](sfm.md) — `Reconstruction`, `View`, `Track`  
 - [Bundle adjustment](bundle_adjustment.md) — refine after applying a global transform  
 - [Pose](pose.md) — geometry that produces rays for gDLS  

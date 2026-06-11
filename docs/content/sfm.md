@@ -8,6 +8,8 @@ Theia has a full Structure-from-Motion pipeline that is extremely efficient. Our
 
 Incremental SfM is the standard approach that adds on one image at a time to grow the reconstruction. While this method is robust, it is not scalable because it requires repeated operations of expensive bundle adjustment. Global SfM is different from incremental SfM in that it considers the entire view graph at the same time instead of incrementally adding more and more images to the `Reconstruction`. Global SfM methods have been proven to be very fast with comparable or better accuracy to incremental SfM approaches (See [JiangICCV](bibliography.md#JiangICCV), [MoulonICCV](bibliography.md#MoulonICCV), [WilsonECCV2014](bibliography.md#WilsonECCV2014)), and they are much more readily parallelized. After we have obtained camera poses, we perform [triangulation](triangulation.md) and [bundle adjustment](bundle_adjustment.md) to obtain a valid 3D reconstruction consisting of cameras and 3D points.
 
+When **two reconstructions already exist** (reference segment + run) and must be fused into one frame, pyTheia provides cross-run alignment tools—BA with relative pose edges and/or a standalone Sim(3) pose graph. See [Cross-run alignment](cross_run_alignment.md).
+
 First, we will describe the fundamental classes of our SfM pipeline:
 
 -   `View`, the main class encapsulating an image, its pose, and which features it observes

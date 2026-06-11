@@ -684,6 +684,9 @@ void pytheia_sfm_classes(py::module& m) {
                          sequential_weight)
       .def_readwrite("anchor_weight",
                      &theia::CrossReconstructionPoseGraphOptions::anchor_weight)
+      .def_readwrite("sequential_translation_magnitude_weight",
+                     &theia::CrossReconstructionPoseGraphOptions::
+                         sequential_translation_magnitude_weight)
       .def_readwrite("scale_smooth_weight",
                      &theia::CrossReconstructionPoseGraphOptions::
                          scale_smooth_weight)
@@ -770,7 +773,15 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("translation_sqrt_weight",
                      &theia::RelativePoseConstraint::translation_sqrt_weight)
       .def_readwrite("rotation_sqrt_weight",
-                     &theia::RelativePoseConstraint::rotation_sqrt_weight);
+                     &theia::RelativePoseConstraint::rotation_sqrt_weight)
+      .def_readwrite("scale_invariant_translation",
+                     &theia::RelativePoseConstraint::scale_invariant_translation)
+      .def_readwrite("translation_direction_sqrt_weight",
+                     &theia::RelativePoseConstraint::
+                         translation_direction_sqrt_weight)
+      .def_readwrite("translation_magnitude_sqrt_weight",
+                     &theia::RelativePoseConstraint::
+                         translation_magnitude_sqrt_weight);
 
   py::class_<theia::CrossReconstructionConstraints>(
       m, "CrossReconstructionConstraints")
@@ -798,6 +809,22 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::CrossReconstructionSim3PoseGraphOptimizer::
                SetVariableReconstruction,
            py::arg("variable_reconstruction"), py::arg("keyframe_view_ids"))
+      .def(
+          "set_initial_variable_poses",
+          [](theia::CrossReconstructionSim3PoseGraphOptimizer& optimizer,
+             py::dict poses_dict) {
+            theia::Sim3LieMap poses;
+            for (auto item : poses_dict) {
+              const theia::ViewId view_id =
+                  py::cast<theia::ViewId>(item.first);
+              poses[view_id] =
+                  py::cast<Eigen::Matrix<double, 7, 1>>(item.second);
+            }
+            optimizer.SetInitialVariablePoses(poses);
+          },
+          py::arg("initial_poses"),
+          "Override initial optimizer poses (view_id -> 7-vector lie) without "
+          "mutating the reconstruction.")
       .def("add_sequential_edge",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::AddSequentialEdge)
       .def("add_cross_view_edge",
