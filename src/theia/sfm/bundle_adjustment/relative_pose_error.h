@@ -73,6 +73,17 @@ struct RelativePoseError {
     Eigen::Map<const Eigen::Matrix<T, 3, 1>> aa_j(extrinsics_j +
                                                   Camera::ORIENTATION);
 
+    // Guard against non-finite trial steps: Sophus::SO3/SE3::exp/log hard-abort
+    // via SOPHUS_ENSURE on NaN/Inf input (e.g. a divergent Levenberg-Marquardt
+    // step). Returning false lets Ceres reject the step and shrink the trust
+    // region instead of aborting the whole process.
+    for (int k = 0; k < 3; ++k) {
+      if (!ceres::isfinite(aa_i[k]) || !ceres::isfinite(aa_j[k]) ||
+          !ceres::isfinite(center_i[k]) || !ceres::isfinite(center_j[k])) {
+        return false;
+      }
+    }
+
     const Sophus::SO3<T> R_i = Sophus::SO3<T>::exp(aa_i);
     const Sophus::SO3<T> R_j = Sophus::SO3<T>::exp(aa_j);
     // world->cam: x_cam = R (x_world - center) => translation = -R * center.
@@ -83,8 +94,15 @@ struct RelativePoseError {
     const Sophus::SE3<T> error =
         predicted_i_to_j * measured_i_to_j_.cast<T>().inverse();
 
+    const Eigen::Matrix<T, 6, 1> log_error = error.log();
+    for (int k = 0; k < 6; ++k) {
+      if (!ceres::isfinite(log_error[k])) {
+        return false;
+      }
+    }
+
     Eigen::Map<Eigen::Matrix<T, 6, 1>> residuals(residual);
-    residuals = sqrt_information_.cast<T>() * error.log();
+    residuals = sqrt_information_.cast<T>() * log_error;
     return true;
   }
 

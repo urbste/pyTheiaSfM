@@ -53,6 +53,14 @@ struct OrientationPriorError {
   bool operator()(const T* camera_extrinsics, T* residual) const {
     Eigen::Map<const Eigen::Matrix<T, 3, 1>> current_orientation(
       camera_extrinsics + Camera::ORIENTATION);
+    // Guard against non-finite trial steps: Sophus::SO3::exp hard-aborts via
+    // SOPHUS_ENSURE on NaN/Inf input. Returning false lets Ceres reject the step
+    // and shrink the trust region instead of crashing the process.
+    for (int k = 0; k < 3; ++k) {
+      if (!ceres::isfinite(current_orientation[k])) {
+        return false;
+      }
+    }
     Sophus::SO3<T> current_orientation_so3 = Sophus::SO3<T>::exp(current_orientation);
     Sophus::SO3<T> prior_orientation_so3 = Sophus::SO3<T>::exp(prior_orientation_.cast<T>());
     Sophus::SO3<T> error = current_orientation_so3 * prior_orientation_so3.inverse();
