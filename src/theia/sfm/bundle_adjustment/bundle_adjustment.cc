@@ -142,6 +142,17 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
   return summary;
 }
 
+namespace {
+
+void SetupPartialViewsConstantBundleAdjuster(
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& var_view_ids,
+    const std::vector<ViewId>& const_view_ids,
+    Reconstruction* reconstruction,
+    BundleAdjuster* bundle_adjuster);
+
+}  // namespace
+
 // Bundle adjust the specified views.
 BundleAdjustmentSummary
 BundleAdjustPartialViewsConstant(const BundleAdjustmentOptions &options,
@@ -152,28 +163,10 @@ BundleAdjustPartialViewsConstant(const BundleAdjustmentOptions &options,
 
   BundleAdjuster bundle_adjuster(options, reconstruction);
   
-  if (options.use_inverse_depth_parametrization) {
-    for (const TrackId track_id : reconstruction->TrackIds()) {
-      bundle_adjuster.AddInvTrack(track_id, false);
-    }
-    for (const ViewId view_id : const_view_ids) {
-      bundle_adjuster.SetCameraExtrinsicsConstant(view_id);
-    }
-    bundle_adjuster.AddViewPriors();
-  } else {
-    for (const ViewId view_id : var_view_ids) {
-      bundle_adjuster.AddView(view_id);
-    }
-    for (const ViewId view_id : const_view_ids) {
-      bundle_adjuster.AddView(view_id);
-      bundle_adjuster.SetCameraExtrinsicsConstant(view_id);
-    }
-    for (const TrackId track_id : reconstruction->TrackIds()) {
-      bundle_adjuster.AddTrack(track_id);
-    }
-  }
-
-  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+  BundleAdjustmentSummary summary;
+  SetupPartialViewsConstantBundleAdjuster(
+      options, var_view_ids, const_view_ids, reconstruction, &bundle_adjuster);
+  summary = bundle_adjuster.Optimize();
 
   if (options.use_inverse_depth_parametrization) {
     UpdateHomogeneousPoint(reconstruction->TrackIds(), *reconstruction);
@@ -229,6 +222,91 @@ BundleAdjustmentSummary BundleAdjustReconstructionWithConstantTracks(
   return summary;
 }
 
+namespace {
+
+void AddRelativePoseConstraintsToBundleAdjuster(
+    BundleAdjuster* bundle_adjuster,
+    const std::vector<RelativePoseConstraint>& relative_pose_constraints,
+    const Reconstruction* reconstruction) {
+  CHECK_NOTNULL(bundle_adjuster);
+  CHECK_NOTNULL(reconstruction);
+  for (const RelativePoseConstraint& edge : relative_pose_constraints) {
+    const View* view_i = reconstruction->View(edge.view_id_i);
+    const View* view_j = reconstruction->View(edge.view_id_j);
+    if (view_i == nullptr || view_j == nullptr || !view_i->IsEstimated() ||
+        !view_j->IsEstimated()) {
+      continue;
+    }
+    if (edge.scale_invariant_translation) {
+      bundle_adjuster->AddScaledRelativePoseConstraint(
+          edge.view_id_i,
+          edge.view_id_j,
+          edge.rotation_sqrt_weight,
+          edge.translation_direction_sqrt_weight,
+          edge.translation_magnitude_sqrt_weight);
+    } else {
+      Matrix6d sqrt_information = Matrix6d::Zero();
+      // Sophus SE3 tangent order: [translation(3), rotation(3)].
+      sqrt_information.diagonal().head<3>().setConstant(
+          edge.translation_sqrt_weight);
+      sqrt_information.diagonal().tail<3>().setConstant(
+          edge.rotation_sqrt_weight);
+      bundle_adjuster->AddRelativePoseConstraint(
+          edge.view_id_i, edge.view_id_j, sqrt_information);
+    }
+  }
+}
+
+void SetupPartialViewsConstantBundleAdjuster(
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& var_view_ids,
+    const std::vector<ViewId>& const_view_ids,
+    Reconstruction* reconstruction,
+    BundleAdjuster* bundle_adjuster) {
+  CHECK_NOTNULL(reconstruction);
+  CHECK_NOTNULL(bundle_adjuster);
+  if (options.use_inverse_depth_parametrization) {
+    for (const TrackId track_id : reconstruction->TrackIds()) {
+      const Track* track = reconstruction->Track(track_id);
+      if (track != nullptr && track->IsEstimated()) {
+        bundle_adjuster->AddInvTrack(track_id, false);
+      }
+    }
+    for (const ViewId view_id : const_view_ids) {
+      bundle_adjuster->EnsureViewExtrinsicsInProblem(view_id);
+      bundle_adjuster->SetCameraExtrinsicsConstant(view_id);
+    }
+    bundle_adjuster->AddViewPriors();
+  } else {
+    for (const ViewId view_id : var_view_ids) {
+      bundle_adjuster->AddView(view_id);
+    }
+    for (const ViewId view_id : const_view_ids) {
+      bundle_adjuster->AddView(view_id);
+      bundle_adjuster->SetCameraExtrinsicsConstant(view_id);
+    }
+    for (const TrackId track_id : reconstruction->TrackIds()) {
+      bundle_adjuster->AddTrack(track_id);
+    }
+  }
+}
+
+BundleAdjustmentSummary FinalizeBundleAdjustment(
+    const BundleAdjustmentOptions& options,
+    const std::vector<TrackId>& track_ids,
+    Reconstruction* reconstruction,
+    BundleAdjuster* bundle_adjuster) {
+  BundleAdjustmentSummary summary = bundle_adjuster->Optimize();
+  if (options.use_inverse_depth_parametrization) {
+    UpdateHomogeneousPoint(track_ids, *reconstruction);
+  } else {
+    UpdateInverseDepth(track_ids, *reconstruction);
+  }
+  return summary;
+}
+
+}  // namespace
+
 // Full reconstruction BA (cameras + points + priors) plus SE3 relative pose
 // edges. AddView()/AddTrack() set up the standard problem (and per-view priors);
 // the relative edges are then added between the requested view pairs, snapshot-
@@ -275,41 +353,36 @@ BundleAdjustmentSummary BundleAdjustReconstructionWithRelativePoseEdges(
     }
   }
 
-  for (const RelativePoseConstraint& edge : relative_pose_constraints) {
-    const View* view_i = reconstruction->View(edge.view_id_i);
-    const View* view_j = reconstruction->View(edge.view_id_j);
-    if (view_i == nullptr || view_j == nullptr || !view_i->IsEstimated() ||
-        !view_j->IsEstimated()) {
-      continue;
-    }
-    if (edge.scale_invariant_translation) {
-      bundle_adjuster.AddScaledRelativePoseConstraint(
-          edge.view_id_i,
-          edge.view_id_j,
-          edge.rotation_sqrt_weight,
-          edge.translation_direction_sqrt_weight,
-          edge.translation_magnitude_sqrt_weight);
-    } else {
-      Matrix6d sqrt_information = Matrix6d::Zero();
-      // Sophus SE3 tangent order: [translation(3), rotation(3)].
-      sqrt_information.diagonal().head<3>().setConstant(
-          edge.translation_sqrt_weight);
-      sqrt_information.diagonal().tail<3>().setConstant(
-          edge.rotation_sqrt_weight);
-      bundle_adjuster.AddRelativePoseConstraint(
-          edge.view_id_i, edge.view_id_j, sqrt_information);
-    }
+  AddRelativePoseConstraintsToBundleAdjuster(
+      &bundle_adjuster, relative_pose_constraints, reconstruction);
+
+  return FinalizeBundleAdjustment(
+      options, track_ids, reconstruction, &bundle_adjuster);
+}
+
+BundleAdjustmentSummary BundleAdjustPartialViewsConstantWithRelativePoseEdges(
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& var_view_ids,
+    const std::vector<ViewId>& const_view_ids,
+    const std::vector<RelativePoseConstraint>& relative_pose_constraints,
+    Reconstruction* reconstruction) {
+  CHECK_NOTNULL(reconstruction);
+
+  const auto& track_ids = reconstruction->TrackIds();
+
+  BundleAdjustmentOptions ba_options = options;
+  if (!relative_pose_constraints.empty()) {
+    ba_options.use_inner_iterations = false;
   }
 
-  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  SetupPartialViewsConstantBundleAdjuster(
+      ba_options, var_view_ids, const_view_ids, reconstruction, &bundle_adjuster);
+  AddRelativePoseConstraintsToBundleAdjuster(
+      &bundle_adjuster, relative_pose_constraints, reconstruction);
 
-  if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint(track_ids, *reconstruction);
-  } else {
-    UpdateInverseDepth(track_ids, *reconstruction);
-  }
-
-  return summary;
+  return FinalizeBundleAdjustment(
+      options, track_ids, reconstruction, &bundle_adjuster);
 }
 
 // Bundle adjust the entire reconstruction.

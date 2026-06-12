@@ -102,6 +102,12 @@ class BundleAdjuster {
     
   void SetCameraExtrinsicsConstant(const ViewId view_id);
 
+  // Register camera extrinsics (and intrinsics for Schur ordering) in the Ceres
+  // problem when inverse-depth BA has not yet added residuals for this view.
+  void EnsureViewExtrinsicsInProblem(const ViewId view_id);
+
+  bool IsViewInProblem(const ViewId view_id) const;
+
   // Add an SE3 relative pose-to-pose constraint between two views. The measured
   // relative pose (cam_i -> cam_j) is snapshotted from the views' current poses,
   // so the constraint preserves the present relative geometry (odometry). The

@@ -1825,6 +1825,8 @@ void pytheia_sfm_classes(py::module& m) {
         theia::BundleAdjustReconstructionWithConstantTracksWrapper);
   m.def("BundleAdjustReconstructionWithRelativePoseEdges",
         theia::BundleAdjustReconstructionWithRelativePoseEdgesWrapper);
+  m.def("BundleAdjustPartialViewsConstantWithRelativePoseEdges",
+        theia::BundleAdjustPartialViewsConstantWithRelativePoseEdgesWrapper);
   m.def("BundleAdjustReconstruction", theia::BundleAdjustReconstructionWrapper);
   m.def("BundleAdjustView", theia::BundleAdjustViewWrapper);
   m.def("BundleAdjustViews", theia::BundleAdjustViewsWrapper);

@@ -250,6 +250,15 @@ BundleAdjustmentSummary BundleAdjustReconstructionWithRelativePoseEdges(
     const std::vector<RelativePoseConstraint>& relative_pose_constraints,
     Reconstruction* reconstruction);
 
+// Partial BA with fixed anchor views plus SE3 odometry / relative-pose edges on
+// the variable chain (e.g. run-to-segment alignment with pinned anchors).
+BundleAdjustmentSummary BundleAdjustPartialViewsConstantWithRelativePoseEdges(
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& var_view_ids,
+    const std::vector<ViewId>& const_view_ids,
+    const std::vector<RelativePoseConstraint>& relative_pose_constraints,
+    Reconstruction* reconstruction);
+
 // Bundle adjust a single view.
 BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
                                          const ViewId view_id,

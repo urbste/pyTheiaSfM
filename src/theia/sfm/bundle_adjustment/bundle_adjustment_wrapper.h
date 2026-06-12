@@ -83,6 +83,14 @@ BundleAdjustmentSummary BundleAdjustReconstructionWithRelativePoseEdgesWrapper(
     const std::vector<RelativePoseConstraint>& relative_pose_constraints,
     Reconstruction& reconstruction);
 
+BundleAdjustmentSummary
+BundleAdjustPartialViewsConstantWithRelativePoseEdgesWrapper(
+    const BundleAdjustmentOptions& options,
+    const std::vector<ViewId>& var_view_ids,
+    const std::vector<ViewId>& const_view_ids,
+    const std::vector<RelativePoseConstraint>& relative_pose_constraints,
+    Reconstruction& reconstruction);
+
 // std::tuple<BundleAdjustmentSummary, Camera, Camera,
 // std::vector<Eigen::Vector4d>> BundleAdjustTwoViewsWrapper(
 //     const TwoViewBundleAdjustmentOptions& options,

@@ -497,6 +497,39 @@ void BundleAdjuster::SetCameraExtrinsicsConstant(const ViewId view_id) {
   problem_->SetParameterBlockConstant(camera->mutable_extrinsics());
 }
 
+bool BundleAdjuster::IsViewInProblem(const ViewId view_id) const {
+  return ContainsKey(optimized_views_, view_id);
+}
+
+void BundleAdjuster::EnsureViewExtrinsicsInProblem(const ViewId view_id) {
+  View* view = reconstruction_->MutableView(view_id);
+  if (view == nullptr || !view->IsEstimated() ||
+      ContainsKey(optimized_views_, view_id)) {
+    return;
+  }
+
+  optimized_views_.emplace(view_id);
+
+  Camera* camera = view->MutableCamera();
+  double* extrinsics = camera->mutable_extrinsics();
+  if (!problem_->HasParameterBlock(extrinsics)) {
+    problem_->AddParameterBlock(extrinsics, Camera::kExtrinsicsSize);
+  }
+
+  double* intrinsics = camera->mutable_intrinsics();
+  const int num_intrinsics = camera->CameraIntrinsics()->NumParameters();
+  if (!problem_->HasParameterBlock(intrinsics)) {
+    problem_->AddParameterBlock(intrinsics, num_intrinsics);
+  }
+
+  SetCameraSchurGroups(view_id);
+
+  const CameraIntrinsicsGroupId intrinsics_group_id =
+      reconstruction_->CameraIntrinsicsGroupIdFromViewId(view_id);
+  potentially_constant_camera_intrinsics_groups_.emplace(intrinsics_group_id);
+  optimized_camera_intrinsics_groups_.emplace(intrinsics_group_id);
+}
+
 void BundleAdjuster::SetCameraPositionConstant(const ViewId view_id) {
   static const std::vector<int> position_parameters = {
       Camera::POSITION + 0, Camera::POSITION + 1, Camera::POSITION + 2};
