@@ -55,6 +55,13 @@ def configure_c_extension():
 	    '-DPYTHON_INCLUDE_DIR=' +  python_include_dir,
         '-DBUILD_WITH_MARCH_NATIVE={}'.format("ON" if build_march_native else "OFF"),
     ]
+
+    # Allow passing custom CMake arguments via CMAKE_ARGS environment variable
+    cmake_args_env = os.environ.get("CMAKE_ARGS", "")
+    if cmake_args_env:
+        import shlex
+        cmake_command.extend(shlex.split(cmake_args_env))
+
     subprocess.check_call(cmake_command, cwd='cmake_build')
 
 
