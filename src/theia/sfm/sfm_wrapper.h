@@ -68,6 +68,16 @@ void AddFullFeatureCorrespondencesToTrackBuilderWrapper(
     const std::vector<Feature>& features2,
     TrackBuilder& track_builder);
 
+// Batch view-graph edges + track-builder correspondences (single pybind call).
+void BulkAddViewGraphEdgesAndCorrespondencesWrapper(
+    ViewGraph& view_graph,
+    TrackBuilder& track_builder,
+    const std::vector<ViewId>& view_ids1,
+    const std::vector<ViewId>& view_ids2,
+    const std::vector<TwoViewInfo>& twoview_infos,
+    const std::vector<std::vector<Eigen::Vector2d>>& features1,
+    const std::vector<std::vector<Eigen::Vector2d>>& features2);
+
 
 void UpdateFeaturesInViewWrapper(
     const ViewId& view_id,

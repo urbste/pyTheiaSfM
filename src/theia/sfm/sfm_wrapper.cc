@@ -100,6 +100,26 @@ void AddFullFeatureCorrespondencesToTrackBuilderWrapper(
   }
 }
 
+void BulkAddViewGraphEdgesAndCorrespondencesWrapper(
+    ViewGraph& view_graph,
+    TrackBuilder& track_builder,
+    const std::vector<ViewId>& view_ids1,
+    const std::vector<ViewId>& view_ids2,
+    const std::vector<TwoViewInfo>& twoview_infos,
+    const std::vector<std::vector<Eigen::Vector2d>>& features1,
+    const std::vector<std::vector<Eigen::Vector2d>>& features2) {
+  const size_t num_edges = view_ids1.size();
+  CHECK_EQ(view_ids2.size(), num_edges);
+  CHECK_EQ(twoview_infos.size(), num_edges);
+  CHECK_EQ(features1.size(), num_edges);
+  CHECK_EQ(features2.size(), num_edges);
+  for (size_t i = 0; i < num_edges; ++i) {
+    view_graph.AddEdge(view_ids1[i], view_ids2[i], twoview_infos[i]);
+    AddFeatureCorrespondencesToTrackBuilderWrapper(
+        view_ids1[i], features1[i], view_ids2[i], features2[i], track_builder);
+  }
+}
+
 
 
 void UpdateFeaturesInViewWrapper(

@@ -1139,6 +1139,8 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("RemoveDisconnectedViewPairs", theia::RemoveDisconnectedViewPairs);
   m.def("AddFeatureCorrespondencesToTrackBuilder", theia::AddFeatureCorrespondencesToTrackBuilderWrapper);
   m.def("AddFullFeatureCorrespondencesToTrackBuilder", theia::AddFullFeatureCorrespondencesToTrackBuilderWrapper);
+  m.def("BulkAddViewGraphEdgesAndCorrespondences",
+        theia::BulkAddViewGraphEdgesAndCorrespondencesWrapper);
   m.def("UpdateFeaturesInView", theia::UpdateFeaturesInViewWrapper);
   m.def("FindCommonTracksByFeatureInReconstructions", 
         theia::FindCommonTracksByFeatureInReconstructionsWrapper);
