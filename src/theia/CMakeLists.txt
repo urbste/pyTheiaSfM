@@ -181,6 +181,7 @@ set(THEIA_SRC
   sfm/reconstruction.cc
   sfm/select_good_tracks_for_bundle_adjustment.cc
   sfm/set_camera_intrinsics_from_priors.cc
+  sfm/compute_mean_reprojection_error.cc
   sfm/set_outlier_tracks_to_unestimated.cc
   sfm/track_builder.cc
   sfm/track.cc

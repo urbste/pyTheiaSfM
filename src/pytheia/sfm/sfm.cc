@@ -1133,6 +1133,10 @@ void pytheia_sfm_classes(py::module& m) {
         theia::SelectGoodTracksForBundleAdjustmentWrapper);
   m.def("SetOutlierTracksToUnestimated",
         theia::SetOutlierTracksToUnestimatedWrapper);
+  m.def("ComputeMeanReprojectionError",
+        theia::ComputeMeanReprojectionErrorWrapper,
+        py::arg("reconstruction"),
+        "Mean L2 pixel reprojection error over estimated views and tracks.");
   m.def("SetCameraIntrinsicsFromPriors", theia::SetCameraIntrinsicsFromPriors);
   m.def("FindCommonViewsByName", theia::FindCommonViewsByName);
   m.def("FindCommonTracksInViews", theia::FindCommonTracksInViews);

@@ -83,6 +83,17 @@ struct RelativePoseError {
         return false;
       }
     }
+    // A per-element isfinite check is NOT sufficient: a huge-but-finite
+    // angle-axis (e.g. a diverging LM step of order 1e258) passes isfinite yet
+    // overflows squaredNorm() to +Inf inside Sophus::SO3::exp -> sqrt(Inf)=Inf
+    // -> sin/cos(Inf)=NaN -> NaN quaternion -> SOPHUS_ENSURE aborts the whole
+    // process. A sane rotation angle-axis has magnitude <= a few * pi, so bound
+    // the squared norm well below the overflow threshold and reject otherwise.
+    constexpr double kMaxAngleAxisSqNorm = 1e12;  // |omega| ~ 1e6 rad
+    if (aa_i.squaredNorm() > T(kMaxAngleAxisSqNorm) ||
+        aa_j.squaredNorm() > T(kMaxAngleAxisSqNorm)) {
+      return false;
+    }
 
     const Sophus::SO3<T> R_i = Sophus::SO3<T>::exp(aa_i);
     const Sophus::SO3<T> R_j = Sophus::SO3<T>::exp(aa_j);

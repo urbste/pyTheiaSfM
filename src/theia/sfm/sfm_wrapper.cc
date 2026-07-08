@@ -56,6 +56,11 @@ int SetOutlierTracksToUnestimatedWrapper(
   return num_features_rm;
 }
 
+double ComputeMeanReprojectionErrorWrapper(
+    const Reconstruction& reconstruction) {
+  return ComputeMeanReprojectionError(reconstruction);
+}
+
 // Outputs the ViewId of all estimated views in the reconstruction.
 std::unordered_set<ViewId> GetEstimatedViewsFromReconstructionWrapper(
     const Reconstruction& reconstruction) {

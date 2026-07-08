@@ -61,6 +61,16 @@ struct OrientationPriorError {
         return false;
       }
     }
+    // A per-element isfinite check is NOT sufficient: a huge-but-finite
+    // angle-axis (e.g. a diverging LM step of order 1e258) passes isfinite yet
+    // overflows squaredNorm() to +Inf inside Sophus::SO3::exp -> sqrt(Inf)=Inf
+    // -> sin/cos(Inf)=NaN -> NaN quaternion -> SOPHUS_ENSURE aborts the whole
+    // process. A sane rotation angle-axis has magnitude <= a few * pi, so bound
+    // the squared norm well below the overflow threshold and reject otherwise.
+    constexpr double kMaxAngleAxisSqNorm = 1e12;  // |omega| ~ 1e6 rad
+    if (current_orientation.squaredNorm() > T(kMaxAngleAxisSqNorm)) {
+      return false;
+    }
     Sophus::SO3<T> current_orientation_so3 = Sophus::SO3<T>::exp(current_orientation);
     Sophus::SO3<T> prior_orientation_so3 = Sophus::SO3<T>::exp(prior_orientation_.cast<T>());
     Sophus::SO3<T> error = current_orientation_so3 * prior_orientation_so3.inverse();
