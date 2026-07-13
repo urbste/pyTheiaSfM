@@ -1,6 +1,8 @@
 
 set(PACKAGE_NAME pytheia)
 
+option(PYTHEIA_USE_NANOBIND "Build pytheia extension with nanobind (default ON)" ON)
+
 set(PY_ALL_SOURCE_FILES
     pytheia_pybind.cc
     matching/matching.cc
@@ -11,7 +13,6 @@ set(PY_ALL_SOURCE_FILES
     io/io.cc)
 
 set(PY_ALL_HEADER_FILES
-    pytheia_pybind.h
     matching/matching.h
     math/math.h
     mvs/mvs.h
@@ -20,8 +21,18 @@ set(PY_ALL_HEADER_FILES
     io/io.h)
 
 
-pybind11_add_module(${PACKAGE_NAME}
-    ${PY_ALL_HEADER_FILES} ${PY_ALL_SOURCE_FILES})
+if (PYTHEIA_USE_NANOBIND)
+  list(APPEND PY_ALL_HEADER_FILES pytheia_nanobind.h)
+  nanobind_add_module(${PACKAGE_NAME}
+      ${PY_ALL_HEADER_FILES} ${PY_ALL_SOURCE_FILES})
+  if(TARGET nanobind-static AND Python_INCLUDE_DIR)
+    target_include_directories(nanobind-static PUBLIC "${Python_INCLUDE_DIR}")
+  endif()
+else()
+  list(APPEND PY_ALL_HEADER_FILES pytheia_pybind.h)
+  pybind11_add_module(${PACKAGE_NAME}
+      ${PY_ALL_HEADER_FILES} ${PY_ALL_SOURCE_FILES})
+endif()
 
 # Same build-tree paths as libTHEIA (PRIVATE there, so they do not propagate).
 target_include_directories(${PACKAGE_NAME} PRIVATE
@@ -41,6 +52,30 @@ target_compile_definitions(${PACKAGE_NAME} PRIVATE
   THEIA_CERES_HAS_CUDA_SPARSE=${THEIA_CERES_HAS_CUDA_SPARSE_VALUE})
 if (WIN32)
     target_link_options(${PACKAGE_NAME} PUBLIC "/force:multiple")
+endif()
+
+# Nanobind migration spike (sidecar module; main pytheia stays pybind11 until port completes).
+option(PYTHEIA_NANOBIND_SPIKE "Build nanobind spike module pytheia_spike" ON)
+if (PYTHEIA_NANOBIND_SPIKE)
+  nanobind_add_module(pytheia_spike spike/pytheia_spike.cc)
+  # FindPython may leave Python_INCLUDE_DIRS empty when only PYTHON_INCLUDE_DIR is set.
+  if(TARGET nanobind-static AND Python_INCLUDE_DIR)
+    target_include_directories(nanobind-static PUBLIC "${Python_INCLUDE_DIR}")
+  endif()
+  target_include_directories(pytheia_spike PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/spectra>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/Sophus>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/cereal/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libraries/stlplus3>
+  )
+  target_link_libraries(pytheia_spike PRIVATE ${CMAKE_PROJECT_NAME})
+  target_compile_definitions(pytheia_spike PRIVATE
+    THEIA_CERES_HAS_CUDA_DENSE=${THEIA_CERES_HAS_CUDA_DENSE_VALUE}
+    THEIA_CERES_HAS_CUDA_SPARSE=${THEIA_CERES_HAS_CUDA_SPARSE_VALUE})
 endif()
 
 # Use `make pip-package` to create the pip package in the build directory

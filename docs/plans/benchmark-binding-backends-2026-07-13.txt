@@ -1,0 +1,45 @@
+pyTheia binding runtime benchmark
+Date: 2026-07-13T18:14:12+02:00
+Host: Linux steffen-Z790-GAMING-X-AX 6.8.0-94-generic #96-Ubuntu SMP PREEMPT_DYNAMIC Fri Jan  9 20:36:55 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+Python: Python 3.12.13
+Iterations (default workload): 20000
+
+=== Building nanobind extension ===
+nanobind .so bytes: 15163056
+
+========== nanobind ==========
+backend: nanobind
+iterations (default): 20000
+python: 3.12.13
+
+benchmark                                iter   total_ms    ns/call      calls/s
+--------------------------------------------------------------------------------
+Camera.ProjectPoint                     20000      33.40     1669.8       598876
+Camera.GetPosition                      20000      24.72     1235.8       809163
+Reconstruction.View                     20000       1.53       76.4     13094301
+View.MutableCamera + SetPosition         5000       2.92      583.1      1715018
+math.SE3d construct                     20000      29.05     1452.5       688473
+math.SE3d * point                       20000      46.60     2330.0       429180
+mvs.ViewSelectionMVSNet                   100       2.52    25248.1        39607
+
+=== Building pybind11 extension (git HEAD sources) ===
+pybind11 .so bytes: 17297520
+
+========== pybind11 ==========
+backend: pybind11
+iterations (default): 20000
+python: 3.12.13
+
+benchmark                                iter   total_ms    ns/call      calls/s
+--------------------------------------------------------------------------------
+Camera.ProjectPoint                     20000      24.05     1202.3       831744
+Camera.GetPosition                      20000      11.43      571.5      1749672
+Reconstruction.View                     20000       4.45      222.5      4494158
+View.MutableCamera + SetPosition         5000       6.55     1309.2       763842
+math.SE3d construct                     20000      21.90     1095.0       913229
+math.SE3d * point                       20000      35.02     1750.8       571162
+
+=== Summary ===
+pybind11 .so: 17297520 bytes
+nanobind .so: 15163056 bytes
+size ratio nanobind/pybind11: 0.877 (12.3% smaller)

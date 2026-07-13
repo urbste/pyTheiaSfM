@@ -5,9 +5,9 @@ import pytheia as pt
 def _build_collinear_reconstruction(positions):
     recon = pt.sfm.Reconstruction()
     cam_prior = pt.sfm.CameraIntrinsicsPrior()
-    cam_prior.focal_length.value = [900.0]
-    cam_prior.principal_point.value = [720.0, 540.0]
-    cam_prior.aspect_ratio.value = [1.0]
+    cam_prior.focal_length.value = np.array([900.0], dtype=np.float64)
+    cam_prior.principal_point.value = np.array([720.0, 540.0], dtype=np.float64)
+    cam_prior.aspect_ratio.value = np.array([1.0], dtype=np.float64)
     cam_prior.camera_intrinsics_model_type = "PINHOLE"
     cam_prior.image_width = 1440
     cam_prior.image_height = 1080
@@ -34,7 +34,7 @@ def _build_collinear_reconstruction(positions):
     for p in points:
         tid = recon.AddTrack()
         track = recon.MutableTrack(tid)
-        track.SetPoint(p.tolist())
+        track.SetPoint(np.asarray(p, dtype=np.float64))
         track.SetIsEstimated(True)
         for vid in view_ids:
             cam = recon.View(vid).Camera()

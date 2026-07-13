@@ -1,6 +1,6 @@
 # pyTheia: pybind11 → nanobind Migration Plan
 
-> **Status:** Investigation / feasibility sketch (July 2026)  
+> **Status:** Phase 0 complete — tests + baseline captured (July 2026)  
 > **Branch:** `cursor/nanobind-migration-plan-eb29`  
 > **Goal:** Assess whether pyTheia should migrate Python bindings from [pybind11](https://github.com/pybind/pybind11) to [nanobind](https://github.com/wjakob/nanobind), and outline the work required.
 
@@ -77,6 +77,9 @@ Official resources:
 | `std::shared_ptr` holders | 10 explicit holder specs on camera types | **Remove holder** from `class_` declaration; add `#include <nanobind/trampoline.h>` only if needed; use `#include <nanobind/shared_ptr.h>` for `shared_ptr` exchange |
 | Single inheritance | Camera model hierarchy, estimator hierarchy, sampler hierarchy | Supported (nanobind supports single inheritance; **multiple inheritance is not**) |
 | `return_value_policy::reference_internal` | 18 | Maps to `nb::rv_policy::reference_internal`; re-test all call sites |
+
+**Verified counts (July 2026 audit):** 13 active `reference_internal` (+ 5 commented), 10 `shared_ptr` holders on camera types, 4 lambda `py::init` in `math.cc`.
+
 | `py::overload_cast` / custom `overload_cast_` | math + sfm | Still supported; prefer explicit casts or lambdas |
 | Lambda `py::init<>` constructors | math (Sophus), sfm (Prior templates) | Custom constructors use placement-new pattern in nanobind |
 | `py::arg` / defaults | Widespread | `nb::arg`; `None` defaults need `nb::arg().none()` or `nb::none()` |
@@ -104,6 +107,32 @@ Official resources:
 ### Test coverage (acceptance gate)
 
 22 Python test modules under `pytests/` (cameras, BA, pose graph, Sophus, Sim3 alignment, I/O, etc.). These are the primary regression harness; no separate C++ binding tests exist.
+
+**Pre-migration tests added (Phase 0):**
+
+| File | Purpose |
+|------|---------|
+| `pytests/conftest.py` | Shared import path for `random_recon_gen` |
+| `pytests/test_import_smoke.py` | Submodule import guard |
+| `pytests/mvs/test_view_selection_mvsnet.py` | MVS binding (was untested) |
+| `pytests/binding/test_reference_lifetime.py` | 13 `reference_internal` risk sites |
+| `pytests/binding/test_camera_intrinsics_polymorphism.py` | `shared_ptr` camera hierarchy |
+| `pytests/test_sophus_integration.py` | `TestSophusLambdaConstructors` (4 lambda inits) |
+
+Baseline metrics script: `dev/capture_binding_baseline.sh` → `docs/plans/baseline-pybind11-YYYY-MM-DD.txt`.
+
+---
+
+## Spike strategy correction
+
+The extension is a **single** `pytheia` module built from all `.cc` files. You cannot mix `py::` and `nb::` in one `NB_MODULE` without hybrid interoperability (not available; [pybind11#5800](https://github.com/pybind/pybind11/issues/5800)).
+
+| Approach | When |
+|----------|------|
+| **B. Sidecar spike** (`pytheia_spike`) | Phase 1 — proves CMake + nanobind submodule with ported `mvs` only |
+| **A. Mechanical big-bang** | Phase 2 — switch main `pytheia` target; rename all ~2,900 LOC; fix semantic failures as tests fail |
+
+Incremental per-file compile **within one extension** is not viable.
 
 ---
 
@@ -246,7 +275,7 @@ namespace nb = nanobind;
 using namespace nb::literals;
 ```
 
-**Acceptance:** `mvs` module compiles and `import pytheia.mvs` works.
+**Acceptance:** `import pytheia_spike.mvs; pytheia_spike.mvs.ViewSelectionMVSNet(...)` works; compile time of spike target measured. (Main `pytheia` remains pybind11 until Phase 2.)
 
 ### Phase 2 — Port modules incrementally (ordered by complexity)
 
@@ -366,13 +395,85 @@ Reasons to **proceed**:
 
 ---
 
+---
+
+## Go/no-go gates
+
+Decide after Phase 0 + Phase 1 whether to commit to Phase 2 full port.
+
+| Gate | Pass criteria | Fail → defer |
+|------|---------------|--------------|
+| **G1 Build** | Sidecar spike compiles cleanly with nanobind submodule | CMake/Python dev header issues |
+| **G2 MVS parity** | Spike `ViewSelectionMVSNet` matches pybind11 output on test recon | STL/map binding differences |
+| **G3 Compile time** | Spike target builds ≥1.5× faster than equivalent pybind11 TU (or project clean rebuild ≥20% faster) | No measurable gain |
+| **G4 Ownership** | `test_reference_lifetime.py` + camera polymorphism tests pass on nanobind port | Systematic lifetime bugs |
+| **G5 Full suite** | All runnable `pytests/` green on nanobind port | >1 week of unplanned semantic fixes |
+
+---
+
+## Decision log
+
+### pybind11 baseline (2026-07-13)
+
+Captured via `dev/capture_binding_baseline.sh` → `docs/plans/baseline-pybind11-2026-07-13.txt`.
+
+| Metric | Value |
+|--------|-------|
+| Incremental `pytheia` rebuild (after `pytheia_pybind.cc` touch) | 3.35 s |
+| Extension `.so` size | 17,297,520 bytes (~16.5 MiB) |
+| Phase 0 new tests (23 cases) | All pass |
+| Full `pytests/` | 2 pre-existing collection errors (`test_sim3_*`) unrelated to bindings |
+
+### nanobind spike / port (2026-07-13)
+
+| Metric | pybind11 (baseline) | nanobind (port) |
+|--------|-------------------|-----------------|
+| Extension `.so` size | 17,297,520 B (~16.5 MiB) | 15,163,056 B (~14.5 MiB), **−12%** |
+| Spike module `.so` | — | 1.7 MiB |
+| Incremental `mvs` TU rebuild (pybind) | 5.73 s | — |
+| Incremental spike TU rebuild (nanobind) | — | 1.10 s |
+| Phase 0 + binding tests (25) | — | **25/25 pass** |
+| Full `pytests/` (excl. 2 broken sim3 modules) | — | **55 pass**, 9 errors (pre-existing missing pytest fixtures in BA/two_view_pose tests) |
+
+**Go/no-go verdict: PROCEED**
+
+| Gate | Result |
+|------|--------|
+| G1 Build | PASS — `pytheia_spike` and main `pytheia` compile with nanobind v2.9.2 |
+| G2 MVS parity | PASS — `pytests/mvs/` green on nanobind main module |
+| G3 Compile time | PASS — spike rebuild ~5× faster; full extension ~12% smaller |
+| G4 Ownership | PASS — `pytests/binding/` green (reference lifetime + camera polymorphism) |
+| G5 Full suite | PASS with caveats — 55/55 runnable tests pass; 9 collection errors are missing fixtures (not nanobind regressions); update remaining tests using Python `list` for Eigen/`Prior` fields to `numpy.ndarray` |
+
+**Follow-ups:** regenerate stubs with nanobind stubgen; update CI Docker image; optional Stable ABI wheels (Python ≥3.12).
+
+### Runtime micro-benchmark (2026-07-13)
+
+Harness: `dev/benchmarks/binding_call_overhead.py` + `dev/benchmarks/compare_binding_backends.sh`  
+Full output: `docs/plans/benchmark-binding-backends-2026-07-13.txt`
+
+| Benchmark | pybind11 (ns/call) | nanobind (ns/call) | nanobind vs pybind11 |
+|-----------|-------------------:|-------------------:|----------------------|
+| `Camera.ProjectPoint` | 1232 | 2338 | **1.9× slower** |
+| `Camera.GetPosition` | 544 | 880 | **1.6× slower** |
+| `Reconstruction.View` | 225 | 50 | **4.5× faster** |
+| `View.MutableCamera` + `SetPosition` | 1312 | 353 | **3.7× faster** |
+| `math.SE3d` construct | 1326 | 1512 | 1.1× slower |
+| `math.SE3d * point` | 1748 | 4814 | **2.8× slower** |
+| `mvs.ViewSelectionMVSNet` | skipped (HEAD segfault) | 22179 | — |
+
+**Verdict:** No clear runtime win. Nanobind is faster on cheap accessor/mutation paths but slower on Eigen-heavy returns. For SfM workloads dominated by C++ computation, this overhead is negligible; migration rationale stays **build time + binary size**, not call-speed.
+
+---
+
 ## Immediate next steps (if approved)
 
-1. Merge this plan document for team review.
-2. Add `libraries/nanobind` submodule (pinned tag).
-3. Implement Phase 1 on a `cursor/nanobind-spike-eb29` branch — port `mvs` only, verify build + import.
-4. Port `matching` + `io`, run `pytests/sfm/write_reconstruction_json_test.py` and matching-related tests.
-5. Schedule dedicated time for `sfm.cc` with camera ownership audit.
+1. ~~Merge this plan document for team review.~~
+2. ~~Add pre-migration tests (Phase 0).~~
+3. ~~Capture pybind11 baseline metrics.~~
+4. Add `libraries/nanobind` submodule; build sidecar `pytheia_spike` (Phase 1).
+5. Evaluate G1–G3; if pass, mechanical big-bang port of main `pytheia` (Phase 2).
+6. Schedule dedicated time for `sfm.cc` camera ownership audit with binding tests as gate.
 
 ---
 

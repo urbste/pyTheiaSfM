@@ -18,7 +18,7 @@ def test_robust_rotation_estimator():
     gt_rotations = {}
     for i in range(0, len(vids)):
         id1 = vids[i]
-        init_rotations[id1] = np.zeros((3,1)) # just initialize with zeros here
+        init_rotations[id1] = np.zeros(3, dtype=np.float64)
         ri = gen.recon.View(id1).Camera().GetOrientationAsAngleAxis()
         gt_rotations[id1] = ri
         for j in range(i, len(vids)):
@@ -29,7 +29,7 @@ def test_robust_rotation_estimator():
             two_view_info = pt.sfm.TwoViewInfo()
             two_view_info.focal_length_1 = 1.0
             two_view_info.focal_length_2 = 1.0
-            two_view_info.position_2 = np.zeros((3,1), dtype=np.float32)
+            two_view_info.position_2 = np.zeros(3, dtype=np.float64)
             two_view_info.rotation_2 = pt.math.RelativeRotationFromTwoRotations(ri, rj)
 
             view_pairs[(id1, id2)] = two_view_info

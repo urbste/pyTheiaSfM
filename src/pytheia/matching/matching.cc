@@ -34,13 +34,10 @@
 
 #include "pytheia/matching/matching.h"
 
-#include <pybind11/eigen.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/eigen/dense.h>
 
 #include <Eigen/Core>
 #include <iostream>
-#include <pybind11/numpy.h>
 #include <vector>
 
 #include "theia/matching/create_feature_matcher.h"
@@ -51,59 +48,59 @@
 #include "theia/matching/indexed_feature_match.h"
 #include "theia/sfm/feature.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace pytheia {
 namespace matching {
 
-void pytheia_matching_classes(py::module& m) {
+void pytheia_matching_classes(nb::module_& m) {
   m.def("GraphMatch", &theia::GraphMatch);
 
-  py::class_<theia::ImagePairMatch>(m, "ImagePairMatch")
-      .def(py::init<>())
-      .def_readwrite("image1", &theia::ImagePairMatch::image1)
-      .def_readwrite("image2", &theia::ImagePairMatch::image2)
-      .def_readwrite("twoview_info", &theia::ImagePairMatch::twoview_info)
-      .def_readwrite("correspondences", &theia::ImagePairMatch::correspondences);
+  nb::class_<theia::ImagePairMatch>(m, "ImagePairMatch")
+      .def(nb::init<>())
+      .def_rw("image1", &theia::ImagePairMatch::image1)
+      .def_rw("image2", &theia::ImagePairMatch::image2)
+      .def_rw("twoview_info", &theia::ImagePairMatch::twoview_info)
+      .def_rw("correspondences", &theia::ImagePairMatch::correspondences);
 
-  py::class_<theia::FeatureMatcherOptions>(m, "FeatureMatcherOptions")
-      .def(py::init<>())
-      .def_readwrite("num_threads", &theia::FeatureMatcherOptions::num_threads)
-      .def_readwrite("keep_only_symmetric_matches",
+  nb::class_<theia::FeatureMatcherOptions>(m, "FeatureMatcherOptions")
+      .def(nb::init<>())
+      .def_rw("num_threads", &theia::FeatureMatcherOptions::num_threads)
+      .def_rw("keep_only_symmetric_matches",
                      &theia::FeatureMatcherOptions::keep_only_symmetric_matches)
-      .def_readwrite("use_lowes_ratio",
+      .def_rw("use_lowes_ratio",
                      &theia::FeatureMatcherOptions::use_lowes_ratio)
-      .def_readwrite("lowes_ratio", &theia::FeatureMatcherOptions::lowes_ratio)
-      .def_readwrite(
+      .def_rw("lowes_ratio", &theia::FeatureMatcherOptions::lowes_ratio)
+      .def_rw(
           "perform_geometric_verification",
           &theia::FeatureMatcherOptions::perform_geometric_verification)
-      .def_readwrite("min_num_feature_matches",
+      .def_rw("min_num_feature_matches",
                      &theia::FeatureMatcherOptions::min_num_feature_matches)
-      .def_readwrite(
+      .def_rw(
           "geometric_verification_options",
           &theia::FeatureMatcherOptions::geometric_verification_options);
 
-  py::class_<theia::IndexedFeatureMatch>(m, "IndexedFeatureMatch")
-      .def(py::init<>())
-      .def(py::init<int, int, float>())
-      .def_readwrite("feature1_ind", &theia::IndexedFeatureMatch::feature1_ind)
-      .def_readwrite("feature2_ind", &theia::IndexedFeatureMatch::feature2_ind)
-      .def_readwrite("distance", &theia::IndexedFeatureMatch::distance);
+  nb::class_<theia::IndexedFeatureMatch>(m, "IndexedFeatureMatch")
+      .def(nb::init<>())
+      .def(nb::init<int, int, float>())
+      .def_rw("feature1_ind", &theia::IndexedFeatureMatch::feature1_ind)
+      .def_rw("feature2_ind", &theia::IndexedFeatureMatch::feature2_ind)
+      .def_rw("distance", &theia::IndexedFeatureMatch::distance);
 
-  py::class_<theia::FeatureCorrespondence>(m, "FeatureCorrespondence")
-      .def(py::init<>())
-      .def(py::init<theia::Feature, theia::Feature>())
-      .def_readwrite("feature1", &theia::FeatureCorrespondence::feature1)
-      .def_readwrite("feature2", &theia::FeatureCorrespondence::feature2);
+  nb::class_<theia::FeatureCorrespondence>(m, "FeatureCorrespondence")
+      .def(nb::init<>())
+      .def(nb::init<theia::Feature, theia::Feature>())
+      .def_rw("feature1", &theia::FeatureCorrespondence::feature1)
+      .def_rw("feature2", &theia::FeatureCorrespondence::feature2);
 
-  py::enum_<theia::MatchingStrategy>(m, "MatchingStrategy")
+  nb::enum_<theia::MatchingStrategy>(m, "MatchingStrategy")
       .value("GLOBAL", theia::MatchingStrategy::BRUTE_FORCE)
       .value("INCREMENTAL", theia::MatchingStrategy::BRUTE_FORCE)
       .export_values();
 }
 
-void pytheia_matching(py::module& m) {
-  py::module m_submodule = m.def_submodule("matching");
+void pytheia_matching(nb::module_& m) {
+  nb::module_ m_submodule = m.def_submodule("matching");
   pytheia_matching_classes(m_submodule);
 }
 
