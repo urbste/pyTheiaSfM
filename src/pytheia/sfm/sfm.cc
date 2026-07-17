@@ -1119,6 +1119,108 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::LocalizeViewToReconstructionOptions::pnp_type);
 
   m.def("EstimateTwoViewInfo", theia::EstimateTwoViewInfoWrapper);
+  m.def(
+      "BulkEstimateTwoViewInfo",
+      [](py::array_t<uint64_t, py::array::c_style | py::array::forcecast>
+             pair_offsets,
+         py::array_t<float, py::array::c_style | py::array::forcecast>
+             points_i,
+         py::array_t<float, py::array::c_style | py::array::forcecast>
+             points_j,
+         const theia::CameraIntrinsicsPrior& camera_prior_i,
+         const theia::CameraIntrinsicsPrior& camera_prior_j,
+         const theia::EstimateTwoViewInfoOptions& options,
+         int num_threads) {
+        const auto offsets_buf = pair_offsets.unchecked<1>();
+        const auto pi = points_i.unchecked<2>();
+        const auto pj = points_j.unchecked<2>();
+        if (pi.shape(1) != 2 || pj.shape(1) != 2) {
+          throw py::value_error("points_i/points_j must have shape [N, 2]");
+        }
+        if (pi.shape(0) != pj.shape(0)) {
+          throw py::value_error("points_i and points_j must have equal length");
+        }
+        if (offsets_buf.shape(0) < 1) {
+          throw py::value_error("pair_offsets must not be empty");
+        }
+        const size_t num_corrs = static_cast<size_t>(pi.shape(0));
+        if (static_cast<size_t>(offsets_buf(offsets_buf.shape(0) - 1)) !=
+            num_corrs) {
+          throw py::value_error(
+              "pair_offsets final entry must equal correspondence count");
+        }
+
+        std::vector<uint64_t> offsets(offsets_buf.shape(0));
+        for (py::ssize_t i = 0; i < offsets_buf.shape(0); ++i) {
+          offsets[i] = offsets_buf(i);
+        }
+        std::vector<theia::FeatureCorrespondence> correspondences;
+        correspondences.reserve(num_corrs);
+        for (size_t i = 0; i < num_corrs; ++i) {
+          correspondences.emplace_back(
+              theia::Feature(static_cast<double>(pi(i, 0)),
+                             static_cast<double>(pi(i, 1))),
+              theia::Feature(static_cast<double>(pj(i, 0)),
+                             static_cast<double>(pj(i, 1))));
+        }
+
+        std::vector<uint8_t> success;
+        std::vector<Eigen::Vector3d> rotations;
+        std::vector<Eigen::Vector3d> positions;
+        std::vector<uint64_t> inlier_offsets;
+        std::vector<int> inlier_indices;
+        {
+          py::gil_scoped_release release;
+          std::tie(success, rotations, positions, inlier_offsets,
+                   inlier_indices) =
+              theia::BulkEstimateTwoViewInfoWrapper(options,
+                                                    camera_prior_i,
+                                                    camera_prior_j,
+                                                    offsets,
+                                                    correspondences,
+                                                    num_threads);
+        }
+
+        const py::ssize_t num_pairs = static_cast<py::ssize_t>(success.size());
+        py::array_t<bool> success_arr(num_pairs);
+        py::array_t<double> orientations_arr({num_pairs, py::ssize_t(3)});
+        py::array_t<double> positions_arr({num_pairs, py::ssize_t(3)});
+        auto success_mut = success_arr.mutable_unchecked<1>();
+        auto orient_mut = orientations_arr.mutable_unchecked<2>();
+        auto pos_mut = positions_arr.mutable_unchecked<2>();
+        for (py::ssize_t p = 0; p < num_pairs; ++p) {
+          success_mut(p) = success[p] != 0;
+          for (py::ssize_t k = 0; k < 3; ++k) {
+            orient_mut(p, k) = rotations[p][k];
+            pos_mut(p, k) = positions[p][k];
+          }
+        }
+        py::array_t<uint64_t> inlier_offsets_arr(
+            static_cast<py::ssize_t>(inlier_offsets.size()));
+        std::copy(inlier_offsets.begin(),
+                  inlier_offsets.end(),
+                  inlier_offsets_arr.mutable_data());
+        py::array_t<int64_t> inlier_indices_arr(
+            static_cast<py::ssize_t>(inlier_indices.size()));
+        std::copy(inlier_indices.begin(),
+                  inlier_indices.end(),
+                  inlier_indices_arr.mutable_data());
+
+        py::dict out;
+        out["success"] = std::move(success_arr);
+        out["orientations"] = std::move(orientations_arr);
+        out["positions"] = std::move(positions_arr);
+        out["inlier_offsets"] = std::move(inlier_offsets_arr);
+        out["inlier_indices"] = std::move(inlier_indices_arr);
+        return out;
+      },
+      py::arg("pair_offsets"),
+      py::arg("points_i"),
+      py::arg("points_j"),
+      py::arg("camera_prior_i"),
+      py::arg("camera_prior_j"),
+      py::arg("options"),
+      py::arg("num_threads") = 0);
   m.def("ColorizeReconstruction", theia::ColorizeReconstruction);
   m.def("ExtractMaximallyParallelRigidSubgraph",
         theia::ExtractMaximallyParallelRigidSubgraph);

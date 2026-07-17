@@ -1,11 +1,15 @@
 
 #include "theia/sfm/sfm_wrapper.h"
+#include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/view_graph/view_graph.h"
 #include "theia/sfm/camera/camera.h"
 #include "glog/logging.h"
+#include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <thread>
 
 namespace theia {
 
@@ -23,6 +27,87 @@ std::tuple<bool, TwoViewInfo, std::vector<int>> EstimateTwoViewInfoWrapper(
                                            &twoview_info,
                                            &inlier_indices);
   return std::make_tuple(success, twoview_info, inlier_indices);
+}
+
+std::tuple<std::vector<uint8_t>,
+           std::vector<Eigen::Vector3d>,
+           std::vector<Eigen::Vector3d>,
+           std::vector<uint64_t>,
+           std::vector<int>>
+BulkEstimateTwoViewInfoWrapper(
+    const EstimateTwoViewInfoOptions& options,
+    const CameraIntrinsicsPrior& intrinsics1,
+    const CameraIntrinsicsPrior& intrinsics2,
+    const std::vector<uint64_t>& pair_offsets,
+    const std::vector<FeatureCorrespondence>& correspondences,
+    int num_threads) {
+  const size_t num_pairs =
+      pair_offsets.empty() ? 0 : pair_offsets.size() - 1;
+  std::vector<uint8_t> success(num_pairs, 0);
+  std::vector<Eigen::Vector3d> rotations(num_pairs, Eigen::Vector3d::Zero());
+  std::vector<Eigen::Vector3d> positions(num_pairs, Eigen::Vector3d::Zero());
+  std::vector<std::vector<int>> pair_inliers(num_pairs);
+
+  if (num_threads <= 0) {
+    num_threads = static_cast<int>(std::thread::hardware_concurrency());
+  }
+  num_threads = std::max<int>(
+      1, std::min<int>(num_threads, static_cast<int>(std::max<size_t>(num_pairs, 1))));
+
+  std::atomic<size_t> next_pair{0};
+  const auto process_pairs = [&]() {
+    for (size_t p = next_pair.fetch_add(1); p < num_pairs;
+         p = next_pair.fetch_add(1)) {
+      const size_t begin = static_cast<size_t>(pair_offsets[p]);
+      const size_t end = static_cast<size_t>(pair_offsets[p + 1]);
+      if (end <= begin || end > correspondences.size()) {
+        continue;
+      }
+      const std::vector<FeatureCorrespondence> corrs(
+          correspondences.begin() + begin, correspondences.begin() + end);
+      TwoViewInfo info;
+      std::vector<int> inliers;
+      if (EstimateTwoViewInfo(
+              options, intrinsics1, intrinsics2, corrs, &info, &inliers)) {
+        success[p] = 1;
+        rotations[p] = info.rotation_2;
+        positions[p] = info.position_2;
+        pair_inliers[p] = std::move(inliers);
+      }
+    }
+  };
+
+  if (num_threads == 1) {
+    process_pairs();
+  } else {
+    std::vector<std::thread> workers;
+    workers.reserve(num_threads);
+    for (int t = 0; t < num_threads; ++t) {
+      workers.emplace_back(process_pairs);
+    }
+    for (std::thread& worker : workers) {
+      worker.join();
+    }
+  }
+
+  std::vector<uint64_t> inlier_offsets(num_pairs + 1, 0);
+  size_t total_inliers = 0;
+  for (size_t p = 0; p < num_pairs; ++p) {
+    total_inliers += pair_inliers[p].size();
+    inlier_offsets[p + 1] = total_inliers;
+  }
+  std::vector<int> inlier_indices;
+  inlier_indices.reserve(total_inliers);
+  for (size_t p = 0; p < num_pairs; ++p) {
+    inlier_indices.insert(
+        inlier_indices.end(), pair_inliers[p].begin(), pair_inliers[p].end());
+  }
+
+  return std::make_tuple(std::move(success),
+                         std::move(rotations),
+                         std::move(positions),
+                         std::move(inlier_offsets),
+                         std::move(inlier_indices));
 }
 
 std::tuple<bool, std::unordered_set<TrackId>>

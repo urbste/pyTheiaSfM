@@ -31,6 +31,25 @@ std::tuple<bool, TwoViewInfo, std::vector<int>> EstimateTwoViewInfoWrapper(
     const CameraIntrinsicsPrior& intrinsics2,
     const std::vector<FeatureCorrespondence>& correspondences);
 
+// Estimates two-view geometry for many pairs in one call, parallelized over
+// pairs with std::thread. Correspondences are flat; pair p owns the range
+// [pair_offsets[p], pair_offsets[p+1]). Returns per-pair success flags,
+// angle-axis rotations, positions, and CSR-style inlier offsets/indices
+// (inlier indices are local to each pair's correspondence range).
+// num_threads <= 0 uses hardware concurrency.
+std::tuple<std::vector<uint8_t>,
+           std::vector<Eigen::Vector3d>,
+           std::vector<Eigen::Vector3d>,
+           std::vector<uint64_t>,
+           std::vector<int>>
+BulkEstimateTwoViewInfoWrapper(
+    const EstimateTwoViewInfoOptions& options,
+    const CameraIntrinsicsPrior& intrinsics1,
+    const CameraIntrinsicsPrior& intrinsics2,
+    const std::vector<uint64_t>& pair_offsets,
+    const std::vector<FeatureCorrespondence>& correspondences,
+    int num_threads);
+
 std::tuple<bool, std::unordered_set<TrackId>>
 SelectGoodTracksForBundleAdjustmentWrapper(
     const Reconstruction& reconstruction,
