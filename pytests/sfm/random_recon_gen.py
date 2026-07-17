@@ -8,17 +8,18 @@ class CameraPrior:
                  aspect_ratio=1.0,
                  img_size=(1440, 1080)):
         self.cam_prior = pt.sfm.CameraIntrinsicsPrior()
-        self.cam_prior.focal_length.value = [focal_length]
-        self.cam_prior.principal_point.value = [
-            int(img_size[0] / 2.0), int(img_size[1] / 2.0)]
-        self.cam_prior.aspect_ratio.value = [aspect_ratio]
+        self.cam_prior.focal_length.value = np.array([focal_length], dtype=np.float64)
+        self.cam_prior.principal_point.value = np.array(
+            [int(img_size[0] / 2.0), int(img_size[1] / 2.0)], dtype=np.float64)
+        self.cam_prior.aspect_ratio.value = np.array([aspect_ratio], dtype=np.float64)
         self.cam_prior.camera_intrinsics_model_type = "PINHOLE"
         self.cam_prior.image_width = img_size[0]
         self.cam_prior.image_height = img_size[1]
 
     def set_to_division_undistortion(self, distortion=1e-6):
         self.cam_prior.camera_intrinsics_model_type = "DIVISION_UNDISTORTION"
-        self.cam_prior.radial_distortion.value = [distortion, 0.0, 0.0, 0.0]
+        self.cam_prior.radial_distortion.value = np.array(
+            [distortion, 0.0, 0.0, 0.0], dtype=np.float64)
 
     def set_to_orthographic(self):
         self.cam_prior.camera_intrinsics_model_type = "ORTHOGRAPHIC"
@@ -86,9 +87,9 @@ class RandomReconGenerator:
             low=xyz_min[2], high=xyz_max[2], size=(nr_tracks,))
         for i in range(self.nr_tracks):
             track_id = self.recon.AddTrack()
-            point = np.array([X[i], Y[i], Z[i], 1], dtype=np.float32)
+            point = np.array([X[i], Y[i], Z[i], 1], dtype=np.float64)
             track = self.recon.MutableTrack(track_id)
-            track.SetPoint(point.tolist())
+            track.SetPoint(point)
             track.SetIsEstimated(True)
 
     def generate_random_recon(self,
@@ -146,7 +147,7 @@ class RandomReconGenerator:
             print("Adding track {}".format(track_id))
         track = self.recon.MutableTrack(track_id)
         track.SetPoint(np.array(
-            [track_xyz[0], track_xyz[1], track_xyz[2], 1], dtype=np.float32))
+            [track_xyz[0], track_xyz[1], track_xyz[2], 1], dtype=np.float64))
         track.SetIsEstimated(True)
 
     def add_noise_to_view(self, view_id, noise_pos, noise_angle):
@@ -165,7 +166,8 @@ class RandomReconGenerator:
     def add_noise_to_track(self, track_id, noise_track):
         noisy_track = self.recon.Track(track_id).Point()[:3] / self.recon.Track(track_id).Point()[3]
         noisy_track += noise_track * np.random.randn(3)
-        self.recon.MutableTrack(track_id).SetPoint(np.append(noisy_track,1))
+        self.recon.MutableTrack(track_id).SetPoint(
+            np.append(noisy_track, 1.0).astype(np.float64))
 
     def add_noise_to_tracks(self, noise_track=1e-5):
         for track_id in self.recon.TrackIds():

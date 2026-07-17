@@ -34,14 +34,14 @@
 
 #pragma once
 
-#include "../pytheia_pybind.h"
+#include "../pytheia_nanobind.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace pytheia {
 namespace util {
 
-void pytheia_util(py::module& m);
+void pytheia_util(nb::module_& m);
 
 }
 }  // namespace pytheia

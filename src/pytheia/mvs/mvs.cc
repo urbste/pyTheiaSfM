@@ -31,21 +31,19 @@
 
 #include "pytheia/mvs/mvs.h"
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 
 #include "theia/mvs/view_selection_mvsnet.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace pytheia {
 namespace mvs {
-void pytheia_mvs_classes(py::module& m) {
+void pytheia_mvs_classes(nb::module_& m) {
   m.def("ViewSelectionMVSNet", &theia::ViewSelectionMVSNet);
 }
 
-void pytheia_mvs(py::module& m) {
-  py::module m_submodule = m.def_submodule("mvs");
+void pytheia_mvs(nb::module_& m) {
+  nb::module_ m_submodule = m.def_submodule("mvs");
   pytheia_mvs_classes(m_submodule);
 }
 

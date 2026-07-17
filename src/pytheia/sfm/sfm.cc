@@ -34,9 +34,7 @@
 
 #include "pytheia/sfm/sfm.h"
 
-#include <pybind11/eigen.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/eigen/dense.h>
 
 #include <Eigen/Dense>
 #include <algorithm>
@@ -145,24 +143,21 @@
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
 #include "theia/sfm/sfm_wrapper.h"
 
-// for overloaded function in CameraInstrinsicsModel
-template <typename... Args>
-using overload_cast_ = pybind11::detail::overload_cast_impl<Args...>;
+// for overloaded function in CameraInstrinsicsModel (commented bindings only)
 
-namespace py = pybind11;
+namespace nb = nanobind;
 #include <iostream>
-#include <pybind11/numpy.h>
 #include <vector>
 
 // Initialize gtest
 // google::InitGoogleLogging(argv[0]);
 
 template <int N>
-void AddIntrinsicsPriorType(py::module& m, const std::string& name) {
-  py::class_<theia::Prior<N>>(m, ("Prior" + name).c_str())
-      .def(py::init())
-      .def_readwrite("is_set", &theia::Prior<N>::is_set)
-      .def_property("value",
+void AddIntrinsicsPriorType(nb::module_& m, const std::string& name) {
+  nb::class_<theia::Prior<N>>(m, ("Prior" + name).c_str())
+      .def(nb::init())
+      .def_rw("is_set", &theia::Prior<N>::is_set)
+      .def_prop_rw("value",
                     &theia::Prior<N>::GetParametersValues,
                     &theia::Prior<N>::SetParametersValues);
 }
@@ -170,7 +165,7 @@ void AddIntrinsicsPriorType(py::module& m, const std::string& name) {
 namespace pytheia {
 namespace sfm {
 
-void pytheia_sfm_classes(py::module& m) {
+void pytheia_sfm_classes(nb::module_& m) {
   m.attr("kInvalidTrackId") = theia::kInvalidTrackId;
   m.attr("kInvalidViewId") = theia::kInvalidViewId;
   // camera
@@ -193,8 +188,7 @@ void pytheia_sfm_classes(py::module& m) {
   */
 
   // abstract superclass and 5 subclasses (camera models)
-  py::class_<theia::CameraIntrinsicsModel,
-             std::shared_ptr<theia::CameraIntrinsicsModel>>
+  nb::class_<theia::CameraIntrinsicsModel>
       camera_intrinsics_model(m, "CameraIntrinsicsModel");
   camera_intrinsics_model
       .def("SetFocalLength", &theia::CameraIntrinsicsModel::SetFocalLength)
@@ -209,11 +203,11 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::CameraIntrinsicsModel::ImageToCameraCoordinates)
       .def("GetParameter", &theia::CameraIntrinsicsModel::GetParameter)
       .def("SetParameter", &theia::CameraIntrinsicsModel::SetParameter)
-      // .def("DistortPoint", py::overload_cast<const
+      // .def("DistortPoint", nb::overload_cast<const
       // Eigen::Vector2d>(&theia::CameraIntrinsicsModel::DistortPoint,
-      // py::const_)) .def("DistortPoint",   py::overload_cast<const
+      // nb::const_)) .def("DistortPoint",   nb::overload_cast<const
       // Eigen::Vector2d&>(&theia::CameraIntrinsicsModel::DistortPoint,
-      // py::const_)); .def("DistortPoint", static_cast<Eigen::Vector2d
+      // nb::const_)); .def("DistortPoint", static_cast<Eigen::Vector2d
       // (theia::CameraIntrinsicsModel::*)(const Eigen::Vector2d
       // &)>(&theia::CameraIntrinsicsModel::DistortPoint), "Set the pet's name")
       // .def("DistortPoint", overload_cast_<const
@@ -222,19 +216,18 @@ void pytheia_sfm_classes(py::module& m) {
       //      (Eigen::Vector2d
       //       (theia::CameraIntrinsicsModel::*)(const Eigen::Vector2d& ))
       //       &theia::CameraIntrinsicsModel::DistortPoint,
-      //      py::return_value_policy::reference_internal)
+      //      nb::rv_policy::reference_internal)
 
       //.def("UndistortPoint",(Eigen::Vector2d
       //(theia::CameraIntrinsicsModel::*)(const Eigen::Vector2d& )) &
       //     theia::CameraIntrinsicsModel::UndistortPoint,
-      //     py::arg("UndistortPoint"))
+      //     nb::arg("UndistortPoint"))
       ;
 
   // FisheyeCameraModel
-  py::class_<theia::FisheyeCameraModel,
-             std::shared_ptr<theia::FisheyeCameraModel>>(
+  nb::class_<theia::FisheyeCameraModel>(
       m, "FisheyeCameraModel", camera_intrinsics_model)
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("Type", &theia::FisheyeCameraModel::Type)
       .def("NumParameters", &theia::FisheyeCameraModel::NumParameters)
       .def("SetFromCameraIntrinsicsPriors",
@@ -247,7 +240,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("GetCalibrationMatrix",
            &theia::FisheyeCameraModel::GetCalibrationMatrix)
       .def("PrintIntrinsics", &theia::FisheyeCameraModel::PrintIntrinsics)
-      .def_property_readonly("kIntrinsicsSize",
+      .def_prop_ro("kIntrinsicsSize",
                              &theia::FisheyeCameraModel::NumParameters)
       .def("AspectRatio", &theia::FisheyeCameraModel::AspectRatio)
       .def("SetAspectRatio", &theia::FisheyeCameraModel::SetAspectRatio)
@@ -261,10 +254,9 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::FisheyeCameraModel::SetRadialDistortion);
 
   // PinholeRadialTangentialCameraModel
-  py::class_<theia::PinholeRadialTangentialCameraModel,
-             std::shared_ptr<theia::PinholeRadialTangentialCameraModel>>(
+  nb::class_<theia::PinholeRadialTangentialCameraModel>(
       m, "PinholeRadialTangentialCameraModel", camera_intrinsics_model)
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("Type", &theia::PinholeRadialTangentialCameraModel::Type)
       .def("NumParameters",
            &theia::PinholeRadialTangentialCameraModel::NumParameters)
@@ -282,7 +274,7 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::PinholeRadialTangentialCameraModel::GetCalibrationMatrix)
       .def("PrintIntrinsics",
            &theia::PinholeRadialTangentialCameraModel::PrintIntrinsics)
-      .def_property_readonly(
+      .def_prop_ro(
           "kIntrinsicsSize",
           &theia::PinholeRadialTangentialCameraModel::NumParameters)
       .def("AspectRatio",
@@ -307,10 +299,9 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::PinholeRadialTangentialCameraModel::SetTangentialDistortion);
 
   // DivisionUndistortionCameraModel
-  py::class_<theia::DivisionUndistortionCameraModel,
-             std::shared_ptr<theia::DivisionUndistortionCameraModel>>(
+  nb::class_<theia::DivisionUndistortionCameraModel>(
       m, "DivisionUndistortionCameraModel", camera_intrinsics_model)
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("Type", &theia::DivisionUndistortionCameraModel::Type)
       .def("NumParameters",
            &theia::DivisionUndistortionCameraModel::NumParameters)
@@ -328,7 +319,7 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::DivisionUndistortionCameraModel::GetCalibrationMatrix)
       .def("PrintIntrinsics",
            &theia::DivisionUndistortionCameraModel::PrintIntrinsics)
-      .def_property_readonly(
+      .def_prop_ro(
           "kIntrinsicsSize",
           &theia::DivisionUndistortionCameraModel::NumParameters)
       .def("AspectRatio", &theia::DivisionUndistortionCameraModel::AspectRatio)
@@ -340,10 +331,9 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::DivisionUndistortionCameraModel::SetRadialDistortion);
 
   // DoubleSphereCameraModel
-  py::class_<theia::DoubleSphereCameraModel,
-             std::shared_ptr<theia::DoubleSphereCameraModel>>(
+  nb::class_<theia::DoubleSphereCameraModel>(
       m, "DoubleSphereCameraModel", camera_intrinsics_model)
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("Type", &theia::DoubleSphereCameraModel::Type)
       .def("NumParameters", &theia::DoubleSphereCameraModel::NumParameters)
       .def("SetFromCameraIntrinsicsPriors",
@@ -355,7 +345,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("GetCalibrationMatrix",
            &theia::DoubleSphereCameraModel::GetCalibrationMatrix)
       .def("PrintIntrinsics", &theia::DoubleSphereCameraModel::PrintIntrinsics)
-      .def_property_readonly("kIntrinsicsSize",
+      .def_prop_ro("kIntrinsicsSize",
                                &theia::DoubleSphereCameraModel::NumParameters)
       .def("AspectRatio", &theia::DoubleSphereCameraModel::AspectRatio)
       .def("SetAspectRatio", &theia::DoubleSphereCameraModel::SetAspectRatio)
@@ -367,10 +357,9 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::DoubleSphereCameraModel::SetAlphaXiDistortion);
 
   // ExtendedUnifiedCameraModel
-  py::class_<theia::ExtendedUnifiedCameraModel,
-             std::shared_ptr<theia::ExtendedUnifiedCameraModel>>(
+  nb::class_<theia::ExtendedUnifiedCameraModel>(
       m, "ExtendedUnifiedCameraModel", camera_intrinsics_model)
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("Type", &theia::ExtendedUnifiedCameraModel::Type)
       .def("NumParameters", &theia::ExtendedUnifiedCameraModel::NumParameters)
       .def("SetFromCameraIntrinsicsPriors",
@@ -384,7 +373,7 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::ExtendedUnifiedCameraModel::GetCalibrationMatrix)
       .def("PrintIntrinsics",
            &theia::ExtendedUnifiedCameraModel::PrintIntrinsics)
-      .def_property_readonly("kIntrinsicsSize",
+      .def_prop_ro("kIntrinsicsSize",
                              &theia::ExtendedUnifiedCameraModel::NumParameters)
       .def("AspectRatio", &theia::ExtendedUnifiedCameraModel::AspectRatio)
       .def("SetAspectRatio",
@@ -397,10 +386,9 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::ExtendedUnifiedCameraModel::SetAlphaBetaDistortion);
 
   // PinholeCameraModel
-  py::class_<theia::PinholeCameraModel,
-             std::shared_ptr<theia::PinholeCameraModel>>(
+  nb::class_<theia::PinholeCameraModel>(
       m, "PinholeCameraModel", camera_intrinsics_model)
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("Type", &theia::PinholeCameraModel::Type)
       .def("NumParameters", &theia::PinholeCameraModel::NumParameters)
       .def("SetFromCameraIntrinsicsPriors",
@@ -413,7 +401,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("GetCalibrationMatrix",
            &theia::PinholeCameraModel::GetCalibrationMatrix)
       .def("PrintIntrinsics", &theia::PinholeCameraModel::PrintIntrinsics)
-      .def_property_readonly("kIntrinsicsSize",
+      .def_prop_ro("kIntrinsicsSize",
                              &theia::PinholeCameraModel::NumParameters)
       .def("AspectRatio", &theia::PinholeCameraModel::AspectRatio)
       .def("SetAspectRatio", &theia::PinholeCameraModel::SetAspectRatio)
@@ -425,10 +413,9 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::PinholeCameraModel::SetRadialDistortion);
 
   // OrthographicCameraModel
-  py::class_<theia::OrthographicCameraModel,
-             std::shared_ptr<theia::OrthographicCameraModel>>(
+  nb::class_<theia::OrthographicCameraModel>(
       m, "OrthographicCameraModel", camera_intrinsics_model)
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("Type", &theia::OrthographicCameraModel::Type)
       .def("NumParameters", &theia::OrthographicCameraModel::NumParameters)
       .def("SetFromCameraIntrinsicsPriors",
@@ -441,7 +428,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("GetCalibrationMatrix",
            &theia::OrthographicCameraModel::GetCalibrationMatrix)
       .def("PrintIntrinsics", &theia::OrthographicCameraModel::PrintIntrinsics)
-      .def_property_readonly("kIntrinsicsSize",
+      .def_prop_ro("kIntrinsicsSize",
                              &theia::OrthographicCameraModel::NumParameters)
       .def("AspectRatio", &theia::OrthographicCameraModel::AspectRatio)
       .def("SetAspectRatio", &theia::OrthographicCameraModel::SetAspectRatio)
@@ -455,9 +442,9 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::OrthographicCameraModel::SetRadialDistortion);
 
   // FOVCameraModel
-  py::class_<theia::FOVCameraModel, std::shared_ptr<theia::FOVCameraModel>>(
+  nb::class_<theia::FOVCameraModel>(
       m, "FOVCameraModel", camera_intrinsics_model)
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("Type", &theia::FOVCameraModel::Type)
       .def("NumParameters", &theia::FOVCameraModel::NumParameters)
       .def("SetFromCameraIntrinsicsPriors",
@@ -469,7 +456,7 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::FOVCameraModel::GetSubsetFromOptimizeIntrinsicsType)
       .def("GetCalibrationMatrix", &theia::FOVCameraModel::GetCalibrationMatrix)
       .def("PrintIntrinsics", &theia::FOVCameraModel::PrintIntrinsics)
-      .def_property_readonly("kIntrinsicsSize",
+      .def_prop_ro("kIntrinsicsSize",
                              &theia::FOVCameraModel::NumParameters)
       .def("AspectRatio", &theia::FOVCameraModel::AspectRatio)
       .def("SetAspectRatio", &theia::FOVCameraModel::SetAspectRatio)
@@ -483,14 +470,14 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("IntrinsicsToCalibrationMatrix",
         theia::IntrinsicsToCalibrationMatrixWrapper);
 
-  py::class_<theia::Camera, std::shared_ptr<theia::Camera>>(m, "Camera")
-      .def(py::init())
-      .def(py::init<theia::Camera>())
-      .def(py::init<theia::CameraIntrinsicsModelType>())
+  nb::class_<theia::Camera>(m, "Camera")
+      .def(nb::init())
+      .def(nb::init<theia::Camera>())
+      .def(nb::init<theia::CameraIntrinsicsModelType>())
       .def("DeepCopy", &theia::Camera::DeepCopy)
       .def("CameraIntrinsics",
            &theia::Camera::CameraIntrinsics,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("SetFromCameraIntrinsicsPriors",
            &theia::Camera::SetFromCameraIntrinsicsPriors)
       .def("CameraIntrinsicsPriorFromIntrinsics",
@@ -531,7 +518,7 @@ void pytheia_sfm_classes(py::module& m) {
       ;
 
   // tested
-  py::enum_<theia::CameraIntrinsicsModelType>(m, "CameraIntrinsicsModelType")
+  nb::enum_<theia::CameraIntrinsicsModelType>(m, "CameraIntrinsicsModelType")
       .value("INVALID", theia::CameraIntrinsicsModelType::INVALID)
       .value("PINHOLE", theia::CameraIntrinsicsModelType::PINHOLE)
       .value("PINHOLE_RADIAL_TANGENTIAL",
@@ -546,30 +533,30 @@ void pytheia_sfm_classes(py::module& m) {
       .value("ORTHOGRAPHIC", theia::CameraIntrinsicsModelType::ORTHOGRAPHIC)
       .export_values();
 
-  py::class_<theia::CameraIntrinsicsPrior>(m, "CameraIntrinsicsPrior")
-      .def(py::init())
-      .def_readwrite("image_width", &theia::CameraIntrinsicsPrior::image_width)
-      .def_readwrite("image_height",
+  nb::class_<theia::CameraIntrinsicsPrior>(m, "CameraIntrinsicsPrior")
+      .def(nb::init())
+      .def_rw("image_width", &theia::CameraIntrinsicsPrior::image_width)
+      .def_rw("image_height",
                      &theia::CameraIntrinsicsPrior::image_height)
-      .def_readwrite(
+      .def_rw(
           "camera_intrinsics_model_type",
           &theia::CameraIntrinsicsPrior::camera_intrinsics_model_type)
-      .def_readwrite("focal_length",
+      .def_rw("focal_length",
                      &theia::CameraIntrinsicsPrior::focal_length)
-      .def_readwrite("principal_point",
+      .def_rw("principal_point",
                      &theia::CameraIntrinsicsPrior::principal_point)
-      .def_readwrite("aspect_ratio",
+      .def_rw("aspect_ratio",
                      &theia::CameraIntrinsicsPrior::aspect_ratio)
-      .def_readwrite("skew", &theia::CameraIntrinsicsPrior::skew)
-      .def_readwrite("radial_distortion",
+      .def_rw("skew", &theia::CameraIntrinsicsPrior::skew)
+      .def_rw("radial_distortion",
                      &theia::CameraIntrinsicsPrior::radial_distortion)
-      .def_readwrite("tangential_distortion",
+      .def_rw("tangential_distortion",
                      &theia::CameraIntrinsicsPrior::tangential_distortion)
-      .def_readwrite("position", &theia::CameraIntrinsicsPrior::position)
-      .def_readwrite("orientation", &theia::CameraIntrinsicsPrior::orientation)
-      .def_readwrite("latitude", &theia::CameraIntrinsicsPrior::latitude)
-      .def_readwrite("longitude", &theia::CameraIntrinsicsPrior::longitude)
-      .def_readwrite("altitude", &theia::CameraIntrinsicsPrior::altitude)
+      .def_rw("position", &theia::CameraIntrinsicsPrior::position)
+      .def_rw("orientation", &theia::CameraIntrinsicsPrior::orientation)
+      .def_rw("latitude", &theia::CameraIntrinsicsPrior::latitude)
+      .def_rw("longitude", &theia::CameraIntrinsicsPrior::longitude)
+      .def_rw("altitude", &theia::CameraIntrinsicsPrior::altitude)
 
       ;
 
@@ -634,27 +621,27 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("TransformReconstruction4", theia::TransformReconstructionWrapper4);
 
   // SIM3 Point Cloud Alignment
-  py::enum_<theia::Sim3AlignmentType>(m, "Sim3AlignmentType")
+  nb::enum_<theia::Sim3AlignmentType>(m, "Sim3AlignmentType")
       .value("POINT_TO_POINT", theia::Sim3AlignmentType::POINT_TO_POINT)
       .value("ROBUST_POINT_TO_POINT", theia::Sim3AlignmentType::ROBUST_POINT_TO_POINT)
       .value("POINT_TO_PLANE", theia::Sim3AlignmentType::POINT_TO_PLANE)
       .export_values();
 
-  py::class_<theia::Sim3AlignmentOptions>(m, "Sim3AlignmentOptions")
-      .def(py::init<>())
-      .def_readwrite("alignment_type", &theia::Sim3AlignmentOptions::alignment_type)
-      .def_readwrite("point_weight", &theia::Sim3AlignmentOptions::point_weight)
-      .def_readwrite("huber_threshold", &theia::Sim3AlignmentOptions::huber_threshold)
-      .def_readwrite("outlier_threshold", &theia::Sim3AlignmentOptions::outlier_threshold)
-      .def_readwrite("max_iterations", &theia::Sim3AlignmentOptions::max_iterations)
-      .def_readwrite("perform_optimization", &theia::Sim3AlignmentOptions::perform_optimization)
-      .def_readwrite("verbose", &theia::Sim3AlignmentOptions::verbose)
+  nb::class_<theia::Sim3AlignmentOptions>(m, "Sim3AlignmentOptions")
+      .def(nb::init<>())
+      .def_rw("alignment_type", &theia::Sim3AlignmentOptions::alignment_type)
+      .def_rw("point_weight", &theia::Sim3AlignmentOptions::point_weight)
+      .def_rw("huber_threshold", &theia::Sim3AlignmentOptions::huber_threshold)
+      .def_rw("outlier_threshold", &theia::Sim3AlignmentOptions::outlier_threshold)
+      .def_rw("max_iterations", &theia::Sim3AlignmentOptions::max_iterations)
+      .def_rw("perform_optimization", &theia::Sim3AlignmentOptions::perform_optimization)
+      .def_rw("verbose", &theia::Sim3AlignmentOptions::verbose)
       .def("set_initial_sim3_params", &theia::Sim3AlignmentOptions::SetInitialSim3Params,
-           py::arg("params"), "Set initial SIM3 parameters")
+           nb::arg("params"), "Set initial SIM3 parameters")
       .def("set_target_normals", &theia::Sim3AlignmentOptions::SetTargetNormals,
-           py::arg("normals"), "Set target normals for point-to-plane alignment")
+           nb::arg("normals"), "Set target normals for point-to-plane alignment")
       .def("set_point_weights", &theia::Sim3AlignmentOptions::SetPointWeights,
-           py::arg("weights"), "Set point weights")
+           nb::arg("weights"), "Set point weights")
       .def("clear_initial_sim3_params", &theia::Sim3AlignmentOptions::ClearInitialSim3Params,
            "Clear initial SIM3 parameters")
       .def("clear_target_normals", &theia::Sim3AlignmentOptions::ClearTargetNormals,
@@ -662,13 +649,13 @@ void pytheia_sfm_classes(py::module& m) {
       .def("clear_point_weights", &theia::Sim3AlignmentOptions::ClearPointWeights,
            "Clear point weights");
 
-  py::class_<theia::Sim3AlignmentSummary>(m, "Sim3AlignmentSummary")
-      .def(py::init<>())
-      .def_readwrite("success", &theia::Sim3AlignmentSummary::success)
-      .def_readwrite("sim3_params", &theia::Sim3AlignmentSummary::sim3_params)
-      .def_readwrite("alignment_error", &theia::Sim3AlignmentSummary::alignment_error)
-      .def_readwrite("num_iterations", &theia::Sim3AlignmentSummary::num_iterations)
-      .def_readwrite("final_cost", &theia::Sim3AlignmentSummary::final_cost);
+  nb::class_<theia::Sim3AlignmentSummary>(m, "Sim3AlignmentSummary")
+      .def(nb::init<>())
+      .def_rw("success", &theia::Sim3AlignmentSummary::success)
+      .def_rw("sim3_params", &theia::Sim3AlignmentSummary::sim3_params)
+      .def_rw("alignment_error", &theia::Sim3AlignmentSummary::alignment_error)
+      .def_rw("num_iterations", &theia::Sim3AlignmentSummary::num_iterations)
+      .def_rw("final_cost", &theia::Sim3AlignmentSummary::final_cost);
 
   m.def("OptimizeAlignmentSim3", theia::OptimizeAlignmentSim3Wrapper);
   m.def("Sim3FromRotationTranslationScale", theia::Sim3FromRotationTranslationScaleWrapper);
@@ -676,68 +663,68 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("Sim3ToHomogeneousMatrix", theia::Sim3ToHomogeneousMatrixWrapper);
 
   // Cross-reconstruction Sim(3) pose graph alignment
-  py::class_<theia::CrossReconstructionPoseGraphOptions>(
+  nb::class_<theia::CrossReconstructionPoseGraphOptions>(
       m, "CrossReconstructionPoseGraphOptions")
-      .def(py::init<>())
-      .def_readwrite("sequential_weight",
+      .def(nb::init<>())
+      .def_rw("sequential_weight",
                      &theia::CrossReconstructionPoseGraphOptions::
                          sequential_weight)
-      .def_readwrite("anchor_weight",
+      .def_rw("anchor_weight",
                      &theia::CrossReconstructionPoseGraphOptions::anchor_weight)
-      .def_readwrite("sequential_translation_magnitude_weight",
+      .def_rw("sequential_translation_magnitude_weight",
                      &theia::CrossReconstructionPoseGraphOptions::
                          sequential_translation_magnitude_weight)
-      .def_readwrite("scale_smooth_weight",
+      .def_rw("scale_smooth_weight",
                      &theia::CrossReconstructionPoseGraphOptions::
                          scale_smooth_weight)
-      .def_readwrite("huber_delta_anchor",
+      .def_rw("huber_delta_anchor",
                      &theia::CrossReconstructionPoseGraphOptions::
                          huber_delta_anchor)
-      .def_readwrite("auto_scale_smoothness",
+      .def_rw("auto_scale_smoothness",
                      &theia::CrossReconstructionPoseGraphOptions::
                          auto_scale_smoothness)
-      .def_readwrite("max_num_iterations",
+      .def_rw("max_num_iterations",
                      &theia::CrossReconstructionPoseGraphOptions::
                          max_num_iterations)
-      .def_readwrite("verbose",
+      .def_rw("verbose",
                      &theia::CrossReconstructionPoseGraphOptions::verbose)
-      .def_readwrite("debug_cost_breakdown",
+      .def_rw("debug_cost_breakdown",
                      &theia::CrossReconstructionPoseGraphOptions::
                          debug_cost_breakdown);
 
-  py::class_<theia::CrossReconstructionPoseGraphSummary>(
+  nb::class_<theia::CrossReconstructionPoseGraphSummary>(
       m, "CrossReconstructionPoseGraphSummary")
-      .def(py::init<>())
-      .def_readwrite("success",
+      .def(nb::init<>())
+      .def_rw("success",
                      &theia::CrossReconstructionPoseGraphSummary::success)
-      .def_readwrite("initial_cost",
+      .def_rw("initial_cost",
                      &theia::CrossReconstructionPoseGraphSummary::initial_cost)
-      .def_readwrite("final_cost",
+      .def_rw("final_cost",
                      &theia::CrossReconstructionPoseGraphSummary::final_cost)
-      .def_readwrite("num_iterations",
+      .def_rw("num_iterations",
                      &theia::CrossReconstructionPoseGraphSummary::
                          num_iterations)
-      .def_readwrite("poses_finite_before",
+      .def_rw("poses_finite_before",
                      &theia::CrossReconstructionPoseGraphSummary::
                          poses_finite_before)
-      .def_readwrite("poses_finite_after",
+      .def_rw("poses_finite_after",
                      &theia::CrossReconstructionPoseGraphSummary::
                          poses_finite_after)
-      .def_readwrite("sequential_residual_cost",
+      .def_rw("sequential_residual_cost",
                      &theia::CrossReconstructionPoseGraphSummary::
                          sequential_residual_cost)
-      .def_readwrite("anchor_residual_cost",
+      .def_rw("anchor_residual_cost",
                      &theia::CrossReconstructionPoseGraphSummary::
                          anchor_residual_cost)
-      .def_readwrite("scale_smooth_residual_cost",
+      .def_rw("scale_smooth_residual_cost",
                      &theia::CrossReconstructionPoseGraphSummary::
                          scale_smooth_residual_cost);
 
-  py::class_<theia::SequentialSim3Edge>(m, "SequentialSim3Edge")
-      .def(py::init<>())
-      .def_readwrite("view_id_i", &theia::SequentialSim3Edge::view_id_i)
-      .def_readwrite("view_id_j", &theia::SequentialSim3Edge::view_id_j)
-      .def_property(
+  nb::class_<theia::SequentialSim3Edge>(m, "SequentialSim3Edge")
+      .def(nb::init<>())
+      .def_rw("view_id_i", &theia::SequentialSim3Edge::view_id_i)
+      .def_rw("view_id_j", &theia::SequentialSim3Edge::view_id_j)
+      .def_prop_rw(
           "measured_S_ji_log",
           [](const theia::SequentialSim3Edge& e) {
             return e.measured_S_ji.log();
@@ -746,16 +733,16 @@ void pytheia_sfm_classes(py::module& m) {
             e.measured_S_ji = Sophus::Sim3d::exp(v);
           },
           "Relative Sim3 S_ji as 7-vector lie algebra log")
-      .def_readwrite("sqrt_information",
+      .def_rw("sqrt_information",
                      &theia::SequentialSim3Edge::sqrt_information,
                      "7x7 sqrt-information for the relative Sim3 residual; "
                      "tangent order [translation(3), rotation(3), scale(1)]");
 
-  py::class_<theia::CrossViewAnchorEdge>(m, "CrossViewAnchorEdge")
-      .def(py::init<>())
-      .def_readwrite("variable_view_id",
+  nb::class_<theia::CrossViewAnchorEdge>(m, "CrossViewAnchorEdge")
+      .def(nb::init<>())
+      .def_rw("variable_view_id",
                      &theia::CrossViewAnchorEdge::variable_view_id)
-      .def_property(
+      .def_prop_rw(
           "measured_S_run_in_seg_log",
           [](const theia::CrossViewAnchorEdge& e) {
             return e.measured_S_run_in_seg.log();
@@ -764,65 +751,65 @@ void pytheia_sfm_classes(py::module& m) {
             e.measured_S_run_in_seg = Sophus::Sim3d::exp(v);
           },
           "PnP Sim3 pose of run camera in segment world (7-vector lie log)")
-      .def_readwrite("weight", &theia::CrossViewAnchorEdge::weight);
+      .def_rw("weight", &theia::CrossViewAnchorEdge::weight);
 
-  py::class_<theia::RelativePoseConstraint>(m, "RelativePoseConstraint")
-      .def(py::init<>())
-      .def_readwrite("view_id_i", &theia::RelativePoseConstraint::view_id_i)
-      .def_readwrite("view_id_j", &theia::RelativePoseConstraint::view_id_j)
-      .def_readwrite("translation_sqrt_weight",
+  nb::class_<theia::RelativePoseConstraint>(m, "RelativePoseConstraint")
+      .def(nb::init<>())
+      .def_rw("view_id_i", &theia::RelativePoseConstraint::view_id_i)
+      .def_rw("view_id_j", &theia::RelativePoseConstraint::view_id_j)
+      .def_rw("translation_sqrt_weight",
                      &theia::RelativePoseConstraint::translation_sqrt_weight)
-      .def_readwrite("rotation_sqrt_weight",
+      .def_rw("rotation_sqrt_weight",
                      &theia::RelativePoseConstraint::rotation_sqrt_weight)
-      .def_readwrite("scale_invariant_translation",
+      .def_rw("scale_invariant_translation",
                      &theia::RelativePoseConstraint::scale_invariant_translation)
-      .def_readwrite("translation_direction_sqrt_weight",
+      .def_rw("translation_direction_sqrt_weight",
                      &theia::RelativePoseConstraint::
                          translation_direction_sqrt_weight)
-      .def_readwrite("translation_magnitude_sqrt_weight",
+      .def_rw("translation_magnitude_sqrt_weight",
                      &theia::RelativePoseConstraint::
                          translation_magnitude_sqrt_weight);
 
-  py::class_<theia::CrossReconstructionConstraints>(
+  nb::class_<theia::CrossReconstructionConstraints>(
       m, "CrossReconstructionConstraints")
-      .def(py::init<>())
-      .def_readwrite("variable_keyframe_view_ids",
+      .def(nb::init<>())
+      .def_rw("variable_keyframe_view_ids",
                      &theia::CrossReconstructionConstraints::
                          variable_keyframe_view_ids)
-      .def_readwrite("fixed_anchor_view_ids",
+      .def_rw("fixed_anchor_view_ids",
                      &theia::CrossReconstructionConstraints::
                          fixed_anchor_view_ids)
-      .def_readwrite("sequential_edges",
+      .def_rw("sequential_edges",
                      &theia::CrossReconstructionConstraints::sequential_edges)
-      .def_readwrite("cross_view_edges",
+      .def_rw("cross_view_edges",
                      &theia::CrossReconstructionConstraints::cross_view_edges);
 
-  py::class_<theia::CrossReconstructionSim3PoseGraphOptimizer>(
+  nb::class_<theia::CrossReconstructionSim3PoseGraphOptimizer>(
       m, "CrossReconstructionSim3PoseGraphOptimizer")
-      .def(py::init<const theia::CrossReconstructionPoseGraphOptions&>(),
-           py::arg("options") = theia::CrossReconstructionPoseGraphOptions())
+      .def(nb::init<const theia::CrossReconstructionPoseGraphOptions&>(),
+           nb::arg("options") = theia::CrossReconstructionPoseGraphOptions())
       .def("set_fixed_reconstruction",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::
                SetFixedReconstruction,
-           py::arg("fixed_reconstruction"), py::arg("anchor_view_ids"))
+           nb::arg("fixed_reconstruction"), nb::arg("anchor_view_ids"))
       .def("set_variable_reconstruction",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::
                SetVariableReconstruction,
-           py::arg("variable_reconstruction"), py::arg("keyframe_view_ids"))
+           nb::arg("variable_reconstruction"), nb::arg("keyframe_view_ids"))
       .def(
           "set_initial_variable_poses",
           [](theia::CrossReconstructionSim3PoseGraphOptimizer& optimizer,
-             py::dict poses_dict) {
+             nb::dict poses_dict) {
             theia::Sim3LieMap poses;
             for (auto item : poses_dict) {
               const theia::ViewId view_id =
-                  py::cast<theia::ViewId>(item.first);
+                  nb::cast<theia::ViewId>(item.first);
               poses[view_id] =
-                  py::cast<Eigen::Matrix<double, 7, 1>>(item.second);
+                  nb::cast<Eigen::Matrix<double, 7, 1>>(item.second);
             }
             optimizer.SetInitialVariablePoses(poses);
           },
-          py::arg("initial_poses"),
+          nb::arg("initial_poses"),
           "Override initial optimizer poses (view_id -> 7-vector lie) without "
           "mutating the reconstruction.")
       .def("add_sequential_edge",
@@ -831,7 +818,7 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::CrossReconstructionSim3PoseGraphOptimizer::AddCrossViewEdge)
       .def("add_scale_smoothness_edge",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::AddScaleSmoothnessEdge,
-           py::arg("view_id_i"), py::arg("view_id_j"), py::arg("weight"))
+           nb::arg("view_id_i"), nb::arg("view_id_j"), nb::arg("weight"))
       .def("set_constraints",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::SetConstraints)
       .def("optimize",
@@ -840,176 +827,176 @@ void pytheia_sfm_classes(py::module& m) {
       .def("apply_to_variable_reconstruction",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::
                ApplyToVariableReconstruction,
-           py::arg("variable_reconstruction"),
-           py::arg("transform_tracks") = true)
+           nb::arg("variable_reconstruction"),
+           nb::arg("transform_tracks") = true)
       .def("variable_poses",
            &theia::CrossReconstructionSim3PoseGraphOptimizer::variable_poses,
-           py::return_value_policy::reference_internal);
+           nb::rv_policy::reference_internal);
 
   m.def("AlignReconstructionsWithPoseGraph",
         &theia::AlignReconstructionsWithPoseGraphWrapper,
-        py::arg("fixed_reconstruction"),
-        py::arg("variable_reconstruction"),
-        py::arg("constraints"),
-        py::arg("options") = theia::CrossReconstructionPoseGraphOptions(),
-        py::arg("apply_to_variable_reconstruction") = true,
+        nb::arg("fixed_reconstruction"),
+        nb::arg("variable_reconstruction"),
+        nb::arg("constraints"),
+        nb::arg("options") = theia::CrossReconstructionPoseGraphOptions(),
+        nb::arg("apply_to_variable_reconstruction") = true,
         "Align variable_reconstruction to fixed via Sim(3) pose graph; "
         "returns (ok, CrossReconstructionPoseGraphSummary).");
 
-  m.def("GetSim3LieFromView", &theia::GetSim3LieFromViewWrapper, py::arg("view"),
+  m.def("GetSim3LieFromView", &theia::GetSim3LieFromViewWrapper, nb::arg("view"),
         "Sim(3) camera pose as 7-vector lie algebra log (Sophus convention).");
   m.def("RelativeSim3BetweenViews", &theia::RelativeSim3BetweenViewsWrapper,
-        py::arg("view_i"), py::arg("view_j"),
+        nb::arg("view_i"), nb::arg("view_j"),
         "Relative Sim(3) S_i^{-1} S_j as 7-vector lie log.");
 
-  py::class_<theia::SimilarityTransformation>(m, "SimilarityTransformation")
-      .def(py::init<>())
-      .def_readwrite("rotation", &theia::SimilarityTransformation::rotation)
-      .def_readwrite("translation",
+  nb::class_<theia::SimilarityTransformation>(m, "SimilarityTransformation")
+      .def(nb::init<>())
+      .def_rw("rotation", &theia::SimilarityTransformation::rotation)
+      .def_rw("translation",
                      &theia::SimilarityTransformation::translation)
-      .def_readwrite("scale", &theia::SimilarityTransformation::scale);
+      .def_rw("scale", &theia::SimilarityTransformation::scale);
 
-  py::class_<theia::RigidTransformation>(m, "RigidTransformation")
-      .def(py::init<>())
-      .def_readwrite("rotation", &theia::RigidTransformation::rotation)
-      .def_readwrite("translation", &theia::RigidTransformation::translation);
+  nb::class_<theia::RigidTransformation>(m, "RigidTransformation")
+      .def(nb::init<>())
+      .def_rw("rotation", &theia::RigidTransformation::rotation)
+      .def_rw("translation", &theia::RigidTransformation::translation);
 
-  py::class_<theia::Feature>(m, "Feature")
-      .def(py::init<>())
-      .def(py::init<double, double>())
-      .def(py::init<double, double, double>())
-      .def(py::init<Eigen::Vector2d>())
-      .def(py::init<Eigen::Vector2d, double>())
-      .def(py::init<Eigen::Vector2d, Eigen::Matrix2d>())
-      .def(py::init<Eigen::Vector2d, Eigen::Matrix2d, double, double>())
-      .def_readwrite("point", &theia::Feature::point_)
-      .def_readwrite("covariance", &theia::Feature::covariance_)
-      .def_readwrite("depth_prior", &theia::Feature::depth_prior_)
-      .def_readwrite("depth_prior_variance",
+  nb::class_<theia::Feature>(m, "Feature")
+      .def(nb::init<>())
+      .def(nb::init<double, double>())
+      .def(nb::init<double, double, double>())
+      .def(nb::init<Eigen::Vector2d>())
+      .def(nb::init<Eigen::Vector2d, double>())
+      .def(nb::init<Eigen::Vector2d, Eigen::Matrix2d>())
+      .def(nb::init<Eigen::Vector2d, Eigen::Matrix2d, double, double>())
+      .def_rw("point", &theia::Feature::point_)
+      .def_rw("covariance", &theia::Feature::covariance_)
+      .def_rw("depth_prior", &theia::Feature::depth_prior_)
+      .def_rw("depth_prior_variance",
                      &theia::Feature::depth_prior_variance_)
       .def("x", &theia::Feature::x)
       .def("y", &theia::Feature::y)
       .def("get_depth_prior", &theia::Feature::depth_prior)
       .def("get_depth_prior_variance", &theia::Feature::depth_prior_variance);
 
-  py::class_<theia::CameraAndFeatureCorrespondence2D3D>(
+  nb::class_<theia::CameraAndFeatureCorrespondence2D3D>(
       m, "CameraAndFeatureCorrespondence2D3D")
-      .def(py::init<>())
-      .def_readwrite("camera",
+      .def(nb::init<>())
+      .def_rw("camera",
                      &theia::CameraAndFeatureCorrespondence2D3D::camera)
-      .def_readwrite("observation",
+      .def_rw("observation",
                      &theia::CameraAndFeatureCorrespondence2D3D::observation)
-      .def_readwrite("point3d",
+      .def_rw("point3d",
                      &theia::CameraAndFeatureCorrespondence2D3D::point3d);
 
-  py::class_<theia::FeatureCorrespondence2D3D>(m, "FeatureCorrespondence2D3D")
-      .def(py::init<>())
-      .def(py::init<Eigen::Vector2d, Eigen::Vector3d>())
-      .def_readwrite("feature", &theia::FeatureCorrespondence2D3D::feature)
-      .def_readwrite("world_point",
+  nb::class_<theia::FeatureCorrespondence2D3D>(m, "FeatureCorrespondence2D3D")
+      .def(nb::init<>())
+      .def(nb::init<Eigen::Vector2d, Eigen::Vector3d>())
+      .def_rw("feature", &theia::FeatureCorrespondence2D3D::feature)
+      .def_rw("world_point",
                      &theia::FeatureCorrespondence2D3D::world_point);
 
-  py::class_<theia::CalibratedAbsolutePose>(m, "CalibratedAbsolutePose")
-      .def(py::init<>())
-      .def_readwrite("rotation", &theia::CalibratedAbsolutePose::rotation)
-      .def_readwrite("position", &theia::CalibratedAbsolutePose::position);
+  nb::class_<theia::CalibratedAbsolutePose>(m, "CalibratedAbsolutePose")
+      .def(nb::init<>())
+      .def_rw("rotation", &theia::CalibratedAbsolutePose::rotation)
+      .def_rw("position", &theia::CalibratedAbsolutePose::position);
 
-  py::class_<theia::UncalibratedAbsolutePose>(m, "UncalibratedAbsolutePose")
-      .def(py::init<>())
-      .def_readwrite("rotation", &theia::UncalibratedAbsolutePose::rotation)
-      .def_readwrite("position", &theia::UncalibratedAbsolutePose::position)
-      .def_readwrite("focal_length",
+  nb::class_<theia::UncalibratedAbsolutePose>(m, "UncalibratedAbsolutePose")
+      .def(nb::init<>())
+      .def_rw("rotation", &theia::UncalibratedAbsolutePose::rotation)
+      .def_rw("position", &theia::UncalibratedAbsolutePose::position)
+      .def_rw("focal_length",
                      &theia::UncalibratedAbsolutePose::focal_length);
 
-  py::class_<theia::RadialDistUncalibratedAbsolutePose>(
+  nb::class_<theia::RadialDistUncalibratedAbsolutePose>(
       m, "RadialDistUncalibratedAbsolutePose")
-      .def(py::init<>())
-      .def_readwrite("rotation",
+      .def(nb::init<>())
+      .def_rw("rotation",
                      &theia::RadialDistUncalibratedAbsolutePose::rotation)
-      .def_readwrite("translation",
+      .def_rw("translation",
                      &theia::RadialDistUncalibratedAbsolutePose::translation)
-      .def_readwrite(
+      .def_rw(
           "focal_length",
           &theia::RadialDistUncalibratedAbsolutePose::focal_length)
-      .def_readwrite("radial_distortion",
+      .def_rw("radial_distortion",
                      &theia::RadialDistUncalibratedAbsolutePose::
                          radial_distortion);
 
-  py::class_<theia::UncalibratedRelativePose>(m, "UncalibratedRelativePose")
-      .def(py::init<>())
-      .def_readwrite("fundamental_matrix",
+  nb::class_<theia::UncalibratedRelativePose>(m, "UncalibratedRelativePose")
+      .def(nb::init<>())
+      .def_rw("fundamental_matrix",
                      &theia::UncalibratedRelativePose::fundamental_matrix)
-      .def_readwrite("focal_length1",
+      .def_rw("focal_length1",
                      &theia::UncalibratedRelativePose::focal_length1)
-      .def_readwrite("focal_length2",
+      .def_rw("focal_length2",
                      &theia::UncalibratedRelativePose::focal_length2)
-      .def_readwrite("rotation", &theia::UncalibratedRelativePose::rotation)
-      .def_readwrite("position", &theia::UncalibratedRelativePose::position);
+      .def_rw("rotation", &theia::UncalibratedRelativePose::rotation)
+      .def_rw("position", &theia::UncalibratedRelativePose::position);
 
-  py::class_<theia::RelativePose>(m, "RelativePose")
-      .def(py::init<>())
-      .def_readwrite("essential_matrix", &theia::RelativePose::essential_matrix)
-      .def_readwrite("rotation", &theia::RelativePose::rotation)
-      .def_readwrite("position", &theia::RelativePose::position);
+  nb::class_<theia::RelativePose>(m, "RelativePose")
+      .def(nb::init<>())
+      .def_rw("essential_matrix", &theia::RelativePose::essential_matrix)
+      .def_rw("rotation", &theia::RelativePose::rotation)
+      .def_rw("position", &theia::RelativePose::position);
 
-  py::class_<theia::Plane>(m, "Plane")
-      .def(py::init<>())
-      .def_readwrite("point", &theia::Plane::point)
-      .def_readwrite("unit_normal", &theia::Plane::unit_normal);
+  nb::class_<theia::Plane>(m, "Plane")
+      .def(nb::init<>())
+      .def_rw("point", &theia::Plane::point)
+      .def_rw("unit_normal", &theia::Plane::unit_normal);
 
-  py::class_<theia::RadialDistortionFeatureCorrespondence>(
+  nb::class_<theia::RadialDistortionFeatureCorrespondence>(
       m, "RadialDistortionFeatureCorrespondence")
-      .def(py::init<>())
-      .def_readwrite(
+      .def(nb::init<>())
+      .def_rw(
           "feature_left",
           &theia::RadialDistortionFeatureCorrespondence::feature_left)
-      .def_readwrite(
+      .def_rw(
           "feature_right",
           &theia::RadialDistortionFeatureCorrespondence::feature_right)
-      .def_readwrite("normalized_feature_left",
+      .def_rw("normalized_feature_left",
                      &theia::RadialDistortionFeatureCorrespondence::
                          normalized_feature_left)
-      .def_readwrite("normalized_feature_right",
+      .def_rw("normalized_feature_right",
                      &theia::RadialDistortionFeatureCorrespondence::
                          normalized_feature_right)
-      .def_readwrite("focal_length_estimate_left",
+      .def_rw("focal_length_estimate_left",
                      &theia::RadialDistortionFeatureCorrespondence::
                          focal_length_estimate_left)
-      .def_readwrite("focal_length_estimate_right",
+      .def_rw("focal_length_estimate_right",
                      &theia::RadialDistortionFeatureCorrespondence::
                          focal_length_estimate_right)
-      .def_readwrite(
+      .def_rw(
           "min_radial_distortion",
           &theia::RadialDistortionFeatureCorrespondence::min_radial_distortion)
-      .def_readwrite(
+      .def_rw(
           "max_radial_distortion",
           &theia::RadialDistortionFeatureCorrespondence::max_radial_distortion);
 
-  py::class_<theia::RadialDistUncalibratedAbsolutePoseMetaData>(
+  nb::class_<theia::RadialDistUncalibratedAbsolutePoseMetaData>(
       m, "RadialDistUncalibratedAbsolutePoseMetaData")
-      .def(py::init<>())
-      .def_readwrite(
+      .def(nb::init<>())
+      .def_rw(
           "min_focal_length",
           &theia::RadialDistUncalibratedAbsolutePoseMetaData::min_focal_length)
-      .def_readwrite(
+      .def_rw(
           "max_focal_length",
           &theia::RadialDistUncalibratedAbsolutePoseMetaData::max_focal_length)
-      .def_readwrite("min_radial_distortion",
+      .def_rw("min_radial_distortion",
                      &theia::RadialDistUncalibratedAbsolutePoseMetaData::
                          min_radial_distortion)
-      .def_readwrite("max_radial_distortion",
+      .def_rw("max_radial_distortion",
                      &theia::RadialDistUncalibratedAbsolutePoseMetaData::
                          max_radial_distortion);
 
   // estimator ransac
-  py::enum_<theia::RansacType>(m, "RansacType")
+  nb::enum_<theia::RansacType>(m, "RansacType")
       .value("RANSAC", theia::RansacType::RANSAC)
       .value("PROSAC", theia::RansacType::PROSAC)
       .value("LMED", theia::RansacType::LMED)
       .value("EXHAUSTIVE", theia::RansacType::EXHAUSTIVE)
       .export_values();
 
-  py::enum_<theia::PnPType>(m, "PnPType")
+  nb::enum_<theia::PnPType>(m, "PnPType")
       .value("KNEIP", theia::PnPType::KNEIP)
       .value("DLS", theia::PnPType::DLS)
       .value("SQPnP", theia::PnPType::SQPnP)
@@ -1060,62 +1047,62 @@ void pytheia_sfm_classes(py::module& m) {
 
   // function in the sfm folder
 
-  py::class_<theia::EstimateTwoViewInfoOptions>(m, "EstimateTwoViewInfoOptions")
-      .def(py::init<>())
-      .def_readwrite("ransac_type",
+  nb::class_<theia::EstimateTwoViewInfoOptions>(m, "EstimateTwoViewInfoOptions")
+      .def(nb::init<>())
+      .def_rw("ransac_type",
                      &theia::EstimateTwoViewInfoOptions::ransac_type)
-      .def_readwrite(
+      .def_rw(
           "max_sampson_error_pixels",
           &theia::EstimateTwoViewInfoOptions::max_sampson_error_pixels)
-      .def_readwrite(
+      .def_rw(
           "expected_ransac_confidence",
           &theia::EstimateTwoViewInfoOptions::expected_ransac_confidence)
-      .def_readwrite("min_ransac_iterations",
+      .def_rw("min_ransac_iterations",
                      &theia::EstimateTwoViewInfoOptions::min_ransac_iterations)
-      .def_readwrite("max_ransac_iterations",
+      .def_rw("max_ransac_iterations",
                      &theia::EstimateTwoViewInfoOptions::max_ransac_iterations)
-      .def_readwrite("use_mle", &theia::EstimateTwoViewInfoOptions::use_mle)
-      .def_readwrite("use_lo", &theia::EstimateTwoViewInfoOptions::use_lo)
-      .def_readwrite("lo_start_iterations",
+      .def_rw("use_mle", &theia::EstimateTwoViewInfoOptions::use_mle)
+      .def_rw("use_lo", &theia::EstimateTwoViewInfoOptions::use_lo)
+      .def_rw("lo_start_iterations",
                      &theia::EstimateTwoViewInfoOptions::lo_start_iterations)
-      .def_readwrite("min_focal_length",
+      .def_rw("min_focal_length",
                      &theia::EstimateTwoViewInfoOptions::min_focal_length)
-      .def_readwrite("max_focal_length",
+      .def_rw("max_focal_length",
                      &theia::EstimateTwoViewInfoOptions::max_focal_length);
 
-  py::class_<theia::FilterViewPairsFromRelativeTranslationOptions>(
+  nb::class_<theia::FilterViewPairsFromRelativeTranslationOptions>(
       m, "FilterViewPairsFromRelativeTranslationOptions")
-      .def(py::init<>())
-      .def_readwrite(
+      .def(nb::init<>())
+      .def_rw(
           "num_threads",
           &theia::FilterViewPairsFromRelativeTranslationOptions::num_threads)
-      .def_readwrite(
+      .def_rw(
           "num_iterations",
           &theia::FilterViewPairsFromRelativeTranslationOptions::num_iterations)
-      .def_readwrite("translation_projection_tolerance",
+      .def_rw("translation_projection_tolerance",
                      &theia::FilterViewPairsFromRelativeTranslationOptions::
                          translation_projection_tolerance);
 
-  py::class_<theia::LocalizeViewToReconstructionOptions>(
+  nb::class_<theia::LocalizeViewToReconstructionOptions>(
       m, "LocalizeViewToReconstructionOptions")
-      .def(py::init<>())
-      .def_readwrite("reprojection_error_threshold_pixels",
+      .def(nb::init<>())
+      .def_rw("reprojection_error_threshold_pixels",
                      &theia::LocalizeViewToReconstructionOptions::
                          reprojection_error_threshold_pixels)
-      .def_readwrite(
+      .def_rw(
           "assume_known_orientation",
           &theia::LocalizeViewToReconstructionOptions::assume_known_orientation)
-      .def_readwrite("ransac_params",
+      .def_rw("ransac_params",
                      &theia::LocalizeViewToReconstructionOptions::ransac_params)
-      .def_readwrite(
+      .def_rw(
           "bundle_adjust_view",
           &theia::LocalizeViewToReconstructionOptions::bundle_adjust_view)
-      .def_readwrite("ba_options",
+      .def_rw("ba_options",
                      &theia::LocalizeViewToReconstructionOptions::ba_options)
-      .def_readwrite(
+      .def_rw(
           "min_num_inliers",
           &theia::LocalizeViewToReconstructionOptions::min_num_inliers)
-      .def_readwrite("pnp_type",
+      .def_rw("pnp_type",
                      &theia::LocalizeViewToReconstructionOptions::pnp_type);
 
   m.def("EstimateTwoViewInfo", theia::EstimateTwoViewInfoWrapper);
@@ -1237,7 +1224,7 @@ void pytheia_sfm_classes(py::module& m) {
         theia::SetOutlierTracksToUnestimatedWrapper);
   m.def("ComputeMeanReprojectionError",
         theia::ComputeMeanReprojectionErrorWrapper,
-        py::arg("reconstruction"),
+        nb::arg("reconstruction"),
         "Mean L2 pixel reprojection error over estimated views and tracks.");
   m.def("SetCameraIntrinsicsFromPriors", theia::SetCameraIntrinsicsFromPriors);
   m.def("FindCommonViewsByName", theia::FindCommonViewsByName);
@@ -1254,9 +1241,9 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("AddTracks", theia::AddTracksWrapper);
 
   // View class
-  py::class_<theia::View>(m, "View")
-      .def(py::init<>())
-      .def(py::init<std::string>())
+  nb::class_<theia::View>(m, "View")
+      .def(nb::init<>())
+      .def(nb::init<std::string>())
       .def("Name", &theia::View::Name)
       .def("IsEstimated", &theia::View::IsEstimated)
       .def("SetIsEstimated", &theia::View::SetEstimated)
@@ -1267,7 +1254,7 @@ void pytheia_sfm_classes(py::module& m) {
       .def("TrackIds", &theia::View::TrackIds)
       .def("GetFeature",
            &theia::View::GetFeature,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("GetTrack", &theia::View::GetTrack)
       .def("GetTimestamp", &theia::View::GetTimestamp)
       .def("Camera", &theia::View::Camera, "Camera class object")
@@ -1275,10 +1262,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def("SetCameraIntrinsicsPrior", &theia::View::SetCameraIntrinsicsPrior)
       .def("MutableCameraIntrinsicsPrior",
            &theia::View::MutableCameraIntrinsicsPrior,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("MutableCamera",
            &theia::View::MutableCamera,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("GetPositionPrior", &theia::View::GetPositionPrior)
       .def("GetPositionPriorSqrtInformation",
            &theia::View::GetPositionPriorSqrtInformation)
@@ -1296,14 +1283,14 @@ void pytheia_sfm_classes(py::module& m) {
       .def("HasOrientationPrior", &theia::View::HasOrientationPrior);
 
   // Visibility pyramid
-  py::class_<theia::VisibilityPyramid>(m, "VisibilityPyramid")
-      .def(py::init<int, int, int>())
+  nb::class_<theia::VisibilityPyramid>(m, "VisibilityPyramid")
+      .def(nb::init<int, int, int>())
       .def("AddPoint", &theia::VisibilityPyramid::AddPoint)
       .def("ComputeScore", &theia::VisibilityPyramid::ComputeScore);
 
   // Track class
-  py::class_<theia::Track>(m, "Track")
-      .def(py::init<>())
+  nb::class_<theia::Track>(m, "Track")
+      .def(nb::init<>())
       .def("SetIsEstimated", &theia::Track::SetEstimated)
       .def("IsEstimated", &theia::Track::IsEstimated)
       .def("NumViews", &theia::Track::NumViews)
@@ -1324,187 +1311,180 @@ void pytheia_sfm_classes(py::module& m) {
       .def("ReferenceDescriptor", &theia::Track::ReferenceDescriptor);
 
   // Track builder class
-  py::class_<theia::TrackBuilder>(m, "TrackBuilder")
-      .def(py::init<int, int>())
+  nb::class_<theia::TrackBuilder>(m, "TrackBuilder")
+      .def(nb::init<int, int>())
       .def("AddFeatureCorrespondence",
            &theia::TrackBuilder::AddFeatureCorrespondence)
       .def("BuildTracks", &theia::TrackBuilder::BuildTracks)
       .def("BuildTracksIncremental",
            &theia::TrackBuilder::BuildTracksIncremental);
 
-  py::class_<theia::BundleAdjustmentOptions>(m, "BundleAdjustmentOptions")
-      .def(py::init<>())
-      .def_readwrite("loss_function_type",
+  nb::class_<theia::BundleAdjustmentOptions>(m, "BundleAdjustmentOptions")
+      .def(nb::init<>())
+      .def_rw("loss_function_type",
                      &theia::BundleAdjustmentOptions::loss_function_type)
-      .def_readwrite("robust_loss_width",
+      .def_rw("robust_loss_width",
                      &theia::BundleAdjustmentOptions::robust_loss_width)
-      .def_readwrite("linear_solver_type",
+      .def_rw("linear_solver_type",
                      &theia::BundleAdjustmentOptions::linear_solver_type)
-      .def_readwrite("preconditioner_type",
+      .def_rw("preconditioner_type",
                      &theia::BundleAdjustmentOptions::preconditioner_type)
-      .def_readwrite("visibility_clustering_type",
+      .def_rw("visibility_clustering_type",
                      &theia::BundleAdjustmentOptions::visibility_clustering_type)
-      .def_readwrite("verbose", &theia::BundleAdjustmentOptions::verbose)
-      .def_readwrite(
+      .def_rw("verbose", &theia::BundleAdjustmentOptions::verbose)
+      .def_rw(
           "constant_camera_orientation",
           &theia::BundleAdjustmentOptions::constant_camera_orientation)
-      .def_readwrite("constant_camera_position",
+      .def_rw("constant_camera_position",
                      &theia::BundleAdjustmentOptions::constant_camera_position)
-      .def_readwrite("intrinsics_to_optimize",
+      .def_rw("intrinsics_to_optimize",
                      &theia::BundleAdjustmentOptions::intrinsics_to_optimize)
-      .def_readwrite("num_threads",
+      .def_rw("num_threads",
                      &theia::BundleAdjustmentOptions::num_threads)
-      .def_readwrite("max_num_iterations",
+      .def_rw("max_num_iterations",
                      &theia::BundleAdjustmentOptions::max_num_iterations)
-      .def_readwrite(
+      .def_rw(
           "max_solver_time_in_seconds",
           &theia::BundleAdjustmentOptions::max_solver_time_in_seconds)
-      .def_readwrite("use_inner_iterations",
+      .def_rw("use_inner_iterations",
                      &theia::BundleAdjustmentOptions::use_inner_iterations)
-      .def_readwrite("function_tolerance",
+      .def_rw("function_tolerance",
                      &theia::BundleAdjustmentOptions::function_tolerance)
-      .def_readwrite("gradient_tolerance",
+      .def_rw("gradient_tolerance",
                      &theia::BundleAdjustmentOptions::gradient_tolerance)
-      .def_readwrite("parameter_tolerance",
+      .def_rw("parameter_tolerance",
                      &theia::BundleAdjustmentOptions::parameter_tolerance)
-      .def_readwrite("max_trust_region_radius",
+      .def_rw("max_trust_region_radius",
                      &theia::BundleAdjustmentOptions::max_trust_region_radius)
-      .def_readwrite("use_position_priors",
+      .def_rw("use_position_priors",
                      &theia::BundleAdjustmentOptions::use_position_priors)
-      .def_readwrite("use_orientation_priors",
+      .def_rw("use_orientation_priors",
                      &theia::BundleAdjustmentOptions::use_orientation_priors)
-      .def_readwrite("use_gravity_priors",
+      .def_rw("use_gravity_priors",
                      &theia::BundleAdjustmentOptions::use_gravity_priors)
-      .def_readwrite("gravity_prior_error_type",
+      .def_rw("gravity_prior_error_type",
                      &theia::BundleAdjustmentOptions::gravity_prior_error_type)
-      .def_readwrite("gravity_world_direction",
+      .def_rw("gravity_world_direction",
                      &theia::BundleAdjustmentOptions::gravity_world_direction)
-      .def_readwrite("use_depth_priors",
+      .def_rw("use_depth_priors",
                      &theia::BundleAdjustmentOptions::use_depth_priors)
-      .def_readwrite("orthographic_camera",
+      .def_rw("orthographic_camera",
                      &theia::BundleAdjustmentOptions::orthographic_camera)
-      .def_readwrite("use_homogeneous_point_parametrization",
+      .def_rw("use_homogeneous_point_parametrization",
                      &theia::BundleAdjustmentOptions::
                          use_homogeneous_point_parametrization)
-      .def_readwrite("robust_loss_width_depth_prior",
+      .def_rw("robust_loss_width_depth_prior",
                      &theia::BundleAdjustmentOptions::robust_loss_width_depth_prior)
-      .def_readwrite(
+      .def_rw(
           "use_inverse_depth_parametrization",
           &theia::BundleAdjustmentOptions::use_inverse_depth_parametrization)
-      .def_readwrite("use_mixed_precision_solves",
+      .def_rw("use_mixed_precision_solves",
                      &theia::BundleAdjustmentOptions::use_mixed_precision_solves)
-      .def_readwrite("max_num_refinement_iterations",
+      .def_rw("max_num_refinement_iterations",
                      &theia::BundleAdjustmentOptions::max_num_refinement_iterations)
-      .def_readwrite("dense_linear_algebra_library_type",
+      .def_rw("dense_linear_algebra_library_type",
                      &theia::BundleAdjustmentOptions::dense_linear_algebra_library_type)
-      .def_readwrite("sparse_linear_algebra_library_type",
+      .def_rw("sparse_linear_algebra_library_type",
                      &theia::BundleAdjustmentOptions::sparse_linear_algebra_library_type)
-      .def_readwrite("optimize_for_forward_facing_trajectory",
+      .def_rw("optimize_for_forward_facing_trajectory",
                      &theia::BundleAdjustmentOptions::optimize_for_forward_facing_trajectory);
 
   // Reconstruction Options
-  py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
+  nb::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
       .value("MIDPOINT", theia::TriangulationMethodType::MIDPOINT)
       .value("SVD", theia::TriangulationMethodType::SVD)
       .value("L2_MINIMIZATION", theia::TriangulationMethodType::L2_MINIMIZATION)
       .export_values();
 
   // Track Estimator Options
-  py::class_<theia::TrackEstimator::Options>(m, "TrackEstimatorOptions")
-      .def(py::init<>())
-      .def_readwrite("num_threads",
+  nb::class_<theia::TrackEstimator::Options>(m, "TrackEstimatorOptions")
+      .def(nb::init<>())
+      .def_rw("num_threads",
                      &theia::TrackEstimator::Options::num_threads)
-      .def_readwrite("max_acceptable_reprojection_error_pixels",
+      .def_rw("max_acceptable_reprojection_error_pixels",
                      &theia::TrackEstimator::Options::
                          max_acceptable_reprojection_error_pixels)
-      .def_readwrite(
+      .def_rw(
           "min_triangulation_angle_degrees",
           &theia::TrackEstimator::Options::min_triangulation_angle_degrees)
-      .def_readwrite("bundle_adjustment",
+      .def_rw("bundle_adjustment",
                      &theia::TrackEstimator::Options::bundle_adjustment)
-      .def_readwrite("multithreaded_step_size",
+      .def_rw("multithreaded_step_size",
                      &theia::TrackEstimator::Options::multithreaded_step_size)
-      .def_readwrite("triangulation_method",
+      .def_rw("triangulation_method",
                      &theia::TrackEstimator::Options::triangulation_method);
 
   // Track Estimator Summary
-  py::class_<theia::TrackEstimator::Summary>(m, "TrackEstimatorSummary")
-      .def_readwrite(
+  nb::class_<theia::TrackEstimator::Summary>(m, "TrackEstimatorSummary")
+      .def_rw(
           "input_num_estimated_tracks",
           &theia::TrackEstimator::Summary::input_num_estimated_tracks)
-      .def_readwrite(
+      .def_rw(
           "num_triangulation_attempts",
           &theia::TrackEstimator::Summary::num_triangulation_attempts)
-      .def_readwrite("estimated_tracks",
+      .def_rw("estimated_tracks",
                      &theia::TrackEstimator::Summary::estimated_tracks);
 
   // Track Estimator class
-  py::class_<theia::TrackEstimator>(m, "TrackEstimator")
-      .def(py::init<const theia::TrackEstimator::Options&,
+  nb::class_<theia::TrackEstimator>(m, "TrackEstimator")
+      .def(nb::init<const theia::TrackEstimator::Options&,
                     theia::Reconstruction*>())
       .def("EstimateAllTracks", &theia::TrackEstimator::EstimateAllTracks)
       .def("EstimateTracks", &theia::TrackEstimator::EstimateTracks);
 
   // ReconstructionEstimatorSummary
-  py::class_<theia::ReconstructionEstimatorSummary>(
+  nb::class_<theia::ReconstructionEstimatorSummary>(
       m, "ReconstructionEstimatorSummary")
-      .def_readwrite("success", &theia::ReconstructionEstimatorSummary::success)
-      .def_readwrite("estimated_tracks",
+      .def_rw("success", &theia::ReconstructionEstimatorSummary::success)
+      .def_rw("estimated_tracks",
                      &theia::ReconstructionEstimatorSummary::estimated_tracks)
-      .def_readwrite("estimated_views",
+      .def_rw("estimated_views",
                      &theia::ReconstructionEstimatorSummary::estimated_views)
-      .def_readwrite("camera_intrinsics_calibration_time",
+      .def_rw("camera_intrinsics_calibration_time",
                      &theia::ReconstructionEstimatorSummary::
                          camera_intrinsics_calibration_time)
-      .def_readwrite(
+      .def_rw(
           "pose_estimation_time",
           &theia::ReconstructionEstimatorSummary::pose_estimation_time)
-      .def_readwrite("triangulation_time",
+      .def_rw("triangulation_time",
                      &theia::ReconstructionEstimatorSummary::triangulation_time)
-      .def_readwrite(
+      .def_rw(
           "bundle_adjustment_time",
           &theia::ReconstructionEstimatorSummary::bundle_adjustment_time)
-      .def_readwrite("total_time",
+      .def_rw("total_time",
                      &theia::ReconstructionEstimatorSummary::total_time)
-      .def_readwrite("message",
+      .def_rw("message",
                      &theia::ReconstructionEstimatorSummary::message);
 
-  // Reconstruction Estimator class (unique_ptr holder: Create transfers ownership)
-  py::class_<theia::ReconstructionEstimator,
-             std::unique_ptr<theia::ReconstructionEstimator>>(
-      m, "ReconstructionEstimator")
+  // Reconstruction Estimator class
+  nb::class_<theia::ReconstructionEstimator>(m, "ReconstructionEstimator")
       .def_static("Create", &theia::ReconstructionEstimator::Create);
 
-  py::class_<theia::GlobalReconstructionEstimator,
-             theia::ReconstructionEstimator,
-             std::unique_ptr<theia::GlobalReconstructionEstimator>>(
+  nb::class_<theia::GlobalReconstructionEstimator, theia::ReconstructionEstimator>(
       m, "GlobalReconstructionEstimator")
-      .def(py::init<theia::ReconstructionEstimatorOptions>())
+      .def(nb::init<theia::ReconstructionEstimatorOptions>())
       .def("Estimate", &theia::GlobalReconstructionEstimator::Estimate);
 
-  py::class_<theia::IncrementalReconstructionEstimator,
-             theia::ReconstructionEstimator,
-             std::unique_ptr<theia::IncrementalReconstructionEstimator>>(
+  nb::class_<theia::IncrementalReconstructionEstimator,
+             theia::ReconstructionEstimator>(
       m, "IncrementalReconstructionEstimator")
-      .def(py::init<theia::ReconstructionEstimatorOptions>())
+      .def(nb::init<theia::ReconstructionEstimatorOptions>())
       .def("Estimate", &theia::IncrementalReconstructionEstimator::Estimate);
 
-  py::class_<theia::HybridReconstructionEstimator,
-             theia::ReconstructionEstimator,
-             std::unique_ptr<theia::HybridReconstructionEstimator>>(
+  nb::class_<theia::HybridReconstructionEstimator, theia::ReconstructionEstimator>(
       m, "HybridReconstructionEstimator")
-      .def(py::init<theia::ReconstructionEstimatorOptions>())
+      .def(nb::init<theia::ReconstructionEstimatorOptions>())
       .def("Estimate", &theia::HybridReconstructionEstimator::Estimate);
 
   // Reconstruction Options
-  py::enum_<theia::ReconstructionEstimatorType>(m,
+  nb::enum_<theia::ReconstructionEstimatorType>(m,
                                                 "ReconstructionEstimatorType")
       .value("GLOBAL", theia::ReconstructionEstimatorType::GLOBAL)
       .value("INCREMENTAL", theia::ReconstructionEstimatorType::INCREMENTAL)
       .value("HYBRID", theia::ReconstructionEstimatorType::HYBRID)
       .export_values();
 
-  py::enum_<theia::GlobalPositionEstimatorType>(m,
+  nb::enum_<theia::GlobalPositionEstimatorType>(m,
                                                 "GlobalPositionEstimatorType")
       .value("NONLINEAR", theia::GlobalPositionEstimatorType::NONLINEAR)
       .value("LINEAR_TRIPLET",
@@ -1515,7 +1495,7 @@ void pytheia_sfm_classes(py::module& m) {
       .value("GLOMAP", theia::GlobalPositionEstimatorType::GLOMAP)
       .export_values();
 
-  py::enum_<theia::GlobalRotationEstimatorType>(m,
+  nb::enum_<theia::GlobalRotationEstimatorType>(m,
                                                 "GlobalRotationEstimatorType")
       .value("ROBUST_L1L2", theia::GlobalRotationEstimatorType::ROBUST_L1L2)
       .value("NONLINEAR", theia::GlobalRotationEstimatorType::NONLINEAR)
@@ -1525,190 +1505,190 @@ void pytheia_sfm_classes(py::module& m) {
       .export_values();
 
   // ReconstructionEstimatorOptions
-  py::class_<theia::ReconstructionEstimatorOptions>(
+  nb::class_<theia::ReconstructionEstimatorOptions>(
       m, "ReconstructionEstimatorOptions")
-      .def(py::init<>())
+      .def(nb::init<>())
 
-      .def_readwrite(
+      .def_rw(
           "reconstruction_estimator_type",
           &theia::ReconstructionEstimatorOptions::reconstruction_estimator_type)
-      .def_readwrite("global_position_estimator_type",
+      .def_rw("global_position_estimator_type",
                      &theia::ReconstructionEstimatorOptions::
                          global_position_estimator_type)
-      .def_readwrite("global_rotation_estimator_type",
+      .def_rw("global_rotation_estimator_type",
                      &theia::ReconstructionEstimatorOptions::
                          global_rotation_estimator_type)
-      .def_readwrite("num_threads",
+      .def_rw("num_threads",
                      &theia::ReconstructionEstimatorOptions::num_threads)
-      .def_readwrite("max_reprojection_error_in_pixels",
+      .def_rw("max_reprojection_error_in_pixels",
                      &theia::ReconstructionEstimatorOptions::
                          max_reprojection_error_in_pixels)
-      .def_readwrite(
+      .def_rw(
           "min_num_two_view_inliers",
           &theia::ReconstructionEstimatorOptions::min_num_two_view_inliers)
-      .def_readwrite("ransac_confidence",
+      .def_rw("ransac_confidence",
                      &theia::ReconstructionEstimatorOptions::ransac_confidence)
-      .def_readwrite(
+      .def_rw(
           "ransac_min_iterations",
           &theia::ReconstructionEstimatorOptions::ransac_min_iterations)
-      .def_readwrite(
+      .def_rw(
           "ransac_max_iterations",
           &theia::ReconstructionEstimatorOptions::ransac_max_iterations)
-      .def_readwrite("ransac_use_mle",
+      .def_rw("ransac_use_mle",
                      &theia::ReconstructionEstimatorOptions::ransac_use_mle)
-      .def_readwrite("ransac_use_lo",
+      .def_rw("ransac_use_lo",
                      &theia::ReconstructionEstimatorOptions::ransac_use_lo)
-      .def_readwrite("ransac_lo_start_iterations",
+      .def_rw("ransac_lo_start_iterations",
                         &theia::ReconstructionEstimatorOptions::ransac_lo_start_iterations)
-      .def_readwrite("rotation_filtering_max_difference_degrees",
+      .def_rw("rotation_filtering_max_difference_degrees",
                      &theia::ReconstructionEstimatorOptions::
                          rotation_filtering_max_difference_degrees)
-      .def_readwrite("refine_relative_translations_after_rotation_estimation",
+      .def_rw("refine_relative_translations_after_rotation_estimation",
                      &theia::ReconstructionEstimatorOptions::
                          refine_relative_translations_after_rotation_estimation)
-      .def_readwrite("extract_maximal_rigid_subgraph",
+      .def_rw("extract_maximal_rigid_subgraph",
                      &theia::ReconstructionEstimatorOptions::
                          extract_maximal_rigid_subgraph)
-      .def_readwrite("filter_relative_translations_with_1dsfm",
+      .def_rw("filter_relative_translations_with_1dsfm",
                      &theia::ReconstructionEstimatorOptions::
                          filter_relative_translations_with_1dsfm)
-      .def_readwrite("translation_filtering_num_iterations",
+      .def_rw("translation_filtering_num_iterations",
                      &theia::ReconstructionEstimatorOptions::
                          translation_filtering_num_iterations)
-      .def_readwrite("translation_filtering_projection_tolerance",
+      .def_rw("translation_filtering_projection_tolerance",
                      &theia::ReconstructionEstimatorOptions::
                          translation_filtering_projection_tolerance)
-      .def_readwrite("rotation_estimation_robust_loss_scale",
+      .def_rw("rotation_estimation_robust_loss_scale",
                      &theia::ReconstructionEstimatorOptions::
                          rotation_estimation_robust_loss_scale)
-      .def_readwrite("nonlinear_position_estimator_options",
+      .def_rw("nonlinear_position_estimator_options",
                      &theia::ReconstructionEstimatorOptions::
                          nonlinear_position_estimator_options)
-      .def_readwrite("linear_triplet_position_estimator_options",
+      .def_rw("linear_triplet_position_estimator_options",
                      &theia::ReconstructionEstimatorOptions::
                          linear_triplet_position_estimator_options)
-      .def_readwrite("ligt_position_estimator_options",
+      .def_rw("ligt_position_estimator_options",
                      &theia::ReconstructionEstimatorOptions::
                          ligt_position_estimator_options)
-      .def_readwrite("glomap_position_estimator_options",
+      .def_rw("glomap_position_estimator_options",
                      &theia::ReconstructionEstimatorOptions::
                          glomap_position_estimator_options)
-      .def_readwrite("least_unsquared_deviation_position_estimator_options",
+      .def_rw("least_unsquared_deviation_position_estimator_options",
                      &theia::ReconstructionEstimatorOptions::
                          least_unsquared_deviation_position_estimator_options)
-      .def_readwrite(
+      .def_rw(
           "refine_camera_positions_and_points_after_position_estimation",
           &theia::ReconstructionEstimatorOptions::
               refine_camera_positions_and_points_after_position_estimation)
-      .def_readwrite("multiple_view_localization_ratio",
+      .def_rw("multiple_view_localization_ratio",
                      &theia::ReconstructionEstimatorOptions::
                          multiple_view_localization_ratio)
-      .def_readwrite("absolute_pose_reprojection_error_threshold",
+      .def_rw("absolute_pose_reprojection_error_threshold",
                      &theia::ReconstructionEstimatorOptions::
                          absolute_pose_reprojection_error_threshold)
-      .def_readwrite(
+      .def_rw(
           "min_num_absolute_pose_inliers",
           &theia::ReconstructionEstimatorOptions::min_num_absolute_pose_inliers)
-      .def_readwrite("full_bundle_adjustment_growth_percent",
+      .def_rw("full_bundle_adjustment_growth_percent",
                      &theia::ReconstructionEstimatorOptions::
                          full_bundle_adjustment_growth_percent)
-      .def_readwrite("partial_bundle_adjustment_num_views",
+      .def_rw("partial_bundle_adjustment_num_views",
                      &theia::ReconstructionEstimatorOptions::
                          partial_bundle_adjustment_num_views)
-      .def_readwrite("relative_position_estimation_max_sampson_error_pixels",
+      .def_rw("relative_position_estimation_max_sampson_error_pixels",
                      &theia::ReconstructionEstimatorOptions::
                          relative_position_estimation_max_sampson_error_pixels)
-      .def_readwrite("min_triangulation_angle_degrees",
+      .def_rw("min_triangulation_angle_degrees",
                      &theia::ReconstructionEstimatorOptions::
                          min_triangulation_angle_degrees)
-      .def_readwrite(
+      .def_rw(
           "bundle_adjust_tracks",
           &theia::ReconstructionEstimatorOptions::bundle_adjust_tracks)
-      .def_readwrite(
+      .def_rw(
           "triangulation_method",
           &theia::ReconstructionEstimatorOptions::triangulation_method)
-      .def_readwrite("num_retriangulation_iterations",
+      .def_rw("num_retriangulation_iterations",
                      &theia::ReconstructionEstimatorOptions::
                          num_retriangulation_iterations)
-      .def_readwrite("bundle_adjustment_loss_function_type",
+      .def_rw("bundle_adjustment_loss_function_type",
                      &theia::ReconstructionEstimatorOptions::
                          bundle_adjustment_loss_function_type)
-      .def_readwrite("bundle_adjustment_robust_loss_width",
+      .def_rw("bundle_adjustment_robust_loss_width",
                      &theia::ReconstructionEstimatorOptions::
                          bundle_adjustment_robust_loss_width)
-      .def_readwrite("min_cameras_for_iterative_solver",
+      .def_rw("min_cameras_for_iterative_solver",
                      &theia::ReconstructionEstimatorOptions::
                          min_cameras_for_iterative_solver)
-      .def_readwrite("intrinsics_to_optimize",
+      .def_rw("intrinsics_to_optimize",
           &theia::ReconstructionEstimatorOptions::intrinsics_to_optimize)
-      .def_readwrite("subsample_tracks_for_bundle_adjustment",
+      .def_rw("subsample_tracks_for_bundle_adjustment",
                      &theia::ReconstructionEstimatorOptions::
                          subsample_tracks_for_bundle_adjustment)
-      .def_readwrite("track_subset_selection_long_track_length_threshold",
+      .def_rw("track_subset_selection_long_track_length_threshold",
                      &theia::ReconstructionEstimatorOptions::
                          track_subset_selection_long_track_length_threshold)
-      .def_readwrite("track_selection_image_grid_cell_size_pixels",
+      .def_rw("track_selection_image_grid_cell_size_pixels",
                      &theia::ReconstructionEstimatorOptions::
                          track_selection_image_grid_cell_size_pixels)
-      .def_readwrite("min_num_optimized_tracks_per_view",
+      .def_rw("min_num_optimized_tracks_per_view",
                      &theia::ReconstructionEstimatorOptions::
                          min_num_optimized_tracks_per_view)
-      .def_readwrite("track_parametrization_type",
+      .def_rw("track_parametrization_type",
           &theia::ReconstructionEstimatorOptions::track_parametrization_type)
-      .def_readwrite("localization_pnp_type",
+      .def_rw("localization_pnp_type",
                      &theia::ReconstructionEstimatorOptions::localization_pnp_type)
-      .def_readwrite("dense_linear_algebra_library_type",
+      .def_rw("dense_linear_algebra_library_type",
                      &theia::ReconstructionEstimatorOptions::dense_linear_algebra_library_type)
-      .def_readwrite("sparse_linear_algebra_library_type",
+      .def_rw("sparse_linear_algebra_library_type",
                      &theia::ReconstructionEstimatorOptions::sparse_linear_algebra_library_type)
-      .def_readwrite("linear_solver_type",
+      .def_rw("linear_solver_type",
                      &theia::ReconstructionEstimatorOptions::linear_solver_type)
-      .def_readwrite("preconditioner_type",
+      .def_rw("preconditioner_type",
                      &theia::ReconstructionEstimatorOptions::preconditioner_type)
-      .def_readwrite("visibility_clustering_type",
+      .def_rw("visibility_clustering_type",
                      &theia::ReconstructionEstimatorOptions::visibility_clustering_type)
-      .def_readwrite("use_inner_iterations",
+      .def_rw("use_inner_iterations",
                      &theia::ReconstructionEstimatorOptions::use_inner_iterations)
-      .def_readwrite("max_num_iterations",
+      .def_rw("max_num_iterations",
                      &theia::ReconstructionEstimatorOptions::max_num_iterations)
-      .def_readwrite("optimize_for_forward_facing_trajectory",
+      .def_rw("optimize_for_forward_facing_trajectory",
                      &theia::ReconstructionEstimatorOptions::optimize_for_forward_facing_trajectory);
   // Reconstruction class
-  py::class_<theia::Reconstruction>(m, "Reconstruction")
-      .def(py::init<>())
+  nb::class_<theia::Reconstruction>(m, "Reconstruction")
+      .def(nb::init<>())
       .def("NumViews", &theia::Reconstruction::NumViews)
       .def("ViewIdFromName", &theia::Reconstruction::ViewIdFromName)
       .def("AddView",
            (theia::ViewId(theia::Reconstruction::*)(const std::string&,
                                                     const double)) &
                theia::Reconstruction::AddView,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("AddView",
            (theia::ViewId(theia::Reconstruction::*)(
                const std::string&,
                const theia::CameraIntrinsicsGroupId,
                const double)) &
                theia::Reconstruction::AddView,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("RemoveView", &theia::Reconstruction::RemoveView)
       .def("ViewIds", &theia::Reconstruction::ViewIds)
       .def("NumTracks", &theia::Reconstruction::NumTracks)
       //   .def("AddTrack",
       //        (theia::TrackId(theia::Reconstruction::*)()) &
       //            theia::Reconstruction::AddTrack,
-      //        py::return_value_policy::reference_internal)
+      //        nb::rv_policy::reference_internal)
       //   .def("AddTrack",
       //        ((theia::Reconstruction::*)(const theia::TrackId&)) &
       //            theia::Reconstruction::AddTrack,
-      //        py::return_value_policy::reference_internal)
+      //        nb::rv_policy::reference_internal)
       //   .def("AddTrack",
       //        (theia::TrackId(theia::Reconstruction::*)()) &
       //            theia::Reconstruction::AddTrack,
-      //        py::return_value_policy::reference_internal)
+      //        nb::rv_policy::reference_internal)
       //   .def("AddTrack",
       //        ((theia::Reconstruction::*)(const theia::TrackId&)) &
       //            theia::Reconstruction::AddTrack,
-      //        py::return_value_policy::reference_internal)
+      //        nb::rv_policy::reference_internal)
       .def("AddTrack",
            static_cast<theia::TrackId (theia::Reconstruction::*)()>(
                &theia::Reconstruction::AddTrack))
@@ -1731,16 +1711,16 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::Reconstruction::CameraIntrinsicsGroupIds)
       .def("View",
            &theia::Reconstruction::View,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("MutableView",
            &theia::Reconstruction::MutableView,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("Track",
            &theia::Reconstruction::Track,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("MutableTrack",
            &theia::Reconstruction::MutableTrack,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("GetViewsInCameraIntrinsicGroup",
            &theia::Reconstruction::GetViewsInCameraIntrinsicGroup)
       .def("InitializeInverseDepth",
@@ -1771,25 +1751,25 @@ void pytheia_sfm_classes(py::module& m) {
         
   // Reconstruction Estimator
   // TwoViewInfo
-  py::class_<theia::TwoViewInfo>(m, "TwoViewInfo")
-      .def(py::init<>())
-      .def_readwrite("focal_length_1", &theia::TwoViewInfo::focal_length_1)
-      .def_readwrite("focal_length_2", &theia::TwoViewInfo::focal_length_2)
-      .def_readwrite("position_2", &theia::TwoViewInfo::position_2)
-      .def_readwrite("rotation_2", &theia::TwoViewInfo::rotation_2)
-      .def_readwrite("num_verified_matches",
+  nb::class_<theia::TwoViewInfo>(m, "TwoViewInfo")
+      .def(nb::init<>())
+      .def_rw("focal_length_1", &theia::TwoViewInfo::focal_length_1)
+      .def_rw("focal_length_2", &theia::TwoViewInfo::focal_length_2)
+      .def_rw("position_2", &theia::TwoViewInfo::position_2)
+      .def_rw("rotation_2", &theia::TwoViewInfo::rotation_2)
+      .def_rw("num_verified_matches",
                      &theia::TwoViewInfo::num_verified_matches)
-      .def_readwrite("num_homography_inliers",
+      .def_rw("num_homography_inliers",
                      &theia::TwoViewInfo::num_homography_inliers)
-      .def_readwrite("visibility_score", &theia::TwoViewInfo::visibility_score)
-      .def_readwrite("scale_estimate", &theia::TwoViewInfo::scale_estimate);
+      .def_rw("visibility_score", &theia::TwoViewInfo::visibility_score)
+      .def_rw("scale_estimate", &theia::TwoViewInfo::scale_estimate);
 
   m.def("SwapCameras", &theia::SwapCameras);
 
   // ViewGraph
-  py::class_<theia::ViewGraph>(m, "ViewGraph")
-      .def(py::init<>())
-      //.def_property_readonly("Name", &theia::View::Name)
+  nb::class_<theia::ViewGraph>(m, "ViewGraph")
+      .def(nb::init<>())
+      //.def_prop_ro("Name", &theia::View::Name)
       .def("ReadFromDisk", &theia::ViewGraph::ReadFromDisk)
       .def("WriteToDisk", &theia::ViewGraph::WriteToDisk)
       .def("HasView", &theia::ViewGraph::HasView)
@@ -1801,10 +1781,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def("NumEdges", &theia::ViewGraph::NumEdges)
       .def("GetNeighborIdsForView",
            &theia::ViewGraph::GetNeighborIdsForView,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("GetEdge",
            &theia::ViewGraph::GetEdge,
-           py::return_value_policy::reference_internal)
+           nb::rv_policy::reference_internal)
       .def("GetAllEdges", &theia::ViewGraph::GetAllEdges)
 
       // not sure pointer as input
@@ -1815,14 +1795,14 @@ void pytheia_sfm_classes(py::module& m) {
       ;
 
   // GPS converter
-  py::class_<theia::GPSConverter>(m, "GPSConverter")
-      .def(py::init<>())
+  nb::class_<theia::GPSConverter>(m, "GPSConverter")
+      .def(nb::init<>())
       .def_static("ECEFToLLA", theia::GPSConverter::ECEFToLLA)
       .def_static("LLAToECEF", theia::GPSConverter::LLAToECEF);
 
   // Bundle Adjustment
   // Expose selected Ceres enums to configure solver from Python.
-  py::enum_<ceres::LinearSolverType>(m, "LinearSolverType")
+  nb::enum_<ceres::LinearSolverType>(m, "LinearSolverType")
       .value("DENSE_QR", ceres::LinearSolverType::DENSE_QR)
       .value("DENSE_NORMAL_CHOLESKY", ceres::LinearSolverType::DENSE_NORMAL_CHOLESKY)
       .value("DENSE_SCHUR", ceres::LinearSolverType::DENSE_SCHUR)
@@ -1832,7 +1812,7 @@ void pytheia_sfm_classes(py::module& m) {
       .value("CGNR", ceres::LinearSolverType::CGNR)
       .export_values();
 
-  py::enum_<ceres::PreconditionerType>(m, "PreconditionerType")
+  nb::enum_<ceres::PreconditionerType>(m, "PreconditionerType")
       .value("IDENTITY", ceres::PreconditionerType::IDENTITY)
       .value("JACOBI", ceres::PreconditionerType::JACOBI)
       .value("SCHUR_JACOBI", ceres::PreconditionerType::SCHUR_JACOBI)
@@ -1840,12 +1820,12 @@ void pytheia_sfm_classes(py::module& m) {
       .value("CLUSTER_TRIDIAGONAL", ceres::PreconditionerType::CLUSTER_TRIDIAGONAL)
       .export_values();
 
-  py::enum_<ceres::VisibilityClusteringType>(m, "VisibilityClusteringType")
+  nb::enum_<ceres::VisibilityClusteringType>(m, "VisibilityClusteringType")
       .value("SINGLE_LINKAGE", ceres::VisibilityClusteringType::SINGLE_LINKAGE)
       .value("CANONICAL_VIEWS", ceres::VisibilityClusteringType::CANONICAL_VIEWS)
       .export_values();
 
-  py::enum_<ceres::DenseLinearAlgebraLibraryType>(m, "DenseLinearAlgebraLibraryType")
+  nb::enum_<ceres::DenseLinearAlgebraLibraryType>(m, "DenseLinearAlgebraLibraryType")
       .value("EIGEN", ceres::DenseLinearAlgebraLibraryType::EIGEN)
       .value("LAPACK", ceres::DenseLinearAlgebraLibraryType::LAPACK)
 #if THEIA_CERES_HAS_CUDA_DENSE
@@ -1853,7 +1833,7 @@ void pytheia_sfm_classes(py::module& m) {
 #endif
       .export_values();
 
-  py::enum_<ceres::SparseLinearAlgebraLibraryType>(m, "SparseLinearAlgebraLibraryType")
+  nb::enum_<ceres::SparseLinearAlgebraLibraryType>(m, "SparseLinearAlgebraLibraryType")
       .value("SUITE_SPARSE", ceres::SparseLinearAlgebraLibraryType::SUITE_SPARSE)
       .value("EIGEN_SPARSE", ceres::SparseLinearAlgebraLibraryType::EIGEN_SPARSE)
       .value("ACCELERATE_SPARSE", ceres::SparseLinearAlgebraLibraryType::ACCELERATE_SPARSE)
@@ -1862,7 +1842,7 @@ void pytheia_sfm_classes(py::module& m) {
 #endif
       .export_values();
 
-  py::enum_<theia::OptimizeIntrinsicsType>(m, "OptimizeIntrinsicsType")
+  nb::enum_<theia::OptimizeIntrinsicsType>(m, "OptimizeIntrinsicsType")
       .value("NONE", theia::OptimizeIntrinsicsType::NONE)
       .value("FOCAL_LENGTH", theia::OptimizeIntrinsicsType::FOCAL_LENGTH)
       .value("ASPECT_RATIO", theia::OptimizeIntrinsicsType::ASPECT_RATIO)
@@ -1881,12 +1861,12 @@ void pytheia_sfm_classes(py::module& m) {
       .value("ALL", theia::OptimizeIntrinsicsType::ALL)
       .export_values();
 
-  py::enum_<theia::GravityPriorErrorType>(m, "GravityPriorErrorType")
+  nb::enum_<theia::GravityPriorErrorType>(m, "GravityPriorErrorType")
       .value("VECTOR_DIFF", theia::GravityPriorErrorType::VECTOR_DIFF)
       .value("DIRECTION_CROSS", theia::GravityPriorErrorType::DIRECTION_CROSS)
       .export_values();
 
-  py::enum_<theia::LossFunctionType>(m, "LossFunctionType")
+  nb::enum_<theia::LossFunctionType>(m, "LossFunctionType")
       .value("TRIVIAL", theia::LossFunctionType::TRIVIAL)
       .value("HUBER", theia::LossFunctionType::HUBER)
       .value("SOFTLONE", theia::LossFunctionType::SOFTLONE)
@@ -1895,34 +1875,34 @@ void pytheia_sfm_classes(py::module& m) {
       .value("TUKEY", theia::LossFunctionType::TUKEY)
       .export_values();
 
-  py::enum_<theia::TrackParametrizationType>(m, "TrackParametrizationType")
+  nb::enum_<theia::TrackParametrizationType>(m, "TrackParametrizationType")
       .value("XYZW", theia::TrackParametrizationType::XYZW)
       .value("XYZW_MANIFOLD", theia::TrackParametrizationType::XYZW_MANIFOLD)
       .value("INVERSE_DEPTH", theia::TrackParametrizationType::INVERSE_DEPTH)
       .export_values();
 
   // TwoViewBundleAdjustmentOptions
-  py::class_<theia::TwoViewBundleAdjustmentOptions>(
+  nb::class_<theia::TwoViewBundleAdjustmentOptions>(
       m, "TwoViewBundleAdjustmentOptions")
-      .def(py::init<>())
-      .def_readwrite("ba_options",
+      .def(nb::init<>())
+      .def_rw("ba_options",
                      &theia::TwoViewBundleAdjustmentOptions::ba_options)
-      .def_readwrite(
+      .def_rw(
           "constant_camera1_intrinsics",
           &theia::TwoViewBundleAdjustmentOptions::constant_camera1_intrinsics)
-      .def_readwrite(
+      .def_rw(
           "constant_camera2_intrinsics",
           &theia::TwoViewBundleAdjustmentOptions::constant_camera2_intrinsics);
 
-  py::class_<theia::BundleAdjustmentSummary>(m, "BundleAdjustmentSummary")
-      .def(py::init<>())
-      .def_readwrite("success", &theia::BundleAdjustmentSummary::success)
-      .def_readwrite("initial_cost",
+  nb::class_<theia::BundleAdjustmentSummary>(m, "BundleAdjustmentSummary")
+      .def(nb::init<>())
+      .def_rw("success", &theia::BundleAdjustmentSummary::success)
+      .def_rw("initial_cost",
                      &theia::BundleAdjustmentSummary::initial_cost)
-      .def_readwrite("final_cost", &theia::BundleAdjustmentSummary::final_cost)
-      .def_readwrite("setup_time_in_seconds",
+      .def_rw("final_cost", &theia::BundleAdjustmentSummary::final_cost)
+      .def_rw("setup_time_in_seconds",
                      &theia::BundleAdjustmentSummary::setup_time_in_seconds)
-      .def_readwrite("solve_time_in_seconds",
+      .def_rw("solve_time_in_seconds",
                      &theia::BundleAdjustmentSummary::solve_time_in_seconds);
 
   m.def("BundleAdjustPartialReconstruction",
@@ -1954,9 +1934,9 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("OptimizeAbsolutePoseOnNormFeatures",
         theia::OptimizeAbsolutePoseOnNormFeatures);
   // Bundle Adjuster
-  py::class_<theia::BundleAdjuster>(m, "BundleAdjuster")
+  nb::class_<theia::BundleAdjuster>(m, "BundleAdjuster")
       // constructor uses pointer of an object as input
-      //.def(py::init<theia::BundleAdjustmentOptions, theia::Reconstruction>())
+      //.def(nb::init<theia::BundleAdjustmentOptions, theia::Reconstruction>())
       .def("AddView", &theia::BundleAdjuster::AddView)
       .def("AddTrack", &theia::BundleAdjuster::AddTrack)
       .def("Optimize", &theia::BundleAdjuster::Optimize)
@@ -1984,48 +1964,48 @@ void pytheia_sfm_classes(py::module& m) {
         theia::ComputeTripletBaselineRatiosWrapper);
 
   // Global position estimator options
-  py::class_<theia::PositionEstimator>(m, "PositionEstimator");
+  nb::class_<theia::PositionEstimator>(m, "PositionEstimator");
 
-  py::class_<theia::LinearPositionEstimator::Options>(
+  nb::class_<theia::LinearPositionEstimator::Options>(
       m, "LinearPositionEstimatorOptions")
-      .def(py::init<>())
-      .def_readwrite("num_threads",
+      .def(nb::init<>())
+      .def_rw("num_threads",
                      &theia::LinearPositionEstimator::Options::num_threads)
-      .def_readwrite(
+      .def_rw(
           "max_power_iterations",
           &theia::LinearPositionEstimator::Options::max_power_iterations)
-      .def_readwrite(
+      .def_rw(
           "eigensolver_threshold",
           &theia::LinearPositionEstimator::Options::eigensolver_threshold);
 
   // Global Position Estimators
-  py::class_<theia::LinearPositionEstimator, theia::PositionEstimator>(
+  nb::class_<theia::LinearPositionEstimator, theia::PositionEstimator>(
       m, "LinearPositionEstimator")
-      .def(py::init<const theia::LinearPositionEstimator::Options&,
+      .def(nb::init<const theia::LinearPositionEstimator::Options&,
                     const theia::Reconstruction&>())
       .def("EstimatePositions",
            &theia::LinearPositionEstimator::EstimatePositionsWrapper);
 
-  py::class_<theia::NonlinearPositionEstimator::Options>(
+  nb::class_<theia::NonlinearPositionEstimator::Options>(
       m, "NonlinearPositionEstimatorOptions")
-      .def(py::init<>())
-      .def_readwrite("num_threads",
+      .def(nb::init<>())
+      .def_rw("num_threads",
                      &theia::NonlinearPositionEstimator::Options::num_threads)
-      .def_readwrite(
+      .def_rw(
           "max_power_iterations",
           &theia::NonlinearPositionEstimator::Options::max_num_iterations)
-      .def_readwrite(
+      .def_rw(
           "eigensolver_threshold",
           &theia::NonlinearPositionEstimator::Options::robust_loss_width)
-      .def_readwrite("min_num_points_per_view",
+      .def_rw("min_num_points_per_view",
                      &theia::NonlinearPositionEstimator::Options::num_threads)
-      .def_readwrite(
+      .def_rw(
           "point_to_camera_weight",
           &theia::NonlinearPositionEstimator::Options::max_num_iterations);
 
-  py::class_<theia::NonlinearPositionEstimator, theia::PositionEstimator>(
+  nb::class_<theia::NonlinearPositionEstimator, theia::PositionEstimator>(
       m, "NonlinearPositionEstimator")
-      .def(py::init<const theia::NonlinearPositionEstimator::Options&,
+      .def(nb::init<const theia::NonlinearPositionEstimator::Options&,
                     const theia::Reconstruction&>())
       .def("EstimatePositions",
            &theia::NonlinearPositionEstimator::EstimatePositionsWrapper)
@@ -2033,111 +2013,111 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::NonlinearPositionEstimator::
                EstimateRemainingPositionsInReconWrapper);
 
-  py::class_<theia::LeastUnsquaredDeviationPositionEstimator::Options>(
+  nb::class_<theia::LeastUnsquaredDeviationPositionEstimator::Options>(
       m, "LeastUnsquaredDeviationPositionEstimatorOptions")
-      .def(py::init<>())
-      .def_readwrite("max_num_iterations",
+      .def(nb::init<>())
+      .def_rw("max_num_iterations",
                      &theia::LeastUnsquaredDeviationPositionEstimator::Options::
                          max_num_iterations)
-      .def_readwrite("max_num_reweighted_iterations",
+      .def_rw("max_num_reweighted_iterations",
                      &theia::LeastUnsquaredDeviationPositionEstimator::Options::
                          max_num_reweighted_iterations)
-      .def_readwrite("convergence_criterion",
+      .def_rw("convergence_criterion",
                      &theia::LeastUnsquaredDeviationPositionEstimator::Options::
                          convergence_criterion)
-      .def_readwrite("use_scale_estimates",
+      .def_rw("use_scale_estimates",
                      &theia::LeastUnsquaredDeviationPositionEstimator::Options::
                          use_scale_estimates)
-      .def_readwrite("min_valid_scale_estimate",
+      .def_rw("min_valid_scale_estimate",
                      &theia::LeastUnsquaredDeviationPositionEstimator::Options::
                          min_valid_scale_estimate);
 
-  py::class_<theia::LeastUnsquaredDeviationPositionEstimator,
+  nb::class_<theia::LeastUnsquaredDeviationPositionEstimator,
              theia::PositionEstimator>(
       m, "LeastUnsquaredDeviationPositionEstimator")
-      .def(py::init<theia::LeastUnsquaredDeviationPositionEstimator::Options>())
+      .def(nb::init<theia::LeastUnsquaredDeviationPositionEstimator::Options>())
       .def("EstimatePositions",
            &theia::LeastUnsquaredDeviationPositionEstimator::
                EstimatePositionsWrapper);
 
-  py::class_<theia::LiGTPositionEstimator::Options>(
+  nb::class_<theia::LiGTPositionEstimator::Options>(
       m, "LiGTPositionEstimatorOptions")
-      .def(py::init<>())
-      .def_readwrite("num_threads",
+      .def(nb::init<>())
+      .def_rw("num_threads",
                      &theia::LiGTPositionEstimator::Options::num_threads)
-      .def_readwrite(
+      .def_rw(
           "max_power_iterations",
           &theia::LiGTPositionEstimator::Options::max_power_iterations)
-      .def_readwrite(
+      .def_rw(
           "eigensolver_threshold",
           &theia::LiGTPositionEstimator::Options::eigensolver_threshold)
-      .def_readwrite("max_num_views_svd",
+      .def_rw("max_num_views_svd",
                      &theia::LiGTPositionEstimator::Options::max_num_views_svd);
 
-  py::class_<theia::LiGTPositionEstimator, theia::PositionEstimator>(
+  nb::class_<theia::LiGTPositionEstimator, theia::PositionEstimator>(
       m, "LiGTPositionEstimator")
-      .def(py::init<const theia::LiGTPositionEstimator::Options&,
+      .def(nb::init<const theia::LiGTPositionEstimator::Options&,
                     const theia::Reconstruction&>())
       .def("EstimatePositions",
            &theia::LiGTPositionEstimator::EstimatePositionsWrapper);
 
-  py::class_<theia::GlomapPositionEstimator::Options>(
+  nb::class_<theia::GlomapPositionEstimator::Options>(
       m, "GlomapPositionEstimatorOptions")
-      .def(py::init<>())
-      .def_readwrite("num_threads",
+      .def(nb::init<>())
+      .def_rw("num_threads",
                      &theia::GlomapPositionEstimator::Options::num_threads)
-      .def_readwrite(
+      .def_rw(
           "max_num_iterations",
           &theia::GlomapPositionEstimator::Options::max_num_iterations)
-      .def_readwrite("robust_loss_width",
+      .def_rw("robust_loss_width",
                      &theia::GlomapPositionEstimator::Options::robust_loss_width)
-      .def_readwrite("min_track_length",
+      .def_rw("min_track_length",
                      &theia::GlomapPositionEstimator::Options::min_track_length)
-      .def_readwrite("max_num_tracks",
+      .def_rw("max_num_tracks",
                      &theia::GlomapPositionEstimator::Options::max_num_tracks)
-      .def_readwrite("write_points_to_reconstruction",
+      .def_rw("write_points_to_reconstruction",
                      &theia::GlomapPositionEstimator::Options::
                          write_points_to_reconstruction)
-      .def_readwrite("use_pairwise_scale_priors",
+      .def_rw("use_pairwise_scale_priors",
                      &theia::GlomapPositionEstimator::Options::
                          use_pairwise_scale_priors)
-      .def_readwrite("pairwise_scale_prior_weight",
+      .def_rw("pairwise_scale_prior_weight",
                      &theia::GlomapPositionEstimator::Options::
                          pairwise_scale_prior_weight);
 
-  py::class_<theia::GlomapPositionEstimator, theia::PositionEstimator>(
+  nb::class_<theia::GlomapPositionEstimator, theia::PositionEstimator>(
       m, "GlomapPositionEstimator")
-      .def(py::init<const theia::GlomapPositionEstimator::Options&,
+      .def(nb::init<const theia::GlomapPositionEstimator::Options&,
                     theia::Reconstruction*>())
       .def("EstimatePositions",
            &theia::GlomapPositionEstimator::EstimatePositionsWrapper);
 
   // base RotationEstimator class
-  py::class_<theia::RotationEstimator>(m, "RotationEstimator");
+  nb::class_<theia::RotationEstimator>(m, "RotationEstimator");
 
-  py::class_<theia::RobustRotationEstimator::Options>(
+  nb::class_<theia::RobustRotationEstimator::Options>(
       m, "RobustRotationEstimatorOptions")
-      .def(py::init<>())
-      .def_readwrite(
+      .def(nb::init<>())
+      .def_rw(
           "max_num_l1_iterations",
           &theia::RobustRotationEstimator::Options::max_num_l1_iterations)
-      .def_readwrite("l1_step_convergence_threshold",
+      .def_rw("l1_step_convergence_threshold",
                      &theia::RobustRotationEstimator::Options::
                          l1_step_convergence_threshold)
-      .def_readwrite(
+      .def_rw(
           "max_num_irls_iterations",
           &theia::RobustRotationEstimator::Options::max_num_irls_iterations)
-      .def_readwrite("irls_step_convergence_threshold",
+      .def_rw("irls_step_convergence_threshold",
                      &theia::RobustRotationEstimator::Options::
                          irls_step_convergence_threshold)
-      .def_readwrite(
+      .def_rw(
           "irls_loss_parameter_sigma",
           &theia::RobustRotationEstimator::Options::irls_loss_parameter_sigma);
 
   // Global Rotation Estimators
-  py::class_<theia::RobustRotationEstimator, theia::RotationEstimator>(
+  nb::class_<theia::RobustRotationEstimator, theia::RotationEstimator>(
       m, "RobustRotationEstimator")
-      .def(py::init<const theia::RobustRotationEstimator::Options&>())
+      .def(nb::init<const theia::RobustRotationEstimator::Options&>())
       .def("EstimateRotations",
            &theia::RobustRotationEstimator::EstimateRotationsWrapper)
       .def("AddRelativeRotationConstraint",
@@ -2145,36 +2125,36 @@ void pytheia_sfm_classes(py::module& m) {
       .def("SetFixedGlobalRotations",
            &theia::RobustRotationEstimator::SetFixedGlobalRotations);
 
-  py::class_<theia::NonlinearRotationEstimator, theia::RotationEstimator>(
+  nb::class_<theia::NonlinearRotationEstimator, theia::RotationEstimator>(
       m, "NonlinearRotationEstimator")
-      .def(py::init<>())
-      .def(py::init<double>())
+      .def(nb::init<>())
+      .def(nb::init<double>())
       .def("EstimateRotations",
            &theia::NonlinearRotationEstimator::EstimateRotationsWrapper);
 
-  py::class_<theia::LinearRotationEstimator, theia::RotationEstimator>(
+  nb::class_<theia::LinearRotationEstimator, theia::RotationEstimator>(
       m, "LinearRotationEstimator")
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("AddRelativeRotationConstraint",
            &theia::LinearRotationEstimator::AddRelativeRotationConstraint)
       .def("EstimateRotations",
            &theia::LinearRotationEstimator::EstimateRotationsWrapper);
 
-  py::class_<theia::LagrangeDualRotationEstimator, theia::RotationEstimator>(
+  nb::class_<theia::LagrangeDualRotationEstimator, theia::RotationEstimator>(
       m, "LagrangeDualRotationEstimator")
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("EstimateRotations",
            &theia::LagrangeDualRotationEstimator::EstimateRotationsWrapper);
 
-  py::class_<theia::HybridRotationEstimator, theia::RotationEstimator>(
+  nb::class_<theia::HybridRotationEstimator, theia::RotationEstimator>(
       m, "HybridRotationEstimator")
-      .def(py::init<>())
+      .def(nb::init<>())
       .def("EstimateRotations",
            &theia::HybridRotationEstimator::EstimateRotationsWrapper);
 }
 
-void pytheia_sfm(py::module& m) {
-  py::module m_submodule = m.def_submodule("sfm");
+void pytheia_sfm(nb::module_& m) {
+  nb::module_ m_submodule = m.def_submodule("sfm");
   pytheia_sfm_classes(m_submodule);
 }
 

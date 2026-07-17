@@ -310,6 +310,40 @@ class TestSophusIntegration:
         np.testing.assert_array_almost_equal(transformed_point, test_point)
 
 
+class TestSophusLambdaConstructors:
+    """Focused tests for lambda py::init bindings (nanobind placement-new targets)."""
+
+    def test_se3d_from_rotation_matrix_and_translation(self):
+        rotation = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
+        translation = np.array([1.0, 2.0, 3.0])
+        se3 = pt.math.SE3d(rotation, translation)
+        np.testing.assert_array_almost_equal(se3.rotation_matrix(), rotation)
+        np.testing.assert_array_almost_equal(se3.translation(), translation)
+
+    def test_se3d_from_quaternion_wxyz_and_translation(self):
+        # Quaternion [w, x, y, z] — 90 deg about Z
+        quaternion = np.array([np.sqrt(2) / 2, 0.0, 0.0, np.sqrt(2) / 2])
+        translation = np.array([0.5, -1.0, 2.0])
+        se3 = pt.math.SE3d(quaternion, translation)
+        expected_r = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
+        np.testing.assert_array_almost_equal(se3.rotation_matrix(), expected_r, decimal=5)
+        np.testing.assert_array_almost_equal(se3.translation(), translation)
+
+    def test_sim3d_from_matrix_translation_scale(self):
+        rotation = np.eye(3)
+        translation = np.array([1.0, 0.0, 0.0])
+        scale = 2.5
+        sim3 = pt.math.Sim3d(rotation, translation, scale)
+        assert sim3.scale() == pytest.approx(scale)
+        np.testing.assert_array_almost_equal(sim3.translation(), translation)
+
+    def test_sim3d_from_tangent_vector_exp(self):
+        tangent = np.zeros(7)
+        tangent[6] = 0.3  # log-scale component
+        sim3 = pt.math.Sim3d(tangent)
+        assert sim3.scale() == pytest.approx(np.exp(0.3), rel=1e-5)
+
+
 if __name__ == "__main__":
     # Run the tests
     import sys

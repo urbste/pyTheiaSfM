@@ -12,7 +12,7 @@ def get_view_graph(recon, outlier_chance=0.1):
     outlier_edges = []
     for i in range(0, len(vids)):
         id1 = vids[i]
-        init_rotations[id1] = np.zeros((3,1)) # just initialize with zeros here
+        init_rotations[id1] = np.zeros(3, dtype=np.float64)
         ri = recon.View(id1).Camera().GetOrientationAsAngleAxis()
         gt_rotations[id1] = ri
         for j in range(i, len(vids)):
@@ -23,8 +23,8 @@ def get_view_graph(recon, outlier_chance=0.1):
             two_view_info = pt.sfm.TwoViewInfo()
             two_view_info.focal_length_1 = 1.0
             two_view_info.focal_length_2 = 1.0
-            two_view_info.position_2 = np.zeros((3,1), dtype=np.float32)
-            two_view_info.rotation_2 = pt.math.RelativeRotationFromTwoRotations(ri, rj) 
+            two_view_info.position_2 = np.zeros(3, dtype=np.float64)
+            two_view_info.rotation_2 = pt.math.RelativeRotationFromTwoRotations(ri, rj)
             if np.random.rand() < outlier_chance:
                 two_view_info.rotation_2 = two_view_info.rotation_2 + np.random.rand(3)
                 outlier_edges.append((id1, id2))

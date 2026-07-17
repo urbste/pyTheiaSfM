@@ -70,8 +70,11 @@ ViewSelectionMVSNet(const Reconstruction& reconstruction,
     if (!view_i->IsEstimated()) {
       continue;
     }
-    // get neighbors of view i and track_ids
-    const auto neighbors = *view_graph.GetNeighborIdsForView(view_i_id);
+    const auto* neighbors_ptr = view_graph.GetNeighborIdsForView(view_i_id);
+    if (neighbors_ptr == nullptr) {
+      continue;
+    }
+    const auto& neighbors = *neighbors_ptr;
     const auto& track_ids_i = reconstruction.View(view_i_id)->TrackIds();
     // position of view_i
     const Eigen::Vector3d ci = view_i->Camera().GetPosition();

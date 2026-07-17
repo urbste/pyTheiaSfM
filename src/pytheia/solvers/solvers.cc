@@ -35,13 +35,10 @@
 
 #include "pytheia/solvers/solvers.h"
 
-#include <pybind11/eigen.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/eigen/dense.h>
 
 #include <Eigen/Core>
 #include <iostream>
-#include <pybind11/numpy.h>
 #include <vector>
 
 #include "theia/solvers/exhaustive_ransac.h"
@@ -58,16 +55,16 @@
 #include "theia/solvers/sampler.h"
 #include "theia/util/random.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 namespace pytheia {
 namespace solvers {
 
-void pytheia_solvers_classes(py::module& m) {
+void pytheia_solvers_classes(nb::module_& m) {
   // RandomNumberGenerator
-  py::class_<theia::RandomNumberGenerator>(m, "RandomNumberGenerator")
-      .def(py::init<>())
-      .def(py::init<int>())
+  nb::class_<theia::RandomNumberGenerator>(m, "RandomNumberGenerator")
+      .def(nb::init<>())
+      .def(nb::init<int>())
       .def("Seed", &theia::RandomNumberGenerator::Seed)
       .def("RandDouble", &theia::RandomNumberGenerator::RandDouble)
       .def("RandFloat", &theia::RandomNumberGenerator::RandFloat)
@@ -77,78 +74,78 @@ void pytheia_solvers_classes(py::module& m) {
       ;
 
   // RansacSummary
-  py::class_<theia::RansacSummary>(m, "RansacSummary")
-      .def_readwrite("inliers", &theia::RansacSummary::inliers)
-      .def_readwrite("num_input_data_points",
+  nb::class_<theia::RansacSummary>(m, "RansacSummary")
+      .def_rw("inliers", &theia::RansacSummary::inliers)
+      .def_rw("num_input_data_points",
                      &theia::RansacSummary::num_input_data_points)
-      .def_readwrite("num_iterations", &theia::RansacSummary::num_iterations)
-      .def_readwrite("confidence", &theia::RansacSummary::confidence)
-      .def_readwrite("num_lo_iterations",
+      .def_rw("num_iterations", &theia::RansacSummary::num_iterations)
+      .def_rw("confidence", &theia::RansacSummary::confidence)
+      .def_rw("num_lo_iterations",
                      &theia::RansacSummary::num_lo_iterations);
 
-  py::class_<theia::RansacParameters>(m, "RansacParameters")
-      .def(py::init<>())
-      .def_readwrite("error_thresh", &theia::RansacParameters::error_thresh)
-      .def_readwrite("failure_probability",
+  nb::class_<theia::RansacParameters>(m, "RansacParameters")
+      .def(nb::init<>())
+      .def_rw("error_thresh", &theia::RansacParameters::error_thresh)
+      .def_rw("failure_probability",
                      &theia::RansacParameters::failure_probability)
-      .def_readwrite("min_inlier_ratio",
+      .def_rw("min_inlier_ratio",
                      &theia::RansacParameters::min_inlier_ratio)
-      .def_readwrite("min_iterations", &theia::RansacParameters::min_iterations)
-      .def_readwrite("max_iterations", &theia::RansacParameters::max_iterations)
-      .def_readwrite("use_mle", &theia::RansacParameters::use_mle)
-      .def_readwrite("use_lo", &theia::RansacParameters::use_lo)
-      .def_readwrite("lo_start_iterations",
+      .def_rw("min_iterations", &theia::RansacParameters::min_iterations)
+      .def_rw("max_iterations", &theia::RansacParameters::max_iterations)
+      .def_rw("use_mle", &theia::RansacParameters::use_mle)
+      .def_rw("use_lo", &theia::RansacParameters::use_lo)
+      .def_rw("lo_start_iterations",
                      &theia::RansacParameters::lo_start_iterations)
-      .def_readwrite("use_Tdd_test", &theia::RansacParameters::use_Tdd_test);
+      .def_rw("use_Tdd_test", &theia::RansacParameters::use_Tdd_test);
   /*
-  py::class_<theia::Sampler> sampler(m, "Sampler");
+  nb::class_<theia::Sampler> sampler(m, "Sampler");
 
 
-  py::class_<theia::ProsacSampler>(m, "ProsacSampler", sampler)
-    .def(py::init<std::shared_ptr<theia::RandomNumberGenerator>, int>())
+  nb::class_<theia::ProsacSampler>(m, "ProsacSampler", sampler)
+    .def(nb::init<std::shared_ptr<theia::RandomNumberGenerator>, int>())
     .def("SetSampleNumber", &theia::ProsacSampler::SetSampleNumber)
     .def("Sample", &theia::ProsacSampler::Sample)
     .def("Initialize", &theia::ProsacSampler::Initialize)
 
   ;
 
-  py::class_<theia::ExhaustiveSampler>(m, "ExhaustiveSampler", sampler)
-    .def(py::init<std::shared_ptr<theia::RandomNumberGenerator>, int>())
+  nb::class_<theia::ExhaustiveSampler>(m, "ExhaustiveSampler", sampler)
+    .def(nb::init<std::shared_ptr<theia::RandomNumberGenerator>, int>())
     .def("Sample", &theia::ExhaustiveSampler::Sample)
     .def("Initialize", &theia::ExhaustiveSampler::Initialize)
 
   ;
 
-  py::class_<theia::RandomSampler>(m, "RandomSampler", sampler)
-    .def(py::init<std::shared_ptr<theia::RandomNumberGenerator>, int>())
+  nb::class_<theia::RandomSampler>(m, "RandomSampler", sampler)
+    .def(nb::init<std::shared_ptr<theia::RandomNumberGenerator>, int>())
     .def("Sample", &theia::RandomSampler::Sample)
     .def("Initialize", &theia::RandomSampler::Initialize)
 
   ;
 
-  py::class_<theia::QualityMeasurement>(m, "QualityMeasurement")
+  nb::class_<theia::QualityMeasurement>(m, "QualityMeasurement")
 
     .def("Initialize", &theia::QualityMeasurement::Initialize)
   ;
 
-  py::class_<theia::LmedQualityMeasurement, theia::QualityMeasurement>(m,
-  "LmedQualityMeasurement") .def(py::init<int>()) .def("ComputeCost",
+  nb::class_<theia::LmedQualityMeasurement, theia::QualityMeasurement>(m,
+  "LmedQualityMeasurement") .def(nb::init<int>()) .def("ComputeCost",
   &theia::LmedQualityMeasurement::ComputeCost)
   ;
 
 
-  py::class_<theia::MLEQualityMeasurement, theia::QualityMeasurement>(m,
-  "MLEQualityMeasurement") .def(py::init<double>()) .def("ComputeCost",
+  nb::class_<theia::MLEQualityMeasurement, theia::QualityMeasurement>(m,
+  "MLEQualityMeasurement") .def(nb::init<double>()) .def("ComputeCost",
   &theia::MLEQualityMeasurement::ComputeCost)
   ;
 
-  py::class_<theia::InlierSupport, theia::QualityMeasurement>(m,
-  "InlierSupport") .def(py::init<double>()) .def("ComputeCost",
+  nb::class_<theia::InlierSupport, theia::QualityMeasurement>(m,
+  "InlierSupport") .def(nb::init<double>()) .def("ComputeCost",
   &theia::InlierSupport::ComputeCost)
   ;
   */
   /*
-  py::class_<theia::SampleConsensusEstimator>(m, "SampleConsensusEstimator")
+  nb::class_<theia::SampleConsensusEstimator>(m, "SampleConsensusEstimator")
 
     .def("Initialize", &theia::SampleConsensusEstimator::Initialize)
     .def("Estimate", &theia::SampleConsensusEstimator::Estimate)
@@ -156,8 +153,8 @@ void pytheia_solvers_classes(py::module& m) {
   */
 }
 
-void pytheia_solvers(py::module& m) {
-  py::module m_submodule = m.def_submodule("solvers");
+void pytheia_solvers(nb::module_& m) {
+  nb::module_ m_submodule = m.def_submodule("solvers");
   pytheia_solvers_classes(m_submodule);
 }
 
