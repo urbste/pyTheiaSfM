@@ -1,6 +1,6 @@
 from __future__ import annotations
 import typing
-__all__: list[str] = ['ACCELERATE_SPARSE', 'ALL', 'ARCTAN', 'ASPECT_RATIO', 'AddFeatureCorrespondencesToTrackBuilder', 'AddFullFeatureCorrespondencesToTrackBuilder', 'AddObservations', 'AddTracks', 'AlignPointCloudsUmeyama', 'AlignPointCloudsUmeyamaWithWeights', 'AlignReconstructions', 'AlignReconstructionsRobust', 'AlignRotations', 'BundleAdjustPartialReconstruction', 'BundleAdjustPartialViewsConstant', 'BundleAdjustReconstruction', 'BundleAdjustReconstructionWithConstantTracks', 'BundleAdjustReconstructionWithRelativePoseEdges', 'RelativePoseConstraint', 'BundleAdjustTrack', 'BundleAdjustTrackWithCov', 'BundleAdjustTracks', 'BundleAdjustTracksWithCov', 'BundleAdjustTwoViewsAngular', 'BundleAdjustView', 'BundleAdjustViewWithCov', 'BundleAdjustViews', 'BundleAdjustViewsWithCov', 'BundleAdjuster', 'BundleAdjustmentOptions', 'BundleAdjustmentSummary', 'CANONICAL_VIEWS', 'CAUCHY', 'CGNR', 'CLUSTER_JACOBI', 'CLUSTER_TRIDIAGONAL', 'CUDA', 'CUDA_SPARSE', 'CalibratedAbsolutePose', 'CalibrationMatrixToIntrinsics', 'Camera', 'CameraAndFeatureCorrespondence2D3D', 'CameraIntrinsicsModel', 'CameraIntrinsicsModelType', 'CameraIntrinsicsPrior', 'ColorizeReconstruction', 'ComposeFundamentalMatrix', 'ComposeProjectionMatrix', 'ComputeTripletBaselineRatios', 'CreateEstimatedSubreconstruction', 'DENSE_NORMAL_CHOLESKY', 'DENSE_QR', 'DENSE_SCHUR', 'DISTORTION', 'DIVISION_UNDISTORTION', 'DLS', 'DOUBLE_SPHERE', 'DecomposeEssentialMatrix', 'DecomposeProjectionMatrix', 'DenseLinearAlgebraLibraryType', 'DivisionUndistortionCameraModel', 'DlsPnp', 'DoubleSphereCameraModel', 'EIGEN', 'EIGEN_SPARSE', 'EXHAUSTIVE', 'EXTENDED_UNIFIED', 'EssentialMatrixFromFundamentalMatrix', 'EssentialMatrixFromTwoProjectionMatrices', 'EstimateAbsolutePoseWithKnownOrientation', 'EstimateCalibratedAbsolutePose', 'EstimateDominantPlaneFromPoints', 'EstimateEssentialMatrix', 'EstimateFundamentalMatrix', 'EstimateHomography', 'EstimateRadialHomographyMatrix', 'EstimateRadialDistUncalibratedAbsolutePose', 'EstimateRelativePose', 'EstimateRelativePoseWithKnownOrientation', 'EstimateRigidTransformation2D3D', 'EstimateRigidTransformation2D3DNormalized', 'EstimateSimilarityTransformation2D3D', 'EstimateTriangulation', 'EstimateTwoViewInfo', 'EstimateTwoViewInfoOptions', 'EstimateUncalibratedAbsolutePose', 'EstimateUncalibratedRelativePose', 'ExtendedUnifiedCameraModel', 'ExtractMaximallyParallelRigidSubgraph', 'FISHEYE', 'FOCAL_LENGTH', 'FOCAL_LENGTH_DISTORTION', 'FOCAL_LENGTH_RADIAL_DISTORTION', 'FOV', 'FOVCameraModel', 'Feature', 'FeatureCorrespondence2D3D', 'FilterViewGraphCyclesByRotation', 'FilterViewPairsFromOrientation', 'FilterViewPairsFromRelativeTranslation', 'FilterViewPairsFromRelativeTranslationOptions', 'FindCommonTracksByFeatureInReconstructions', 'FindCommonTracksInViews', 'FindCommonViewsByName', 'FisheyeCameraModel', 'FivePointFocalLengthRadialDistortion', 'FivePointRelativePose', 'FocalLengthsFromFundamentalMatrix', 'FourPointHomography', 'FourPointPoseAndFocalLength', 'FourPointRelativePosePartialRotation', 'FourPointsPoseFocalLengthRadialDistortion', 'FundamentalMatrixFromProjectionMatrices', 'GLOBAL', 'GLOMAP', 'GPSConverter', 'GdlsSimilarityTransform', 'GetBestPoseFromEssentialMatrix', 'GetEstimatedTracksFromReconstruction', 'GetEstimatedViewsFromReconstruction', 'GlobalPositionEstimatorType', 'GlobalReconstructionEstimator', 'GlobalRotationEstimatorType', 'GlomapPositionEstimator', 'GlomapPositionEstimatorOptions', 'HUBER', 'HYBRID', 'HybridReconstructionEstimator', 'HybridRotationEstimator', 'IDENTITY', 'INCREMENTAL', 'INVALID', 'INVERSE_DEPTH', 'ITERATIVE_SCHUR', 'IncrementalReconstructionEstimator', 'IntrinsicsToCalibrationMatrix', 'IsTriangulatedPointInFrontOfCameras', 'JACOBI', 'KNEIP', 'L2_MINIMIZATION', 'LAGRANGE_DUAL', 'LAPACK', 'LEAST_UNSQUARED_DEVIATION', 'LIGT', 'LINEAR', 'LINEAR_TRIPLET', 'LMED', 'LagrangeDualRotationEstimator', 'LeastUnsquaredDeviationPositionEstimator', 'LeastUnsquaredDeviationPositionEstimatorOptions', 'LiGTPositionEstimator', 'LiGTPositionEstimatorOptions', 'LinearPositionEstimator', 'LinearPositionEstimatorOptions', 'LinearRotationEstimator', 'LinearSolverType', 'LocalizeViewToReconstruction', 'LocalizeViewToReconstructionOptions', 'LossFunctionType', 'MIDPOINT', 'MLPnP', 'NONE', 'NONLINEAR', 'NonlinearPositionEstimator', 'NonlinearPositionEstimatorOptions', 'NonlinearRotationEstimator', 'NormalizedEightPointFundamentalMatrix', 'NumEstimatedTracks', 'NumEstimatedViews', 'ORTHOGRAPHIC', 'OptimizeAbsolutePoseOnNormFeatures', 'OptimizeAlignmentSim3', 'OptimizeIntrinsicsType', 'OptimizeRelativePositionWithKnownRotation', 'OrthographicCameraModel', 'PINHOLE', 'PINHOLE_RADIAL_TANGENTIAL', 'POINT_TO_PLANE', 'POINT_TO_POINT', 'PRINCIPAL_POINTS', 'PROSAC', 'PinholeCameraModel', 'PinholeRadialTangentialCameraModel', 'PlanarUncalibratedOrthographicPose', 'Plane', 'PnPType', 'PoseFromThreePoints', 'PositionEstimator', 'PositionFromTwoRays', 'PreconditionerType', 'PriorScalar', 'PriorVector2d', 'PriorVector3d', 'PriorVector4d', 'ProjectionMatricesFromFundamentalMatrix', 'RADIAL_DISTORTION', 'RANSAC', 'ROBUST_L1L2', 'ROBUST_POINT_TO_POINT', 'RadialDistUncalibratedAbsolutePose', 'RadialDistUncalibratedAbsolutePoseMetaData', 'RadialDistortionFeatureCorrespondence', 'RansacType', 'Reconstruction', 'ReconstructionEstimator', 'ReconstructionEstimatorOptions', 'ReconstructionEstimatorSummary', 'ReconstructionEstimatorType', 'RelativePose', 'RelativePoseFromTwoPointsWithKnownRotation', 'RelativeRotationsFromViewGraph', 'RemoveDisconnectedViewPairs', 'RigidTransformation', 'RobustRotationEstimator', 'RobustRotationEstimatorOptions', 'RotationEstimator', 'SCHUR_JACOBI', 'SINGLE_LINKAGE', 'SKEW', 'SOFTLONE', 'SPARSE_NORMAL_CHOLESKY', 'SPARSE_SCHUR', 'SQPnP', 'SUITE_SPARSE', 'SVD', 'SelectGoodTracksForBundleAdjustment', 'SetCameraIntrinsicsFromPriors', 'SetOutlierTracksToUnestimated', 'SetReconstructionFromEstimatedPoses', 'SetUnderconstrainedTracksToUnestimated', 'SetUnderconstrainedViewsToUnestimated', 'SevenPointFundamentalMatrix', 'SharedFocalLengthsFromFundamentalMatrix', 'Sim3AlignmentOptions', 'Sim3AlignmentSummary', 'Sim3AlignmentType', 'Sim3FromRotationTranslationScale', 'Sim3ToHomogeneousMatrix', 'Sim3ToRotationTranslationScale', 'SimTransformPartialRotation', 'SimilarityTransformation', 'SparseLinearAlgebraLibraryType', 'SufficientTriangulationAngle', 'SwapCameras', 'TANGENTIAL_DISTORTION', 'TRIVIAL', 'TUKEY', 'ThreePointRelativePosePartialRotation', 'Track', 'TrackBuilder', 'TrackEstimator', 'TrackEstimatorOptions', 'TrackEstimatorSummary', 'TrackParametrizationType', 'TransformReconstruction', 'TransformReconstruction4', 'Triangulate', 'TriangulateDLT', 'TriangulateMidpoint', 'TriangulateNView', 'TriangulateNViewSVD', 'TriangulationMethodType', 'TwoPointPosePartialRotation', 'TwoViewBundleAdjustmentOptions', 'TwoViewInfo', 'UncalibratedAbsolutePose', 'UncalibratedRelativePose', 'UpdateFeaturesInView', 'View', 'ViewGraph', 'VisibilityClusteringType', 'VisibilityPyramid', 'XYZW', 'XYZW_MANIFOLD', 'kInvalidTrackId', 'kInvalidViewId']
+__all__: list[str] = ['ACCELERATE_SPARSE', 'ALL', 'ARCTAN', 'ASPECT_RATIO', 'AddFeatureCorrespondencesToTrackBuilder', 'AddFullFeatureCorrespondencesToTrackBuilder', 'AddObservations', 'AddTracks', 'AlignPointCloudsUmeyama', 'AlignPointCloudsUmeyamaWithWeights', 'AlignReconstructions', 'AlignReconstructionsRobust', 'AlignReconstructionsWithPoseGraph', 'AlignRotations', 'BulkAddViewGraphEdgesAndCorrespondences', 'BulkEstimateTwoViewInfo', 'BundleAdjustPartialReconstruction', 'BundleAdjustPartialViewsConstant', 'BundleAdjustPartialViewsConstantWithRelativePoseEdges', 'BundleAdjustReconstruction', 'BundleAdjustReconstructionWithConstantTracks', 'BundleAdjustReconstructionWithRelativePoseEdges', 'BundleAdjustTrack', 'BundleAdjustTrackWithCov', 'BundleAdjustTracks', 'BundleAdjustTracksWithCov', 'BundleAdjustTwoViewsAngular', 'BundleAdjustView', 'BundleAdjustViewWithCov', 'BundleAdjustViews', 'BundleAdjustViewsWithCov', 'BundleAdjuster', 'BundleAdjustmentOptions', 'BundleAdjustmentSummary', 'CANONICAL_VIEWS', 'CAUCHY', 'CGNR', 'CLUSTER_JACOBI', 'CLUSTER_TRIDIAGONAL', 'CUDA', 'CUDA_SPARSE', 'CalibratedAbsolutePose', 'CalibrationMatrixToIntrinsics', 'Camera', 'CameraAndFeatureCorrespondence2D3D', 'CameraIntrinsicsModel', 'CameraIntrinsicsModelType', 'CameraIntrinsicsPrior', 'ColorizeReconstruction', 'ComposeFundamentalMatrix', 'ComposeProjectionMatrix', 'ComputeMeanReprojectionError', 'ComputeTripletBaselineRatios', 'CreateEstimatedSubreconstruction', 'CrossReconstructionConstraints', 'CrossReconstructionPoseGraphOptions', 'CrossReconstructionPoseGraphSummary', 'CrossReconstructionSim3PoseGraphOptimizer', 'CrossViewAnchorEdge', 'DENSE_NORMAL_CHOLESKY', 'DENSE_QR', 'DENSE_SCHUR', 'DIRECTION_CROSS', 'DISTORTION', 'DIVISION_UNDISTORTION', 'DLS', 'DOUBLE_SPHERE', 'DecomposeEssentialMatrix', 'DecomposeProjectionMatrix', 'DenseLinearAlgebraLibraryType', 'DivisionUndistortionCameraModel', 'DlsPnp', 'DoubleSphereCameraModel', 'EIGEN', 'EIGEN_SPARSE', 'EXHAUSTIVE', 'EXTENDED_UNIFIED', 'EssentialMatrixFromFundamentalMatrix', 'EssentialMatrixFromTwoProjectionMatrices', 'EstimateAbsolutePoseWithKnownOrientation', 'EstimateCalibratedAbsolutePose', 'EstimateDominantPlaneFromPoints', 'EstimateEssentialMatrix', 'EstimateFundamentalMatrix', 'EstimateHomography', 'EstimateMonoDepthRelativePose', 'EstimateMonoDepthRelativePoseSharedFocal', 'EstimateMonoDepthRelativePoseVaryingFocal', 'EstimateRadialDistUncalibratedAbsolutePose', 'EstimateRadialHomographyMatrix', 'EstimateRelativePose', 'EstimateRelativePoseWithKnownOrientation', 'EstimateRigidTransformation2D3D', 'EstimateRigidTransformation2D3DNormalized', 'EstimateSimilarityTransformation2D3D', 'EstimateTriangulation', 'EstimateTwoViewInfo', 'EstimateTwoViewInfoOptions', 'EstimateUncalibratedAbsolutePose', 'EstimateUncalibratedRelativePose', 'ExtendedUnifiedCameraModel', 'ExtractMaximallyParallelRigidSubgraph', 'FISHEYE', 'FOCAL_LENGTH', 'FOCAL_LENGTH_DISTORTION', 'FOCAL_LENGTH_RADIAL_DISTORTION', 'FOV', 'FOVCameraModel', 'Feature', 'FeatureCorrespondence2D3D', 'FilterViewGraphCyclesByRotation', 'FilterViewPairsFromOrientation', 'FilterViewPairsFromRelativeTranslation', 'FilterViewPairsFromRelativeTranslationOptions', 'FindCommonTracksByFeatureInReconstructions', 'FindCommonTracksInViews', 'FindCommonViewsByName', 'FisheyeCameraModel', 'FivePointFocalLengthRadialDistortion', 'FivePointRelativePose', 'FocalLengthsFromFundamentalMatrix', 'FourPointHomography', 'FourPointPoseAndFocalLength', 'FourPointRelativePosePartialRotation', 'FourPointsPoseFocalLengthRadialDistortion', 'FundamentalMatrixFromProjectionMatrices', 'GLOBAL', 'GLOMAP', 'GPSConverter', 'GdlsSimilarityTransform', 'GetBestPoseFromEssentialMatrix', 'GetEstimatedTracksFromReconstruction', 'GetEstimatedViewsFromReconstruction', 'GetSim3LieFromView', 'GlobalPositionEstimatorType', 'GlobalReconstructionEstimator', 'GlobalRotationEstimatorType', 'GlomapPositionEstimator', 'GlomapPositionEstimatorOptions', 'GravityPriorErrorType', 'HUBER', 'HYBRID', 'HybridReconstructionEstimator', 'HybridRotationEstimator', 'IDENTITY', 'INCREMENTAL', 'INVALID', 'INVERSE_DEPTH', 'ITERATIVE_SCHUR', 'IncrementalReconstructionEstimator', 'IntrinsicsToCalibrationMatrix', 'IsTriangulatedPointInFrontOfCameras', 'JACOBI', 'KNEIP', 'L2_MINIMIZATION', 'LAGRANGE_DUAL', 'LAPACK', 'LEAST_UNSQUARED_DEVIATION', 'LIGT', 'LINEAR', 'LINEAR_TRIPLET', 'LMED', 'LagrangeDualRotationEstimator', 'LeastUnsquaredDeviationPositionEstimator', 'LeastUnsquaredDeviationPositionEstimatorOptions', 'LiGTPositionEstimator', 'LiGTPositionEstimatorOptions', 'LinearPositionEstimator', 'LinearPositionEstimatorOptions', 'LinearRotationEstimator', 'LinearSolverType', 'LocalizeViewToReconstruction', 'LocalizeViewToReconstructionOptions', 'LossFunctionType', 'MIDPOINT', 'MLPnP', 'MonoDepthRelativePoseResult', 'NONE', 'NONLINEAR', 'NonlinearPositionEstimator', 'NonlinearPositionEstimatorOptions', 'NonlinearRotationEstimator', 'NormalizedEightPointFundamentalMatrix', 'NumEstimatedTracks', 'NumEstimatedViews', 'ORTHOGRAPHIC', 'OptimizeAbsolutePoseOnNormFeatures', 'OptimizeAlignmentSim3', 'OptimizeIntrinsicsType', 'OptimizeRelativePositionWithKnownRotation', 'OrthographicCameraModel', 'PINHOLE', 'PINHOLE_RADIAL_TANGENTIAL', 'POINT_TO_PLANE', 'POINT_TO_POINT', 'PRINCIPAL_POINTS', 'PROSAC', 'PinholeCameraModel', 'PinholeRadialTangentialCameraModel', 'PlanarUncalibratedOrthographicPose', 'Plane', 'PnPType', 'PoseFromThreePoints', 'PositionEstimator', 'PositionFromTwoRays', 'PreconditionerType', 'PriorScalar', 'PriorVector2d', 'PriorVector3d', 'PriorVector4d', 'ProjectionMatricesFromFundamentalMatrix', 'RADIAL_DISTORTION', 'RANSAC', 'ROBUST_L1L2', 'ROBUST_POINT_TO_POINT', 'RadialDistUncalibratedAbsolutePose', 'RadialDistUncalibratedAbsolutePoseMetaData', 'RadialDistortionFeatureCorrespondence', 'RansacType', 'Reconstruction', 'ReconstructionEstimator', 'ReconstructionEstimatorOptions', 'ReconstructionEstimatorSummary', 'ReconstructionEstimatorType', 'RelativePose', 'RelativePoseConstraint', 'RelativePoseFromTwoPointsWithKnownRotation', 'RelativeRotationsFromViewGraph', 'RelativeSim3BetweenViews', 'RemoveDisconnectedViewPairs', 'RigidTransformation', 'RobustRotationEstimator', 'RobustRotationEstimatorOptions', 'RotationEstimator', 'SCHUR_JACOBI', 'SINGLE_LINKAGE', 'SKEW', 'SOFTLONE', 'SPARSE_NORMAL_CHOLESKY', 'SPARSE_SCHUR', 'SQPnP', 'SUITE_SPARSE', 'SVD', 'SelectGoodTracksForBundleAdjustment', 'SequentialSim3Edge', 'SetCameraIntrinsicsFromPriors', 'SetOutlierTracksToUnestimated', 'SetReconstructionFromEstimatedPoses', 'SetUnderconstrainedTracksToUnestimated', 'SetUnderconstrainedViewsToUnestimated', 'SevenPointFundamentalMatrix', 'SharedFocalLengthsFromFundamentalMatrix', 'Sim3AlignmentOptions', 'Sim3AlignmentSummary', 'Sim3AlignmentType', 'Sim3FromRotationTranslationScale', 'Sim3ToHomogeneousMatrix', 'Sim3ToRotationTranslationScale', 'SimTransformPartialRotation', 'SimilarityTransformation', 'SparseLinearAlgebraLibraryType', 'SufficientTriangulationAngle', 'SwapCameras', 'TANGENTIAL_DISTORTION', 'TRIVIAL', 'TUKEY', 'ThreePointRelativePosePartialRotation', 'Track', 'TrackBuilder', 'TrackEstimator', 'TrackEstimatorOptions', 'TrackEstimatorSummary', 'TrackParametrizationType', 'TransformReconstruction', 'TransformReconstruction4', 'Triangulate', 'TriangulateDLT', 'TriangulateMidpoint', 'TriangulateNView', 'TriangulateNViewSVD', 'TriangulationMethodType', 'TwoPointPosePartialRotation', 'TwoViewBundleAdjustmentOptions', 'TwoViewInfo', 'UncalibratedAbsolutePose', 'UncalibratedRelativePose', 'UpdateFeaturesInView', 'VECTOR_DIFF', 'View', 'ViewGraph', 'VisibilityClusteringType', 'VisibilityPyramid', 'XYZW', 'XYZW_MANIFOLD', 'kInvalidTrackId', 'kInvalidViewId']
 class BundleAdjuster:
     @staticmethod
     def AddTrack(*args, **kwargs):
@@ -44,6 +44,18 @@ class BundleAdjustmentOptions:
         ...
     @gradient_tolerance.setter
     def gradient_tolerance(*args, **kwargs):
+        ...
+    @property
+    def gravity_prior_error_type(*args, **kwargs):
+        ...
+    @gravity_prior_error_type.setter
+    def gravity_prior_error_type(*args, **kwargs):
+        ...
+    @property
+    def gravity_world_direction(*args, **kwargs):
+        ...
+    @gravity_world_direction.setter
+    def gravity_world_direction(*args, **kwargs):
         ...
     @property
     def intrinsics_to_optimize(*args, **kwargs):
@@ -146,18 +158,6 @@ class BundleAdjustmentOptions:
         ...
     @use_gravity_priors.setter
     def use_gravity_priors(*args, **kwargs):
-        ...
-    @property
-    def gravity_prior_error_type(*args, **kwargs):
-        ...
-    @gravity_prior_error_type.setter
-    def gravity_prior_error_type(*args, **kwargs):
-        ...
-    @property
-    def gravity_world_direction(*args, **kwargs):
-        ...
-    @gravity_world_direction.setter
-    def gravity_world_direction(*args, **kwargs):
         ...
     @property
     def use_homogeneous_point_parametrization(*args, **kwargs):
@@ -548,6 +548,212 @@ class CameraIntrinsicsPrior:
     @tangential_distortion.setter
     def tangential_distortion(*args, **kwargs):
         ...
+class CrossReconstructionConstraints:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def cross_view_edges(*args, **kwargs):
+        ...
+    @cross_view_edges.setter
+    def cross_view_edges(*args, **kwargs):
+        ...
+    @property
+    def fixed_anchor_view_ids(*args, **kwargs):
+        ...
+    @fixed_anchor_view_ids.setter
+    def fixed_anchor_view_ids(*args, **kwargs):
+        ...
+    @property
+    def sequential_edges(*args, **kwargs):
+        ...
+    @sequential_edges.setter
+    def sequential_edges(*args, **kwargs):
+        ...
+    @property
+    def variable_keyframe_view_ids(*args, **kwargs):
+        ...
+    @variable_keyframe_view_ids.setter
+    def variable_keyframe_view_ids(*args, **kwargs):
+        ...
+class CrossReconstructionPoseGraphOptions:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def anchor_weight(*args, **kwargs):
+        ...
+    @anchor_weight.setter
+    def anchor_weight(*args, **kwargs):
+        ...
+    @property
+    def auto_scale_smoothness(*args, **kwargs):
+        ...
+    @auto_scale_smoothness.setter
+    def auto_scale_smoothness(*args, **kwargs):
+        ...
+    @property
+    def debug_cost_breakdown(*args, **kwargs):
+        ...
+    @debug_cost_breakdown.setter
+    def debug_cost_breakdown(*args, **kwargs):
+        ...
+    @property
+    def huber_delta_anchor(*args, **kwargs):
+        ...
+    @huber_delta_anchor.setter
+    def huber_delta_anchor(*args, **kwargs):
+        ...
+    @property
+    def max_num_iterations(*args, **kwargs):
+        ...
+    @max_num_iterations.setter
+    def max_num_iterations(*args, **kwargs):
+        ...
+    @property
+    def scale_smooth_weight(*args, **kwargs):
+        ...
+    @scale_smooth_weight.setter
+    def scale_smooth_weight(*args, **kwargs):
+        ...
+    @property
+    def sequential_translation_magnitude_weight(*args, **kwargs):
+        ...
+    @sequential_translation_magnitude_weight.setter
+    def sequential_translation_magnitude_weight(*args, **kwargs):
+        ...
+    @property
+    def sequential_weight(*args, **kwargs):
+        ...
+    @sequential_weight.setter
+    def sequential_weight(*args, **kwargs):
+        ...
+    @property
+    def verbose(*args, **kwargs):
+        ...
+    @verbose.setter
+    def verbose(*args, **kwargs):
+        ...
+class CrossReconstructionPoseGraphSummary:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def anchor_residual_cost(*args, **kwargs):
+        ...
+    @anchor_residual_cost.setter
+    def anchor_residual_cost(*args, **kwargs):
+        ...
+    @property
+    def final_cost(*args, **kwargs):
+        ...
+    @final_cost.setter
+    def final_cost(*args, **kwargs):
+        ...
+    @property
+    def initial_cost(*args, **kwargs):
+        ...
+    @initial_cost.setter
+    def initial_cost(*args, **kwargs):
+        ...
+    @property
+    def num_iterations(*args, **kwargs):
+        ...
+    @num_iterations.setter
+    def num_iterations(*args, **kwargs):
+        ...
+    @property
+    def poses_finite_after(*args, **kwargs):
+        ...
+    @poses_finite_after.setter
+    def poses_finite_after(*args, **kwargs):
+        ...
+    @property
+    def poses_finite_before(*args, **kwargs):
+        ...
+    @poses_finite_before.setter
+    def poses_finite_before(*args, **kwargs):
+        ...
+    @property
+    def scale_smooth_residual_cost(*args, **kwargs):
+        ...
+    @scale_smooth_residual_cost.setter
+    def scale_smooth_residual_cost(*args, **kwargs):
+        ...
+    @property
+    def sequential_residual_cost(*args, **kwargs):
+        ...
+    @sequential_residual_cost.setter
+    def sequential_residual_cost(*args, **kwargs):
+        ...
+    @property
+    def success(*args, **kwargs):
+        ...
+    @success.setter
+    def success(*args, **kwargs):
+        ...
+class CrossReconstructionSim3PoseGraphOptimizer:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @staticmethod
+    def add_cross_view_edge(*args, **kwargs):
+        ...
+    @staticmethod
+    def add_scale_smoothness_edge(*args, **kwargs):
+        ...
+    @staticmethod
+    def add_sequential_edge(*args, **kwargs):
+        ...
+    @staticmethod
+    def apply_to_variable_reconstruction(*args, **kwargs):
+        ...
+    @staticmethod
+    def optimize(*args, **kwargs):
+        """
+        Run Ceres pose-graph optimization; returns (ok, summary).
+        """
+    @staticmethod
+    def set_constraints(*args, **kwargs):
+        ...
+    @staticmethod
+    def set_fixed_reconstruction(*args, **kwargs):
+        ...
+    @staticmethod
+    def set_initial_variable_poses(*args, **kwargs):
+        """
+        Override initial optimizer poses (view_id -> 7-vector lie) without mutating the reconstruction.
+        """
+    @staticmethod
+    def set_variable_reconstruction(*args, **kwargs):
+        ...
+    @staticmethod
+    def variable_poses(*args, **kwargs):
+        ...
+class CrossViewAnchorEdge:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def measured_S_run_in_seg_log(*args, **kwargs):
+        """
+        PnP Sim3 pose of run camera in segment world (7-vector lie log)
+        """
+    @measured_S_run_in_seg_log.setter
+    def measured_S_run_in_seg_log(*args, **kwargs):
+        ...
+    @property
+    def variable_view_id(*args, **kwargs):
+        ...
+    @variable_view_id.setter
+    def variable_view_id(*args, **kwargs):
+        ...
+    @property
+    def weight(*args, **kwargs):
+        ...
+    @weight.setter
+    def weight(*args, **kwargs):
+        ...
 class DenseLinearAlgebraLibraryType:
     """
     Members:
@@ -687,6 +893,88 @@ class DoubleSphereCameraModel(CameraIntrinsicsModel):
     @property
     def kIntrinsicsSize(*args, **kwargs):
         ...
+class EstimateTwoViewInfoOptions:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def expected_ransac_confidence(*args, **kwargs):
+        ...
+    @expected_ransac_confidence.setter
+    def expected_ransac_confidence(*args, **kwargs):
+        ...
+    @property
+    def lo_start_iterations(*args, **kwargs):
+        ...
+    @lo_start_iterations.setter
+    def lo_start_iterations(*args, **kwargs):
+        ...
+    @property
+    def max_focal_length(*args, **kwargs):
+        ...
+    @max_focal_length.setter
+    def max_focal_length(*args, **kwargs):
+        ...
+    @property
+    def max_ransac_iterations(*args, **kwargs):
+        ...
+    @max_ransac_iterations.setter
+    def max_ransac_iterations(*args, **kwargs):
+        ...
+    @property
+    def max_sampson_error_pixels(*args, **kwargs):
+        ...
+    @max_sampson_error_pixels.setter
+    def max_sampson_error_pixels(*args, **kwargs):
+        ...
+    @property
+    def min_focal_length(*args, **kwargs):
+        ...
+    @min_focal_length.setter
+    def min_focal_length(*args, **kwargs):
+        ...
+    @property
+    def min_ransac_iterations(*args, **kwargs):
+        ...
+    @min_ransac_iterations.setter
+    def min_ransac_iterations(*args, **kwargs):
+        ...
+    @property
+    def monodepth_shared_focal(*args, **kwargs):
+        ...
+    @monodepth_shared_focal.setter
+    def monodepth_shared_focal(*args, **kwargs):
+        ...
+    @property
+    def ransac_type(*args, **kwargs):
+        ...
+    @ransac_type.setter
+    def ransac_type(*args, **kwargs):
+        ...
+    @property
+    def use_lo(*args, **kwargs):
+        ...
+    @use_lo.setter
+    def use_lo(*args, **kwargs):
+        ...
+    @property
+    def use_mle(*args, **kwargs):
+        ...
+    @use_mle.setter
+    def use_mle(*args, **kwargs):
+        ...
+    @property
+    def use_monodepth(*args, **kwargs):
+        ...
+    @use_monodepth.setter
+    def use_monodepth(*args, **kwargs):
+        ...
+    @property
+    def use_sturm_5pt(*args, **kwargs):
+        ...
+    @use_sturm_5pt.setter
+    def use_sturm_5pt(*args, **kwargs):
+        ...
 class ExtendedUnifiedCameraModel(CameraIntrinsicsModel):
     @staticmethod
     def Alpha(*args, **kwargs):
@@ -735,70 +1023,6 @@ class ExtendedUnifiedCameraModel(CameraIntrinsicsModel):
         ...
     @property
     def kIntrinsicsSize(*args, **kwargs):
-        ...
-class EstimateTwoViewInfoOptions:
-    @staticmethod
-    def __init__(*args, **kwargs):
-        ...
-    @property
-    def expected_ransac_confidence(*args, **kwargs):
-        ...
-    @expected_ransac_confidence.setter
-    def expected_ransac_confidence(*args, **kwargs):
-        ...
-    @property
-    def lo_start_iterations(*args, **kwargs):
-        ...
-    @lo_start_iterations.setter
-    def lo_start_iterations(*args, **kwargs):
-        ...
-    @property
-    def max_focal_length(*args, **kwargs):
-        ...
-    @max_focal_length.setter
-    def max_focal_length(*args, **kwargs):
-        ...
-    @property
-    def max_ransac_iterations(*args, **kwargs):
-        ...
-    @max_ransac_iterations.setter
-    def max_ransac_iterations(*args, **kwargs):
-        ...
-    @property
-    def max_sampson_error_pixels(*args, **kwargs):
-        ...
-    @max_sampson_error_pixels.setter
-    def max_sampson_error_pixels(*args, **kwargs):
-        ...
-    @property
-    def min_focal_length(*args, **kwargs):
-        ...
-    @min_focal_length.setter
-    def min_focal_length(*args, **kwargs):
-        ...
-    @property
-    def min_ransac_iterations(*args, **kwargs):
-        ...
-    @min_ransac_iterations.setter
-    def min_ransac_iterations(*args, **kwargs):
-        ...
-    @property
-    def ransac_type(*args, **kwargs):
-        ...
-    @ransac_type.setter
-    def ransac_type(*args, **kwargs):
-        ...
-    @property
-    def use_lo(*args, **kwargs):
-        ...
-    @use_lo.setter
-    def use_lo(*args, **kwargs):
-        ...
-    @property
-    def use_mle(*args, **kwargs):
-        ...
-    @use_mle.setter
-    def use_mle(*args, **kwargs):
         ...
 class FOVCameraModel(CameraIntrinsicsModel):
     @staticmethod
@@ -994,7 +1218,7 @@ class GlobalPositionEstimatorType:
       LEAST_UNSQUARED_DEVIATION
     
       LIGT
-
+    
       GLOMAP
     """
     GLOMAP: typing.ClassVar[GlobalPositionEstimatorType]  # value = <GlobalPositionEstimatorType.GLOMAP: 4>
@@ -1066,6 +1290,112 @@ class GlobalRotationEstimatorType:
     NONLINEAR: typing.ClassVar[GlobalRotationEstimatorType]  # value = <GlobalRotationEstimatorType.NONLINEAR: 1>
     ROBUST_L1L2: typing.ClassVar[GlobalRotationEstimatorType]  # value = <GlobalRotationEstimatorType.ROBUST_L1L2: 0>
     __members__: typing.ClassVar[dict[str, GlobalRotationEstimatorType]]  # value = {'ROBUST_L1L2': <GlobalRotationEstimatorType.ROBUST_L1L2: 0>, 'NONLINEAR': <GlobalRotationEstimatorType.NONLINEAR: 1>, 'LINEAR': <GlobalRotationEstimatorType.LINEAR: 2>, 'LAGRANGE_DUAL': <GlobalRotationEstimatorType.LAGRANGE_DUAL: 3>, 'HYBRID': <GlobalRotationEstimatorType.HYBRID: 4>}
+    @staticmethod
+    def __eq__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __getstate__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __hash__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __index__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __int__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __ne__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __repr__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __setstate__(*args, **kwargs):
+        ...
+    @staticmethod
+    def __str__(*args, **kwargs):
+        ...
+    @property
+    def name(*args, **kwargs):
+        ...
+    @property
+    def value(*args, **kwargs):
+        ...
+class GlomapPositionEstimator(PositionEstimator):
+    @staticmethod
+    def EstimatePositions(*args, **kwargs):
+        ...
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+class GlomapPositionEstimatorOptions:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def max_num_iterations(*args, **kwargs):
+        ...
+    @max_num_iterations.setter
+    def max_num_iterations(*args, **kwargs):
+        ...
+    @property
+    def max_num_tracks(*args, **kwargs):
+        ...
+    @max_num_tracks.setter
+    def max_num_tracks(*args, **kwargs):
+        ...
+    @property
+    def min_track_length(*args, **kwargs):
+        ...
+    @min_track_length.setter
+    def min_track_length(*args, **kwargs):
+        ...
+    @property
+    def num_threads(*args, **kwargs):
+        ...
+    @num_threads.setter
+    def num_threads(*args, **kwargs):
+        ...
+    @property
+    def pairwise_scale_prior_weight(*args, **kwargs):
+        ...
+    @pairwise_scale_prior_weight.setter
+    def pairwise_scale_prior_weight(*args, **kwargs):
+        ...
+    @property
+    def robust_loss_width(*args, **kwargs):
+        ...
+    @robust_loss_width.setter
+    def robust_loss_width(*args, **kwargs):
+        ...
+    @property
+    def use_pairwise_scale_priors(*args, **kwargs):
+        ...
+    @use_pairwise_scale_priors.setter
+    def use_pairwise_scale_priors(*args, **kwargs):
+        ...
+    @property
+    def write_points_to_reconstruction(*args, **kwargs):
+        ...
+    @write_points_to_reconstruction.setter
+    def write_points_to_reconstruction(*args, **kwargs):
+        ...
+class GravityPriorErrorType:
+    """
+    Members:
+    
+      VECTOR_DIFF
+    
+      DIRECTION_CROSS
+    """
+    DIRECTION_CROSS: typing.ClassVar[GravityPriorErrorType]  # value = <GravityPriorErrorType.DIRECTION_CROSS: 1>
+    VECTOR_DIFF: typing.ClassVar[GravityPriorErrorType]  # value = <GravityPriorErrorType.VECTOR_DIFF: 0>
+    __members__: typing.ClassVar[dict[str, GravityPriorErrorType]]  # value = {'VECTOR_DIFF': <GravityPriorErrorType.VECTOR_DIFF: 0>, 'DIRECTION_CROSS': <GravityPriorErrorType.DIRECTION_CROSS: 1>}
     @staticmethod
     def __eq__(*args, **kwargs):
         ...
@@ -1205,65 +1535,6 @@ class LiGTPositionEstimatorOptions:
         ...
     @num_threads.setter
     def num_threads(*args, **kwargs):
-        ...
-class GlomapPositionEstimator(PositionEstimator):
-    @staticmethod
-    def EstimatePositions(*args, **kwargs):
-        ...
-    @staticmethod
-    def __init__(*args, **kwargs):
-        ...
-class GlomapPositionEstimatorOptions:
-    @staticmethod
-    def __init__(*args, **kwargs):
-        ...
-    @property
-    def max_num_iterations(*args, **kwargs):
-        ...
-    @max_num_iterations.setter
-    def max_num_iterations(*args, **kwargs):
-        ...
-    @property
-    def max_num_tracks(*args, **kwargs):
-        ...
-    @max_num_tracks.setter
-    def max_num_tracks(*args, **kwargs):
-        ...
-    @property
-    def min_track_length(*args, **kwargs):
-        ...
-    @min_track_length.setter
-    def min_track_length(*args, **kwargs):
-        ...
-    @property
-    def num_threads(*args, **kwargs):
-        ...
-    @num_threads.setter
-    def num_threads(*args, **kwargs):
-        ...
-    @property
-    def pairwise_scale_prior_weight(*args, **kwargs):
-        ...
-    @pairwise_scale_prior_weight.setter
-    def pairwise_scale_prior_weight(*args, **kwargs):
-        ...
-    @property
-    def robust_loss_width(*args, **kwargs):
-        ...
-    @robust_loss_width.setter
-    def robust_loss_width(*args, **kwargs):
-        ...
-    @property
-    def use_pairwise_scale_priors(*args, **kwargs):
-        ...
-    @use_pairwise_scale_priors.setter
-    def use_pairwise_scale_priors(*args, **kwargs):
-        ...
-    @property
-    def write_points_to_reconstruction(*args, **kwargs):
-        ...
-    @write_points_to_reconstruction.setter
-    def write_points_to_reconstruction(*args, **kwargs):
         ...
 class LinearPositionEstimator(PositionEstimator):
     @staticmethod
@@ -1412,32 +1683,6 @@ class LocalizeViewToReconstructionOptions:
     @reprojection_error_threshold_pixels.setter
     def reprojection_error_threshold_pixels(*args, **kwargs):
         ...
-class GravityPriorErrorType:
-    """
-    Members:
-
-      VECTOR_DIFF
-
-      DIRECTION_CROSS
-    """
-    DIRECTION_CROSS: typing.ClassVar[GravityPriorErrorType]
-    VECTOR_DIFF: typing.ClassVar[GravityPriorErrorType]
-    __members__: typing.ClassVar[dict[str, GravityPriorErrorType]]
-    def __eq__(self, other: typing.Any) -> bool: ...
-    def __getstate__(self) -> int: ...
-    def __hash__(self) -> int: ...
-    def __index__(self) -> int: ...
-    def __init__(self, value: int) -> None: ...
-    def __int__(self) -> int: ...
-    def __ne__(self, other: typing.Any) -> bool: ...
-    def __repr__(self) -> str: ...
-    def __setstate__(self, state: int) -> None: ...
-    def __str__(self) -> str: ...
-    @property
-    def name(self) -> str: ...
-    @property
-    def value(self) -> int: ...
-
 class LossFunctionType:
     """
     Members:
@@ -1496,6 +1741,52 @@ class LossFunctionType:
         ...
     @property
     def value(*args, **kwargs):
+        ...
+class MonoDepthRelativePoseResult:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def focal_length1(*args, **kwargs):
+        ...
+    @focal_length1.setter
+    def focal_length1(*args, **kwargs):
+        ...
+    @property
+    def focal_length2(*args, **kwargs):
+        ...
+    @focal_length2.setter
+    def focal_length2(*args, **kwargs):
+        ...
+    @property
+    def position(*args, **kwargs):
+        ...
+    @position.setter
+    def position(*args, **kwargs):
+        ...
+    @property
+    def rotation(*args, **kwargs):
+        ...
+    @rotation.setter
+    def rotation(*args, **kwargs):
+        ...
+    @property
+    def scale(*args, **kwargs):
+        ...
+    @scale.setter
+    def scale(*args, **kwargs):
+        ...
+    @property
+    def shift1(*args, **kwargs):
+        ...
+    @shift1.setter
+    def shift1(*args, **kwargs):
+        ...
+    @property
+    def shift2(*args, **kwargs):
+        ...
+    @shift2.setter
+    def shift2(*args, **kwargs):
         ...
 class NonlinearPositionEstimator(PositionEstimator):
     @staticmethod
@@ -1808,12 +2099,10 @@ class PnPType:
       SQPnP
     
       MLPnP
-    
-    MLPnP uses six-point minimal samples in RANSAC (kMLPnPMinimumPoints).
     """
     DLS: typing.ClassVar[PnPType]  # value = <PnPType.DLS: 2>
     KNEIP: typing.ClassVar[PnPType]  # value = <PnPType.KNEIP: 0>
-    MLPnP: typing.ClassVar[PnPType]  # value = <PnPType.MLPnP: 3>  # six-point RANSAC sample
+    MLPnP: typing.ClassVar[PnPType]  # value = <PnPType.MLPnP: 3>
     SQPnP: typing.ClassVar[PnPType]  # value = <PnPType.SQPnP: 1>
     __members__: typing.ClassVar[dict[str, PnPType]]  # value = {'KNEIP': <PnPType.KNEIP: 0>, 'DLS': <PnPType.DLS: 2>, 'SQPnP': <PnPType.SQPnP: 1>, 'MLPnP': <PnPType.MLPnP: 3>}
     @staticmethod
@@ -2268,22 +2557,28 @@ class ReconstructionEstimatorOptions:
     def global_rotation_estimator_type(*args, **kwargs):
         ...
     @property
-    def intrinsics_to_optimize(*args, **kwargs):
-        ...
-    @intrinsics_to_optimize.setter
-    def intrinsics_to_optimize(*args, **kwargs):
-        ...
-    @property
     def glomap_position_estimator_options(*args, **kwargs):
         ...
     @glomap_position_estimator_options.setter
     def glomap_position_estimator_options(*args, **kwargs):
         ...
     @property
+    def intrinsics_to_optimize(*args, **kwargs):
+        ...
+    @intrinsics_to_optimize.setter
+    def intrinsics_to_optimize(*args, **kwargs):
+        ...
+    @property
     def least_unsquared_deviation_position_estimator_options(*args, **kwargs):
         ...
     @least_unsquared_deviation_position_estimator_options.setter
     def least_unsquared_deviation_position_estimator_options(*args, **kwargs):
+        ...
+    @property
+    def ligt_position_estimator_options(*args, **kwargs):
+        ...
+    @ligt_position_estimator_options.setter
+    def ligt_position_estimator_options(*args, **kwargs):
         ...
     @property
     def linear_solver_type(*args, **kwargs):
@@ -2296,12 +2591,6 @@ class ReconstructionEstimatorOptions:
         ...
     @linear_triplet_position_estimator_options.setter
     def linear_triplet_position_estimator_options(*args, **kwargs):
-        ...
-    @property
-    def ligt_position_estimator_options(*args, **kwargs):
-        ...
-    @ligt_position_estimator_options.setter
-    def ligt_position_estimator_options(*args, **kwargs):
         ...
     @property
     def localization_pnp_type(*args, **kwargs):
@@ -2652,6 +2941,52 @@ class RelativePose:
     @rotation.setter
     def rotation(*args, **kwargs):
         ...
+class RelativePoseConstraint:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def rotation_sqrt_weight(*args, **kwargs):
+        ...
+    @rotation_sqrt_weight.setter
+    def rotation_sqrt_weight(*args, **kwargs):
+        ...
+    @property
+    def scale_invariant_translation(*args, **kwargs):
+        ...
+    @scale_invariant_translation.setter
+    def scale_invariant_translation(*args, **kwargs):
+        ...
+    @property
+    def translation_direction_sqrt_weight(*args, **kwargs):
+        ...
+    @translation_direction_sqrt_weight.setter
+    def translation_direction_sqrt_weight(*args, **kwargs):
+        ...
+    @property
+    def translation_magnitude_sqrt_weight(*args, **kwargs):
+        ...
+    @translation_magnitude_sqrt_weight.setter
+    def translation_magnitude_sqrt_weight(*args, **kwargs):
+        ...
+    @property
+    def translation_sqrt_weight(*args, **kwargs):
+        ...
+    @translation_sqrt_weight.setter
+    def translation_sqrt_weight(*args, **kwargs):
+        ...
+    @property
+    def view_id_i(*args, **kwargs):
+        ...
+    @view_id_i.setter
+    def view_id_i(*args, **kwargs):
+        ...
+    @property
+    def view_id_j(*args, **kwargs):
+        ...
+    @view_id_j.setter
+    def view_id_j(*args, **kwargs):
+        ...
 class RigidTransformation:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -2717,6 +3052,38 @@ class RobustRotationEstimatorOptions:
         ...
 class RotationEstimator:
     pass
+class SequentialSim3Edge:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def measured_S_ji_log(*args, **kwargs):
+        """
+        Relative Sim3 S_ji as 7-vector lie algebra log
+        """
+    @measured_S_ji_log.setter
+    def measured_S_ji_log(*args, **kwargs):
+        ...
+    @property
+    def sqrt_information(*args, **kwargs):
+        """
+        7x7 sqrt-information for the relative Sim3 residual; tangent order [translation(3), rotation(3), scale(1)]
+        """
+    @sqrt_information.setter
+    def sqrt_information(*args, **kwargs):
+        ...
+    @property
+    def view_id_i(*args, **kwargs):
+        ...
+    @view_id_i.setter
+    def view_id_i(*args, **kwargs):
+        ...
+    @property
+    def view_id_j(*args, **kwargs):
+        ...
+    @view_id_j.setter
+    def view_id_j(*args, **kwargs):
+        ...
 class Sim3AlignmentOptions:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -3510,8 +3877,6 @@ def AddFeatureCorrespondencesToTrackBuilder(*args, **kwargs):
     ...
 def AddFullFeatureCorrespondencesToTrackBuilder(*args, **kwargs):
     ...
-def BulkAddViewGraphEdgesAndCorrespondences(*args, **kwargs):
-    ...
 def AddObservations(*args, **kwargs):
     ...
 def AddTracks(*args, **kwargs):
@@ -3524,7 +3889,15 @@ def AlignReconstructions(*args, **kwargs):
     ...
 def AlignReconstructionsRobust(*args, **kwargs):
     ...
+def AlignReconstructionsWithPoseGraph(*args, **kwargs):
+    """
+    Align variable_reconstruction to fixed via Sim(3) pose graph; returns (ok, CrossReconstructionPoseGraphSummary).
+    """
 def AlignRotations(*args, **kwargs):
+    ...
+def BulkAddViewGraphEdgesAndCorrespondences(*args, **kwargs):
+    ...
+def BulkEstimateTwoViewInfo(*args, **kwargs):
     ...
 def BundleAdjustPartialReconstruction(*args, **kwargs):
     ...
@@ -3538,16 +3911,6 @@ def BundleAdjustReconstructionWithConstantTracks(*args, **kwargs):
     ...
 def BundleAdjustReconstructionWithRelativePoseEdges(*args, **kwargs):
     ...
-class RelativePoseConstraint:
-    view_id_i: int
-    view_id_j: int
-    translation_sqrt_weight: float
-    rotation_sqrt_weight: float
-    scale_invariant_translation: bool
-    translation_direction_sqrt_weight: float
-    translation_magnitude_sqrt_weight: float
-    def __init__(self) -> None:
-        ...
 def BundleAdjustTrack(*args, **kwargs):
     ...
 def BundleAdjustTrackWithCov(*args, **kwargs):
@@ -3574,6 +3937,10 @@ def ComposeFundamentalMatrix(*args, **kwargs):
     ...
 def ComposeProjectionMatrix(*args, **kwargs):
     ...
+def ComputeMeanReprojectionError(*args, **kwargs):
+    """
+    Mean L2 pixel reprojection error over estimated views and tracks.
+    """
 def ComputeTripletBaselineRatios(*args, **kwargs):
     ...
 def CreateEstimatedSubreconstruction(*args, **kwargs):
@@ -3600,9 +3967,15 @@ def EstimateFundamentalMatrix(*args, **kwargs):
     ...
 def EstimateHomography(*args, **kwargs):
     ...
-def EstimateRadialHomographyMatrix(*args, **kwargs):
+def EstimateMonoDepthRelativePose(*args, **kwargs):
+    ...
+def EstimateMonoDepthRelativePoseSharedFocal(*args, **kwargs):
+    ...
+def EstimateMonoDepthRelativePoseVaryingFocal(*args, **kwargs):
     ...
 def EstimateRadialDistUncalibratedAbsolutePose(*args, **kwargs):
+    ...
+def EstimateRadialHomographyMatrix(*args, **kwargs):
     ...
 def EstimateRelativePose(*args, **kwargs):
     ...
@@ -3610,9 +3983,9 @@ def EstimateRelativePoseWithKnownOrientation(*args, **kwargs):
     ...
 def EstimateRigidTransformation2D3D(*args, **kwargs):
     ...
-def EstimateSimilarityTransformation2D3D(*args, **kwargs):
-    ...
 def EstimateRigidTransformation2D3DNormalized(*args, **kwargs):
+    ...
+def EstimateSimilarityTransformation2D3D(*args, **kwargs):
     ...
 def EstimateTriangulation(*args, **kwargs):
     ...
@@ -3660,6 +4033,10 @@ def GetEstimatedTracksFromReconstruction(*args, **kwargs):
     ...
 def GetEstimatedViewsFromReconstruction(*args, **kwargs):
     ...
+def GetSim3LieFromView(*args, **kwargs):
+    """
+    Sim(3) camera pose as 7-vector lie algebra log (Sophus convention).
+    """
 def IntrinsicsToCalibrationMatrix(*args, **kwargs):
     ...
 def IsTriangulatedPointInFrontOfCameras(*args, **kwargs):
@@ -3667,7 +4044,9 @@ def IsTriangulatedPointInFrontOfCameras(*args, **kwargs):
 def LocalizeViewToReconstruction(*args, **kwargs):
     ...
 def MLPnP(*args, **kwargs):
-    ...
+    """
+    Maximum-likelihood PnP. Requires at least six normalized 2D-3D correspondences (see kMLPnPMinimumPoints).
+    """
 def NormalizedEightPointFundamentalMatrix(*args, **kwargs):
     ...
 def NumEstimatedTracks(*args, **kwargs):
@@ -3692,11 +4071,13 @@ def RelativePoseFromTwoPointsWithKnownRotation(*args, **kwargs):
     ...
 def RelativeRotationsFromViewGraph(*args, **kwargs):
     ...
+def RelativeSim3BetweenViews(*args, **kwargs):
+    """
+    Relative Sim(3) S_i^{-1} S_j as 7-vector lie log.
+    """
 def RemoveDisconnectedViewPairs(*args, **kwargs):
     ...
 def SelectGoodTracksForBundleAdjustment(*args, **kwargs):
-    ...
-def ComputeMeanReprojectionError(reconstruction: Reconstruction) -> float:
     ...
 def SetCameraIntrinsicsFromPriors(*args, **kwargs):
     ...
@@ -3758,6 +4139,7 @@ CUDA_SPARSE: SparseLinearAlgebraLibraryType  # value = <SparseLinearAlgebraLibra
 DENSE_NORMAL_CHOLESKY: LinearSolverType  # value = <LinearSolverType.DENSE_NORMAL_CHOLESKY: 0>
 DENSE_QR: LinearSolverType  # value = <LinearSolverType.DENSE_QR: 1>
 DENSE_SCHUR: LinearSolverType  # value = <LinearSolverType.DENSE_SCHUR: 3>
+DIRECTION_CROSS: GravityPriorErrorType  # value = <GravityPriorErrorType.DIRECTION_CROSS: 1>
 DISTORTION: OptimizeIntrinsicsType  # value = <OptimizeIntrinsicsType.DISTORTION: 48>
 DIVISION_UNDISTORTION: CameraIntrinsicsModelType  # value = <CameraIntrinsicsModelType.DIVISION_UNDISTORTION: 4>
 DLS: PnPType  # value = <PnPType.DLS: 2>
@@ -3816,6 +4198,7 @@ SVD: TriangulationMethodType  # value = <TriangulationMethodType.SVD: 1>
 TANGENTIAL_DISTORTION: OptimizeIntrinsicsType  # value = <OptimizeIntrinsicsType.TANGENTIAL_DISTORTION: 32>
 TRIVIAL: LossFunctionType  # value = <LossFunctionType.TRIVIAL: 0>
 TUKEY: LossFunctionType  # value = <LossFunctionType.TUKEY: 5>
+VECTOR_DIFF: GravityPriorErrorType  # value = <GravityPriorErrorType.VECTOR_DIFF: 0>
 XYZW: TrackParametrizationType  # value = <TrackParametrizationType.XYZW: 0>
 XYZW_MANIFOLD: TrackParametrizationType  # value = <TrackParametrizationType.XYZW_MANIFOLD: 1>
 kInvalidTrackId: int = 4294967295

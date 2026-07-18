@@ -65,6 +65,10 @@ def test_5ptEssentialMatrix(image_pts_1, image_pts_2, t_gt, max_error_deg):
 
 def test_EstimateRelativeOrientation(image_pts_1, image_pts_2, R_gt, t_gt, max_error_deg):
     params = pt.solvers.RansacParameters()
+    # Seed the RNG so RANSAC's minimal-sample draws are deterministic and the
+    # test is reproducible (otherwise a time-seeded generator can occasionally
+    # pick an unlucky sample on tight tolerances / small scenes).
+    params.rng = pt.solvers.RandomNumberGenerator(42)
     params.error_thresh = 1e-4
     params.max_iterations = 20
     params.min_iterations = 1

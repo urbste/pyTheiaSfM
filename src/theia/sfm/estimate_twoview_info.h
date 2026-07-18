@@ -73,6 +73,25 @@ struct EstimateTwoViewInfoOptions {
   bool use_lo = false;
   int lo_start_iterations = 10;
 
+  // Use the Sturm-sequence-based 5-point solver (ported from PoseLib) instead
+  // of theia's Stewenius-style eigendecomposition solver inside the RANSAC
+  // inner loop. See RansacParameters::use_sturm_5pt for details.
+  bool use_sturm_5pt = true;
+
+  // Use the monodepth 3-point minimal solvers (ported from PoseLib's
+  // RePoseD) instead of the standard 5-/8-point solvers, when correspondences
+  // carry a monocular-depth prior (Feature::depth_prior_ > 0 on both sides
+  // for effectively all matches). Requires far fewer RANSAC iterations since
+  // the minimal sample size drops from 5 (or 8, uncalibrated) to 3. Silently
+  // (with a one-time warning) falls back to the standard path if depth
+  // priors are missing.
+  bool use_monodepth = false;
+
+  // Only relevant when use_monodepth is true and the views are uncalibrated:
+  // whether to assume both cameras share one unknown focal length (true) or
+  // solve for two independent focal lengths (false).
+  bool monodepth_shared_focal = true;
+
   // min and max focal length
   // this is very useful for the ransac loop, if we already
   // have a guess of the focal length of our cameras

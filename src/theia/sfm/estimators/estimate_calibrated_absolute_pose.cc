@@ -41,16 +41,14 @@
 
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
-#include "theia/sfm/pose/perspective_three_point.h"
-#include "theia/sfm/pose/sqpnp.h"
 #include "theia/sfm/pose/dls_pnp.h"
 #include "theia/sfm/pose/mlpnp.h"
+#include "theia/sfm/pose/perspective_three_point.h"
+#include "theia/sfm/pose/refine_absolute_pose.h"
+#include "theia/sfm/pose/sqpnp.h"
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
-
-#include "theia/sfm/reconstruction.h"
-#include "theia/sfm/bundle_adjustment/bundle_adjuster.h"
 
 namespace theia {
 namespace {
@@ -129,38 +127,21 @@ class CalibratedAbsolutePoseEstimator
   }
 
   bool RefineModel(const std::vector<FeatureCorrespondence2D3D>& correspondences,
-    const double error_thresh,
-    CalibratedAbsolutePose* absolute_pose) const {
-
-    theia::BundleAdjustmentOptions ba_opts;
-    ba_opts.max_num_iterations = 2;
-    ba_opts.use_homogeneous_point_parametrization = false;
-    ba_opts.intrinsics_to_optimize = theia::OptimizeIntrinsicsType::NONE;
-    ba_opts.loss_function_type = LossFunctionType::HUBER;
-    ba_opts.robust_loss_width = error_thresh*1.5;
-
-    Reconstruction reconstruction;
-    const auto v_id = reconstruction.AddView("0", 0, 0.0);
-    auto m_view = reconstruction.MutableView(v_id);
-    auto m_cam = m_view->MutableCamera();
-    m_view->SetEstimated(true);
-    m_cam->SetOrientationFromRotationMatrix(absolute_pose->rotation);
-    m_cam->SetPosition(absolute_pose->position);
-    for (int i=0; i < correspondences.size(); ++i) {
-        const auto t_id = reconstruction.AddTrack();
-        auto m_track = reconstruction.MutableTrack(t_id);
-        m_track->SetEstimated(true);
-        m_track->SetPoint(correspondences[i].world_point.homogeneous());
-        reconstruction.AddObservation(v_id, t_id, theia::Feature(correspondences[i].feature));
+                   const double error_thresh,
+                   CalibratedAbsolutePose* absolute_pose) const {
+    std::vector<Eigen::Vector2d> features(correspondences.size());
+    std::vector<Eigen::Vector3d> world_points(correspondences.size());
+    for (size_t i = 0; i < correspondences.size(); ++i) {
+      features[i] = correspondences[i].feature;
+      world_points[i] = correspondences[i].world_point;
     }
-    
-
-    theia::BundleAdjustmentSummary ba_summary = theia::BundleAdjustView(
-        ba_opts, v_id, &reconstruction);
-
-    absolute_pose->position = m_cam->GetPosition();
-    absolute_pose->rotation = m_cam->GetOrientationAsRotationMatrix();
-    return ba_summary.final_cost < ba_summary.initial_cost && ba_summary.success;
+    // Dense 6-DoF reprojection LM (PoseLib-style); avoids Ceres Reconstruction
+    // setup per LO call.
+    return RefineAbsolutePoseReprojection(features,
+                                          world_points,
+                                          error_thresh,
+                                          &absolute_pose->rotation,
+                                          &absolute_pose->position);
   }
 
 

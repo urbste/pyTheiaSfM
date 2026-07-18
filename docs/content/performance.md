@@ -1,70 +1,55 @@
 # Performance {#chapter-performance}
 
-This page was last updated March 30th, 2016.
+This page describes practical performance considerations for **pyTheia** (the Python fork). Historical Strecha / 1DSfM benchmark tables from upstream TheiaSfM (2016) are **not** representative of this fork's Python-first API and are omitted here.
 
-By utilizing the [Eigen](http://eigen.tuxfamily.org/dox/) and [Ceres Solver](http://www.ceres-solver.org) libraries in addition to custom scalable algorithms, Theia achieves state-of-the-art performance in terms of efficiency and accuracy on large-scale datasets. We measure the performance of Theia in terms of efficiency and accuracy on benchmark datasets for small and large-scale problems to provide meaningful context for the strengths and weaknesses of the library.
+## Threading
 
-## Small Dataset Benchmarks
+- **`ReconstructionEstimatorOptions.num_threads`** defaults to **1**. Raise it for incremental, hybrid, or global reconstruction when running large scenes on multi-core hosts.
+- Some internal paths (e.g. nested bundle adjustment inside incremental estimation) may still cap parallelism for numerical stability.
+- **OpenMP pragmas** exist in parts of the C++ tree, but OpenMP is not wired in CMake by default; do not assume multi-threaded OpenMP without a custom build.
 
-To demonstrate the viability of Theia for small scenes, we measure the performance on the [Strecha MVS datasets](http://cvlabwww.epfl.ch/data/multiview/denseMVS.html) datasets. These datasets consist of small scale scenes, though they are extremely high-resolution and rather dense image sampling so it may be considered an "easy" dataset by some. Nonetheless, it is a commonly used dataset to measure reconstruction accuracy.
+## Linear algebra and Ceres backends
 
-All reconstructions were generated using the parameters found in [this configuration file](http://theia-sfm.org/build_reconstruction_flags_strecha.txt). Each reconstruction generated from this file was then compared to the ground truth reconstruction (which can be generated from the Strecha dataset using the "create_reconstruction_from_strecha_dataset.cc" program). The camera intrinsic calibration files can be easily generated from the information provided by datasets.
+Bundle adjustment and many solvers use **Ceres Solver**. Defaults favor portable CPU backends (`EIGEN` dense, `EIGEN_SPARSE` sparse).
 
-  Dataset        N (input)   N    Median Error (mm)   Mean Error (mm)   Timing (s)
-  -------------- ----------- ---- ------------------- ----------------- ------------
-  Castle-19      19          19   14.7                25.3              1.54
-  Castle-30      30          30   18.5                21.7              3.77
-  Entry-10       10          10   4.8                 6.0               1.15
-  Fountain-11    11          11   2.0                 2.4               1.76
-  Herz-Jesu-25   25          25   5.1                 5.1               2.49
-  Herz-Jesu-8    8           8    1.9                 3.1               0.59
+- **Pre-built wheels** link a **CPU** Ceres build. For GPU linear algebra, build Ceres locally with CUDA (and optionally cuDSS for sparse CUDA), then build pyTheia against that Ceres. See [Building](building.md) and [Bundle adjustment](bundle_adjustment.md).
+- **SuiteSparse / CHOLMOD:** this fork removed GPL-dependent SuiteSparse code from `sparse_cholesky_llt.cc` and uses **Eigen::SimplicialLDLT** instead. That improves portability but can be slower or slightly less stable on very large sparse problems than a SuiteSparse-enabled Ceres build.
 
-  : Strecha Dataset Performance
+## Python / pybind11 boundary
 
-## Large Scale Benchmarks
+Most bound functions **hold the Python GIL** for the full C++ call. Long-running work (full reconstruction, bundle adjustment, single-pair two-view estimation) blocks other Python threads.
 
-We use the [1DSfM Datasets](http://www.cs.cornell.edu/projects/1dsfm/) as benchmarks for large-scale reconstructions. These datasets provide 2-view matches and epipolar geometry as input, and a reference reconstruction from incremental SfM (computed with [Bundler](http://www.cs.cornell.edu/~snavely/bundler/)) for measuring error. The reference reconstruction is not necessarily considered ground truth, but it is a meaningful reference point since incremental SfM algorithms are rather robust and accurate.
+**Exception:** `BulkEstimateTwoViewInfo` releases the GIL while processing many view pairs in C++. Prefer batch APIs where available when driving pyTheia from multi-threaded Python or async code.
 
-We measure the accuracy of camera positions (approximately in meters) and timing results. We report N, the number of cameras that could be succesfully reconstructed, in addition to the mean and median camera position errors after robust alignment (via RANSAC) to ground truth camera positions.
+Passing large correspondences or descriptors through Python lists incurs conversion overhead. For hot loops, keep data in NumPy arrays and batch work on the C++ side when bindings support it.
 
-All reconstructions were generated using the "build_1dsfm_reconstruction.cc" program and the parameters found in [this config file](http://theia-sfm.org/build_1dsfm_reconstruction_flags.txt). Each reconstruction generated was then compared to the ground truth reconstruction provided in the 1dSfM dataset (these are provided as Bundler files, but can be converted to Theia reconstructions with the "convert_bundle_file.cc" program).
+## Local build tuning
 
-  Dataset             N (input)   N      Median Error (m)   Mean Error (m)
-  ------------------- ----------- ------ ------------------ ----------------
-  Alamo               577         558    0.37               1.62
-  Ellis Island        227         220    4.74               18.38
-  Madrid Metropolis   341         321    0.95               4.10
-  Montreal N.D.       450         448    0.41               0.81
-  Notre Dame          553         540    0.20               0.52
-  NYC Library         332         321    0.85               4.91
-  Piazza del Popolo   328         326    1.03               3.91
-  Piccadilly          2152        2055   0.72               2.67
-  Roman Forum         1084        1045   2.19               9.33
-  Tower of London     572         456    1.36               17.38
-  Union Square        789         720    4.9                10.51
-  Vienna Cathedral    836         797    2.55               13.79
-  Yorkminster         437         414    1.37               4.28
-  Trafalgar           5288        4716   5.47               8.39
-  Gendarmenmarkt      733         657    10.09              35.24
+| Setting | Effect |
+|---------|--------|
+| `BUILD_MARCH_NATIVE=1` (env) / `-DBUILD_WITH_MARCH_NATIVE=ON` | Enables `-march=native -mtune=native` for local max performance; **off** for portable wheels |
+| CUDA-enabled Ceres | Speeds large BA when `BundleAdjustmentOptions` selects GPU dense/sparse backends |
+| Higher `num_threads` on estimators | Better CPU utilization for reconstruction pipelines |
 
-  : 1DSfM Dataset Position Error
+## Two-view relative pose estimation
 
-  Dataset             N (input)   Rotation   Position   BA       Total
-  ------------------- ----------- ---------- ---------- -------- --------
-  Alamo               577         3.31       44.74      413.05   497.11
-  Ellis Island        227         0.51       4.97       13.63    28.34
-  Madrid Metropolis   341         1.24       5.75       33.87    47.15
-  Montreal N.D.       450         1.42       23.19      107.00   163.82
-  Notre Dame          553         4.91       43.37      196.22   330.71
-  NYC Library         332         0.45       4.35       46.78    61.60
-  Piazza del Popolo   328         0.47       8.37       46.30    61.31
-  Piccadilly          2152        49.56      129.21     72.26    330.33
-  Roman Forum         1084        2.03       23.49      183.48   244.41
-  Tower of London     572         0.47       8.03       129.65   154.45
-  Union Square        789         1.06       6.26       26.82    47.56
-  Vienna Cathedral    836         5.46       41.06      110.89   243.83
-  Yorkminster         437         0.55       10.17      59.41    92.39
-  Trafalgar           5288        156.331    387.29     142.10   880.74
-  Gendarmenmarkt      733         1.88       13.89      43.32    72.04
+`EstimateTwoViewInfo` / `EstimateRelativePose` were optimized along independent, composable axes (see [RANSAC and robust estimation](ransac.md) and [Pose — relative pose](pose.md) for the API):
 
-  : 1DSfM Dataset Timings (seconds)
+1. **RANSAC-loop optimizations** (always on): Sampson-only scoring with a single final essential-matrix decomposition instead of one per candidate model, vectorized Sampson residuals (`SquaredSampsonDistances`), hoisted per-iteration allocations, count-only inlier scoring, and `PartialPivLU` in the 10×10 elimination.
+2. **`use_sturm_5pt`** (default `true`): swaps in a Sturm-sequence-based 5-point minimal solver ([`FivePointRelativePoseSturm`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/five_point_relative_pose_sturm.h), adapted from [PoseLib](bibliography.md#LarssonPoseLib)) that avoids the eigendecomposition theia's original Stewénius-style solver performs per RANSAC iteration.
+3. **`use_monodepth`** (default `false`, requires per-feature `depth_prior`): drops the minimal sample size from 5 (or 8, uncalibrated) to 3, which sharply reduces the number of RANSAC iterations needed for a given inlier ratio/confidence — the effect compounds with the outlier ratio.
+4. **Dense LM local optimization** when **`use_lo=true`**: `RefineModel` for calibrated relative pose, monodepth relative pose, and calibrated absolute pose uses a small analytic LM (`theia/math/lmlsq`) instead of constructing a Ceres problem (or a one-view `Reconstruction`) on every LO call. See [RANSAC — local optimization](ransac.md#ransac-local-optimization).
+
+Representative numbers from `dev/benchmark_two_view_estimation.py` (2000 correspondences, synthetic scene, `use_lo=false`; classic = `use_sturm_5pt=False`):
+
+| outlier ratio | classic 5pt | Sturm 5pt | monodepth 3pt |
+|---|---|---|---|
+| 10% | 1.51 ms | 0.96 ms | 0.56 ms |
+| 30% | 3.26 ms | 2.86 ms | 0.68 ms |
+| 50% | 15.69 ms | 13.46 ms | 1.05 ms |
+
+Absolute numbers depend heavily on machine, correspondence count, and outlier ratio — re-run the script on your own hardware/dataset before relying on these for capacity planning. With **`use_lo=true`**, wall time rises with the number of LO calls (`RansacSummary.num_lo_iterations`); the dense LM path keeps that overhead much smaller than the previous Ceres-backed LO.
+
+## Measuring performance
+
+For two-view relative pose estimation, run `dev/benchmark_two_view_estimation.py` (see above). For other paths, there is no general in-repo microbenchmark suite; see wall-clock patterns in `pyexamples/` and `examples/vismatch_sfm/`. When comparing changes, use the same Ceres build, thread count, and dataset.

@@ -60,6 +60,17 @@ class QualityMeasurement {
   virtual double ComputeCost(const std::vector<double>& residuals,
                              std::vector<int>* inliers) = 0;
 
+  // Count-only variant used inside the hot RANSAC loop: computes the same
+  // cost as ComputeCost() above but without building the inlier index
+  // vector, since most candidate models do not beat the current best cost
+  // and the indices are wasted work for them. The default implementation
+  // falls back to the full method with a scratch vector; subclasses should
+  // override this for the fast path.
+  virtual double ComputeCost(const std::vector<double>& residuals) {
+    std::vector<int> scratch_inliers;
+    return ComputeCost(residuals, &scratch_inliers);
+  }
+
  protected:
   double error_thresh_;
 };

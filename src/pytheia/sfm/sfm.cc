@@ -952,6 +952,19 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("rotation", &theia::RelativePose::rotation)
       .def_readwrite("position", &theia::RelativePose::position);
 
+  py::class_<theia::MonoDepthRelativePoseResult>(
+      m, "MonoDepthRelativePoseResult")
+      .def(py::init<>())
+      .def_readwrite("rotation", &theia::MonoDepthRelativePoseResult::rotation)
+      .def_readwrite("position", &theia::MonoDepthRelativePoseResult::position)
+      .def_readwrite("scale", &theia::MonoDepthRelativePoseResult::scale)
+      .def_readwrite("shift1", &theia::MonoDepthRelativePoseResult::shift1)
+      .def_readwrite("shift2", &theia::MonoDepthRelativePoseResult::shift2)
+      .def_readwrite("focal_length1",
+                     &theia::MonoDepthRelativePoseResult::focal_length1)
+      .def_readwrite("focal_length2",
+                     &theia::MonoDepthRelativePoseResult::focal_length2);
+
   py::class_<theia::Plane>(m, "Plane")
       .def(py::init<>())
       .def_readwrite("point", &theia::Plane::point)
@@ -1032,6 +1045,12 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("EstimateRadialHomographyMatrix",
         theia::EstimateRadialHomographyMatrixWrapper);
   m.def("EstimateRelativePose", theia::EstimateRelativePoseWrapper);
+  m.def("EstimateMonoDepthRelativePose",
+        theia::EstimateMonoDepthRelativePoseWrapper);
+  m.def("EstimateMonoDepthRelativePoseSharedFocal",
+        theia::EstimateMonoDepthRelativePoseSharedFocalWrapper);
+  m.def("EstimateMonoDepthRelativePoseVaryingFocal",
+        theia::EstimateMonoDepthRelativePoseVaryingFocalWrapper);
   m.def("EstimateRelativePoseWithKnownOrientation",
         theia::EstimateRelativePoseWithKnownOrientationWrapper);
   m.def("EstimateRigidTransformation2D3D",
@@ -1078,6 +1097,13 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("use_lo", &theia::EstimateTwoViewInfoOptions::use_lo)
       .def_readwrite("lo_start_iterations",
                      &theia::EstimateTwoViewInfoOptions::lo_start_iterations)
+      .def_readwrite("use_sturm_5pt",
+                     &theia::EstimateTwoViewInfoOptions::use_sturm_5pt)
+      .def_readwrite("use_monodepth",
+                     &theia::EstimateTwoViewInfoOptions::use_monodepth)
+      .def_readwrite(
+          "monodepth_shared_focal",
+          &theia::EstimateTwoViewInfoOptions::monodepth_shared_focal)
       .def_readwrite("min_focal_length",
                      &theia::EstimateTwoViewInfoOptions::min_focal_length)
       .def_readwrite("max_focal_length",

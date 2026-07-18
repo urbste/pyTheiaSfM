@@ -36,6 +36,7 @@
 #define THEIA_SFM_POSE_UTIL_H_
 
 #include <Eigen/Core>
+#include <vector>
 
 namespace theia {
 
@@ -45,6 +46,15 @@ namespace theia {
 double SquaredSampsonDistance(const Eigen::Matrix3d& F,
                               const Eigen::Vector2d& x,
                               const Eigen::Vector2d& y);
+
+// Vectorized squared Sampson distance for many correspondences at once. x1
+// and x2 are 3xN matrices of homogeneous image points (row 3 == 1),
+// packed once by the caller and reused across RANSAC iterations. Numerically
+// equivalent to calling SquaredSampsonDistance per column, but avoids the
+// per-point virtual-call and homogeneous-conversion overhead.
+std::vector<double> SquaredSampsonDistances(const Eigen::Matrix3d& F,
+                                            const Eigen::Matrix3Xd& x1,
+                                            const Eigen::Matrix3Xd& x2);
 
 // Returns the cross product matrix of a vector: if cross_vec = [x y z] then
 //                        [ 0  -z   y]

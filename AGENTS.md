@@ -21,8 +21,8 @@ The [README](README.md) states that **interfaces are still evolving**. Prefer ba
 | Python bindings | [`src/pytheia/`](src/pytheia/) | [`pytheia_pybind.cc`](src/pytheia/pytheia_pybind.cc), [`pytheia_pybind.h`](src/pytheia/pytheia_pybind.h), and domain sources: [`matching/`](src/pytheia/matching/), [`sfm/`](src/pytheia/sfm/), [`solvers/`](src/pytheia/solvers/), [`math/`](src/pytheia/math/), [`mvs/`](src/pytheia/mvs/), [`io/`](src/pytheia/io/) — listed in [`src/pytheia/CMakeLists.txt`](src/pytheia/CMakeLists.txt) |
 | Type stubs (PEP 561) | [`src/pytheia/pytheia.pyi`](src/pytheia/pytheia.pyi), [`src/pytheia/pytheia/`](src/pytheia/pytheia/) | Produced by the build / [`dev/generate_stubs.sh`](dev/generate_stubs.sh) |
 | Python tests & examples | [`pytests/`](pytests/), [`pyexamples/`](pyexamples/) | e.g. [`pytests/sfm_pipeline.py`](pytests/sfm_pipeline.py); pytest modules under `pytests/` |
-| Vendored / submodule code | [`libraries/`](libraries/) | CI checks out **recursive submodules** |
-| Documentation | [`docs/source/`](docs/source/) (Sphinx), [`docs/mkdocs.yml`](docs/mkdocs.yml) (MkDocs) | Dual Python/C++ tabbed examples: [`docs/source/contributions.rst`](docs/source/contributions.rst) |
+| Vendored dependencies | [`libraries/`](libraries/) | Vendored in-tree (`pybind11`, `cereal`, `gtest`, etc.); no `.gitmodules` |
+| Documentation | [`docs/mkdocs.yml`](docs/mkdocs.yml), [`docs/content/`](docs/content/) | MkDocs site; dual Python/C++ tabbed examples in [`docs/content/contributions.md`](docs/content/contributions.md) |
 
 ## Build flow
 
@@ -68,11 +68,13 @@ After C++ or binding changes:
 - Run **`python -m pytest pytests/`** from the repository root (with `PYTHONPATH` including the built package, typically `src`, or after `pip install -e .` / wheel install).
 - Run targeted scripts when appropriate, e.g. **`python pytests/sfm_pipeline.py --image_path ...`** (see README).
 
+**C++ tests:** ~118 `*_test.cc` files exist under `src/theia/`, but most are commented out in `src/theia/CMakeLists.txt` and wheel builds pass `-DBUILD_TESTING=OFF`. Re-enabling a core subset is a separate effort.
+
 If `import pytheia` fails on Linux with **GLIBCXX** errors (often in Conda), see the troubleshooting notes in [README.md](README.md).
 
 ## CI and release
 
-[`.github/workflows/build_wheels.yml`](.github/workflows/build_wheels.yml) builds Linux wheels inside Docker (`urbste/pytheia_base:1.4.0`, `build-wheel-linux.sh`). Checkout must use **recursive submodules** so `libraries/` is complete.
+[`.github/workflows/build_wheels.yml`](.github/workflows/build_wheels.yml) builds Linux wheels inside Docker (`urbste/pytheia_base:1.4.0`, `build-wheel-linux.sh`). Vendored `libraries/` is already in the repository.
 
 ## Style and contributions
 

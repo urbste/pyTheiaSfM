@@ -69,6 +69,15 @@ class MLEQualityMeasurement : public QualityMeasurement {
     }
     return mle_score;
   }
+
+  // Fast path: computes the MLE score without storing inlier indices.
+  double ComputeCost(const std::vector<double>& residuals) override {
+    double mle_score = 0.0;
+    for (size_t i = 0; i < residuals.size(); i++) {
+      mle_score += (residuals[i] < error_thresh_) ? residuals[i] : error_thresh_;
+    }
+    return mle_score;
+  }
 };
 
 }  // namespace theia

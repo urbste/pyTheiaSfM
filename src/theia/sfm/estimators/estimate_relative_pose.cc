@@ -44,14 +44,13 @@
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
 #include "theia/sfm/pose/essential_matrix_utils.h"
 #include "theia/sfm/pose/five_point_relative_pose.h"
+#include "theia/sfm/pose/five_point_relative_pose_sturm.h"
+#include "theia/sfm/pose/refine_relative_pose.h"
 #include "theia/sfm/pose/util.h"
 #include "theia/sfm/triangulation/triangulation.h"
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
-#include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
-#include "theia/sfm/twoview_info.h"
-#include <ceres/types.h>
 
 namespace theia {
 namespace {
@@ -65,45 +64,59 @@ using Eigen::Vector3d;
 class RelativePoseEstimator
     : public Estimator<FeatureCorrespondence, RelativePose> {
  public:
-  RelativePoseEstimator() {}
+  explicit RelativePoseEstimator(const bool use_sturm_5pt = true)
+      : use_sturm_5pt_(use_sturm_5pt) {}
 
   // 5 correspondences are needed to determine an essential matrix and thus a
   // relative pose..
   double SampleSize() const { return 5; }
 
-  // Estimates candidate relative poses from correspondences.
+  // Estimates candidate relative poses from correspondences. Only the
+  // essential matrix is filled in (Sampson-only scoring, COLMAP-style): the
+  // expensive per-candidate SVD decomposition + 4-way cheirality check is
+  // deferred to RefineModel/the caller, since scoring only needs the E
+  // matrix. rotation/position are left at their default (identity/zero)
+  // until RefineModel or the final decomposition in EstimateRelativePose()
+  // fills them in.
   bool EstimateModel(const std::vector<FeatureCorrespondence>& correspondences,
                      std::vector<RelativePose>* relative_poses) const {
-    std::vector<Eigen::Vector2d> image1_points, image2_points;
-    image1_points.reserve(correspondences.size());
-    image2_points.reserve(correspondences.size());
-    for (int i = 0; i < correspondences.size(); i++) {
-      image1_points.emplace_back(correspondences[i].feature1.point_);
-      image2_points.emplace_back(correspondences[i].feature2.point_);
-    }
-
     std::vector<Matrix3d> essential_matrices;
-    if (!FivePointRelativePose(
-            image1_points, image2_points, &essential_matrices)) {
-      return false;
+    // The ported Sturm-sequence-based solver (theia/sfm/pose/
+    // five_point_relative_pose_sturm.h) is strictly minimal, so it is only
+    // used for exactly-5-point samples (the only case RANSAC ever calls this
+    // with); larger, non-minimal samples always use FivePointRelativePose.
+    if (use_sturm_5pt_ && correspondences.size() == 5) {
+      std::vector<Vector3d> x1h, x2h;
+      x1h.reserve(5);
+      x2h.reserve(5);
+      for (int i = 0; i < 5; i++) {
+        x1h.emplace_back(correspondences[i].feature1.point_.homogeneous());
+        x2h.emplace_back(correspondences[i].feature2.point_.homogeneous());
+      }
+      if (FivePointRelativePoseSturm(x1h, x2h, &essential_matrices) == 0) {
+        return false;
+      }
+    } else {
+      std::vector<Eigen::Vector2d> image1_points, image2_points;
+      image1_points.reserve(correspondences.size());
+      image2_points.reserve(correspondences.size());
+      for (int i = 0; i < correspondences.size(); i++) {
+        image1_points.emplace_back(correspondences[i].feature1.point_);
+        image2_points.emplace_back(correspondences[i].feature2.point_);
+      }
+      if (!FivePointRelativePose(
+              image1_points, image2_points, &essential_matrices)) {
+        return false;
+      }
     }
 
-    relative_poses->reserve(essential_matrices.size() * 4);
+    relative_poses->reserve(essential_matrices.size());
     for (const Eigen::Matrix3d& essential_matrix : essential_matrices) {
       RelativePose relative_pose;
       relative_pose.essential_matrix = essential_matrix;
-
-      // The best relative pose decomposition should have at least 4
-      // triangulated points in front of the camera. This is because one point
-      // may be at infinity.
-      const int num_points_in_front_of_cameras =
-          GetBestPoseFromEssentialMatrix(essential_matrix,
-                                         correspondences,
-                                         &relative_pose.rotation,
-                                         &relative_pose.position);
-      if (num_points_in_front_of_cameras >= 4) {
-        relative_poses->push_back(relative_pose);
-      }
+      relative_pose.rotation.setIdentity();
+      relative_pose.position.setZero();
+      relative_poses->push_back(relative_pose);
     }
     return relative_poses->size() > 0;
   }
@@ -112,45 +125,77 @@ class RelativePoseEstimator
     const std::vector<FeatureCorrespondence>& correspondences,
     const double error_thresh,
     RelativePose* relative_pose) const {
-    
-    theia::TwoViewInfo two_view_info;
-    Eigen::AngleAxisd rotvec(relative_pose->rotation);
-    two_view_info.rotation_2 = rotvec.angle() * rotvec.axis();
-    two_view_info.position_2 = relative_pose->position;
+    // Local optimization needs an actual rotation/position. Decompose the
+    // essential matrix lazily here (once per LO call, on the current inlier
+    // set), rather than for every candidate from EstimateModel.
+    GetBestPoseFromEssentialMatrix(relative_pose->essential_matrix,
+                                   correspondences,
+                                   &relative_pose->rotation,
+                                   &relative_pose->position);
 
-    theia::BundleAdjustmentOptions ba_opts;
-    ba_opts.max_num_iterations = 15;
-    ba_opts.linear_solver_type = ceres::CGNR;
-    ba_opts.preconditioner_type = ceres::JACOBI;
-    ba_opts.loss_function_type = LossFunctionType::TRUNCATED;
-    ba_opts.verbose = false;
-    ba_opts.robust_loss_width = error_thresh;
+    std::vector<Eigen::Vector2d> x1(correspondences.size());
+    std::vector<Eigen::Vector2d> x2(correspondences.size());
+    for (size_t i = 0; i < correspondences.size(); ++i) {
+      x1[i] = correspondences[i].feature1.point_;
+      x2[i] = correspondences[i].feature2.point_;
+    }
 
-    const auto ba_summary = theia::BundleAdjustTwoViewsAngular(
-      ba_opts, correspondences, &two_view_info);
+    // Dense 5-DoF Sampson LM (PoseLib-style); avoids Ceres problem setup.
+    if (!RefineRelativePoseSampson(x1,
+                                   x2,
+                                   error_thresh,
+                                   &relative_pose->rotation,
+                                   &relative_pose->position)) {
+      return false;
+    }
 
-    relative_pose->position = two_view_info.position_2;
-    Eigen::AngleAxisd rot_vec_out;
-    rot_vec_out.angle() = two_view_info.rotation_2.norm();
-    rot_vec_out.axis() = two_view_info.rotation_2 / rot_vec_out.angle();
-    relative_pose->rotation = rot_vec_out.toRotationMatrix();
-    return ba_summary.final_cost < ba_summary.initial_cost;
+    // Keep essential_matrix consistent with the refined pose for scoring.
+    const Eigen::Vector3d translation =
+        -relative_pose->rotation * relative_pose->position;
+    relative_pose->essential_matrix =
+        CrossProductMatrix(translation) * relative_pose->rotation;
+    return true;
   }
 
-  // The error for a correspondences given a model. This is the squared sampson
-  // error.
+  // The error for a correspondences given a model. This is the squared
+  // sampson error. Cheirality is deliberately not checked here: scoring
+  // purely on Sampson distance (no per-candidate SVD/cheirality) is the
+  // COLMAP-style approach and is significantly cheaper; the winning model's
+  // inliers are re-filtered by cheirality once in EstimateRelativePose().
   double Error(const FeatureCorrespondence& correspondence,
                const RelativePose& relative_pose) const {
-    if (IsTriangulatedPointInFrontOfCameras(
-            correspondence, relative_pose.rotation, relative_pose.position)) {
-      return SquaredSampsonDistance(relative_pose.essential_matrix,
-                                    correspondence.feature1.point_,
-                                    correspondence.feature2.point_);
+    return SquaredSampsonDistance(relative_pose.essential_matrix,
+                                  correspondence.feature1.point_,
+                                  correspondence.feature2.point_);
+  }
+
+  // Vectorized Sampson residuals for all correspondences at once. Packs the
+  // homogeneous point coordinates into 3xN matrices lazily on first call and
+  // reuses them across RANSAC iterations (the `data` vector passed in by
+  // SampleConsensusEstimator::Estimate is the same object every iteration).
+  std::vector<double> Residuals(
+      const std::vector<FeatureCorrespondence>& correspondences,
+      const RelativePose& relative_pose) const override {
+    if (cached_correspondences_ != &correspondences ||
+        cached_x1_.cols() != static_cast<int>(correspondences.size())) {
+      cached_x1_.resize(3, correspondences.size());
+      cached_x2_.resize(3, correspondences.size());
+      for (int i = 0; i < correspondences.size(); i++) {
+        cached_x1_.col(i) = correspondences[i].feature1.point_.homogeneous();
+        cached_x2_.col(i) = correspondences[i].feature2.point_.homogeneous();
+      }
+      cached_correspondences_ = &correspondences;
     }
-    return std::numeric_limits<double>::max();
+    return SquaredSampsonDistances(
+        relative_pose.essential_matrix, cached_x1_, cached_x2_);
   }
 
  private:
+  const bool use_sturm_5pt_;
+  mutable Eigen::Matrix3Xd cached_x1_, cached_x2_;
+  mutable const std::vector<FeatureCorrespondence>* cached_correspondences_ =
+      nullptr;
+
   DISALLOW_COPY_AND_ASSIGN(RelativePoseEstimator);
 };
 
@@ -162,13 +207,48 @@ bool EstimateRelativePose(
     const std::vector<FeatureCorrespondence>& normalized_correspondences,
     RelativePose* relative_pose,
     RansacSummary* ransac_summary) {
-  RelativePoseEstimator relative_pose_estimator;
+  RelativePoseEstimator relative_pose_estimator(ransac_params.use_sturm_5pt);
   std::unique_ptr<SampleConsensusEstimator<RelativePoseEstimator> > ransac =
       CreateAndInitializeRansacVariant(
           ransac_type, ransac_params, relative_pose_estimator);
   // Estimate the relative pose.
-  return ransac->Estimate(
-      normalized_correspondences, relative_pose, ransac_summary);
+  if (!ransac->Estimate(
+          normalized_correspondences, relative_pose, ransac_summary)) {
+    return false;
+  }
+
+  // RelativePoseEstimator scores purely on Sampson distance and never
+  // decomposes the essential matrix into a pose (Phase 1.1), so do the
+  // single, final decomposition here on the winning inlier set. If LO-RANSAC
+  // ran, this simply reproduces the pose RefineModel's BA already computed;
+  // if it did not run, this is the only decomposition performed.
+  std::vector<FeatureCorrespondence> inlier_correspondences;
+  inlier_correspondences.reserve(ransac_summary->inliers.size());
+  for (const int inlier_index : ransac_summary->inliers) {
+    inlier_correspondences.push_back(
+        normalized_correspondences[inlier_index]);
+  }
+  GetBestPoseFromEssentialMatrix(relative_pose->essential_matrix,
+                                 inlier_correspondences,
+                                 &relative_pose->rotation,
+                                 &relative_pose->position);
+
+  // Re-filter inliers by cheirality w.r.t. the final pose, preserving the
+  // previous behavior where RANSAC inliers were guaranteed to triangulate in
+  // front of both cameras.
+  std::vector<int> cheiral_inliers;
+  cheiral_inliers.reserve(ransac_summary->inliers.size());
+  for (const int inlier_index : ransac_summary->inliers) {
+    if (IsTriangulatedPointInFrontOfCameras(
+            normalized_correspondences[inlier_index],
+            relative_pose->rotation,
+            relative_pose->position)) {
+      cheiral_inliers.push_back(inlier_index);
+    }
+  }
+  ransac_summary->inliers = std::move(cheiral_inliers);
+
+  return true;
 }
 
 }  // namespace theia

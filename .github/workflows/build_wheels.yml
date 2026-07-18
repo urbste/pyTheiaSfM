@@ -21,17 +21,15 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
+      uses: actions/checkout@v4
     - name: Build the Linux wheels
       run: |
         sudo docker run --rm -e PYTHON_VERSION=${{ matrix.pyversion }} -v `pwd`:/home urbste/pytheia_base:1.4.0 /home/pypackage/build-wheel-linux.sh
         # cleanup for custom runner
         sudo chown -R $(whoami):$(whoami) .
-    - name: Publish distribution to Test PyPI
-      uses: pypa/gh-action-pypi-publish@master
+    - name: Publish distribution to PyPI
+      if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
-        # repository_url: https://test.pypi.org/legacy/
         packages_dir: wheelhouse/

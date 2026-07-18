@@ -23,18 +23,10 @@ def _package_version():
 
 
 class platform_bdist_wheel(bdist_wheel):
-    """Patched bdist_well to make sure wheels include platform tag."""
+    """Patched bdist_wheel to make sure wheels include platform tag."""
     def finalize_options(self):
         bdist_wheel.finalize_options(self)
         self.root_is_pure = False
-"""
-def _find_packages():
-    packages = setuptools.find_packages()
-    packages.append('mypythonpackage.doc')
-    packages.append('matlabsources')
-    print('packages found: {}'.format(packages))
-    return packages
-""" 
 
 def configure_c_extension():
     """Configure cmake project to C extension."""
@@ -68,7 +60,8 @@ def configure_c_extension():
 def build_c_extension():
     """Compile C extension."""
     print("Compiling extension...")
-    subprocess.check_call(['make', '-j15'], cwd='cmake_build')
+    jobs = os.cpu_count() or 1
+    subprocess.check_call(['make', f'-j{jobs}'], cwd='cmake_build')
 
 
 def create_package():
@@ -140,7 +133,6 @@ setuptools.setup(
     package_data={
         'pytheia': [
             'pytheia.*',
-            'libflann_cpp.*',
         '*.pyi',
         '*/*.pyi',
         '*/*/*.pyi',

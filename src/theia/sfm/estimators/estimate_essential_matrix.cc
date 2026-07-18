@@ -39,6 +39,7 @@
 
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/pose/five_point_relative_pose.h"
+#include "theia/sfm/pose/five_point_relative_pose_sturm.h"
 #include "theia/sfm/pose/util.h"
 #include "theia/solvers/estimator.h"
 #include "theia/util/util.h"
@@ -52,14 +53,28 @@ namespace {
 class EssentialMatrixEstimator
     : public Estimator<FeatureCorrespondence, Eigen::Matrix3d> {
  public:
-  EssentialMatrixEstimator() {}
+  explicit EssentialMatrixEstimator(const bool use_sturm_5pt = true)
+      : use_sturm_5pt_(use_sturm_5pt) {}
 
   // 5 correspondences are needed to determine an essential matrix.
   double SampleSize() const { return 5; }
 
-  // Estimates candidate essential matrices from correspondences.
+  // Estimates candidate essential matrices from correspondences. See
+  // RelativePoseEstimator::EstimateModel (estimate_relative_pose.cc) for why
+  // the Sturm solver is only used for exactly-5-point samples.
   bool EstimateModel(const std::vector<FeatureCorrespondence>& correspondences,
                      std::vector<Eigen::Matrix3d>* essential_matrices) const {
+    if (use_sturm_5pt_ && correspondences.size() == 5) {
+      std::vector<Eigen::Vector3d> x1h, x2h;
+      x1h.reserve(5);
+      x2h.reserve(5);
+      for (int i = 0; i < 5; i++) {
+        x1h.emplace_back(correspondences[i].feature1.point_.homogeneous());
+        x2h.emplace_back(correspondences[i].feature2.point_.homogeneous());
+      }
+      return FivePointRelativePoseSturm(x1h, x2h, essential_matrices) > 0;
+    }
+
     std::vector<Eigen::Vector2d> image1_points, image2_points;
     image1_points.reserve(correspondences.size());
     image2_points.reserve(correspondences.size());
@@ -81,7 +96,31 @@ class EssentialMatrixEstimator
                                   correspondence.feature2.point_);
   }
 
+  // Vectorized Sampson residuals for all correspondences at once (see
+  // RelativePoseEstimator::Residuals in estimate_relative_pose.cc for the
+  // same pattern).
+  std::vector<double> Residuals(
+      const std::vector<FeatureCorrespondence>& correspondences,
+      const Eigen::Matrix3d& essential_matrix) const override {
+    if (cached_correspondences_ != &correspondences ||
+        cached_x1_.cols() != static_cast<int>(correspondences.size())) {
+      cached_x1_.resize(3, correspondences.size());
+      cached_x2_.resize(3, correspondences.size());
+      for (int i = 0; i < correspondences.size(); i++) {
+        cached_x1_.col(i) = correspondences[i].feature1.point_.homogeneous();
+        cached_x2_.col(i) = correspondences[i].feature2.point_.homogeneous();
+      }
+      cached_correspondences_ = &correspondences;
+    }
+    return SquaredSampsonDistances(essential_matrix, cached_x1_, cached_x2_);
+  }
+
  private:
+  const bool use_sturm_5pt_;
+  mutable Eigen::Matrix3Xd cached_x1_, cached_x2_;
+  mutable const std::vector<FeatureCorrespondence>* cached_correspondences_ =
+      nullptr;
+
   DISALLOW_COPY_AND_ASSIGN(EssentialMatrixEstimator);
 };
 
@@ -93,7 +132,8 @@ bool EstimateEssentialMatrix(
     const std::vector<FeatureCorrespondence>& normalized_correspondences,
     Eigen::Matrix3d* essential_matrix,
     RansacSummary* ransac_summary) {
-  EssentialMatrixEstimator essential_matrix_estimator;
+  EssentialMatrixEstimator essential_matrix_estimator(
+      ransac_params.use_sturm_5pt);
   std::unique_ptr<SampleConsensusEstimator<EssentialMatrixEstimator> > ransac =
       CreateAndInitializeRansacVariant(
           ransac_type, ransac_params, essential_matrix_estimator);

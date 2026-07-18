@@ -257,8 +257,11 @@ bool FivePointRelativePose(const std::vector<Vector2d>& image1_points,
   const Matrix<double, 10, 20> constraint_matrix =
       BuildConstraintMatrix(null_space_matrix);
 
-  // Step 3. Eliminate part of the matrix to isolate polynomials in z.
-  Eigen::FullPivLU<Matrix10d> c_lu(constraint_matrix.block<10, 10>(0, 0));
+  // Step 3. Eliminate part of the matrix to isolate polynomials in z. This
+  // block is always well-conditioned/invertible for genuine 5-point samples
+  // (it is only ever used to .solve(), never to query rank/kernel), so
+  // PartialPivLU is used instead of FullPivLU for speed.
+  Eigen::PartialPivLU<Matrix10d> c_lu(constraint_matrix.block<10, 10>(0, 0));
   Matrix10d eliminated_matrix =
       c_lu.solve(constraint_matrix.block<10, 10>(0, 10));
 

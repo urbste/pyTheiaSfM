@@ -24,6 +24,9 @@
 ## Devernay {#Devernay}
 :   Devernay, and Faugeras. **Straight Lines Have to be Straight: Automatic Calibration and Removal of Distortion from Scenes of Structured Environments**, *Machine Vision and Applications*, 2001.
 
+## DingRePoseD2025 {#DingRePoseD2025}
+:   Y. Ding, V. Larsson, et al. **RePoseD: Efficient Relative Pose Estimation With Known Depth Information**. *International Conference on Computer Vision (ICCV)*, 2025.
+
 ## Fischler {#Fischler}
 :   M. Fischler and R. Bolles. 1981. **Random sample consensus: a paradigm for model fitting with applications to image analysis and automated cartography**. *Commun. ACM* 24, 6 (June 1981), 381-395.
 
@@ -47,6 +50,9 @@
 
 ## Kukelova {#Kukelova}
 :   Z. Kukelova, M. Bujnak, T. Pajdla. **Real-time Solution to the Absolute Pose Problem with Unknown Radial Distortion and Focal Length**. *In Proceedings of the International Conference on Computer Vision (ICCV) 2013*
+
+## LarssonPoseLib {#LarssonPoseLib}
+:   V. Larsson and contributors. **PoseLib**. [github.com/PoseLib/PoseLib](https://github.com/PoseLib/PoseLib). Source of the ported Sturm-sequence 5-point solver, monodepth 3-point solvers, and dense LM local-optimization refiners used by RANSAC `RefineModel` (see [License](license.md#third-party-code-poselib) and [RANSAC — local optimization](ransac.md#ransac-local-optimization)).
 
 ## Leutenegger {#Leutenegger}
 :   S. Leutenegger, M. Chli and R. Siegwart, **BRISK: Binary Robust Invariant Scalable Keypoints**, *In Proceedings of the IEEE International Conference on Computer Vision (ICCV) 2011*

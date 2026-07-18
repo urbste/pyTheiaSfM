@@ -34,6 +34,8 @@ Minimal closed-form solvers (five-point, eight-point, DLS PnP, …) are document
 
 Calibrated perspective-*n*-point with RANSAC. Correspondences must be **normalized** by intrinsics. Choose backend via `PnPType`: `KNEIP`, `DLS`, `SQPnP`, or `MLPnP`. The other backends use **3-point** minimal samples; **`MLPnP` requires at least six correspondences per RANSAC hypothesis** (see [`mlpnp.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/mlpnp.h)).
 
+With **`RansacParameters.use_lo=true`**, inlier refinement uses a dense 6-DoF reprojection LM ([`refine_absolute_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/refine_absolute_pose.h)) rather than a Ceres one-view bundle — see [RANSAC — local optimization](ransac.md#ransac-local-optimization).
+
 **Returns:** `(success, CalibratedAbsolutePose, RansacSummary)` — pose has `rotation` and `position`.
 
 ---
@@ -102,6 +104,24 @@ Like the multi-camera rigid case, but estimates a **7-DOF similarity** (gDLS / s
 Calibrated two-view **relative pose** with RANSAC (five-point essential matrix pipeline). Uses **normalized** `FeatureCorrespondence` pairs.
 
 **Returns:** `(success, RelativePose, RansacSummary)` with `essential_matrix`, `rotation`, `position` (translation up to scale).
+
+By default (`RansacParameters.use_sturm_5pt = True`) the minimal 5-point solve inside RANSAC uses a Sturm-sequence-based solver adapted from [PoseLib](bibliography.md#LarssonPoseLib) instead of theia's original Stewénius-style solver — see [Pose — Five Point Relative Pose (Sturm-sequence solver)](pose.md#section-five_point_essential_matrix_sturm).
+
+With **`use_lo=true`**, inlier refinement is a dense 5-DoF Sampson LM ([`refine_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/refine_relative_pose.h)); see [RANSAC — local optimization](ransac.md#ransac-local-optimization).
+
+---
+
+### `EstimateMonoDepthRelativePose` / `...SharedFocal` / `...VaryingFocal` {#estimate-monodepth-relative-pose}
+
+**Header:** [`estimate_monodepth_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_monodepth_relative_pose.h)
+
+Relative pose from a **3-point** minimal sample when correspondences carry a monocular depth prior (`Feature.depth_prior`), adapted from [PoseLib](bibliography.md#LarssonPoseLib)'s RePoseD solvers [DingRePoseD2025](bibliography.md#DingRePoseD2025). `EstimateMonoDepthRelativePose` is calibrated (normalized correspondences, like `EstimateRelativePose`); `...SharedFocal` / `...VaryingFocal` are uncalibrated (centered correspondences, like `EstimateUncalibratedRelativePose`) and additionally recover one or two focal length(s).
+
+**Returns:** `(success, MonoDepthRelativePoseResult, RansacSummary)` with `rotation`, `position`, `scale` (relative depth-map scale), `shift1`/`shift2` (calibrated variant only), `focal_length1`/`focal_length2` (uncalibrated variants only).
+
+With **`use_lo=true`**, LO jointly refines pose (and scale / shifts / focals as applicable) via dense LM ([`refine_monodepth_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/refine_monodepth_relative_pose.h)).
+
+Normally reached via `pytheia.sfm.EstimateTwoViewInfo(options)` with `options.use_monodepth = True` (see [RANSAC — monocular-depth-assisted two-view estimation](ransac.md)) rather than called directly; see `pyexamples/monodepth_two_view_estimation_example.py`.
 
 ---
 

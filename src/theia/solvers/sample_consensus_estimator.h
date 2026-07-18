@@ -65,7 +65,8 @@ struct RansacParameters {
         use_mle(false),
         use_Tdd_test(false),
         use_lo(false),
-        lo_start_iterations(50) {}
+        lo_start_iterations(50),
+        use_sturm_5pt(true) {}
 
   // The random number generator used to compute random number during
   // RANSAC. This may be controlled by the caller for debugging purposes.
@@ -123,6 +124,15 @@ struct RansacParameters {
   //
   // NOTE: Not currently implemented!
   bool use_Tdd_test;
+
+  // Use the Sturm-sequence-based 5-point solver (ported from PoseLib,
+  // theia::FivePointRelativePoseSturm) instead of theia's own Stewenius-style
+  // eigendecomposition solver (FivePointRelativePose) inside 5-point RANSAC
+  // estimators (RelativePoseEstimator, EssentialMatrixEstimator). The Sturm
+  // solver is significantly faster since it never forms a 10x10
+  // eigendecomposition, but it is strictly minimal (only used for exactly-5
+  // point samples; non-minimal calls always use FivePointRelativePose).
+  bool use_sturm_5pt;
 };
 
 // A struct to hold useful outputs of Ransac-like methods.
@@ -327,23 +337,31 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
                  ransac_params_.max_iterations);
   }
 
+  // Reused across iterations to avoid per-iteration heap allocations; the
+  // sampler and estimator only ever append to these after a clear(), so
+  // clearing (rather than reallocating) keeps the reserved capacity around.
+  std::vector<int> data_subset_indices;
+  std::vector<Datum> data_subset;
+  std::vector<Model> temp_models;
+  std::vector<int> inlier_indices;
+
   for (summary->num_iterations = 0; summary->num_iterations < max_iterations;
        summary->num_iterations++) {
     // Sample subset. Proceed if successfully sampled.
-    std::vector<int> data_subset_indices;
+    data_subset_indices.clear();
     if (!sampler_->Sample(&data_subset_indices)) {
       continue;
     }
 
     // Get the corresponding data elements for the subset.
-    std::vector<Datum> data_subset(data_subset_indices.size());
+    data_subset.resize(data_subset_indices.size());
     for (int i = 0; i < data_subset_indices.size(); i++) {
       data_subset[i] = data[data_subset_indices[i]];
     }
 
     // Estimate model from subset. Skip to next iteration if the model fails to
     // estimate.
-    std::vector<Model> temp_models;
+    temp_models.clear();
     if (!estimator_.EstimateModel(data_subset, &temp_models)) {
       continue;
     }
@@ -353,17 +371,23 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
       const std::vector<double> residuals =
           estimator_.Residuals(data, temp_model);
 
-      // Determine cost of the generated model.
-      std::vector<int> inlier_indices;
-      const double sample_cost =
-          quality_measurement_->ComputeCost(residuals, &inlier_indices);
-      const double inlier_ratio = static_cast<double>(inlier_indices.size()) /
-                                  static_cast<double>(data.size());
+      // Count-only cost: avoids building the inlier index vector for models
+      // that do not end up beating the current best (the vast majority).
+      const double sample_cost = quality_measurement_->ComputeCost(residuals);
 
       // Update best model if error is the best we have seen.
       if (sample_cost < best_cost) {
+        // Only now, for the (rare) winning model, pay for the inlier index
+        // vector -- it is needed below for LO-RANSAC and the iteration
+        // stopping criterion.
+        inlier_indices.clear();
+        quality_measurement_->ComputeCost(residuals, &inlier_indices);
+
         *best_model = temp_model;
         best_cost = sample_cost;
+        const double inlier_ratio =
+            static_cast<double>(inlier_indices.size()) /
+            static_cast<double>(data.size());
 
         if (inlier_ratio <
             estimator_.SampleSize() / static_cast<double>(data.size())) {

@@ -103,6 +103,7 @@ set(THEIA_SRC
   sfm/estimators/estimate_essential_matrix.cc
   sfm/estimators/estimate_fundamental_matrix.cc
   sfm/estimators/estimate_homography.cc
+  sfm/estimators/estimate_monodepth_relative_pose.cc
   sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.cc
   sfm/estimators/estimate_radial_distortion_homography.cc
   sfm/estimators/estimate_relative_pose_with_known_orientation.cc
@@ -152,6 +153,7 @@ set(THEIA_SRC
   sfm/pose/essential_matrix_utils.cc
   sfm/pose/five_point_focal_length_radial_distortion.cc
   sfm/pose/five_point_relative_pose.cc
+  sfm/pose/five_point_relative_pose_sturm.cc
   sfm/pose/four_point_focal_length_helper.cc
   sfm/pose/four_point_focal_length.cc
   sfm/pose/four_point_focal_length_radial_distortion.cc
@@ -165,6 +167,10 @@ set(THEIA_SRC
   sfm/pose/perspective_three_point.cc
   sfm/pose/position_from_two_rays.cc
   sfm/pose/relative_pose_from_two_points_with_known_rotation.cc
+  sfm/pose/relative_pose_monodepth_3pt.cc
+  sfm/pose/refine_absolute_pose.cc
+  sfm/pose/refine_monodepth_relative_pose.cc
+  sfm/pose/refine_relative_pose.cc
   sfm/pose/seven_point_fundamental_matrix.cc
   sfm/pose/sim_transform_partial_rotation.cc
   sfm/pose/six_point_radial_distortion_homography.cc
@@ -311,6 +317,7 @@ if (BUILD_TESTING)
 #  gtest(math/graph/normalized_graph_cut)
 #  gtest(math/graph/triplet_extractor)
 #  gtest(math/l1_solver)
+  gtest(math/lmlsq/lm_optimizer)
 #  gtest(math/matrix/gauss_jordan)
 #  gtest(math/matrix/rq_decomposition)
 #  gtest(math/polynomial)
@@ -331,14 +338,16 @@ if (BUILD_TESTING)
 #  gtest(sfm/camera/pinhole_radial_tangential_camera_model)
 #  gtest(sfm/camera/projection_matrix_utils)
 #  gtest(sfm/estimators/estimate_absolute_pose_with_known_orientation)
-#  gtest(sfm/estimators/estimate_calibrated_absolute_pose)
+  gtest(sfm/estimators/estimate_calibrated_absolute_pose)
 #  gtest(sfm/estimators/estimate_dominant_plane_from_points)
-#  gtest(sfm/estimators/estimate_essential_matrix)
+  gtest(sfm/estimate_twoview_info)
+  gtest(sfm/estimators/estimate_essential_matrix)
 #  gtest(sfm/estimators/estimate_fundamental_matrix)
 #  gtest(sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose)
 #  gtest(sfm/estimators/estimate_radial_distortion_homography)
 #  gtest(sfm/estimators/estimate_homography)
-#  gtest(sfm/estimators/estimate_relative_pose)
+  gtest(sfm/estimators/estimate_monodepth_relative_pose)
+  gtest(sfm/estimators/estimate_relative_pose)
 #  gtest(sfm/estimators/estimate_relative_pose_with_known_orientation)
 #  gtest(sfm/estimators/estimate_rigid_transformation_2d_3d)
 #  gtest(sfm/estimators/estimate_similarity_transformation_2d_3d)
@@ -373,9 +382,10 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/build_upnp_action_matrix_using_symmetry)
 #  gtest(sfm/pose/dls_pnp)
 #  gtest(sfm/pose/eight_point_fundamental_matrix)
-#  gtest(sfm/pose/essential_matrix_utils)
+  gtest(sfm/pose/essential_matrix_utils)
 #  gtest(sfm/pose/five_point_focal_length_radial_distortion)
-#  gtest(sfm/pose/five_point_relative_pose)
+  gtest(sfm/pose/five_point_relative_pose)
+  gtest(sfm/pose/five_point_relative_pose_sturm)
 #  gtest(sfm/pose/four_point_focal_length)
 #  gtest(sfm/pose/four_point_focal_length_radial_distortion)
 #  gtest(sfm/pose/four_point_homography)
@@ -386,6 +396,11 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/perspective_three_point)
 #  gtest(sfm/pose/position_from_two_rays)
 #  gtest(sfm/pose/relative_pose_from_two_points_with_known_rotation)
+  gtest(sfm/pose/relative_pose_monodepth_3pt)
+  gtest(sfm/pose/refine_absolute_pose)
+  gtest(sfm/pose/refine_monodepth_relative_pose)
+  gtest(sfm/pose/refine_relative_pose)
+  gtest(sfm/pose/util)
 #  gtest(sfm/pose/seven_point_fundamental_matrix)
 #  gtest(sfm/pose/sim_transform_partial_rotation)
 #  gtest(sfm/pose/six_point_radial_distortion_homography)
@@ -408,10 +423,10 @@ if (BUILD_TESTING)
 #  gtest(sfm/view_graph/remove_disconnected_view_pairs)
  # gtest(sfm/view_graph/view_graph_from_reconstruction)
 #  gtest(sfm/view_graph/view_graph)
-#  gtest(solvers/exhaustive_ransac)
-#  gtest(solvers/exhaustive_sampler)
-#  gtest(solvers/lmed)
-#  gtest(solvers/prosac)
-#  gtest(solvers/random_sampler)
-#  gtest(solvers/ransac)
+  gtest(solvers/exhaustive_ransac)
+  gtest(solvers/exhaustive_sampler)
+  gtest(solvers/lmed)
+  gtest(solvers/prosac)
+  gtest(solvers/random_sampler)
+  gtest(solvers/ransac)
 endif (BUILD_TESTING)

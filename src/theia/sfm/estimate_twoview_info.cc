@@ -43,6 +43,7 @@
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera_intrinsics_prior.h"
+#include "theia/sfm/estimators/estimate_monodepth_relative_pose.h"
 #include "theia/sfm/estimators/estimate_relative_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_relative_pose.h"
 #include "theia/sfm/pose/util.h"
@@ -90,12 +91,18 @@ void NormalizeFeatures(
     const Eigen::Vector3d normalized_feature1 =
         camera1.PixelToNormalizedCoordinates(correspondence.feature1.point_);
     normalized_correspondence.feature1 =
-        Feature(normalized_feature1.hnormalized());
+        Feature(normalized_feature1.hnormalized(),
+               correspondence.feature1.covariance_,
+               correspondence.feature1.depth_prior_,
+               correspondence.feature1.depth_prior_variance_);
 
     const Eigen::Vector3d normalized_feature2 =
         camera2.PixelToNormalizedCoordinates(correspondence.feature2.point_);
     normalized_correspondence.feature2 =
-        Feature(normalized_feature2.hnormalized());
+        Feature(normalized_feature2.hnormalized(),
+               correspondence.feature2.covariance_,
+               correspondence.feature2.depth_prior_,
+               correspondence.feature2.depth_prior_variance_);
 
     normalized_correspondences->emplace_back(normalized_correspondence);
   }
@@ -130,6 +137,25 @@ int ComputeVisibilityScoreOfInliers(
   return pyramid1.ComputeScore() + pyramid2.ComputeScore();
 }
 
+// Depth prior 0.0 means "no depth" (the Feature default), never a valid
+// depth. Require depth on effectively all correspondences before taking the
+// monodepth path, since a single missing-depth minimal sample would fail to
+// estimate a model.
+bool HasSufficientDepthPriors(
+    const std::vector<FeatureCorrespondence>& correspondences) {
+  if (correspondences.empty()) {
+    return false;
+  }
+  int num_with_depth = 0;
+  for (const FeatureCorrespondence& correspondence : correspondences) {
+    if (correspondence.feature1.depth_prior_ > 0.0 &&
+        correspondence.feature2.depth_prior_ > 0.0) {
+      ++num_with_depth;
+    }
+  }
+  return static_cast<double>(num_with_depth) / correspondences.size() >= 0.95;
+}
+
 bool EstimateTwoViewInfoCalibrated(
     const EstimateTwoViewInfoOptions& options,
     const CameraIntrinsicsPrior& intrinsics1,
@@ -150,6 +176,7 @@ bool EstimateTwoViewInfoCalibrated(
   ransac_options.max_iterations = options.max_ransac_iterations;
   ransac_options.use_lo = options.use_lo;
   ransac_options.lo_start_iterations = options.lo_start_iterations;
+  ransac_options.use_sturm_5pt = options.use_sturm_5pt;
 
   // Compute the sampson error threshold to account for the resolution of the
   // images.
@@ -165,6 +192,41 @@ bool EstimateTwoViewInfoCalibrated(
       max_sampson_error_pixels1 * max_sampson_error_pixels2 /
       (intrinsics1.focal_length.value[0] * intrinsics2.focal_length.value[0]);
   ransac_options.use_mle = options.use_mle;
+
+  if (options.use_monodepth) {
+    if (HasSufficientDepthPriors(normalized_correspondences)) {
+      MonoDepthRelativePoseResult monodepth_result;
+      RansacSummary monodepth_summary;
+      if (EstimateMonoDepthRelativePose(ransac_options,
+                                        options.ransac_type,
+                                        normalized_correspondences,
+                                        &monodepth_result,
+                                        &monodepth_summary)) {
+        AngleAxisd rotation(monodepth_result.rotation);
+        twoview_info->rotation_2 = rotation.angle() * rotation.axis();
+        twoview_info->position_2 = monodepth_result.position;
+        twoview_info->focal_length_1 = intrinsics1.focal_length.value[0];
+        twoview_info->focal_length_2 = intrinsics2.focal_length.value[0];
+        twoview_info->scale_estimate = monodepth_result.scale;
+        twoview_info->num_verified_matches = monodepth_summary.inliers.size();
+        twoview_info->visibility_score = ComputeVisibilityScoreOfInliers(
+            intrinsics1,
+            intrinsics2,
+            correspondences,
+            monodepth_summary.inliers);
+        *inlier_indices = monodepth_summary.inliers;
+        return true;
+      }
+      // Monodepth RANSAC failed to find a model; fall through to the
+      // standard (depth-free) estimator below.
+    } else {
+      LOG_FIRST_N(WARNING, 1)
+          << "EstimateTwoViewInfoOptions::use_monodepth is set but fewer "
+             "than 95% of correspondences have a valid depth_prior_ (> 0) "
+             "on both features; falling back to the standard relative pose "
+             "estimator.";
+    }
+  }
 
   RelativePose relative_pose;
   RansacSummary summary;
@@ -212,6 +274,7 @@ bool EstimateTwoViewInfoUncalibrated(
   ransac_options.max_iterations = options.max_ransac_iterations;
   ransac_options.use_lo = options.use_lo;
   ransac_options.lo_start_iterations = options.lo_start_iterations;
+  ransac_options.use_sturm_5pt = options.use_sturm_5pt;
 
   // Compute the sampson error threshold to account for the resolution of the
   // images.
@@ -225,6 +288,51 @@ bool EstimateTwoViewInfoUncalibrated(
                                        intrinsics2.image_height);
   ransac_options.error_thresh =
       max_sampson_error_pixels1 * max_sampson_error_pixels2;
+
+  if (options.use_monodepth) {
+    if (HasSufficientDepthPriors(centered_correspondences)) {
+      MonoDepthRelativePoseResult monodepth_result;
+      RansacSummary monodepth_summary;
+      const bool monodepth_success =
+          options.monodepth_shared_focal
+              ? EstimateMonoDepthRelativePoseSharedFocal(
+                    ransac_options,
+                    options.ransac_type,
+                    centered_correspondences,
+                    &monodepth_result,
+                    &monodepth_summary)
+              : EstimateMonoDepthRelativePoseVaryingFocal(
+                    ransac_options,
+                    options.ransac_type,
+                    centered_correspondences,
+                    &monodepth_result,
+                    &monodepth_summary);
+      if (monodepth_success) {
+        AngleAxisd rotation(monodepth_result.rotation);
+        twoview_info->rotation_2 = rotation.angle() * rotation.axis();
+        twoview_info->position_2 = monodepth_result.position;
+        twoview_info->focal_length_1 = monodepth_result.focal_length1;
+        twoview_info->focal_length_2 = monodepth_result.focal_length2;
+        twoview_info->scale_estimate = monodepth_result.scale;
+        twoview_info->num_verified_matches = monodepth_summary.inliers.size();
+        twoview_info->visibility_score = ComputeVisibilityScoreOfInliers(
+            intrinsics1,
+            intrinsics2,
+            correspondences,
+            monodepth_summary.inliers);
+        *inlier_indices = monodepth_summary.inliers;
+        return true;
+      }
+      // Monodepth RANSAC failed to find a model; fall through to the
+      // standard (depth-free) estimator below.
+    } else {
+      LOG_FIRST_N(WARNING, 1)
+          << "EstimateTwoViewInfoOptions::use_monodepth is set but fewer "
+             "than 95% of correspondences have a valid depth_prior_ (> 0) "
+             "on both features; falling back to the standard relative pose "
+             "estimator.";
+    }
+  }
 
   UncalibratedRelativePose relative_pose;
   RansacSummary summary;

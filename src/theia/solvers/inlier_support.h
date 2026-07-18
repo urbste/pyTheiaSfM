@@ -61,6 +61,17 @@ class InlierSupport : public QualityMeasurement {
     }
     return residuals.size() - inliers->size();
   }
+
+  // Fast path: count inliers without storing their indices.
+  double ComputeCost(const std::vector<double>& residuals) override {
+    int num_inliers = 0;
+    for (int i = 0; i < residuals.size(); i++) {
+      if (residuals[i] < this->error_thresh_) {
+        ++num_inliers;
+      }
+    }
+    return residuals.size() - num_inliers;
+  }
 };
 
 }  // namespace theia

@@ -36,6 +36,7 @@ These headers power Theia’s solvers and pipelines; **most are not bound to Pyt
 | Polynomials | `polynomial.h`, `closed_form_polynomial_solver.h`, `find_polynomial_roots_*.h` | Closed-form and generic root finding, Jenkins–Traub, companion matrix, Newton/Laguerre steps |
 | Rotation / geometry | `rotation.h` | Angle-axis alignment, relative rotation utilities (partially in Python) |
 | $L_1$ / optimization | `l1_solver.h`, `constrained_l1_solver.h`, `qp_solver.h` | $L_1$ minimization, QP interfaces |
+| Dense LM (RANSAC LO) | `lmlsq/lm_optimizer.h`, `lmlsq/normal_accumulator.h`, `lmlsq/robust_loss.h`, `lmlsq/lm_options.h` | Tiny Levenberg–Marquardt for geometric `RefineModel` (not Ceres); see [RANSAC — local optimization](ransac.md#ransac-local-optimization) |
 | Linear algebra | `matrix/linear_operator.h`, `matrix/sparse_*.h`, `matrix/rq_decomposition.h`, `matrix/gauss_jordan.h`, `matrix/matrix_square_root.h`, `nullspace.h` | Operators, sparse Cholesky, RQ, Gauss–Jordan, square root |
 | Graph | `graph/connected_components.h`, `graph/minimum_spanning_tree.h`, `graph/normalized_graph_cut.h`, `graph/triplet_extractor.h` | Graph algorithms used in SfM |
 | Probability / sampling | `probability/sequential_probability_ratio.h`, `reservoir_sampler.h`, `distribution.h`, `histogram.h` | SPRT (RANSAC), sampling, distributions |

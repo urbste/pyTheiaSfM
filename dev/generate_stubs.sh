@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: dev/generate_stubs.sh [DEST_DIR]
-# Default destination is ./typings (recommended for editor consumption).
-DEST_DIR="${1:-typings}"
-mkdir -p "${DEST_DIR}"
+# Usage: dev/generate_stubs.sh
+# Writes PEP 561 stubs into src/pytheia/ (same layout as setup.py wheel build).
 
-# Pick a Python interpreter
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${REPO_ROOT}"
+
 if command -v python >/dev/null 2>&1; then
 	PY=python
 elif command -v python3 >/dev/null 2>&1; then
@@ -21,34 +21,23 @@ if ! "$PY" -c "import pybind11_stubgen" >/dev/null 2>&1; then
 	exit 1
 fi
 
-# Ensure the built extension in src/ is importable
-export PYTHONPATH="$(pwd)/src:${PYTHONPATH:-}"
+export PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"
 
-TMP_DIR="${DEST_DIR}/.gen"
-rm -rf "${TMP_DIR}"
-mkdir -p "${TMP_DIR}"
+echo "Generating stubs for 'pytheia.pytheia' into src/..."
+"$PY" -m pybind11_stubgen pytheia.pytheia -o src
 
-echo "Generating stubs for 'pytheia' into temporary dir '${TMP_DIR}'..."
-"$PY" -m pybind11_stubgen pytheia -o "${TMP_DIR}"
+TARGET_PKG="src/pytheia/pytheia"
+ALT_STUBS="src/pytheia-stubs"
 
-# pybind11-stubgen typically outputs into <out>/pytheia-stubs/pytheia
-if [ -d "${TMP_DIR}/pytheia-stubs/pytheia" ]; then
-	mkdir -p "${DEST_DIR}/pytheia"
-	rsync -a --delete "${TMP_DIR}/pytheia-stubs/pytheia/" "${DEST_DIR}/pytheia/" || cp -r "${TMP_DIR}/pytheia-stubs/pytheia/." "${DEST_DIR}/pytheia/"
-else
-	# Fallback: copy any .pyi files under TMP_DIR
-	find "${TMP_DIR}" -name '*.pyi' -exec bash -c '
-		for f; do
-			rel="${f#${TMP_DIR}/}"
-			dir="${DEST_DIR}/$(dirname "$rel")"
-			mkdir -p "$dir"
-			cp "$f" "$dir/"
-		done
-	' bash {} +
+if [ -d "${ALT_STUBS}" ]; then
+	mkdir -p "${TARGET_PKG}"
+	rsync -a "${ALT_STUBS}/" "${TARGET_PKG}/" 2>/dev/null || cp -r "${ALT_STUBS}/." "${TARGET_PKG}/"
 fi
 
-# Create PEP 561 marker in stub folder for editors
-: > "${DEST_DIR}/pytheia/py.typed"
+INIT_PYI="${TARGET_PKG}/__init__.pyi"
+FLAT_PYI="src/pytheia/pytheia.pyi"
+if [ -f "${INIT_PYI}" ]; then
+	cp "${INIT_PYI}" "${FLAT_PYI}"
+fi
 
-rm -rf "${TMP_DIR}"
-echo "Stubs ready in '${DEST_DIR}/pytheia'. Ensure your editor uses this path."
+echo "Stub files updated under src/pytheia (see pytheia.pyi and pytheia/*.pyi)"

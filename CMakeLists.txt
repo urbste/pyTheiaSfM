@@ -58,32 +58,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Set up the git hook to make Gerrit Change-Id: lines in commit messages.
-set (LOCAL_GIT_DIRECTORY)
-if (EXISTS ${CMAKE_SOURCE_DIR}/.git)
-  # .git directory can be found on Unix based system, or on Windows with
-  # Git Bash (shipped with msysgit)
-  set (LOCAL_GIT_DIRECTORY ${CMAKE_SOURCE_DIR}/.git)
-else (EXISTS ${CMAKE_SOURCE_DIR}/.git)
-endif (EXISTS ${CMAKE_SOURCE_DIR}/.git)
-
-if (EXISTS ${LOCAL_GIT_DIRECTORY})
-  if (NOT EXISTS ${LOCAL_GIT_DIRECTORY}/hooks/commit-msg)
-    # Download the hook only if it is not already present. We borrow the hook
-    # hosted by Ceres because it is not specific to the project.
-    file(DOWNLOAD http://www.theia-sfm.org/_static/commit-msg
-         ${CMAKE_BINARY_DIR}/commit-msg)
-
-    # Make the downloaded file executable, since it is not by default.
-    file(COPY ${CMAKE_BINARY_DIR}/commit-msg
-         DESTINATION ${LOCAL_GIT_DIRECTORY}/hooks/
-         FILE_PERMISSIONS
-           OWNER_READ OWNER_WRITE OWNER_EXECUTE
-           GROUP_READ GROUP_WRITE GROUP_EXECUTE
-           WORLD_READ WORLD_EXECUTE)
-  endif (NOT EXISTS ${LOCAL_GIT_DIRECTORY}/hooks/commit-msg)
-endif (EXISTS ${LOCAL_GIT_DIRECTORY})
-
 # ==============================================================================
 # Additional cmake find modules
 # ==============================================================================
@@ -136,8 +110,6 @@ if(BUILD_WITH_MARCH_NATIVE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native -march=native")
     message(STATUS "Architecture-aware optimization (-march=native): ENABLED")
 else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native")
     message(STATUS "Architecture-aware optimization (-march=native): DISABLED")
 endif()
 
@@ -358,7 +330,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/TheiaConfig.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindEigen.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGlog.cmake"
               "${CMAKE_SOURCE_DIR}/cmake/FindGflags.cmake"
-              #"${CMAKE_SOURCE_DIR}/cmake/FindSuiteSparse.cmake"
               DESTINATION ${CMAKECONFIG_INSTALL_DIR})
 
 

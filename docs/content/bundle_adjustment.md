@@ -249,7 +249,7 @@ Used by **`BundleAdjustTwoViews`** (C++); Python exposes **`pt.sfm.TwoViewBundle
 - **`ba_options`** — a nested **`BundleAdjustmentOptions`**.
 - **`constant_camera1_intrinsics`** / **`constant_camera2_intrinsics`** — default **`true`** (hold intrinsics fixed per camera).
 
-**`BundleAdjustTwoViewsAngular`** takes a plain **`BundleAdjustmentOptions`** (angular / epipolar formulation; see C++ header).
+**`BundleAdjustTwoViewsAngular`** takes a plain **`BundleAdjustmentOptions`** (angular / epipolar formulation; see C++ header). RANSAC local optimization for calibrated / monodepth relative pose no longer calls this path; it uses dense LM instead ([RANSAC — local optimization](ransac.md#ransac-local-optimization)).
 
 ## Pipeline-level BA settings (`ReconstructionEstimatorOptions`) {#reconstruction-estimator-ba}
 

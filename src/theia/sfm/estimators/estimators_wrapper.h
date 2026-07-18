@@ -11,6 +11,7 @@
 #include "theia/sfm/estimators/estimate_calibrated_absolute_pose.h"
 #include "theia/sfm/estimators/estimate_dominant_plane_from_points.h"
 #include "theia/sfm/estimators/estimate_radial_distortion_homography.h"
+#include "theia/sfm/estimators/estimate_monodepth_relative_pose.h"
 #include "theia/sfm/estimators/estimate_relative_pose.h"
 #include "theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_absolute_pose.h"
@@ -71,6 +72,24 @@ std::tuple<bool, RelativePose, RansacSummary> EstimateRelativePoseWrapper(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
     const std::vector<FeatureCorrespondence>& normalized_correspondences);
+
+std::tuple<bool, MonoDepthRelativePoseResult, RansacSummary>
+EstimateMonoDepthRelativePoseWrapper(
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
+    const std::vector<FeatureCorrespondence>& normalized_correspondences);
+
+std::tuple<bool, MonoDepthRelativePoseResult, RansacSummary>
+EstimateMonoDepthRelativePoseSharedFocalWrapper(
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
+    const std::vector<FeatureCorrespondence>& centered_correspondences);
+
+std::tuple<bool, MonoDepthRelativePoseResult, RansacSummary>
+EstimateMonoDepthRelativePoseVaryingFocalWrapper(
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
+    const std::vector<FeatureCorrespondence>& centered_correspondences);
 
 std::tuple<bool, Eigen::Vector3d, RansacSummary>
 EstimateRelativePoseWithKnownOrientationWrapper(

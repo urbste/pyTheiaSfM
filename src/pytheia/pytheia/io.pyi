@@ -148,7 +148,9 @@ def WriteNerfStudio(*args, **kwargs):
 def WritePlyFile(*args, **kwargs):
     ...
 def WriteReconstruction(*args, **kwargs):
-    ...
+    """
+    Write reconstruction to binary file. By default writes only estimated views and multi-view tracks (smaller file). Pass write_full_reconstruction=True to save the complete model.
+    """
 def WriteReconstructionJson(*args, **kwargs):
     ...
 def WriteSdfStudio(*args, **kwargs):

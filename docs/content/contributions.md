@@ -4,7 +4,7 @@ We welcome and encourage contributions to Theia, whether they are new features, 
 
 ## Style and Testing
 
-We follow Google's [C++ Style Guide](https://google.github.io/styleguide/cppguide.html) and use git for version control. We use [Gerrit](https://code.google.com/p/gerrit/) to review changes before commits. The git repository has been set up with [GerritHub](http://gerrithub.io/) so that the repository lives in GitHub, but all reviews are performed with Gerrit.
+We follow Google's [C++ Style Guide](https://google.github.io/styleguide/cppguide.html) and use git for version control. Contributions are reviewed via GitHub pull requests.
 
 When contributing substantial new code or bug fixes, please add unit tests to ensure the usage of the code (or to prove the bug is fixed!).
 
@@ -50,57 +50,20 @@ Much of the instructions that follow in this section were borrowed and modified 
 
 2.  Sign up for a [GitHub](http://github.com) account. Accounts are free to register.
 
-3.  Clone the Theia `git` repository from GerritHub.
+3.  Clone the pyTheia repository:
 
     ``` bash
-    git clone https://review.gerrithub.io/sweeneychris/TheiaSfM
+    git clone https://github.com/urbste/pyTheiaSfM.git
     ```
 
 4.  Build Theia, following the instructions in [chapter-building](building.md#chapter-building).
 
-    On Mac and Linux, the `CMake` build will download and enable the Gerrit pre-commit hook automatically. This pre-submit hook creates `Change-Id: ...` lines in your commits.
+5.  Open a pull request on [GitHub](https://github.com/urbste/pyTheiaSfM) against `master`.
 
-    If this does not work OR you are on Windows, execute the following in the root directory of the local `git` repository:
+## Submitting a change
 
-    ``` bash
-    curl -o .git/hooks/commit-msg http://www.theia-sfm.org/_static/commit-msg
-    chmod +x .git/hooks/commit-msg
-    ```
-
-5.  Configure your GerritHub password.
-
-> Sign into <https://review.gerrithub.io>, go to `Settings` then `HTTP Password`. If no password exists, select `Generate Password`. The username and password listed on this page will need to be entered when pushing your changes to the repo for review (see instructions below).
-
-## Submitting a change to Theia
-
-1.  Make your changes against master or whatever branch you like. Commit your changes as one patch. This is critical for the review process; if you submit a change with multiple commits, each commit will become a separate review in Gerrit.
-
-2.  Push your changes to the Theia GerritHub instance:
-
-    ``` bash
-    git push origin HEAD:refs/for/master
-    ```
-
-    You will likely have to enter your GerritHub username and password. When the push succeeds, the console will display a URL showing the address of the review. Go to the URL and add reviewers; at this point this is only Chris.
-
-3.  Wait for a review.
-
-4.  Once review comments come in, address them. Please reply to each comment in Gerrit, which makes the re-review process easier. After modifying the code in your `git` instance, *don't make a new commit*. Instead, update the last commit using a command like the following:
-
-    ``` bash
-    git commit --amend -a
-    ```
-
-    This will update the last commit, so that it has both the original patch and your updates as a single commit. You will have a chance to edit the commit message as well. Push the new commit to Gerrit as before.
-
-    Gerrit will use the `Change-Id:` to match the previous commit with the new one. The review interface retains your original patch, but also shows the new patch.
-
-    Publish your responses to the comments, and wait for a new round of reviews.
-
-5.  Before submitting, make sure you are synced to the latest commit in the repo. To do this, simply run the command:
-
-    ``` bash
-    git pull --rebase origin master
-    ```
-
-    This will pull the latest changes without interfering with your current patch.
+1.  Fork the repository and create a feature branch from `master`.
+2.  Make your changes; include tests when adding behavior or fixing bugs.
+3.  Regenerate or update `.pyi` stubs if you change Python bindings (`dev/generate_stubs.sh` or a full wheel build).
+4.  Open a pull request with a clear description and test notes.
+5.  Address review feedback; rebase on `master` if needed before merge.

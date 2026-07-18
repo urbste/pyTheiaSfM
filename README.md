@@ -155,7 +155,7 @@ success, rad_homog, summary = pt.sfm.EstimateFundamentalMatrix(
 import pytheia as pt
 recon = pt.sfm.Reconstruction()
 # add some views and points
-veiw_id = recon.AddView() 
+view_id = recon.AddView() 
 ...
 track_id = recon.AddTrack()
 ...
@@ -168,26 +168,26 @@ opts = pt.sfm.BundleAdjustmentOptions()
 opts.robust_loss_width = 1.345
 opts.loss_function_type = pt.sfm.LossFunctionType.HUBER
 
-res = BundleAdjustReconstruction(opts, recon)
-res = BundleAdjustPartialReconstruction(opts, {view_ids}, {track_ids}, recon)
-res = BundleAdjustPartialViewsConstant(opts, {var_view_ids}, {const_view_ids}, recon)
+res = pt.sfm.BundleAdjustReconstruction(opts, recon)
+res = pt.sfm.BundleAdjustPartialReconstruction(opts, {view_ids}, {track_ids}, recon)
+res = pt.sfm.BundleAdjustPartialViewsConstant(opts, {var_view_ids}, {const_view_ids}, recon)
 
 # optimize absolute pose on normalized 2D 3D correspondences
 res = pt.sfm.OptimizeAbsolutePoseOnNormFeatures(
   [pt.sfm.FeatureCorrespondence2D3D], R_init, p_init, opts)
 
 # bundle camera adjust pose only
-res = BundleAdjustView(recon, opts, view_id)
-res = BundleAdjustViewWithCov(recon, view_id)
-res = BundleAdjustViewsWithCov(recon, opts, [view_id1,view_id2])
+res = pt.sfm.BundleAdjustView(recon, opts, view_id)
+res = pt.sfm.BundleAdjustViewWithCov(recon, view_id)
+res = pt.sfm.BundleAdjustViewsWithCov(recon, opts, [view_id1,view_id2])
 
 # optimize structure only
-res = BundleAdjustTrack(recon, opts, trackid)
-res = BundleAdjustTrackWithCov(recon, opts, [view_id1,view_id2])
-res = BundleAdjustTracksWithCov(recon, opts, [view_id1,trackid])
+res = pt.sfm.BundleAdjustTrack(recon, opts, trackid)
+res = pt.sfm.BundleAdjustTrackWithCov(recon, opts, [view_id1,view_id2])
+res = pt.sfm.BundleAdjustTracksWithCov(recon, opts, [view_id1,trackid])
 
 # two view optimization
-res = BundleAdjustTwoViewsAngular(recon, [pt.sfm.FeatureCorrespondence], pt.sfm.TwoViewInfo())
+res = pt.sfm.BundleAdjustTwoViewsAngular(recon, [pt.sfm.FeatureCorrespondence], pt.sfm.TwoViewInfo())
 ```
 
 ### Export to Nerfstudio and SDFStudio
@@ -257,7 +257,7 @@ Full narrative (system deps, CUDA notes, docs build): **`docs/content/building.m
 
 ## How to build Python wheels
 ### Local build with sudo installed ceres-solver and Eigen
-Tested on Ubuntu. In your Python >= 3.6 environment of choice run:
+Tested on Ubuntu. In your Python >= 3.8 environment of choice run:
 ```bash
 sh build_and_install.sh
 ```
@@ -275,7 +275,7 @@ ln -sf /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ${CONDA_PREFIX}/lib/libstdc++.so
 ```
 
 ### With Docker
-The docker build will actually build manylinux wheels for Linux (Python 3.6-3.12).
+The docker build will actually build manylinux wheels for Linux (Python 3.8-3.13).
 There are two ways to do that. One will clutter the source directory, but you will have the wheel file directly available (./wheelhouse/).
 Another drawback of this approach is that the files will have been created with docker sudo rights and are diffcult to delete:
 ```bash
@@ -298,19 +298,39 @@ docker cp CONTAINER_ID:/home/wheelhouse /path/to/result/folder/pytheia_wheels
 ## Typing and editor stubs
 To get full function/argument lists and IntelliSense in editors for the native extension:
 
-- Generate stubs locally (requires `pybind11-stubgen`):
-   
+- Stubs ship with the package under `src/pytheia/` (`pytheia.pyi`, `pytheia/*.pyi`, and `py.typed`). After `pip install`, editors such as VS Code/Pylance pick them up from the installed package.
+
+- Regenerate stubs locally (requires a built extension and `pybind11-stubgen`):
+
    ```bash
    pip install pybind11-stubgen
    dev/generate_stubs.sh
    ```
-   
-   This writes `.pyi` files to `typings/pytheia`. VS Code/Pylance will pick them up via `pyrightconfig.json`.
- 
- - When building wheels via `setup.py`, stubs are generated automatically by default. To skip:
-   
+
+   This refreshes `.pyi` files under `src/pytheia/` (same layout as the wheel build).
+
+- When building wheels via `setup.py`, stubs are generated automatically by default. To skip:
+
    ```bash
    GENERATE_STUBS=0 python setup.py bdist_wheel --plat-name=...
    ```
- 
- - The package ships a PEP 561 marker (`py.typed`) so downstream type checkers can consume the bundled stubs.
+
+- The package ships a PEP 561 marker (`py.typed`) so downstream type checkers can consume the bundled stubs.
+
+## Acknowledgements
+pyTheiaSfM includes minimal relative-pose solvers and dense local-optimization
+refiners adapted (not vendored as a dependency) from
+[PoseLib](https://github.com/PoseLib/PoseLib) by Viktor Larsson and
+contributors, distributed under the BSD-3-Clause license (see
+[docs/licenses/POSELIB_LICENSE.txt](docs/licenses/POSELIB_LICENSE.txt)). The
+adapted algorithms are described in:
+
+* D. Nistér, "An Efficient Solution to the Five-Point Relative Pose Problem",
+  IEEE TPAMI, 2004. (Sturm-sequence-based 5-point solver)
+* Y. Ding, V. Larsson, et al., "RePoseD: Efficient Relative Pose Estimation
+  With Known Depth Information", ICCV 2025. (Monocular-depth 3-point solvers)
+
+RANSAC `RefineModel` for calibrated relative pose, monodepth relative pose,
+and calibrated absolute pose uses PoseLib-style analytic LM
+(`src/theia/math/lmlsq/`, `src/theia/sfm/pose/refine_*.h`) inside Theia’s own
+sample-consensus loop.

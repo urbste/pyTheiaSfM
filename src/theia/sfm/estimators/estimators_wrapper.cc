@@ -141,6 +141,53 @@ std::tuple<bool, RelativePose, RansacSummary> EstimateRelativePoseWrapper(
   return std::make_tuple(success, relative_pose, ransac_summary);
 }
 
+std::tuple<bool, MonoDepthRelativePoseResult, RansacSummary>
+EstimateMonoDepthRelativePoseWrapper(
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
+    const std::vector<FeatureCorrespondence>& normalized_correspondences) {
+  MonoDepthRelativePoseResult result;
+  RansacSummary ransac_summary;
+  const bool success = EstimateMonoDepthRelativePose(ransac_params,
+                                                     ransac_type,
+                                                     normalized_correspondences,
+                                                     &result,
+                                                     &ransac_summary);
+  return std::make_tuple(success, result, ransac_summary);
+}
+
+std::tuple<bool, MonoDepthRelativePoseResult, RansacSummary>
+EstimateMonoDepthRelativePoseSharedFocalWrapper(
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
+    const std::vector<FeatureCorrespondence>& centered_correspondences) {
+  MonoDepthRelativePoseResult result;
+  RansacSummary ransac_summary;
+  const bool success =
+      EstimateMonoDepthRelativePoseSharedFocal(ransac_params,
+                                               ransac_type,
+                                               centered_correspondences,
+                                               &result,
+                                               &ransac_summary);
+  return std::make_tuple(success, result, ransac_summary);
+}
+
+std::tuple<bool, MonoDepthRelativePoseResult, RansacSummary>
+EstimateMonoDepthRelativePoseVaryingFocalWrapper(
+    const RansacParameters& ransac_params,
+    const RansacType& ransac_type,
+    const std::vector<FeatureCorrespondence>& centered_correspondences) {
+  MonoDepthRelativePoseResult result;
+  RansacSummary ransac_summary;
+  const bool success =
+      EstimateMonoDepthRelativePoseVaryingFocal(ransac_params,
+                                                ransac_type,
+                                                centered_correspondences,
+                                                &result,
+                                                &ransac_summary);
+  return std::make_tuple(success, result, ransac_summary);
+}
+
 std::tuple<bool, Eigen::Vector3d, RansacSummary>
 EstimateRelativePoseWithKnownOrientationWrapper(
     const RansacParameters& ransac_params,

@@ -1,4 +1,4 @@
-// Copyright (C) 2015 The Regents of the University of California (Regents).
+// Copyright (C) 2024 The Regents of the University of California (Regents).
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -29,33 +29,46 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 //
-// Please contact the author of this library if you have any questions.
-// Author: Steffen Urban (urbse@googlemail.com), Shengyu Yin
+// Equivalence test for the vectorized Sampson-distance helper added in Phase
+// 1.2 of dev/TWO_VIEW_SPEEDUP_PLAN.md: SquaredSampsonDistances() must match
+// SquaredSampsonDistance() called per-column, element-wise, to within 1e-12.
 
-#include "pytheia/solvers/solvers.h"
-
-#include <pybind11/eigen.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-
+#include "gtest/gtest.h"
 #include <Eigen/Core>
-#include <iostream>
-#include <pybind11/numpy.h>
+#include <Eigen/Geometry>
 #include <vector>
 
-#include "theia/util/map_util.h"
+#include "theia/sfm/pose/util.h"
+#include "theia/util/random.h"
 
-namespace py = pybind11;
+namespace theia {
+namespace {
 
-namespace pytheia {
-namespace util {
+TEST(SquaredSampsonDistances, MatchesScalarPerColumn) {
+  RandomNumberGenerator rng(123);
 
-void pytheia_util_classes(py::module& m) {}
+  const Eigen::Matrix3d F = (Eigen::Matrix3d() << 0.1, 0.4, -0.2, -0.3, 0.05,
+                             0.7, 0.15, -0.6, 0.02)
+                                .finished();
 
-void pytheia_util(py::module& m) {
-  py::module m_submodule = m.def_submodule("util");
-  pytheia_util_classes(m_submodule);
+  constexpr int kNumPoints = 200;
+  Eigen::Matrix3Xd x1(3, kNumPoints), x2(3, kNumPoints);
+  for (int i = 0; i < kNumPoints; i++) {
+    x1.col(i) = Eigen::Vector3d(
+        rng.RandDouble(-1.0, 1.0), rng.RandDouble(-1.0, 1.0), 1.0);
+    x2.col(i) = Eigen::Vector3d(
+        rng.RandDouble(-1.0, 1.0), rng.RandDouble(-1.0, 1.0), 1.0);
+  }
+
+  const std::vector<double> vectorized = SquaredSampsonDistances(F, x1, x2);
+  ASSERT_EQ(vectorized.size(), kNumPoints);
+
+  for (int i = 0; i < kNumPoints; i++) {
+    const double scalar = SquaredSampsonDistance(
+        F, x1.col(i).hnormalized(), x2.col(i).hnormalized());
+    EXPECT_NEAR(vectorized[i], scalar, 1e-12);
+  }
 }
 
-}  // namespace util
-}  // namespace pytheia
+}  // namespace
+}  // namespace theia

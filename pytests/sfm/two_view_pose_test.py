@@ -95,6 +95,13 @@ def test_RelativePoseFromTwoPointsWithKnownRotation(R0, R1, pts0, pts1, gt_pose)
 
 def test_EstimateRelativeOrientation(normalized_corrs, gt_pose, max_error_deg):
     params = pt.solvers.RansacParameters()
+    # Seed the RNG for a deterministic, reproducible test. Without this, RANSAC
+    # uses a time-seeded generator, and with this scene's near-degenerate,
+    # 10-point, near-zero-rotation configuration plus a tight error_thresh /
+    # max_error_deg, an unlucky minimal sample can occasionally slip through
+    # the (loose) inlier threshold with a poor pose estimate, making the test
+    # flaky.
+    params.rng = pt.solvers.RandomNumberGenerator(42)
     params.error_thresh = 1e-4
     params.max_iterations = 20
     params.min_iterations = 1

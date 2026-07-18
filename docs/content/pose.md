@@ -12,7 +12,7 @@ For **Python** vs **C++** usage patterns, see [Python API overview](python_wrapp
 
 The rest of this page is split into **absolute** solvers, **relative** solvers, and small **matrix utilities** used after estimating \(E\) or \(F\).
 
-For **RANSAC-wrapped** estimators (e.g. calibrated PnP with inliers, two-view models from noisy matches), see [Geometric estimators](estimators.md).
+For **RANSAC-wrapped** estimators (e.g. calibrated PnP with inliers, two-view models from noisy matches), see [Geometric estimators](estimators.md). When those estimators run with **`use_lo=true`**, inlier refinement for calibrated absolute pose, calibrated relative pose, and monodepth relative pose uses dense analytic LM helpers under `src/theia/sfm/pose/refine_*.h` (see [RANSAC — local optimization](ransac.md#ransac-local-optimization)).
 
 ## Absolute pose estimation {#absolute-pose-estimation}
 
@@ -704,6 +704,52 @@ Computes candidate **essential matrices** \(E\) from five or more normalized cor
     Eigen::Vector3d t;
     theia::DecomposeEssentialMatrix(essential_matrices[0], &R1, &R2, &t);
     ```
+
+### Five Point Relative Pose (Sturm-sequence solver) {#section-five_point_essential_matrix_sturm}
+
+**Signature (C++):** [`five_point_relative_pose_sturm.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/five_point_relative_pose_sturm.h)
+
+```cpp
+int FivePointRelativePoseSturm(
+    const std::vector<Eigen::Vector3d>& x1h,
+    const std::vector<Eigen::Vector3d>& x2h,
+    std::vector<Eigen::Matrix3d>* essential_matrices);
+```
+
+An alternative 5-point minimal solver (adapted from [PoseLib](bibliography.md#LarssonPoseLib), following [Nistér](bibliography.md#Nister)'s original polynomial-elimination route: QR nullspace → explicit elimination → degree-10 polynomial in \(z\) → **Sturm-sequence root bracketing** ([`theia/math/sturm.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/math/sturm.h)) → back-substitution) rather than the Stewénius-style 10×10 action-matrix eigendecomposition `FivePointRelativePose` above uses. It is faster because it never forms that eigendecomposition, but it is **strictly minimal** (always exactly 5 correspondences; `FivePointRelativePose` remains the solver for `n > 5` and for the public Python API).
+
+This solver is a C++-only internal implementation detail — there is no direct Python binding for it. It is used automatically inside the RANSAC-based relative-pose and essential-matrix estimators (`RelativePoseEstimator`, `EssentialMatrixEstimator` in `estimate_relative_pose.cc` / `estimate_essential_matrix.cc`) whenever `RansacParameters::use_sturm_5pt` (default `true`; also exposed as `pytheia.solvers.RansacParameters.use_sturm_5pt` / `pytheia.sfm.EstimateTwoViewInfoOptions.use_sturm_5pt`) is set. See [RANSAC and robust estimation](ransac.md).
+
+### Monocular-depth-assisted relative pose (3-point solvers) {#section-monodepth_relative_pose}
+
+**Signature (C++):** [`relative_pose_monodepth_3pt.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/relative_pose_monodepth_3pt.h), [`estimate_monodepth_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_monodepth_relative_pose.h)
+
+When per-feature monocular depth estimates are available (e.g. from a depth network — `Feature.depth_prior`), only **3** correspondences are needed to determine the relative pose, instead of 5 (calibrated) or 8 (uncalibrated). Adapted from [PoseLib](bibliography.md#LarssonPoseLib)'s RePoseD solvers [DingRePoseD2025](bibliography.md#DingRePoseD2025). Three variants are provided, wrapped as RANSAC estimators (mirroring `EstimateRelativePose`/`EstimateUncalibratedRelativePose`) rather than exposed as raw minimal solvers in Python:
+
+| Function | Use case | Recovers |
+|---|---|---|
+| `EstimateMonoDepthRelativePose` | Both views calibrated | Rotation, position, relative depth-map scale |
+| `EstimateMonoDepthRelativePoseSharedFocal` | Both views uncalibrated, one shared unknown focal length | + one focal length |
+| `EstimateMonoDepthRelativePoseVaryingFocal` | Both views uncalibrated, independent focal lengths | + two focal lengths |
+
+The recovered `scale` is the relative scale between the two (possibly independently-scaled) depth maps — valuable standalone metric information, not just an estimation aid.
+
+=== "Python"
+
+    ```python
+    import pytheia as pt
+
+    params = pt.solvers.RansacParameters()
+    params.error_thresh = 1e-4  # squared Sampson error, normalized units
+
+    # correspondences: list[pt.matching.FeatureCorrespondence], each Feature
+    # constructed with a depth_prior, e.g. pt.sfm.Feature(point, depth_prior)
+    success, result, ransac_summary = pt.sfm.EstimateMonoDepthRelativePose(
+        params, pt.sfm.RansacType.RANSAC, correspondences)
+    # result.rotation, result.position, result.scale
+    ```
+
+The higher-level `pytheia.sfm.EstimateTwoViewInfo` entry point (see [RANSAC and robust estimation — monocular-depth-assisted two-view estimation](ransac.md)) dispatches to these automatically via `EstimateTwoViewInfoOptions.use_monodepth`, falling back to the standard 5-/8-point path when depth priors are missing; see `pyexamples/monodepth_two_view_estimation_example.py` for a full worked example.
 
 ### Four Point Algorithm for Homography {#section-four_point_homography}
 

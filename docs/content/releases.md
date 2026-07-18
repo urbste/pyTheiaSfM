@@ -4,6 +4,26 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
+## 1.0.x (current: 1.0.9)
+
+Stable Python packaging line with MkDocs documentation, cross-run alignment APIs, and continued binding coverage for cameras, BA, pose solvers, view graphs, and I/O (COLMAP, Bundler, NVM, PLY, Nerfstudio, SDFStudio, etc.).
+
+### Highlights since 0.6.0
+
+- **Versioning** aligned across root `VERSION`, CMake `project()`, and `pyproject.toml`.
+- **Documentation** maintained as MkDocs under `docs/content/` (Sphinx-era pages removed).
+- **Cross-run alignment** APIs documented in [Cross-run alignment](cross_run_alignment.md) and [Transformations](transformations.md) (BA relative pose edges, Sim(3) pose graph, scale-invariant odometry).
+- **Examples:** lightweight scripts in `pyexamples/`; showcase `examples/vismatch_sfm/`; Nerfstudio export via `pyexamples/nerfstudio_export_reconstruction.py`.
+- **Wheels:** manylinux builds for Python 3.8–3.13 via Docker (`urbste/pytheia_base`).
+- **Two-view / PnP speed:** Sturm 5-pt and monodepth 3-pt minimal solvers (PoseLib-adapted); dense LM RANSAC local optimization (`use_lo`) for calibrated relative pose, monodepth relative pose, and calibrated absolute pose — see [RANSAC](ransac.md#ransac-local-optimization) and [Performance](performance.md).
+
+### Known limitations
+
+- C++ unit tests exist but are mostly unwired in CMake; CI builds wheels without running pytest or CTest.
+- Feature detection / descriptor matching in C++ is deprecated in favor of Python-side pipelines; see 0.6.0 notes below.
+
+---
+
 ## 0.6.0
 
 Major cleanup: smaller surface area, Python-first imaging and features, fewer vendored or optional dependencies in the default build path.

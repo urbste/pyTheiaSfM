@@ -67,6 +67,21 @@ double SquaredSampsonDistance(const Matrix3d& F,
   return numerator_sqrt * numerator_sqrt / denominator.squaredNorm();
 }
 
+std::vector<double> SquaredSampsonDistances(const Matrix3d& F,
+                                            const Eigen::Matrix3Xd& x1,
+                                            const Eigen::Matrix3Xd& x2) {
+  const Eigen::Matrix3Xd Fx1 = F * x1;
+  const Eigen::Matrix3Xd Ftx2 = F.transpose() * x2;
+  const Eigen::RowVectorXd numerator =
+      (x2.array() * Fx1.array()).colwise().sum();
+  const Eigen::RowVectorXd denominator =
+      Fx1.topRows<2>().colwise().squaredNorm() +
+      Ftx2.topRows<2>().colwise().squaredNorm();
+  const Eigen::RowVectorXd sq_dist =
+      numerator.array().square() / denominator.array();
+  return std::vector<double>(sq_dist.data(), sq_dist.data() + sq_dist.size());
+}
+
 Eigen::Matrix3d CrossProductMatrix(const Vector3d& cross_vec) {
   Matrix3d cross;
   cross << 0.0, -cross_vec.z(), cross_vec.y(), cross_vec.z(), 0.0,
