@@ -12,7 +12,7 @@ For **Python** vs **C++** usage patterns, see [Python API overview](python_wrapp
 
 The rest of this page is split into **absolute** solvers, **relative** solvers, and small **matrix utilities** used after estimating \(E\) or \(F\).
 
-For **RANSAC-wrapped** estimators (e.g. calibrated PnP with inliers, two-view models from noisy matches), see [Geometric estimators](estimators.md). When those estimators run with **`use_lo=true`**, inlier refinement for calibrated absolute pose, calibrated relative pose, and monodepth relative pose uses dense analytic LM helpers under `src/theia/sfm/pose/refine_*.h` (see [RANSAC — local optimization](ransac.md#ransac-local-optimization)).
+For **RANSAC-wrapped** estimators (e.g. calibrated PnP with inliers, two-view models from noisy matches), see [Geometric estimators](estimators.md). When those estimators run with **`use_lo=true`**, inlier refinement for calibrated absolute pose, calibrated relative pose, and monodepth relative pose uses dense analytic LM helpers under `src/theia/sfm/pose/refine_*.h` (see [Dense LM pose refinement](#section-dense-lm-pose-refinement) and [RANSAC — local optimization](ransac.md#ransac-local-optimization)).
 
 ## Absolute pose estimation {#absolute-pose-estimation}
 
@@ -722,17 +722,59 @@ This solver is a C++-only internal implementation detail — there is no direct 
 
 ### Monocular-depth-assisted relative pose (3-point solvers) {#section-monodepth_relative_pose}
 
-**Signature (C++):** [`relative_pose_monodepth_3pt.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/relative_pose_monodepth_3pt.h), [`estimate_monodepth_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_monodepth_relative_pose.h)
+**Headers:** [`relative_pose_monodepth_3pt.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/relative_pose_monodepth_3pt.h) (minimal solvers), [`estimate_monodepth_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_monodepth_relative_pose.h) (RANSAC wrappers).
 
-When per-feature monocular depth estimates are available (e.g. from a depth network — `Feature.depth_prior`), only **3** correspondences are needed to determine the relative pose, instead of 5 (calibrated) or 8 (uncalibrated). Adapted from [PoseLib](bibliography.md#LarssonPoseLib)'s RePoseD solvers [DingRePoseD2025](bibliography.md#DingRePoseD2025). Three variants are provided, wrapped as RANSAC estimators (mirroring `EstimateRelativePose`/`EstimateUncalibratedRelativePose`) rather than exposed as raw minimal solvers in Python:
+When per-feature monocular depth estimates are available (e.g. from a depth network — `Feature.depth_prior`), only **3** correspondences are needed to determine the relative pose, instead of 5 (calibrated) or 8 (uncalibrated). Adapted from [PoseLib](bibliography.md#LarssonPoseLib)'s RePoseD solvers [DingRePoseD2025](bibliography.md#DingRePoseD2025).
+
+#### Minimal solvers (C++ only)
+
+Internally the solvers use PoseLib’s \(x_2 \sim R x_1 + t\) convention; `|translation|` encodes relative depth-map scale (not a unit vector). Each call takes exactly three correspondences and returns the number of solutions written to `poses`.
+
+```cpp
+struct MonoDepthRelativePose {
+  Eigen::Matrix3d rotation;
+  Eigen::Vector3d translation;  // metric; |t| related to depth scale
+  double scale = 1.0;
+  double shift1 = 0.0, shift2 = 0.0;           // calibrated solver only
+  double focal_length1 = 1.0, focal_length2 = 1.0;  // uncalibrated variants
+};
+
+// Calibrated: x1h/x2h normalized by known intrinsics; also recovers depth shifts.
+int MonoDepthRelativePose3pt(
+    const std::vector<Eigen::Vector3d>& x1h,
+    const std::vector<Eigen::Vector3d>& x2h,
+    const std::vector<double>& depth1,
+    const std::vector<double>& depth2,
+    std::vector<MonoDepthRelativePose>* poses);
+
+// Shared unknown focal: x1h/x2h are pp-centered pixels (not divided by f).
+int MonoDepthRelativePose3ptSharedFocal(
+    const std::vector<Eigen::Vector3d>& x1h,
+    const std::vector<Eigen::Vector3d>& x2h,
+    const std::vector<double>& depth1,
+    const std::vector<double>& depth2,
+    std::vector<MonoDepthRelativePose>* poses);
+
+// Independent focals per camera; at most one solution; shifts unused.
+int MonoDepthRelativePose3ptVaryingFocal(
+    const std::vector<Eigen::Vector3d>& x1h,
+    const std::vector<Eigen::Vector3d>& x2h,
+    const std::vector<double>& depth1,
+    const std::vector<double>& depth2,
+    std::vector<MonoDepthRelativePose>* poses);
+```
+
+These raw solvers are **not** bound to Python. Use the RANSAC estimators below (or `EstimateTwoViewInfo` with `use_monodepth`).
+
+#### RANSAC estimators (Python + C++)
 
 | Function | Use case | Recovers |
 |---|---|---|
-| `EstimateMonoDepthRelativePose` | Both views calibrated | Rotation, position, relative depth-map scale |
-| `EstimateMonoDepthRelativePoseSharedFocal` | Both views uncalibrated, one shared unknown focal length | + one focal length |
-| `EstimateMonoDepthRelativePoseVaryingFocal` | Both views uncalibrated, independent focal lengths | + two focal lengths |
+| `EstimateMonoDepthRelativePose` | Both views calibrated | Rotation, unit `position`, relative depth-map `scale`, shifts |
+| `EstimateMonoDepthRelativePoseSharedFocal` | Uncalibrated, one shared unknown focal | + one focal length |
+| `EstimateMonoDepthRelativePoseVaryingFocal` | Uncalibrated, independent focals | + two focal lengths |
 
-The recovered `scale` is the relative scale between the two (possibly independently-scaled) depth maps — valuable standalone metric information, not just an estimation aid.
+The recovered `scale` is the relative scale between the two (possibly independently-scaled) depth maps — valuable standalone metric information, not just an estimation aid. RANSAC models store Theia’s usual unit `position` (= \(-R^{\top} t / \|t\|\)); metric \(t\) is recovered inside LO when refining.
 
 === "Python"
 
@@ -749,7 +791,73 @@ The recovered `scale` is the relative scale between the two (possibly independen
     # result.rotation, result.position, result.scale
     ```
 
-The higher-level `pytheia.sfm.EstimateTwoViewInfo` entry point (see [RANSAC and robust estimation — monocular-depth-assisted two-view estimation](ransac.md)) dispatches to these automatically via `EstimateTwoViewInfoOptions.use_monodepth`, falling back to the standard 5-/8-point path when depth priors are missing; see `pyexamples/monodepth_two_view_estimation_example.py` for a full worked example.
+The higher-level `pytheia.sfm.EstimateTwoViewInfo` entry point (see [RANSAC — monocular-depth-assisted two-view estimation](ransac.md)) dispatches to these automatically via `EstimateTwoViewInfoOptions.use_monodepth`, falling back to the standard 5-/8-point path when depth priors are missing; see `pyexamples/monodepth_two_view_estimation_example.py` for a full worked example. Batch equivalent: `BulkEstimateTwoViewInfo` with optional `depth_i` / `depth_j` and returned `scales` (1.1.0+).
+
+### Dense LM pose refinement (RANSAC LO) {#section-dense-lm-pose-refinement}
+
+**Headers:** [`refine_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/refine_relative_pose.h), [`refine_monodepth_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/refine_monodepth_relative_pose.h), [`refine_absolute_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/refine_absolute_pose.h); shared driver in [`theia/math/lmlsq/`](https://github.com/urbste/pyTheiaSfM/tree/master/src/theia/math/lmlsq) (see [Math](math.md#section-dense-lm-lmlsq)).
+
+C++-only helpers used by estimator `RefineModel` when **`RansacParameters.use_lo=true`**. They run a small dense Levenberg–Marquardt problem (PoseLib-style analytic Jacobians) with truncated loss width `squared_error_thresh` in the same units as RANSAC residuals. Not exposed in Python; called automatically from the estimators listed in [RANSAC — local optimization](ransac.md#ransac-local-optimization).
+
+```cpp
+// Calibrated relative pose: 5-DoF Sampson on E = [t]_× R.
+// Theia position is the unit camera-2 center in camera-1 frame.
+bool RefineRelativePoseSampson(
+    const std::vector<Eigen::Vector2d>& x1,
+    const std::vector<Eigen::Vector2d>& x2,
+    double squared_error_thresh,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* position,
+    LmStats* stats = nullptr);
+
+// Calibrated monodepth: Sampson + depth reprojection (7/9 DoF with shifts).
+bool RefineMonoDepthRelativePose(
+    const std::vector<Eigen::Vector2d>& x1,
+    const std::vector<Eigen::Vector2d>& x2,
+    const std::vector<double>& depth1,
+    const std::vector<double>& depth2,
+    double squared_error_thresh,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* position,
+    double* scale,
+    double* shift1,
+    double* shift2,
+    LmStats* stats = nullptr);
+
+bool RefineMonoDepthSharedFocalRelativePose(
+    const std::vector<Eigen::Vector2d>& x1,
+    const std::vector<Eigen::Vector2d>& x2,
+    const std::vector<double>& depth1,
+    const std::vector<double>& depth2,
+    double squared_error_thresh,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* position,
+    double* scale,
+    double* focal_length,
+    LmStats* stats = nullptr);
+
+bool RefineMonoDepthVaryingFocalRelativePose(
+    const std::vector<Eigen::Vector2d>& x1,
+    const std::vector<Eigen::Vector2d>& x2,
+    const std::vector<double>& depth1,
+    const std::vector<double>& depth2,
+    double squared_error_thresh,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* position,
+    double* scale,
+    double* focal_length1,
+    double* focal_length2,
+    LmStats* stats = nullptr);
+
+// Calibrated absolute pose: 6-DoF reprojection; position is camera center.
+bool RefineAbsolutePoseReprojection(
+    const std::vector<Eigen::Vector2d>& features,
+    const std::vector<Eigen::Vector3d>& world_points,
+    double squared_error_thresh,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* position,
+    LmStats* stats = nullptr);
+```
 
 ### Four Point Algorithm for Homography {#section-four_point_homography}
 

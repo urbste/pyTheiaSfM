@@ -49,6 +49,10 @@ Jacobians / steps follow [PoseLib](bibliography.md#LarssonPoseLib)’s robust op
 
 `pytheia.sfm.EstimateTwoViewInfoOptions.use_monodepth` (default `false`) switches `EstimateTwoViewInfo` to a **3-point** minimal solver family ([`MonoDepthRelativePose3pt`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/relative_pose_monodepth_3pt.h) and its shared-/varying-focal variants, ported from [PoseLib](bibliography.md#LarssonPoseLib)'s RePoseD, [DingRePoseD2025](bibliography.md#DingRePoseD2025)) whenever each correspondence's `Feature.depth_prior` (e.g. from a monocular depth network) is set on both sides. Dropping the minimal sample size from 5 (or 8, uncalibrated) to 3 sharply reduces the number of RANSAC iterations needed for a given inlier ratio and confidence — see the benchmark in `dev/benchmark_two_view_estimation.py`. `EstimateTwoViewInfoOptions.monodepth_shared_focal` (default `true`) selects between the shared- and varying-focal uncalibrated variants. If fewer than 95% of correspondences carry a valid depth prior, `EstimateTwoViewInfo` logs a warning once and falls back to the standard (depth-free) estimator. The recovered relative scale between the two (possibly differently-scaled) depth maps is written to `TwoViewInfo.scale_estimate`.
 
+### Bulk path (`BulkEstimateTwoViewInfo`)
+
+`pytheia.sfm.BulkEstimateTwoViewInfo` runs the same `EstimateTwoViewInfo` logic over many pairs (GIL released, multithreaded). From **1.1.0** it accepts optional flat `depth_i` / `depth_j` arrays (length \(N\), same order as `points_i` / `points_j`) so monodepth works without a scalar fallback. The return dict includes `scales` (per-pair `scale_estimate`; \(-1\) when unused). Omit depths (or pass `None`) for the classic 5-pt path.
+
 ## SPRT and other internals
 
 Global RANSAC acceleration via **sequential probability ratio tests** (SPRT) appears in the math layer ([Matas](bibliography.md#Matas)); see [Math — SPRT](math.md#section-sprt). That is separate from the `RansacType` switch above.

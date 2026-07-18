@@ -109,7 +109,7 @@ pyTheiaSfM includes minimal relative-pose solvers and dense LO refiners
 [PoseLib](https://github.com/PoseLib/PoseLib) by Viktor Larsson and
 contributors. PoseLib is not a dependency or submodule; the algorithms were
 ported to use pyTheiaSfM's own Eigen-based types. Full license text:
-[docs/licenses/POSELIB_LICENSE.txt](../licenses/POSELIB_LICENSE.txt).
+[`docs/licenses/POSELIB_LICENSE.txt`](https://github.com/urbste/pyTheiaSfM/blob/master/docs/licenses/POSELIB_LICENSE.txt).
 
     BSD 3-Clause License
 

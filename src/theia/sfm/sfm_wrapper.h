@@ -34,14 +34,16 @@ std::tuple<bool, TwoViewInfo, std::vector<int>> EstimateTwoViewInfoWrapper(
 // Estimates two-view geometry for many pairs in one call, parallelized over
 // pairs with std::thread. Correspondences are flat; pair p owns the range
 // [pair_offsets[p], pair_offsets[p+1]). Returns per-pair success flags,
-// angle-axis rotations, positions, and CSR-style inlier offsets/indices
-// (inlier indices are local to each pair's correspondence range).
+// angle-axis rotations, positions, CSR-style inlier offsets/indices
+// (inlier indices are local to each pair's correspondence range), and
+// TwoViewInfo::scale_estimate (-1 when unset / unused).
 // num_threads <= 0 uses hardware concurrency.
 std::tuple<std::vector<uint8_t>,
            std::vector<Eigen::Vector3d>,
            std::vector<Eigen::Vector3d>,
            std::vector<uint64_t>,
-           std::vector<int>>
+           std::vector<int>,
+           std::vector<double>>
 BulkEstimateTwoViewInfoWrapper(
     const EstimateTwoViewInfoOptions& options,
     const CameraIntrinsicsPrior& intrinsics1,

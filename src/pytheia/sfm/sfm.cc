@@ -1156,7 +1156,9 @@ void pytheia_sfm_classes(py::module& m) {
          const theia::CameraIntrinsicsPrior& camera_prior_i,
          const theia::CameraIntrinsicsPrior& camera_prior_j,
          const theia::EstimateTwoViewInfoOptions& options,
-         int num_threads) {
+         int num_threads,
+         py::object depth_i,
+         py::object depth_j) {
         const auto offsets_buf = pair_offsets.unchecked<1>();
         const auto pi = points_i.unchecked<2>();
         const auto pj = points_j.unchecked<2>();
@@ -1176,18 +1178,64 @@ void pytheia_sfm_classes(py::module& m) {
               "pair_offsets final entry must equal correspondence count");
         }
 
+        const bool has_depth_i = !depth_i.is_none();
+        const bool has_depth_j = !depth_j.is_none();
+        if (has_depth_i != has_depth_j) {
+          throw py::value_error(
+              "depth_i and depth_j must both be provided or both None");
+        }
+
+        py::array_t<float, py::array::c_style | py::array::forcecast>
+            depth_i_arr;
+        py::array_t<float, py::array::c_style | py::array::forcecast>
+            depth_j_arr;
+        if (has_depth_i) {
+          depth_i_arr =
+              depth_i
+                  .cast<py::array_t<float,
+                                    py::array::c_style | py::array::forcecast>>();
+          depth_j_arr =
+              depth_j
+                  .cast<py::array_t<float,
+                                    py::array::c_style | py::array::forcecast>>();
+          if (depth_i_arr.ndim() != 1 || depth_j_arr.ndim() != 1) {
+            throw py::value_error("depth_i/depth_j must be 1-D arrays");
+          }
+          if (static_cast<size_t>(depth_i_arr.shape(0)) != num_corrs ||
+              static_cast<size_t>(depth_j_arr.shape(0)) != num_corrs) {
+            throw py::value_error(
+                "depth_i/depth_j length must equal correspondence count");
+          }
+        }
+
         std::vector<uint64_t> offsets(offsets_buf.shape(0));
         for (py::ssize_t i = 0; i < offsets_buf.shape(0); ++i) {
           offsets[i] = offsets_buf(i);
         }
         std::vector<theia::FeatureCorrespondence> correspondences;
         correspondences.reserve(num_corrs);
-        for (size_t i = 0; i < num_corrs; ++i) {
-          correspondences.emplace_back(
-              theia::Feature(static_cast<double>(pi(i, 0)),
-                             static_cast<double>(pi(i, 1))),
-              theia::Feature(static_cast<double>(pj(i, 0)),
-                             static_cast<double>(pj(i, 1))));
+        if (has_depth_i) {
+          const auto di = depth_i_arr.unchecked<1>();
+          const auto dj = depth_j_arr.unchecked<1>();
+          for (size_t i = 0; i < num_corrs; ++i) {
+            const double depth1 = static_cast<double>(di(i));
+            const double depth2 = static_cast<double>(dj(i));
+            correspondences.emplace_back(
+                theia::Feature(static_cast<double>(pi(i, 0)),
+                               static_cast<double>(pi(i, 1)),
+                               depth1 > 0.0 ? depth1 : 0.0),
+                theia::Feature(static_cast<double>(pj(i, 0)),
+                               static_cast<double>(pj(i, 1)),
+                               depth2 > 0.0 ? depth2 : 0.0));
+          }
+        } else {
+          for (size_t i = 0; i < num_corrs; ++i) {
+            correspondences.emplace_back(
+                theia::Feature(static_cast<double>(pi(i, 0)),
+                               static_cast<double>(pi(i, 1))),
+                theia::Feature(static_cast<double>(pj(i, 0)),
+                               static_cast<double>(pj(i, 1))));
+          }
         }
 
         std::vector<uint8_t> success;
@@ -1195,10 +1243,11 @@ void pytheia_sfm_classes(py::module& m) {
         std::vector<Eigen::Vector3d> positions;
         std::vector<uint64_t> inlier_offsets;
         std::vector<int> inlier_indices;
+        std::vector<double> scales;
         {
           py::gil_scoped_release release;
           std::tie(success, rotations, positions, inlier_offsets,
-                   inlier_indices) =
+                   inlier_indices, scales) =
               theia::BulkEstimateTwoViewInfoWrapper(options,
                                                     camera_prior_i,
                                                     camera_prior_j,
@@ -1211,11 +1260,14 @@ void pytheia_sfm_classes(py::module& m) {
         py::array_t<bool> success_arr(num_pairs);
         py::array_t<double> orientations_arr({num_pairs, py::ssize_t(3)});
         py::array_t<double> positions_arr({num_pairs, py::ssize_t(3)});
+        py::array_t<double> scales_arr(num_pairs);
         auto success_mut = success_arr.mutable_unchecked<1>();
         auto orient_mut = orientations_arr.mutable_unchecked<2>();
         auto pos_mut = positions_arr.mutable_unchecked<2>();
+        auto scales_mut = scales_arr.mutable_unchecked<1>();
         for (py::ssize_t p = 0; p < num_pairs; ++p) {
           success_mut(p) = success[p] != 0;
+          scales_mut(p) = scales[p];
           for (py::ssize_t k = 0; k < 3; ++k) {
             orient_mut(p, k) = rotations[p][k];
             pos_mut(p, k) = positions[p][k];
@@ -1238,6 +1290,7 @@ void pytheia_sfm_classes(py::module& m) {
         out["positions"] = std::move(positions_arr);
         out["inlier_offsets"] = std::move(inlier_offsets_arr);
         out["inlier_indices"] = std::move(inlier_indices_arr);
+        out["scales"] = std::move(scales_arr);
         return out;
       },
       py::arg("pair_offsets"),
@@ -1246,7 +1299,9 @@ void pytheia_sfm_classes(py::module& m) {
       py::arg("camera_prior_i"),
       py::arg("camera_prior_j"),
       py::arg("options"),
-      py::arg("num_threads") = 0);
+      py::arg("num_threads") = 0,
+      py::arg("depth_i") = py::none(),
+      py::arg("depth_j") = py::none());
   m.def("ColorizeReconstruction", theia::ColorizeReconstruction);
   m.def("ExtractMaximallyParallelRigidSubgraph",
         theia::ExtractMaximallyParallelRigidSubgraph);

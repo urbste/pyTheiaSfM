@@ -33,7 +33,8 @@ std::tuple<std::vector<uint8_t>,
            std::vector<Eigen::Vector3d>,
            std::vector<Eigen::Vector3d>,
            std::vector<uint64_t>,
-           std::vector<int>>
+           std::vector<int>,
+           std::vector<double>>
 BulkEstimateTwoViewInfoWrapper(
     const EstimateTwoViewInfoOptions& options,
     const CameraIntrinsicsPrior& intrinsics1,
@@ -46,6 +47,7 @@ BulkEstimateTwoViewInfoWrapper(
   std::vector<uint8_t> success(num_pairs, 0);
   std::vector<Eigen::Vector3d> rotations(num_pairs, Eigen::Vector3d::Zero());
   std::vector<Eigen::Vector3d> positions(num_pairs, Eigen::Vector3d::Zero());
+  std::vector<double> scales(num_pairs, -1.0);
   std::vector<std::vector<int>> pair_inliers(num_pairs);
 
   if (num_threads <= 0) {
@@ -72,6 +74,7 @@ BulkEstimateTwoViewInfoWrapper(
         success[p] = 1;
         rotations[p] = info.rotation_2;
         positions[p] = info.position_2;
+        scales[p] = info.scale_estimate;
         pair_inliers[p] = std::move(inliers);
       }
     }
@@ -107,7 +110,8 @@ BulkEstimateTwoViewInfoWrapper(
                          std::move(rotations),
                          std::move(positions),
                          std::move(inlier_offsets),
-                         std::move(inlier_indices));
+                         std::move(inlier_indices),
+                         std::move(scales));
 }
 
 std::tuple<bool, std::unordered_set<TrackId>>

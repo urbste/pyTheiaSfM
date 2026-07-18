@@ -33,17 +33,17 @@ These headers power Theia’s solvers and pipelines; **most are not bound to Pyt
 
 | Area | Headers (representative) | Purpose |
 |------|---------------------------|---------|
-| Polynomials | `polynomial.h`, `closed_form_polynomial_solver.h`, `find_polynomial_roots_*.h` | Closed-form and generic root finding, Jenkins–Traub, companion matrix, Newton/Laguerre steps |
+| Polynomials | `polynomial.h`, `closed_form_polynomial_solver.h`, `find_polynomial_roots_*.h`, **`sturm.h`** | Closed-form and generic root finding; Sturm bracketing for the 5-pt essential solver |
 | Rotation / geometry | `rotation.h` | Angle-axis alignment, relative rotation utilities (partially in Python) |
 | $L_1$ / optimization | `l1_solver.h`, `constrained_l1_solver.h`, `qp_solver.h` | $L_1$ minimization, QP interfaces |
-| Dense LM (RANSAC LO) | `lmlsq/lm_optimizer.h`, `lmlsq/normal_accumulator.h`, `lmlsq/robust_loss.h`, `lmlsq/lm_options.h` | Tiny Levenberg–Marquardt for geometric `RefineModel` (not Ceres); see [RANSAC — local optimization](ransac.md#ransac-local-optimization) |
+| Dense LM (RANSAC LO) | `lmlsq/lm_optimizer.h`, `lmlsq/normal_accumulator.h`, `lmlsq/robust_loss.h`, `lmlsq/lm_options.h` | Tiny Levenberg–Marquardt for geometric `RefineModel` (not Ceres); see [below](#section-dense-lm-lmlsq) |
 | Linear algebra | `matrix/linear_operator.h`, `matrix/sparse_*.h`, `matrix/rq_decomposition.h`, `matrix/gauss_jordan.h`, `matrix/matrix_square_root.h`, `nullspace.h` | Operators, sparse Cholesky, RQ, Gauss–Jordan, square root |
 | Graph | `graph/connected_components.h`, `graph/minimum_spanning_tree.h`, `graph/normalized_graph_cut.h`, `graph/triplet_extractor.h` | Graph algorithms used in SfM |
 | Probability / sampling | `probability/sequential_probability_ratio.h`, `reservoir_sampler.h`, `distribution.h`, `histogram.h` | SPRT (RANSAC), sampling, distributions |
 | SDP / rank restrictions | `sdp_solver.h`, `bcm_sdp_solver.h`, `rbr_sdp_solver.h`, `rank_restricted_sdp_solver.h`, `riemannian_staircase.h` | Convex relaxations for rotation estimation |
 | Utilities | `util.h`, `solver_options.h`, `solver_summary.h` | Shared helpers |
 
-For **SPRT**, **Gauss–Jordan**, **$L_1$ solver**, and **generic polynomial** APIs, refer to the sections below (C++ oriented).
+For **SPRT**, **Gauss–Jordan**, **$L_1$ solver**, **generic polynomial**, **Sturm**, and **dense LM** APIs, refer to the sections below (C++ oriented).
 
 ---
 
@@ -102,6 +102,51 @@ Finds a single polynomials root iteratively based on the starting position $x_0$
 **`double FindRootIterativeNewton(const Eigen::VectorXd& polynomial, const double x0, const double epsilon, const int max_iter)`**
 
 Finds a single polynomials root iteratively based on the starting position $x_0$ and guaranteed precision of epsilon using [Newton's Method](https://en.wikipedia.org/wiki/Newton%27s_method).
+
+## Sturm-sequence root bracketing {#section-sturm}
+
+**Header:** [`theia/math/sturm.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/math/sturm.h) (namespace `theia::sturm`). Adapted from [PoseLib](bibliography.md#LarssonPoseLib); BSD-3-Clause — see [License](license.md#third-party-code-poselib).
+
+Used by the Nistér/Sturm [5-point essential solver](pose.md#section-five_point_essential_matrix_sturm) to find real roots of the degree-10 eliminant **without** forming a companion / action-matrix eigendecomposition. Not bound to Python; call sites are C++ only.
+
+```cpp
+namespace theia::sturm {
+
+// coeffs[0..N] are coefficients of a monic (or scaled) degree-N polynomial;
+// writes up to N real roots into roots[]. Returns the number found.
+template <int N>
+int bisect_sturm(const double* coeffs, double* roots, double tol = 1e-10);
+
+}  // namespace theia::sturm
+```
+
+Internally: build Sturm chain → count sign changes on a Cauchy bound → isolate intervals → Ridder/Newton polish. Recursion depth is capped by `MAX_STURM_RECURSION_DEPTH_LIMIT` (CMake default 300).
+
+## Dense LM for RANSAC LO (`lmlsq`) {#section-dense-lm-lmlsq}
+
+**Headers:** [`theia/math/lmlsq/`](https://github.com/urbste/pyTheiaSfM/tree/master/src/theia/math/lmlsq) — `lm_optimizer.h`, `normal_accumulator.h`, `robust_loss.h`, `lm_options.h`. Adapted from PoseLib’s dense LM (BSD-3-Clause).
+
+Tiny Levenberg–Marquardt for **small** geometric models (5–9 parameters) used by estimator `RefineModel` when `RansacParameters.use_lo=true`. This is **not** a substitute for Ceres full bundle adjustment; see [RANSAC — local optimization](ransac.md#ransac-local-optimization) and [Pose — dense LM refiners](pose.md#section-dense-lm-pose-refinement).
+
+```cpp
+struct LmOptions {
+  size_t max_iterations = 25;
+  double loss_scale = 1.0;  // truncation on squared residual; <=0 = trivial loss
+  double gradient_tol = 1e-12;
+  double step_tol = 1e-8;
+  double relative_cost_tol = 1e-10;
+  double initial_lambda = 1e-3;
+  // ...
+};
+
+struct LmStats { /* iterations, costs, lambda, norms */ };
+
+// Problem must provide NumParams(), ComputeResidual, ComputeJacobian, Step.
+template <typename Problem, typename Model = typename Problem::Model>
+LmStats MinimizeLM(Problem& problem, Model* parameters, const LmOptions& opt);
+```
+
+`NormalAccumulator` builds dense \(J^\top J\) / \(J^\top r\) with optional `TruncatedLoss`. Pose refiners live under `theia/sfm/pose/refine_*.h`, not in `math/`.
 
 ## Matrix Methods {#section-matrix_methods}
 

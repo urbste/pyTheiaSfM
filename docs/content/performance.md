@@ -19,7 +19,7 @@ Bundle adjustment and many solvers use **Ceres Solver**. Defaults favor portable
 
 Most bound functions **hold the Python GIL** for the full C++ call. Long-running work (full reconstruction, bundle adjustment, single-pair two-view estimation) blocks other Python threads.
 
-**Exception:** `BulkEstimateTwoViewInfo` releases the GIL while processing many view pairs in C++. Prefer batch APIs where available when driving pyTheia from multi-threaded Python or async code.
+**Exception:** `BulkEstimateTwoViewInfo` releases the GIL while processing many view pairs in C++. Prefer batch APIs where available when driving pyTheia from multi-threaded Python or async code. From **1.1.0**, pass optional `depth_i` / `depth_j` and read `scales` so monodepth two-view stays on the bulk path ([RANSAC](ransac.md#monocular-depth-assisted-two-view-estimation)).
 
 Passing large correspondences or descriptors through Python lists incurs conversion overhead. For hot loops, keep data in NumPy arrays and batch work on the C++ side when bindings support it.
 
