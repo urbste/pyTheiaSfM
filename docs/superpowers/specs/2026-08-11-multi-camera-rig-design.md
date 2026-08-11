@@ -135,13 +135,122 @@ RigMembership (per View, optional)
   capture_id
 ```
 
-Pose composition (world ← camera):
+### 4.1.1 Frame convention (yes: relative to a RIG coordinate system)
+
+Sensor extrinsics are defined **in / relative to a shared rig (body) frame**, not relative to “the other camera” as a one-off:
 
 \[
-T_{w\leftarrow c} = T_{w\leftarrow\text{rig}} \, T_{\text{rig}\leftarrow c}
+T_{w\leftarrow c_k} = T_{w\leftarrow\text{rig}} \, T_{\text{rig}\leftarrow c_k}
 \]
 
-where \(T_{w\leftarrow\text{rig}}\) is the **capture body pose** (trajectory sample).
+| Transform | Meaning | Stored where |
+|-----------|---------|--------------|
+| \(T_{w\leftarrow\text{rig}}(t)\) | Rig pose at capture timestamp \(t\) (trajectory sample) | `RigCapture` |
+| \(T_{\text{rig}\leftarrow c_k}\) | Fixed (or slowly calibrated) sensor pose in the **rig coordinate system** | `CameraRig::RigSensor` |
+| \(T_{w\leftarrow c_k}(t)\) | Derived camera pose used for projection / I/O | Cached on `View::Camera` |
+
+**Rig frame choice:** the rig CS is an explicit frame you pick when defining the rig. Common choices:
+
+1. **Reference sensor** (typical stereo): left camera = identity \(T_{\text{rig}\leftarrow L}=I\), right = baseline \(T_{\text{rig}\leftarrow R}\).
+2. **Abstract body** (IMU / vehicle / geometric center): every sensor has a non-identity offset; useful when fusing IMU later.
+
+Stereo “left↔right relative pose” is then just composition of the two sensor offsets:
+
+\[
+T_{L\leftarrow R} = T_{\text{rig}\leftarrow L}^{-1}\, T_{\text{rig}\leftarrow R}
+\]
+
+(with \(T_{\text{rig}\leftarrow L}=I\) this collapses to \(T_{\text{rig}\leftarrow R}\)).
+
+**Decision locked in:** one `RigCapture` = **one timestamp** = **one rig pose** \(T_{w\leftarrow\text{rig}}(t)\). All Views in that capture share that timestamp; uniqueness is on `(rig_id, timestamp)` / `CaptureId`, not on every View.
+
+### 4.1.2 Features and matches — keep them on Views
+
+Rigs change **pose ownership**, not the observation graph. Features and tracks stay **image-centric** (same as today).
+
+```mermaid
+flowchart TB
+  subgraph pose["Pose layer (new)"]
+    Rig["CameraRig: T_rig←cam_k"]
+    Cap["RigCapture t: T_w←rig"]
+  end
+  subgraph obs["Observation layer (unchanged)"]
+    VL["View left @ t"]
+    VR["View right @ t"]
+    FeatL["Features on left"]
+    FeatR["Features on right"]
+    Track["Track / AddObservation"]
+  end
+  Cap --> VL
+  Cap --> VR
+  Rig --> Cap
+  VL --> FeatL
+  VR --> FeatR
+  FeatL --> Track
+  FeatR --> Track
+```
+
+**Features**
+
+- Detect and store keypoints per **View** (per image / sensor), exactly as now: `View::AddFeature` / `Reconstruction::AddObservation`.
+- A stereo pair at time \(t\) is two Views in one `RigCapture`; each has its own feature list.
+- No “rig-level Feature” type in v1 — that would break Track/BA without buying much.
+
+**Tracks (multi-view correspondences)**
+
+- Still `TrackId` with observations `(ViewId, Feature)`.
+- A 3D point seen in left and right at the same time is just a track with two observations in the same capture (different `RigCameraId`s) — valuable for **metric scale**.
+- A point tracked over time may appear in many captures and sensors; TrackBuilder / `AddObservation` need no special API.
+
+**Matches → ViewGraph (pairwise geometry)**
+
+Matching remains **View ↔ View** (pyTheia already leaves matching to the application):
+
+| Match type | Example | Role |
+|------------|---------|------|
+| Intra-capture (stereo) | left\(_t\) ↔ right\(_t\) | Known relative pose from rig; use for triangulation / scale / verification; optional ViewGraph edge marked as *rig-known* |
+| Temporal, same sensor | left\(_t\) ↔ left\(_t+1\) | Primary motion edges |
+| Temporal, cross sensor | left\(_t\) ↔ right\(_t+1\) | Extra constraints; relative pose = motion ∘ rig offsets |
+
+**Recommended structure:**
+
+1. **Keep `ViewGraph` as ViewId–ViewId** for v1. Add matches with `AddEdge(view_i, view_j, TwoViewInfo)` as today.
+2. For **intra-rig pairs**, either:
+   - skip estimating `TwoViewInfo` and **inject** the known \(T_{c_i\leftarrow c_j}\) from the `CameraRig`, or
+   - estimate normally and **compare / replace** with the rig prior (calibration check).
+3. Optionally tag edges (`TwoViewInfo` flag or side map) as `FROM_RIG_EXTRINSICS` vs `FROM_MATCHES` so estimators can trust stereo edges fully.
+4. **Later (P3):** a thin `CaptureGraph` (CaptureId–CaptureId) can be *derived* by composing View edges with known sensor offsets — used by rotation/position averaging on the trajectory. Do **not** require users to match at capture level first.
+
+**Python ingest sketch**
+
+```python
+# 1) Define rig CS + sensor offsets (relative to RIG frame)
+rig_id = recon.AddCameraRig(stereo_rig)  # T_rig_left = I, T_rig_right = baseline
+
+# 2) One capture = one timestamp = one rig pose slot
+cap = recon.AddRigCapture(rig_id, t, {LEFT: "l.png", RIGHT: "r.png"})
+v_l, v_r = recon.GetRigCapture(cap).view_ids[LEFT], ...
+
+# 3) Features stay on views
+for kp in left_keypoints:
+    # via TrackBuilder or AddObservation after matching
+    ...
+
+# 4) Matches are still between views
+matches_lr = match(left_desc, right_desc)          # stereo
+matches_ll = match(left_t_desc, left_t1_desc)      # temporal
+
+view_graph.AddEdge(v_l, v_r, two_view_from_rig(rig, LEFT, RIGHT))  # or from matches
+view_graph.AddEdge(v_l_t, v_l_t1, two_view_from_matches(matches_ll))
+
+# 5) Tracks from all match sets (TrackBuilder across ViewIds)
+```
+
+**What we deliberately do *not* do in v1**
+
+- Replace ViewGraph vertices with captures (too breaking for matching code).
+- Store features on the `CameraRig` or `RigCapture`.
+- Require users to only match left–left (though that remains a valid simplified pipeline).
 
 ### 4.2 Reconstruction API (additive)
 
@@ -165,9 +274,9 @@ CaptureId AddRigCapture(
 
 **Timestamp policy (compatibility):**
 
-- Relax `view_timestamp_to_id_` uniqueness **or** key it by `(timestamp, view_id)` / drop the unique map for new code paths.
-- Prefer: uniqueness moves to **`CaptureId` timestamp within a rig** (`capture_timestamp_to_id_`), while Views may share a timestamp when they belong to the same capture.
-- Monocular `AddView` keeps today’s uniqueness for backward compatibility until a version bump.
+- **Locked:** one capture ↔ one timestamp ↔ one rig pose.
+- Uniqueness is on **`(rig_id, timestamp)`** for captures. Member Views **share** that timestamp.
+- Monocular `AddView` keeps today’s per-View uniqueness for backward compatibility until a version bump.
 
 **Serialization:** bump `CEREAL_CLASS_VERSION(Reconstruction)` and `View`; old files load as “no rigs”.
 
@@ -315,14 +424,15 @@ A user can:
 
 ## 7. Open decisions (defaults proposed)
 
-| Question | Proposed default |
-|----------|------------------|
-| Body frame = which sensor? | Reference sensor (usually left) = identity offset |
-| Extrinsics convention | \(T_{\text{rig}\leftarrow\text{cam}}\) (camera from rig), matching Theia’s world←camera style |
-| Optimize extrinsics by default? | **No** (calibrated stereo); opt-in per sensor |
-| Store body pose where? | `RigCapture` on `Reconstruction`, propagate to `View.Camera` |
-| Full SfM rewrite in first implementation? | **No** — P0+P1 first |
-| Timestamp uniqueness | Unique per capture; Views in one capture may share timestamp |
+| Question | Proposed default | Status |
+|----------|------------------|--------|
+| Body frame = which sensor? | Reference sensor (usually left) = identity offset; abstract body allowed | Open |
+| Extrinsics convention | \(T_{\text{rig}\leftarrow\text{cam}}\) in **rig CS** | **Agreed direction** |
+| Optimize extrinsics by default? | **No** (calibrated stereo); opt-in per sensor | Open |
+| Store body pose where? | `RigCapture` on `Reconstruction`, propagate to `View.Camera` | Open |
+| Features / matches | On **Views**; `ViewGraph` stays View–View; optional later `CaptureGraph` | **Agreed direction** |
+| Full SfM rewrite in first implementation? | **No** — P0+P1 first | Open |
+| Timestamp uniqueness | **One capture = one timestamp = one rig pose** | **Locked** |
 
 ---
 
