@@ -352,6 +352,7 @@ Tune via `ReconstructionEstimatorOptions` (threads, BA loss, rotation filtering,
 | Monocular pipeline example | `pyexamples/sfm_pipeline_fountain.py` |
 | Matcher showcase | `examples/vismatch_sfm/`, [vismatch + SfM](examples_vismatch_sfm.md) |
 | Rig example / tests | `pyexamples/stereo_rig_reconstruction.py`, `pytests/test_camera_rig.py` |
+| ZED SVO → stereo frames | `pyexamples/zed_svo_extract_stereo.py` (needs `pyzed`) |
 | Repo contributor map (build, CI) | Root `AGENTS.md` |
 | Human narrative API chapters | [API Reference](api.md) |
 

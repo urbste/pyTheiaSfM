@@ -46,6 +46,8 @@ summary = pt.sfm.GlobalRigReconstructor(opts).Estimate(view_graph, reconstructio
 
 See [`pyexamples/stereo_rig_reconstruction.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/stereo_rig_reconstruction.py): set focal / principal point / baseline, match with **vismatch** (`edm` by default), run global or incremental rig SfM.
 
+**ZED SVO:** [`pyexamples/zed_svo_extract_stereo.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/zed_svo_extract_stereo.py) opens a Stereolabs `.svo` / `.svo2` (needs `pyzed`), writes rectified `left/` / `right/` frames plus `rig_calibration.json` (intrinsics, baseline, mid-point body-frame sensor poses) for the reconstruction example above.
+
 ## See also
 
 - [SfM](sfm.md) — `Reconstruction`, Views, Tracks  

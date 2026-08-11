@@ -6,8 +6,9 @@ The repository ships two levels of Python examples: **lightweight** scripts unde
 
 - Classic **OpenCV** features (SIFT / AKAZE) and **BFMatcher**, wired to **pyTheia** two-view estimation and **incremental / global / hybrid** reconstruction (e.g. fountain scene scripts).
 - **Stereo / calibrated rig** — [`pyexamples/stereo_rig_reconstruction.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/stereo_rig_reconstruction.py) sets baseline + intrinsics, matches with **vismatch** (`edm` default), runs `GlobalRigReconstructor` or `IncrementalRigReconstructor` (see [Rigs](rigs.md)).
+- **ZED SVO → rectified stereo** — [`pyexamples/zed_svo_extract_stereo.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/zed_svo_extract_stereo.py) extracts `VIEW.LEFT` / `VIEW.RIGHT` frames and writes `rig_calibration.json` (requires Stereolabs `pyzed`).
 - Utilities: **NeRFStudio** / **SDFStudio** export, **MVS** / **Open3D** stubs, video frame extraction.
-- Typical extras: `opencv-python`, `kornia` (see [`pyexamples/requirements.txt`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/requirements.txt)).
+- Typical extras: `opencv-python`, `kornia` (see [`pyexamples/requirements.txt`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/requirements.txt)). ZED extraction additionally needs the ZED SDK Python API.
 
 Use these when you want a quick sanity check without installing Torch-based matchers.
 
