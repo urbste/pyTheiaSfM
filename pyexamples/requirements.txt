@@ -2,3 +2,6 @@ open3d
 opencv
 kornia
 kornia-rs
+# Optional: ZED SVO extraction (pyexamples/zed_svo_extract_stereo.py)
+# Install Stereolabs ZED SDK + pyzed from https://www.stereolabs.com/docs/app-development/python/install
+# pyzed
