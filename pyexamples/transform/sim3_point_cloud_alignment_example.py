@@ -122,8 +122,8 @@ def main():
     print("-" * 30)
     
     options.alignment_type = pt.sfm.Sim3AlignmentType.POINT_TO_PLANE
-    options.target_normals = target_normals
-    
+    options.set_target_normals(target_normals)
+
     summary_plane = pt.sfm.OptimizeAlignmentSim3(source_points, target_points, options)
     
     print(f"Success: {summary_plane.success}")
@@ -138,9 +138,9 @@ def main():
     print(f"Point weights range: {min(point_weights):.2f} to {max(point_weights):.2f}")
     
     options.alignment_type = pt.sfm.Sim3AlignmentType.ROBUST_POINT_TO_POINT
-    options.point_weights = point_weights
-    # Note: point_weight is only used if point_weights is not provided
-    
+    options.set_point_weights(point_weights)
+    # Note: scalar point_weight is only used if point_weights is not provided
+
     summary_weighted = pt.sfm.OptimizeAlignmentSim3(source_points, target_points, options)
     
     print(f"Success: {summary_weighted.success}")

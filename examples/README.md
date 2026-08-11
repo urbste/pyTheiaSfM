@@ -7,7 +7,7 @@ Optional, dependency-heavy workflows built around **pyTheia** Structure-from-Mot
 | Directory | Purpose |
 |-----------|---------|
 | [`vismatch_sfm/`](vismatch_sfm/) | [**vismatch**](https://github.com/gmberton/vismatch) matching + **pyTheia** two-view and incremental/global/hybrid SfM on a **Strecha-style** folder layout; Sim3 to GT, **average camera-center error**, PLY exports, optional [**Rerun**](https://rerun.io/). See [`vismatch_sfm/README.md`](vismatch_sfm/README.md). |
-| Nerfstudio / 3DGS export | Use [`pyexamples/nerfstudio_export_reconstruction.py`](../pyexamples/nerfstudio_export_reconstruction.py) to export `transforms.json`; train in external tools (Nerfstudio Splatfacto, etc.). |
+| Nerfstudio / 3DGS export | Use [`pyexamples/io/nerfstudio_export_reconstruction.py`](../pyexamples/io/nerfstudio_export_reconstruction.py) to export `transforms.json`; train in external tools (Nerfstudio Splatfacto, etc.). |
 
 ## Setup
 

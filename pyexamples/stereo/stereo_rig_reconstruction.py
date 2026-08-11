@@ -9,7 +9,7 @@ builds ViewGraph + tracks, then runs GlobalRigReconstructor or
 IncrementalRigReconstructor.
 
 Example:
-  python pyexamples/stereo_rig_reconstruction.py \\
+  python pyexamples/stereo/stereo_rig_reconstruction.py \\
     --left_dir /data/left --right_dir /data/right \\
     --baseline 0.12 --focal 700 --cx 640 --cy 360 \\
     --matcher edm --method global

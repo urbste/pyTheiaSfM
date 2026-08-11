@@ -53,7 +53,7 @@ Arguments:
 - **`global_descriptors`** — one floating-point descriptor per image: typically a **2D NumPy array** of shape `(n_images, dim)` or an equivalent sequence of 1D vectors (same `dim` for every row). These are **whole-image** embeddings (e.g. from a place-recognition network), not per-keypoint descriptors.
 - **`num_nearest_neighbors_for_global_descriptor_matching`** — **k**; capped internally at `n_images - 1`.
 
-Use this to avoid an **all-pairs** \(O(n^2)\) local matching schedule on large collections. Example: [`pyexamples/sfm_pipeline_loftr_aqualoc.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/sfm_pipeline_loftr_aqualoc.py) (CosPlace-style global vectors + `GraphMatch`, then LoFTR on the selected pairs).
+Use this to avoid an **all-pairs** \(O(n^2)\) local matching schedule on large collections. Example: [`pyexamples/sfm/sfm_pipeline_loftr_aqualoc.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/sfm/sfm_pipeline_loftr_aqualoc.py) (CosPlace-style global vectors + `GraphMatch`, then LoFTR on the selected pairs).
 
 ---
 

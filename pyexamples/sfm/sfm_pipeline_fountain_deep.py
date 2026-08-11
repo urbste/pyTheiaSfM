@@ -10,7 +10,12 @@ import numpy as np
 import os, glob, argparse, time
 import pytheia as pt
 import torch, kornia
-from image_utils import load_image
+import sys
+
+_PYEXAMPLES_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _PYEXAMPLES_ROOT not in sys.path:
+    sys.path.insert(0, _PYEXAMPLES_ROOT)
+from common.image_utils import load_image
 
 min_num_inlier_matches = 30
 
@@ -211,19 +216,18 @@ if __name__ == "__main__":
         for j in range(i+1, len(view_ids)):
             img_j_name = recon.View(view_ids[j]).Name()
             
-            success, twoview_info = match_image_pair( 
+            success, twoview_info = match_image_pair(
                 img_data[img_i_name], img_data[img_j_name], matcher, 0.8)
-            
-            nr_matches = twoview_info.num_verified_matches
-            if success == True:
+
+            if success and twoview_info is not None:
                 view_id1 = recon.ViewIdFromName(img_i_name)
                 view_id2 = recon.ViewIdFromName(img_j_name)
                 view_graph.AddEdge(view_id1, view_id2, twoview_info)
                 print("{} Matches  between image {} and image {}. ".format(
-                    nr_matches, img_i_name, img_j_name))
+                    twoview_info.num_verified_matches, img_i_name, img_j_name))
             else:
-                print("Only {} matches between image {} and image {}. Removing from view graph.".format(
-                    nr_matches, img_i_name, img_j_name))
+                print("No usable matches between image {} and image {}.".format(
+                    img_i_name, img_j_name))
     
     print('{} edges were added to the view graph.'.format(view_graph.NumEdges()))
     track_builder.BuildTracks(recon)

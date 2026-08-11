@@ -14,7 +14,7 @@ Calibrated multi-camera / stereo **rig** support: abstract body frame, synchroni
 - **`PropagateCameraPosesForCapture`** / **`BuildCaptureViewGraph`** — compose View cameras from body ⊕ calibrated sensors; derive capture–capture edges from View–View `TwoViewInfo`.
 - **`IncrementalRigReconstructor`** — seed at identity, triangulate (intra-rig metric), localize later captures (generalized 2D–3D / single-view fallback).
 - **`GlobalRigReconstructor`** (MGSfM-inspired) — capture graph + selectable Theia averaging backends (`GlobalRotationEstimatorType` / `GlobalPositionEstimatorType` via `sfm_options`). Extrinsics assumed **calibrated** (not optimized in averaging).
-- Docs: [Rigs](rigs.md). Example: `pyexamples/stereo_rig_reconstruction.py` (baseline / intrinsics, vismatch `edm`, global or incremental).
+- Docs: [Rigs](rigs.md). Example: `pyexamples/stereo/stereo_rig_reconstruction.py` (baseline / intrinsics, vismatch `edm`, global or incremental).
 
 ### Tests
 
@@ -76,7 +76,7 @@ Stable Python packaging line with MkDocs documentation, cross-run alignment APIs
 - **Versioning** aligned across root `VERSION`, CMake `project()`, and `pyproject.toml`.
 - **Documentation** maintained as MkDocs under `docs/content/` (Sphinx-era pages removed).
 - **Cross-run alignment** APIs documented in [Cross-run alignment](cross_run_alignment.md) and [Transformations](transformations.md) (BA relative pose edges, Sim(3) pose graph, scale-invariant odometry).
-- **Examples:** lightweight scripts in `pyexamples/`; showcase `examples/vismatch_sfm/`; Nerfstudio export via `pyexamples/nerfstudio_export_reconstruction.py`.
+- **Examples:** lightweight scripts in `pyexamples/`; showcase `examples/vismatch_sfm/`; Nerfstudio export via `pyexamples/io/nerfstudio_export_reconstruction.py`.
 - **Wheels:** manylinux builds for Python 3.8–3.13 via Docker (`urbste/pytheia_base`).
 - **1.0.9:** Sturm 5-pt + monodepth 3-pt solvers; dense LM RANSAC LO for relative / monodepth / calibrated absolute pose — see [1.0.9 notes](#release-1-0-9).
 - **1.1.0:** `BulkEstimateTwoViewInfo` depth priors + `scales` — see [1.1.0 notes](#release-1-1-0).

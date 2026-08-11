@@ -8,10 +8,10 @@ Requires the Stereolabs ZED SDK Python package (`pyzed`). Opens a recorded
 intrinsics + stereo extrinsics for use with `stereo_rig_reconstruction.py`.
 
 Example:
-  python pyexamples/zed_svo_extract_stereo.py \\
+  python pyexamples/preprocess/zed_svo_extract_stereo.py \\
     --svo /data/capture.svo2 --out_dir /data/zed_frames --every 5
 
-  python pyexamples/stereo_rig_reconstruction.py \\
+  python pyexamples/stereo/stereo_rig_reconstruction.py \\
     --left_dir /data/zed_frames/left --right_dir /data/zed_frames/right \\
     --baseline $(python -c "import json; print(json.load(open('/data/zed_frames/rig_calibration.json'))['pytheia']['baseline'])") \\
     --focal $(python -c "import json; print(json.load(open('/data/zed_frames/rig_calibration.json'))['pytheia']['focal'])") \\
@@ -192,7 +192,7 @@ def _build_calibration(
             "left_position_in_rig": [-half_b, 0.0, 0.0],
             "right_position_in_rig": [half_b, 0.0, 0.0],
             "notes": (
-                "Use with pyexamples/stereo_rig_reconstruction.py. "
+                "Use with pyexamples/stereo/stereo_rig_reconstruction.py. "
                 "Rectified ZED images are effectively pinhole (distortion≈0). "
                 "Body frame at stereo mid-point; +X toward the right camera."
             ),
@@ -340,7 +340,7 @@ def main() -> int:
     print(f"Calibration: {calib_path}")
     print(
         "Suggested next step:\n"
-        f"  python pyexamples/stereo_rig_reconstruction.py \\\n"
+        f"  python pyexamples/stereo/stereo_rig_reconstruction.py \\\n"
         f"    --left_dir {left_dir} --right_dir {right_dir} \\\n"
         f"    --baseline {py['baseline']} --focal {py['focal']} \\\n"
         f"    --cx {py['cx']} --cy {py['cy']} \\\n"

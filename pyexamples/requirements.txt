@@ -1,7 +1,17 @@
-open3d
-opencv
+# Core extras used by several pyexamples scripts
+opencv-python
+numpy
+# Deep matching / MVS scripts
+torch
 kornia
 kornia-rs
-# Optional: ZED SVO extraction (pyexamples/zed_svo_extract_stereo.py)
-# Install Stereolabs ZED SDK + pyzed from https://www.stereolabs.com/docs/app-development/python/install
-# pyzed
+natsort
+tqdm
+PyYAML
+# Point-cloud viewer
+open3d
+# Stereo rig reconstruction uses vismatch (see examples/requirements.txt)
+# vismatch
+# Optional: ZED SVO extraction (pyexamples/preprocess/zed_svo_extract_stereo.py)
+# Install Stereolabs ZED SDK + pyzed:
+#   https://www.stereolabs.com/docs/app-development/python/install

@@ -134,7 +134,7 @@ Relative pose from a **3-point** minimal sample when correspondences carry a mon
 
 With **`use_lo=true`**, LO jointly refines pose (and scale / shifts / focals as applicable) via dense LM ([`refine_monodepth_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/refine_monodepth_relative_pose.h); signatures in [Pose — dense LM](pose.md#section-dense-lm-pose-refinement)). Minimal solvers: [Pose — monodepth 3-pt](pose.md#section-monodepth_relative_pose).
 
-Normally reached via `pytheia.sfm.EstimateTwoViewInfo(options)` with `options.use_monodepth = True` (see [RANSAC — monocular-depth-assisted two-view estimation](ransac.md)) rather than called directly; see `pyexamples/monodepth_two_view_estimation_example.py`. For many pairs, use `BulkEstimateTwoViewInfo(..., depth_i=..., depth_j=...)` and read the returned `scales` array (pyTheia **1.1.0+**).
+Normally reached via `pytheia.sfm.EstimateTwoViewInfo(options)` with `options.use_monodepth = True` (see [RANSAC — monocular-depth-assisted two-view estimation](ransac.md)) rather than called directly; see `pyexamples/twoview/monodepth_two_view_estimation_example.py`. For many pairs, use `BulkEstimateTwoViewInfo(..., depth_i=..., depth_j=...)` and read the returned `scales` array (pyTheia **1.1.0+**).
 
 ---
 

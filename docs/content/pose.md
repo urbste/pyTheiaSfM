@@ -808,7 +808,7 @@ The recovered `scale` is the relative scale between the two (possibly independen
     # result.rotation, result.position, result.scale
     ```
 
-The higher-level `pytheia.sfm.EstimateTwoViewInfo` entry point (see [RANSAC — monocular-depth-assisted two-view estimation](ransac.md)) dispatches to these automatically via `EstimateTwoViewInfoOptions.use_monodepth`, falling back to the standard 5-/8-point path when depth priors are missing; see `pyexamples/monodepth_two_view_estimation_example.py` for a full worked example. Batch equivalent: `BulkEstimateTwoViewInfo` with optional `depth_i` / `depth_j` and returned `scales` (1.1.0+).
+The higher-level `pytheia.sfm.EstimateTwoViewInfo` entry point (see [RANSAC — monocular-depth-assisted two-view estimation](ransac.md)) dispatches to these automatically via `EstimateTwoViewInfoOptions.use_monodepth`, falling back to the standard 5-/8-point path when depth priors are missing; see `pyexamples/twoview/monodepth_two_view_estimation_example.py` for a full worked example. Batch equivalent: `BulkEstimateTwoViewInfo` with optional `depth_i` / `depth_j` and returned `scales` (1.1.0+).
 
 ### Dense LM pose refinement (RANSAC LO) {#section-dense-lm-pose-refinement}
 
