@@ -445,6 +445,14 @@ def main() -> int:
     if args.out_reconstruction and summary.success:
         pt.io.WriteReconstruction(recon, args.out_reconstruction)
         print(f"Wrote {args.out_reconstruction}")
+        ply_path = os.path.splitext(args.out_reconstruction)[0] + ".ply"
+        pt.io.WriteRigPlyFile(
+            ply_path,
+            recon,
+            sensor_color=np.array([255, 0, 0], dtype=np.int32),
+            min_num_observations_per_point=2,
+        )
+        print(f"Wrote {ply_path} (tracks + capture trajectory + sensor baselines)")
     return 0 if summary.success else 2
 
 

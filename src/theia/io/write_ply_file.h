@@ -48,6 +48,29 @@ bool WritePlyFile(const std::string& ply_file,
                   const Eigen::Vector3i& camera_color,
                   const int min_num_observations_per_point);
 
+// Writes a PLY for calibrated multi-camera / stereo reconstructions:
+// estimated tracks, per-capture body centers, per-sensor camera centers, and
+// densely sampled polylines for (1) the capture trajectory over time and
+// (2) intra-capture sensor baselines. Compatible with MeshLab / Open3D point
+// cloud viewers (connections are vertices along the edges).
+//
+// Colors:
+//   sensor_color     — individual camera centers
+//   capture_color    — abstract body / RigCapture centers
+//   trajectory_color — samples along consecutive capture centers
+//   baseline_color   — samples linking sensors within one capture
+bool WriteRigPlyFile(const std::string& ply_file,
+                     const Reconstruction& reconstruction,
+                     const Eigen::Vector3i& sensor_color,
+                     const int min_num_observations_per_point,
+                     const Eigen::Vector3i& capture_color =
+                         Eigen::Vector3i(255, 220, 0),
+                     const Eigen::Vector3i& trajectory_color =
+                         Eigen::Vector3i(0, 220, 255),
+                     const Eigen::Vector3i& baseline_color =
+                         Eigen::Vector3i(255, 0, 180),
+                     const int edge_samples = 24);
+
 }  // namespace theia
 
 #endif  // THEIA_IO_WRITE_PLY_FILE_H_

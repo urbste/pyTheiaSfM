@@ -362,8 +362,8 @@ bool BuildCaptureViewGraph(const Reconstruction& reconstruction,
         }
       }
     }
-    VLOG(1) << "Metric capture edges estimated: " << num_metric << " / "
-            << pairs.size() << " candidate pairs.";
+    LOG(INFO) << "Metric capture edges estimated: " << num_metric << " / "
+              << pairs.size() << " candidate pairs.";
   }
 
   if (options.fallback_to_twoview_strip) {
@@ -381,8 +381,8 @@ bool BuildCaptureViewGraph(const Reconstruction& reconstruction,
                                        /*only_if_missing=*/false);
   }
 
-  VLOG(1) << "Built capture view graph with " << capture_view_graph->NumEdges()
-          << " edges (" << num_metric << " metric).";
+  LOG(INFO) << "Built capture view graph with " << capture_view_graph->NumEdges()
+            << " edges (" << num_metric << " metric).";
   return capture_view_graph->NumEdges() > 0;
 }
 

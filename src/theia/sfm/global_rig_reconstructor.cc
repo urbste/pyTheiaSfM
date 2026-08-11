@@ -60,13 +60,18 @@ ReconstructionEstimatorSummary GlobalRigReconstructor::Estimate(
   Timer timer;
   const ReconstructionEstimatorOptions& opt = options_.sfm_options;
 
+  LOG(INFO) << "Calibrating any uncalibrated cameras.";
+  timer.Reset();
   SetCameraIntrinsicsFromPriors(reconstruction_);
 
+  LOG(INFO) << "Building the capture view graph.";
+  timer.Reset();
   ViewGraph capture_graph;
   if (!BuildCaptureViewGraph(*reconstruction_,
                              *view_graph,
                              &capture_graph,
                              options_.capture_graph_options)) {
+    LOG(WARNING) << "Failed to build capture view graph from view matches.";
     summary.success = false;
     summary.message =
         "Failed to build capture view graph from view matches. Ensure Views "
@@ -75,25 +80,39 @@ ReconstructionEstimatorSummary GlobalRigReconstructor::Estimate(
     return summary;
   }
   capture_view_graph_ = &capture_graph;
+  LOG(INFO) << "Built capture view graph with "
+            << capture_view_graph_->NumEdges() << " edges.";
 
+  LOG(INFO) << "Filtering the initial capture view graph.";
   if (!FilterCaptureGraph()) {
+    LOG(INFO) << "Insufficient capture pairs to perform estimation.";
     summary.success = false;
     summary.message = "Capture graph too sparse after filtering.";
     summary.total_time = total_timer.ElapsedTimeInSeconds();
     return summary;
   }
+  LOG(INFO) << "Capture view graph has " << capture_view_graph_->NumEdges()
+            << " edges after filtering.";
 
+  LOG(INFO) << "Estimating the global rotations of all captures.";
   timer.Reset();
   if (!EstimateCaptureRotations()) {
+    LOG(WARNING) << "Rotation estimation failed!";
     summary.success = false;
     summary.message = "Capture rotation averaging failed.";
     summary.total_time = total_timer.ElapsedTimeInSeconds();
     return summary;
   }
   summary.pose_estimation_time += timer.ElapsedTimeInSeconds();
+  LOG(INFO) << orientations_.size()
+            << " capture rotations were estimated successfully.";
 
+  LOG(INFO) << "Filtering any bad rotation estimations.";
+  timer.Reset();
   FilterCaptureRotations();
+  summary.pose_estimation_time += timer.ElapsedTimeInSeconds();
 
+  LOG(INFO) << "Estimating the positions of all captures.";
   timer.Reset();
   bool positions_ok = false;
   if (opt.global_position_estimator_type ==
@@ -101,27 +120,36 @@ ReconstructionEstimatorSummary GlobalRigReconstructor::Estimate(
     positions_ok = EstimateCapturePositions();
   }
   if (!positions_ok) {
+    LOG(INFO) << "Capture-graph position estimator failed or was skipped; "
+                 "falling back to view-graph position estimation.";
     positions_ok = EstimateCapturePositionsFromViewGraph(view_graph);
   }
   summary.pose_estimation_time += timer.ElapsedTimeInSeconds();
   if (!positions_ok) {
+    LOG(WARNING) << "Position estimation failed!";
     summary.success = false;
     summary.message = "Capture position averaging failed.";
     summary.total_time = total_timer.ElapsedTimeInSeconds();
     return summary;
   }
+  LOG(INFO) << positions_.size()
+            << " capture positions were estimated successfully.";
 
   if (options_.rescale_positions_to_metric_edges) {
+    LOG(INFO) << "Rescaling capture positions to metric edge lengths.";
     RescaleCapturePositionsToMetricEdges();
   }
 
+  LOG(INFO) << "Setting capture poses and propagating to views.";
   SetCapturePosesAndPropagate();
 
   for (int i = 0; i < opt.num_retriangulation_iterations + 1; ++i) {
+    LOG(INFO) << "Triangulating all features.";
     timer.Reset();
     EstimateStructure();
     summary.triangulation_time += timer.ElapsedTimeInSeconds();
 
+    LOG(INFO) << "Performing bundle adjustment.";
     timer.Reset();
     BundleAdjustAndPropagate();
     summary.bundle_adjustment_time += timer.ElapsedTimeInSeconds();
@@ -265,7 +293,7 @@ void GlobalRigReconstructor::RescaleCapturePositionsToMetricEdges() {
   if (!std::isfinite(scale) || scale <= 0.0) {
     return;
   }
-  VLOG(1) << "Rescaling capture positions by metric edge factor " << scale;
+  LOG(INFO) << "Rescaling capture positions by metric edge factor " << scale;
   for (auto& pos : positions_) {
     pos.second *= scale;
   }

@@ -147,6 +147,11 @@ def WriteNerfStudio(*args, **kwargs):
     ...
 def WritePlyFile(*args, **kwargs):
     ...
+def WriteRigPlyFile(*args, **kwargs):
+    """
+    Write a PLY with tracks, capture centers, sensor centers, and sampled polylines for the rig trajectory and intra-capture baselines.
+    """
+    ...
 def WriteReconstruction(*args, **kwargs):
     """
     Write reconstruction to binary file. By default writes only estimated views and multi-view tracks (smaller file). Pass write_full_reconstruction=True to save the complete model.

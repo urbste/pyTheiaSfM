@@ -34,12 +34,15 @@
 
 #include "theia/io/write_ply_file.h"
 
+#include <algorithm>
 #include <fstream>  // NOLINT
 #include <glog/logging.h>
 #include <string>
 #include <vector>
 
 #include "theia/sfm/reconstruction.h"
+#include "theia/sfm/rig/rig_capture.h"
+#include "theia/sfm/view.h"
 
 namespace theia {
 
@@ -116,6 +119,149 @@ bool WritePlyFile(const std::string& ply_file,
              << "end_header" << std::endl;
 
   for (int i = 0; i < points_to_write.size(); i++) {
+    ply_writer << points_to_write[i].transpose() << " "
+               << colors_to_write[i].transpose() << "\n";
+  }
+
+  return true;
+}
+
+namespace {
+
+void AppendSegmentSamples(const Eigen::Vector3d& a,
+                          const Eigen::Vector3d& b,
+                          const Eigen::Vector3i& color,
+                          const int edge_samples,
+                          std::vector<Eigen::Vector3d>* points,
+                          std::vector<Eigen::Vector3i>* colors) {
+  const int samples = std::max(1, edge_samples);
+  for (int i = 0; i <= samples; ++i) {
+    const double t = static_cast<double>(i) / static_cast<double>(samples);
+    points->emplace_back((1.0 - t) * a + t * b);
+    colors->emplace_back(color);
+  }
+}
+
+}  // namespace
+
+bool WriteRigPlyFile(const std::string& ply_file,
+                     const Reconstruction& const_reconstruction,
+                     const Eigen::Vector3i& sensor_color,
+                     const int min_num_observations_per_point,
+                     const Eigen::Vector3i& capture_color,
+                     const Eigen::Vector3i& trajectory_color,
+                     const Eigen::Vector3i& baseline_color,
+                     const int edge_samples) {
+  CHECK_GT(ply_file.length(), 0);
+
+  std::ofstream ply_writer(ply_file, std::ofstream::out);
+  if (!ply_writer.is_open()) {
+    LOG(ERROR) << "Could not open the file: " << ply_file
+               << " for writing a PLY file.";
+    return false;
+  }
+
+  Reconstruction reconstruction = const_reconstruction;
+  const auto& track_ids = reconstruction.TrackIds();
+  for (const TrackId track_id : track_ids) {
+    const Track& track = *reconstruction.Track(track_id);
+    if (!track.IsEstimated() ||
+        track.NumViews() < min_num_observations_per_point) {
+      reconstruction.RemoveTrack(track_id);
+    }
+  }
+
+  std::vector<Eigen::Vector3d> points_to_write;
+  std::vector<Eigen::Vector3i> colors_to_write;
+  GatherTracks(reconstruction, &points_to_write, &colors_to_write);
+
+  // Estimated captures sorted by timestamp (stable trajectory order).
+  std::vector<CaptureId> capture_ids = reconstruction.CaptureIds();
+  std::sort(capture_ids.begin(),
+            capture_ids.end(),
+            [&](const CaptureId a, const CaptureId b) {
+              const RigCapture* ca = reconstruction.GetRigCapture(a);
+              const RigCapture* cb = reconstruction.GetRigCapture(b);
+              if (ca == nullptr || cb == nullptr) {
+                return a < b;
+              }
+              if (ca->GetTimestamp() == cb->GetTimestamp()) {
+                return a < b;
+              }
+              return ca->GetTimestamp() < cb->GetTimestamp();
+            });
+
+  std::vector<Eigen::Vector3d> capture_centers;
+  capture_centers.reserve(capture_ids.size());
+  std::vector<std::vector<Eigen::Vector3d>> sensors_per_capture;
+  sensors_per_capture.reserve(capture_ids.size());
+
+  for (const CaptureId capture_id : capture_ids) {
+    const RigCapture* capture = reconstruction.GetRigCapture(capture_id);
+    if (capture == nullptr || !capture->IsEstimated()) {
+      continue;
+    }
+
+    const Eigen::Vector3d body = capture->GetPosition();
+    capture_centers.push_back(body);
+    points_to_write.push_back(body);
+    colors_to_write.push_back(capture_color);
+
+    std::vector<Eigen::Vector3d> sensor_centers;
+    for (const ViewId view_id : capture->GetViewIds()) {
+      const View* view = reconstruction.View(view_id);
+      if (view == nullptr || !view->IsEstimated()) {
+        continue;
+      }
+      const Eigen::Vector3d cam_c = view->Camera().GetPosition();
+      sensor_centers.push_back(cam_c);
+      points_to_write.push_back(cam_c);
+      colors_to_write.push_back(sensor_color);
+    }
+    sensors_per_capture.push_back(sensor_centers);
+  }
+
+  // Trajectory polyline: consecutive capture body centers.
+  for (size_t i = 1; i < capture_centers.size(); ++i) {
+    AppendSegmentSamples(capture_centers[i - 1],
+                         capture_centers[i],
+                         trajectory_color,
+                         edge_samples,
+                         &points_to_write,
+                         &colors_to_write);
+  }
+
+  // Intra-capture baselines: connect every pair of sensors in a capture
+  // (stereo = one segment; multi-camera = full clique for visibility).
+  for (const auto& sensors : sensors_per_capture) {
+    for (size_t i = 0; i < sensors.size(); ++i) {
+      for (size_t j = i + 1; j < sensors.size(); ++j) {
+        AppendSegmentSamples(sensors[i],
+                             sensors[j],
+                             baseline_color,
+                             edge_samples,
+                             &points_to_write,
+                             &colors_to_write);
+      }
+    }
+  }
+
+  LOG(INFO) << "Writing rig PLY with " << points_to_write.size()
+            << " vertices (" << capture_centers.size()
+            << " captures).";
+
+  ply_writer << "ply" << '\n'
+             << "format ascii 1.0" << '\n'
+             << "element vertex " << points_to_write.size() << '\n'
+             << "property float x" << '\n'
+             << "property float y" << '\n'
+             << "property float z" << '\n'
+             << "property uchar red" << '\n'
+             << "property uchar green" << '\n'
+             << "property uchar blue" << '\n'
+             << "end_header" << std::endl;
+
+  for (size_t i = 0; i < points_to_write.size(); ++i) {
     ply_writer << points_to_write[i].transpose() << " "
                << colors_to_write[i].transpose() << "\n";
   }

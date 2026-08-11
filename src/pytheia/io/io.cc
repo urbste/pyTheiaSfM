@@ -120,6 +120,35 @@ void pytheia_io_classes(py::module& m) {
   m.def("WriteColmapFiles", theia::WriteColmapFiles);
   m.def("WriteNVMFile", theia::WriteNVMFile);
   m.def("WritePlyFile", theia::WritePlyFile);
+  m.def(
+      "WriteRigPlyFile",
+      [](const std::string& ply_file,
+         const theia::Reconstruction& reconstruction,
+         const Eigen::Vector3i& sensor_color,
+         int min_num_observations_per_point,
+         const Eigen::Vector3i& capture_color,
+         const Eigen::Vector3i& trajectory_color,
+         const Eigen::Vector3i& baseline_color,
+         int edge_samples) {
+        return theia::WriteRigPlyFile(ply_file,
+                                      reconstruction,
+                                      sensor_color,
+                                      min_num_observations_per_point,
+                                      capture_color,
+                                      trajectory_color,
+                                      baseline_color,
+                                      edge_samples);
+      },
+      py::arg("ply_file"),
+      py::arg("reconstruction"),
+      py::arg("sensor_color"),
+      py::arg("min_num_observations_per_point") = 2,
+      py::arg("capture_color") = Eigen::Vector3i(255, 220, 0),
+      py::arg("trajectory_color") = Eigen::Vector3i(0, 220, 255),
+      py::arg("baseline_color") = Eigen::Vector3i(255, 0, 180),
+      py::arg("edge_samples") = 24,
+      "Write a PLY with tracks, capture centers, sensor centers, and sampled "
+      "polylines for the rig trajectory and intra-capture baselines.");
   m.def("WriteNerfStudio", theia::WriteNerfStudio);
   m.def("WriteSdfStudio", theia::WriteSdfStudio);
 }

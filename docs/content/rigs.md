@@ -73,6 +73,8 @@ See [`pyexamples/stereo/stereo_rig_reconstruction.py`](https://github.com/urbste
 
 **ZED SVO:** [`pyexamples/preprocess/zed_svo_extract_stereo.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/preprocess/zed_svo_extract_stereo.py) opens a Stereolabs `.svo` / `.svo2` (needs `pyzed`), writes rectified `left/` / `right/` frames plus `rig_calibration.json` (intrinsics, baseline, mid-point body-frame sensor poses) for the reconstruction example above.
 
+**Visualization:** `pt.io.WriteRigPlyFile(...)` exports tracks plus capture trajectory and intra-capture sensor baselines (densely sampled polylines) for MeshLab / Open3D.
+
 ## See also
 
 - [SfM](sfm.md) — `Reconstruction`, Views, Tracks  
