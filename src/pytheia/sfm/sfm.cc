@@ -1637,17 +1637,51 @@ void pytheia_sfm_classes(py::module& m) {
       .def(py::init<theia::IncrementalRigReconstructorOptions>())
       .def("Estimate", &theia::IncrementalRigReconstructor::Estimate);
 
+  py::class_<theia::BuildCaptureViewGraphOptions>(
+      m, "BuildCaptureViewGraphOptions")
+      .def(py::init<>())
+      .def_readwrite(
+          "use_metric_relative_rig_pose",
+          &theia::BuildCaptureViewGraphOptions::use_metric_relative_rig_pose)
+      .def_readwrite(
+          "fallback_to_twoview_strip",
+          &theia::BuildCaptureViewGraphOptions::fallback_to_twoview_strip)
+      .def_readwrite(
+          "relative_rig_ransac",
+          &theia::BuildCaptureViewGraphOptions::relative_rig_ransac);
+
   py::class_<theia::GlobalRigReconstructorOptions>(
       m, "GlobalRigReconstructorOptions")
       .def(py::init<>())
       .def_readwrite("sfm_options",
-                     &theia::GlobalRigReconstructorOptions::sfm_options);
+                     &theia::GlobalRigReconstructorOptions::sfm_options)
+      .def_readwrite(
+          "capture_graph_options",
+          &theia::GlobalRigReconstructorOptions::capture_graph_options)
+      .def_readwrite(
+          "rescale_positions_to_metric_edges",
+          &theia::GlobalRigReconstructorOptions::
+              rescale_positions_to_metric_edges);
 
   py::class_<theia::GlobalRigReconstructor>(m, "GlobalRigReconstructor")
       .def(py::init<theia::GlobalRigReconstructorOptions>())
       .def("Estimate", &theia::GlobalRigReconstructor::Estimate);
 
-  m.def("BuildCaptureViewGraph", &theia::BuildCaptureViewGraph);
+  m.def("BuildCaptureViewGraph",
+        [](const theia::Reconstruction& reconstruction,
+           const theia::ViewGraph& view_graph,
+           theia::ViewGraph& capture_view_graph) {
+          return theia::BuildCaptureViewGraph(
+              reconstruction, view_graph, &capture_view_graph);
+        });
+  m.def("BuildCaptureViewGraph",
+        [](const theia::Reconstruction& reconstruction,
+           const theia::ViewGraph& view_graph,
+           theia::ViewGraph& capture_view_graph,
+           const theia::BuildCaptureViewGraphOptions& options) {
+          return theia::BuildCaptureViewGraph(
+              reconstruction, view_graph, &capture_view_graph, options);
+        });
 
   py::class_<theia::HybridReconstructionEstimator,
              theia::ReconstructionEstimator,

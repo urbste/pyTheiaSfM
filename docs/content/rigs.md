@@ -32,6 +32,21 @@ For capture–capture edges with a known baseline, prefer metric relative pose i
 
 Lift pixels with known `RigSensor` extrinsics into the abstract body frame, then estimate.
 
+**Degeneracy:** 5+1 cannot fix scale when relative translation is parallel to the offset used by the scale ray (typical failure: side-by-side stereo baseline along \(X\) with pure \(X\) motion). Forward motion (\(Z\)) with a lateral baseline is well-conditioned.
+
+**`BuildCaptureViewGraph`** (default): when tracks span two captures, lifts observations into the rig frame and runs **`EstimateRelativeRigInfo`** so capture edges are **metric**. Falls back to stripping View–View essentials only for pairs that cannot be estimated metrically. `GlobalRigReconstructor` then optionally **rescales** averaged positions to match those metric edge lengths (`rescale_positions_to_metric_edges`).
+
+```python
+opts = pt.sfm.BuildCaptureViewGraphOptions()
+opts.use_metric_relative_rig_pose = True
+opts.fallback_to_twoview_strip = True
+pt.sfm.BuildCaptureViewGraph(recon, view_graph, capture_graph, opts)
+
+gro = pt.sfm.GlobalRigReconstructorOptions()
+gro.capture_graph_options = opts
+gro.rescale_positions_to_metric_edges = True
+```
+
 ## Reconstructors
 
 ### `IncrementalRigReconstructor`
@@ -40,9 +55,9 @@ Seeds the first capture at identity, triangulates (intra-rig matches are metric)
 
 ### `GlobalRigReconstructor` (MGSfM-inspired)
 
-1. `BuildCaptureViewGraph` — strip known sensor extrinsics from View–View `TwoViewInfo` edges → capture–capture graph  
+1. `BuildCaptureViewGraph` — metric 5+1 from tracks when possible; optional strip of View–View essentials for missing pairs  
 2. **Rotation averaging** on captures — any `GlobalRotationEstimatorType` (`ROBUST_L1L2`, `NONLINEAR`, `LINEAR`, `LAGRANGE_DUAL`, `HYBRID`)  
-3. **Position averaging** — `LEAST_UNSQUARED_DEVIATION` on the capture graph, or other `GlobalPositionEstimatorType`s (`NONLINEAR`, `LINEAR_TRIPLET`, `LIGT`, `GLOMAP`) via the View graph after propagating orientations  
+3. **Position averaging** — `LEAST_UNSQUARED_DEVIATION` on the capture graph, or other `GlobalPositionEstimatorType`s (`NONLINEAR`, `LINEAR_TRIPLET`, `LIGT`, `GLOMAP`) via the View graph after propagating orientations; optional median rescale to metric edge lengths  
 4. Propagate → triangulate → BA (then re-snap Views to the calibrated rig)
 
 ```python

@@ -731,6 +731,8 @@ R\,(p_1 + \lambda_1 x_1) + t = p_2 + \lambda_2 x_2
 - **`FivePointOnePointGeneralizedRelativePose`** — first five correspondences share origins (central 5-pt essential); the sixth may use different origins (e.g. the other stereo sensor) to recover **metric** \(t\). Algorithm from PoseLib `gen_relpose_5p1pt`, implemented in-tree on Theia’s 5-pt solvers.
 - **`FourPointUprightGeneralizedRelativePose`** — thin wrapper around [`FourPointRelativePosePartialRotation`](#section-four-point-relative-pose-partial-rotation) (Sweeney QEP; PoseLib `gen_relpose_upright_4pt`).
 
+Scale is **degenerate** when \(t\) is parallel to the sensor offset used by the sixth ray (e.g. side-by-side stereo with pure lateral motion). Forward motion with a lateral baseline is the usual well-conditioned case.
+
 RANSAC: **`EstimateRelativeRigInfo`** / **`EstimateRelativeRigInfoUpright`** (see [Estimators](estimators.md#estimate-relative-rig-info), [Rigs](rigs.md)).
 
 **pyTheia:** `n, Rs, ts = pt.sfm.FivePointOnePointGeneralizedRelativePose(origins1, dirs1, origins2, dirs2)` with six rays; likewise `FourPointUprightGeneralizedRelativePose(gravity, ...)`.
