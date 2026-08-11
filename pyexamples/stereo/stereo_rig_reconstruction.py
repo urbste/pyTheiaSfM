@@ -326,11 +326,17 @@ def main() -> int:
     print(f"Added {n} stereo captures ({2 * n} views). Loading matcher={args.matcher}...")
     matcher = get_matcher(args.matcher, device=args.device)
 
-    def load_pair(path):
-        from vismatch import load_image
+    # vismatch exposes load_image on the matcher instance (not as a package export).
+    _img_cache: dict[str, tuple[object, tuple[int, int], tuple[int, int]]] = {}
 
-        tensor = load_image(path, resize=args.resize)
-        img = cv2.imread(path)
+    def load_pair(path: str):
+        ap = os.path.abspath(path)
+        if ap in _img_cache:
+            return _img_cache[ap]
+        tensor = matcher.load_image(ap, resize=args.resize)
+        img = cv2.imread(ap)
+        if img is None:
+            raise FileNotFoundError(f"Failed to read image: {ap}")
         h, w = img.shape[:2]
         if hasattr(tensor, "shape") and len(tensor.shape) >= 2:
             sh = tuple(int(x) for x in tensor.shape)
@@ -340,7 +346,9 @@ def main() -> int:
                 mh, mw = sh[0], sh[1]
         else:
             mh, mw = h, w
-        return tensor, (w, h), (mh, mw)
+        out = (tensor, (w, h), (mh, mw))
+        _img_cache[ap] = out
+        return out
 
     def match_and_add(path_a, path_b, view_a, view_b, label: str) -> bool:
         ta, full_a, matched_a = load_pair(path_a)
