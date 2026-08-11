@@ -319,23 +319,36 @@ Reprojection residual for a rigged view uses composed pose \(T_{w\leftarrow c} =
 
 **Do not overload** `RelativePoseConstraint` for calibrated rigs — keep that for odometry. Rigs use shared extrinsics parameters instead.
 
-### 4.5 Estimators / SfM pipeline (phased)
+**Rig frame choice:** the default is an **abstract body frame** whose pose is the trajectory sample. It is initialized to **identity** in the world for the first capture. Sensors are **not** required to include a camera at the body origin — each stores its calibrated pose in that abstract rig CS (stereo left/right both offset from body, or left coincidentally at identity if you choose).
 
-| Phase | Capability | Notes |
-|-------|------------|-------|
-| **P0 — Data model + Python** | Define rigs, captures, membership; sync View cameras from body pose; serialize | Unblocks building stereo datasets in pyTheia |
-| **P1 — Rig BA** | Optimize trajectory + optional extrinsics | Stereo trajectory refinement given initial poses |
-| **P2 — Rig localization** | Generalized PnP using all cameras in a capture (`CameraAndFeatureCorrespondence2D3D` already close) | Incremental registration of a stereo frame |
-| **P3 — Rig-aware ViewGraph / SfM** | Edges between *captures* (or keep View graph but seed/constrain with known stereo edges); incremental/global estimators place captures | Full stereo trajectory reconstruction |
+### 4.5.1 `IncrementalRigReconstructor` (v1 pipeline)
 
-For **stereo trajectory reconstruction** specifically, a practical P1–P2 workflow is already valuable:
+Prefer a dedicated incremental **rig** reconstructor over overloading `IncrementalReconstructionEstimator`:
 
-1. Calibrate (or load) stereo extrinsics into `CameraRig`.
-2. Match left–left, right–right, and optionally left–right across time.
-3. Initialize poses (e.g. treat left as monocular SfM, or use stereo depth for scale).
-4. Assign Views to captures; run **rig BA** so left/right stay consistent and the trajectory is metric.
+```text
+IncrementalRigReconstructor::Estimate(ViewGraph*, Reconstruction*)
+  1. SeedCapture:
+       - Pick earliest capture (by timestamp) with enough intra-rig tracks
+       - Set RigCapture pose = Identity (abstract body)
+       - PropagateViewCamerasFromCapture()
+       - Triangulate tracks observed by ≥2 estimated cameras in this capture
+         (intra-rig: known metric baseline → scale for free)
+  2. While unestimated captures remain:
+       - Pick next capture with enough 2D–3D correspondences to the map
+       - LocalizeCapture:
+           Prefer EstimateRigidTransformation2D3D with cameras posed in the
+           rig frame (all sensors) → T_world←rig
+           Fallback: LocalizeViewToReconstruction on one view, then
+           T_world←rig = T_world←cam ∘ T_rig←cam^{-1}
+       - PropagateViewCamerasFromCapture()
+       - Triangulate new tracks (intra-rig + temporal)
+       - Optional partial / full BundleAdjustReconstruction, then
+         re-propagate from optimized body (views stay consistent with rig)
+```
 
-P3 makes initialization first-class (capture-level pose graph).
+**Why incremental-first:** triangulation between cameras of the same capture is the easy, metric case; pose from capture \(t\) to \(t+1\) is then standard map localization (generalized absolute pose) rather than a fragile two-view + scale dance. A later `RigReconstructionBuilder` can wrap matching ingest + this reconstructor the way `ReconstructionBuilder` wraps the monocular estimators.
+
+**Triangulation:** reuse `TrackEstimator` / `Triangulate*` after camera poses are propagated — no separate “rig triangulation” type. Intra-rig matches simply become 2-view (or N-view) tracks whose cameras already have correct relative geometry.
 
 ### 4.6 Python API sketch (non-breaking)
 
@@ -426,12 +439,13 @@ A user can:
 
 | Question | Proposed default | Status |
 |----------|------------------|--------|
-| Body frame = which sensor? | Reference sensor (usually left) = identity offset; abstract body allowed | Open |
-| Extrinsics convention | \(T_{\text{rig}\leftarrow\text{cam}}\) in **rig CS** | **Agreed direction** |
+| Body frame = which sensor? | **Abstract body** at identity (sensors carry offsets into that CS) | **Locked** |
+| Extrinsics convention | Sensor pose in **rig CS**, same convention as `Camera` (center in rig + rig→camera rotation) | **Locked** |
 | Optimize extrinsics by default? | **No** (calibrated stereo); opt-in per sensor | Open |
-| Store body pose where? | `RigCapture` on `Reconstruction`, propagate to `View.Camera` | Open |
-| Features / matches | On **Views**; `ViewGraph` stays View–View; optional later `CaptureGraph` | **Agreed direction** |
-| Full SfM rewrite in first implementation? | **No** — P0+P1 first | Open |
+| Store body pose where? | `RigCapture` on `Reconstruction`, propagate to `View.Camera` | **Locked** |
+| Features / matches | On **Views**; `ViewGraph` stays View–View; optional later `CaptureGraph` | **Locked** |
+| Reconstructor | **`IncrementalRigReconstructor`** first (seed + localize capture-by-capture) | **Locked** |
+| Full SfM rewrite in first implementation? | **No** — data model + incremental rig reconstructor | Open |
 | Timestamp uniqueness | **One capture = one timestamp = one rig pose** | **Locked** |
 
 ---

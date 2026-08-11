@@ -107,9 +107,13 @@
 #include "theia/sfm/global_reconstruction_estimator.h"
 #include "theia/sfm/hybrid_reconstruction_estimator.h"
 #include "theia/sfm/incremental_reconstruction_estimator.h"
+#include "theia/sfm/incremental_rig_reconstructor.h"
 #include "theia/sfm/reconstruction_estimator.h"
 #include "theia/sfm/reconstruction_estimator_options.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
+#include "theia/sfm/rig/camera_rig.h"
+#include "theia/sfm/rig/rig_capture.h"
+#include "theia/sfm/rig/rig_utils.h"
 #include "theia/sfm/track_builder.h"
 
 #include "theia/sfm/rigid_transformation.h"
@@ -1570,6 +1574,36 @@ void pytheia_sfm_classes(py::module& m) {
       .def(py::init<theia::ReconstructionEstimatorOptions>())
       .def("Estimate", &theia::IncrementalReconstructionEstimator::Estimate);
 
+  py::class_<theia::IncrementalRigReconstructorOptions>(
+      m, "IncrementalRigReconstructorOptions")
+      .def(py::init<>())
+      .def_readwrite("min_num_abs_pose_features",
+                     &theia::IncrementalRigReconstructorOptions::
+                         min_num_abs_pose_features)
+      .def_readwrite("min_num_inliers_for_localization",
+                     &theia::IncrementalRigReconstructorOptions::
+                         min_num_inliers_for_localization)
+      .def_readwrite("max_reprojection_error_in_pixels",
+                     &theia::IncrementalRigReconstructorOptions::
+                         max_reprojection_error_in_pixels)
+      .def_readwrite("min_triangulation_angle_degrees",
+                     &theia::IncrementalRigReconstructorOptions::
+                         min_triangulation_angle_degrees)
+      .def_readwrite("bundle_adjust_after_localize",
+                     &theia::IncrementalRigReconstructorOptions::
+                         bundle_adjust_after_localize)
+      .def_readwrite("use_generalized_localization",
+                     &theia::IncrementalRigReconstructorOptions::
+                         use_generalized_localization)
+      .def_readwrite(
+          "ba_options",
+          &theia::IncrementalRigReconstructorOptions::ba_options);
+
+  py::class_<theia::IncrementalRigReconstructor>(
+      m, "IncrementalRigReconstructor")
+      .def(py::init<theia::IncrementalRigReconstructorOptions>())
+      .def("Estimate", &theia::IncrementalRigReconstructor::Estimate);
+
   py::class_<theia::HybridReconstructionEstimator,
              theia::ReconstructionEstimator,
              std::unique_ptr<theia::HybridReconstructionEstimator>>(
@@ -1826,9 +1860,110 @@ void pytheia_sfm_classes(py::module& m) {
            &theia::Reconstruction::GetViewsInCameraIntrinsicGroup)
       .def("InitializeInverseDepth",
            &theia::Reconstruction::InitializeInverseDepth)
+      .def("AddCameraRig", &theia::Reconstruction::AddCameraRig)
+      .def("GetCameraRig",
+           &theia::Reconstruction::GetCameraRig,
+           py::return_value_policy::reference_internal)
+      .def("MutableCameraRig",
+           &theia::Reconstruction::MutableCameraRig,
+           py::return_value_policy::reference_internal)
+      .def("RigIds", &theia::Reconstruction::RigIds)
+      .def("NumCameraRigs", &theia::Reconstruction::NumCameraRigs)
+      .def("AddCapture", &theia::Reconstruction::AddCapture)
+      .def("AddRigCapture", &theia::Reconstruction::AddRigCapture)
+      .def("SetViewRigMembership", &theia::Reconstruction::SetViewRigMembership)
+      .def("ViewHasRigMembership", &theia::Reconstruction::ViewHasRigMembership)
+      .def("GetViewRigMembership",
+           &theia::Reconstruction::GetViewRigMembership,
+           py::return_value_policy::reference_internal)
+      .def("GetRigCapture",
+           &theia::Reconstruction::GetRigCapture,
+           py::return_value_policy::reference_internal)
+      .def("MutableRigCapture",
+           &theia::Reconstruction::MutableRigCapture,
+           py::return_value_policy::reference_internal)
+      .def("CaptureIds", &theia::Reconstruction::CaptureIds)
+      .def("CaptureIdsForRig", &theia::Reconstruction::CaptureIdsForRig)
+      .def("CaptureIdFromRigAndTimestamp",
+           &theia::Reconstruction::CaptureIdFromRigAndTimestamp)
+      .def("NumCaptures", &theia::Reconstruction::NumCaptures)
       //.def("GetSubReconstruction",
       //&theia::Reconstruction::GetSubReconstructionWrapper)
       ;
+
+  py::class_<theia::RigSensor>(m, "RigSensor")
+      .def(py::init<>())
+      .def_readwrite("name", &theia::RigSensor::name)
+      .def_readwrite("position", &theia::RigSensor::position)
+      .def_readwrite("orientation", &theia::RigSensor::orientation)
+      .def_readwrite("optimize_extrinsics",
+                     &theia::RigSensor::optimize_extrinsics)
+      .def_readwrite("intrinsics_group_id",
+                     &theia::RigSensor::intrinsics_group_id)
+      .def("GetOrientationAsRotationMatrix",
+           &theia::RigSensor::GetOrientationAsRotationMatrix)
+      .def("SetOrientationFromRotationMatrix",
+           &theia::RigSensor::SetOrientationFromRotationMatrix)
+      .def("SetOrientationFromAngleAxis",
+           &theia::RigSensor::SetOrientationFromAngleAxis)
+      .def("SetPosition", &theia::RigSensor::SetPosition);
+
+  py::class_<theia::CameraRig>(m, "CameraRig")
+      .def(py::init<>())
+      .def(py::init<const std::string&>())
+      .def("Name", &theia::CameraRig::Name)
+      .def("SetName", &theia::CameraRig::SetName)
+      .def("AddSensor",
+           (theia::RigCameraId(theia::CameraRig::*)(
+               const std::string&,
+               const Eigen::Vector3d&,
+               const Eigen::Vector3d&)) &
+               theia::CameraRig::AddSensor)
+      .def("AddSensor",
+           (theia::RigCameraId(theia::CameraRig::*)(const theia::RigSensor&)) &
+               theia::CameraRig::AddSensor)
+      .def("HasSensor", &theia::CameraRig::HasSensor)
+      .def("GetSensor",
+           &theia::CameraRig::GetSensor,
+           py::return_value_policy::reference_internal)
+      .def("MutableSensor",
+           &theia::CameraRig::MutableSensor,
+           py::return_value_policy::reference_internal)
+      .def("SensorIds", &theia::CameraRig::SensorIds)
+      .def("NumSensors", &theia::CameraRig::NumSensors);
+
+  py::class_<theia::ViewRigMembership>(m, "ViewRigMembership")
+      .def(py::init<>())
+      .def_readwrite("rig_id", &theia::ViewRigMembership::rig_id)
+      .def_readwrite("rig_camera_id", &theia::ViewRigMembership::rig_camera_id)
+      .def_readwrite("capture_id", &theia::ViewRigMembership::capture_id);
+
+  py::class_<theia::RigCapture>(m, "RigCapture")
+      .def(py::init<>())
+      .def(py::init<theia::RigId, double>())
+      .def("GetRigId", &theia::RigCapture::GetRigId)
+      .def("GetTimestamp", &theia::RigCapture::GetTimestamp)
+      .def("SetTimestamp", &theia::RigCapture::SetTimestamp)
+      .def("SetEstimated", &theia::RigCapture::SetEstimated)
+      .def("IsEstimated", &theia::RigCapture::IsEstimated)
+      .def("SetPosition", &theia::RigCapture::SetPosition)
+      .def("GetPosition", &theia::RigCapture::GetPosition)
+      .def("SetOrientationFromRotationMatrix",
+           &theia::RigCapture::SetOrientationFromRotationMatrix)
+      .def("SetOrientationFromAngleAxis",
+           &theia::RigCapture::SetOrientationFromAngleAxis)
+      .def("GetOrientationAsRotationMatrix",
+           &theia::RigCapture::GetOrientationAsRotationMatrix)
+      .def("GetOrientationAsAngleAxis",
+           &theia::RigCapture::GetOrientationAsAngleAxis)
+      .def("ViewIdForCamera", &theia::RigCapture::ViewIdForCamera)
+      .def("GetViewIds", &theia::RigCapture::GetViewIds)
+      .def("NumViews", &theia::RigCapture::NumViews);
+
+  m.def("PropagateCameraPosesForCapture",
+        &theia::PropagateCameraPosesForCapture);
+  m.def("PropagateAllEstimatedCapturePoses",
+        &theia::PropagateAllEstimatedCapturePoses);
 
   // Reconstruction Estimator Helpers
   m.def("SetUnderconstrainedTracksToUnestimated",

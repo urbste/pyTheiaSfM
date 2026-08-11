@@ -39,7 +39,9 @@
 #include <cereal/cereal.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/unordered_map.hpp>
+#include <cereal/types/unordered_set.hpp>
 #include <stdint.h>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -47,6 +49,8 @@
 #include <vector>
 
 #include "theia/sfm/feature.h"
+#include "theia/sfm/rig/camera_rig.h"
+#include "theia/sfm/rig/rig_capture.h"
 #include "theia/sfm/track.h"
 #include "theia/sfm/types.h"
 #include "theia/sfm/view.h"
@@ -175,6 +179,42 @@ class Reconstruction {
   // Initialize inverse depth for all tracks
   void InitializeInverseDepth();
 
+  // ---------------------------- Camera rigs ---------------------------- //
+  // Adds a camera rig definition (abstract body + sensor extrinsics). The
+  // returned RigId is unique within this reconstruction.
+  RigId AddCameraRig(const CameraRig& camera_rig);
+  const CameraRig* GetCameraRig(const RigId rig_id) const;
+  CameraRig* MutableCameraRig(const RigId rig_id);
+  std::vector<RigId> RigIds() const;
+  int NumCameraRigs() const;
+
+  // Creates an empty capture (body pose + timestamp) for |rig_id|. Timestamps
+  // must be unique per rig. Member Views may share this timestamp.
+  CaptureId AddCapture(const RigId rig_id, const double timestamp);
+
+  // Creates a capture and Adds one View per entry in
+  // |rig_camera_id_to_view_name|. Intrinsics groups are taken from each
+  // RigSensor when set, otherwise a fresh group is allocated per sensor.
+  CaptureId AddRigCapture(
+      const RigId rig_id,
+      const double timestamp,
+      const std::map<RigCameraId, std::string>& rig_camera_id_to_view_name);
+
+  bool SetViewRigMembership(const ViewId view_id,
+                            const RigId rig_id,
+                            const RigCameraId rig_camera_id,
+                            const CaptureId capture_id);
+  bool ViewHasRigMembership(const ViewId view_id) const;
+  const ViewRigMembership* GetViewRigMembership(const ViewId view_id) const;
+
+  const RigCapture* GetRigCapture(const CaptureId capture_id) const;
+  RigCapture* MutableRigCapture(const CaptureId capture_id);
+  std::vector<CaptureId> CaptureIds() const;
+  std::vector<CaptureId> CaptureIdsForRig(const RigId rig_id) const;
+  CaptureId CaptureIdFromRigAndTimestamp(const RigId rig_id,
+                                         const double timestamp) const;
+  int NumCaptures() const;
+
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
@@ -189,11 +229,28 @@ class Reconstruction {
        tracks_,
        view_id_to_camera_intrinsics_group_id_,
        camera_intrinsics_groups_);
+    if (version >= 1) {
+      ar(next_rig_id_,
+         next_capture_id_,
+         camera_rigs_,
+         rig_captures_,
+         view_id_to_rig_membership_,
+         rig_timestamp_to_capture_id_);
+    }
   }
+
+  // Helper used by AddRigCapture: like AddView but allows a shared timestamp
+  // when the View will be attached to a RigCapture.
+  ViewId AddViewWithSharedTimestamp(const std::string& view_name,
+                                    const CameraIntrinsicsGroupId group_id,
+                                    const double timestamp,
+                                    const bool enforce_unique_timestamp);
 
   TrackId next_track_id_;
   ViewId next_view_id_;
   CameraIntrinsicsGroupId next_camera_intrinsics_group_id_;
+  RigId next_rig_id_ = 0;
+  CaptureId next_capture_id_ = 0;
 
   std::unordered_map<std::string, ViewId> view_name_to_id_;
   std::unordered_map<double, ViewId> view_timestamp_to_id_;
@@ -204,10 +261,17 @@ class Reconstruction {
       view_id_to_camera_intrinsics_group_id_;
   std::unordered_map<CameraIntrinsicsGroupId, std::unordered_set<ViewId> >
       camera_intrinsics_groups_;
+
+  aligned_unordered_map<RigId, CameraRig> camera_rigs_;
+  aligned_unordered_map<CaptureId, RigCapture> rig_captures_;
+  std::unordered_map<ViewId, ViewRigMembership> view_id_to_rig_membership_;
+  // Keyed as (rig_id, timestamp) via a string or pair hash — store nested map.
+  std::unordered_map<RigId, std::unordered_map<double, CaptureId>>
+      rig_timestamp_to_capture_id_;
 };
 
 }  // namespace theia
 
-CEREAL_CLASS_VERSION(theia::Reconstruction, 0);
+CEREAL_CLASS_VERSION(theia::Reconstruction, 1);
 
 #endif  // THEIA_SFM_RECONSTRUCTION_H_

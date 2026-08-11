@@ -144,6 +144,7 @@ set(THEIA_SRC
   sfm/gps_converter.cc
   sfm/hybrid_reconstruction_estimator.cc
   sfm/incremental_reconstruction_estimator.cc
+  sfm/incremental_rig_reconstructor.cc
   sfm/localize_view_to_reconstruction.cc
   sfm/pose/build_upnp_action_matrix.cc
   sfm/pose/build_upnp_action_matrix_using_symmetry.cc
@@ -185,6 +186,9 @@ set(THEIA_SRC
   sfm/reconstruction_estimator_utils.cc
   sfm/reconstruction_estimator.cc
   sfm/reconstruction.cc
+  sfm/rig/camera_rig.cc
+  sfm/rig/rig_capture.cc
+  sfm/rig/rig_utils.cc
   sfm/select_good_tracks_for_bundle_adjustment.cc
   sfm/set_camera_intrinsics_from_priors.cc
   sfm/compute_mean_reprojection_error.cc
@@ -348,6 +352,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/estimators/estimate_homography)
   gtest(sfm/estimators/estimate_monodepth_relative_pose)
   gtest(sfm/estimators/estimate_relative_pose)
+  gtest(sfm/rig/rig_utils)
 #  gtest(sfm/estimators/estimate_relative_pose_with_known_orientation)
 #  gtest(sfm/estimators/estimate_rigid_transformation_2d_3d)
 #  gtest(sfm/estimators/estimate_similarity_transformation_2d_3d)
