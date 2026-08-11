@@ -1,6 +1,6 @@
 # Camera rigs (stereo / multi-camera) {#documentation-rigs}
 
-pyTheia supports **calibrated multi-camera / stereo rigs** as an additive layer on the usual `View` / `Track` / `ViewGraph` model.
+**Since pyTheia 1.2.0.** Calibrated multi-camera / stereo rigs as an additive layer on the usual `View` / `Track` / `ViewGraph` model.
 
 ## Concepts
 
