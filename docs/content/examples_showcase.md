@@ -5,6 +5,7 @@ The repository ships two levels of Python examples: **lightweight** scripts unde
 ## `pyexamples/` (fewer dependencies)
 
 - Classic **OpenCV** features (SIFT / AKAZE) and **BFMatcher**, wired to **pyTheia** two-view estimation and **incremental / global / hybrid** reconstruction (e.g. fountain scene scripts).
+- **Stereo / calibrated rig** — [`pyexamples/stereo_rig_reconstruction.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/stereo_rig_reconstruction.py) sets baseline + intrinsics, matches with **vismatch** (`edm` default), runs `GlobalRigReconstructor` or `IncrementalRigReconstructor` (see [Rigs](rigs.md)).
 - Utilities: **NeRFStudio** / **SDFStudio** export, **MVS** / **Open3D** stubs, video frame extraction.
 - Typical extras: `opencv-python`, `kornia` (see [`pyexamples/requirements.txt`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/requirements.txt)).
 

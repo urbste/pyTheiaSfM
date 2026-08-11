@@ -12,6 +12,7 @@ The chapters below document the underlying **C++** Theia library (classes, funct
 - [SfM](sfm.md) — reconstruction, pipelines, core data structures  
 - [Triangulation](triangulation.md) — multi-view point estimation and robust triangulation  
 - [View graph](view_graph.md) — image pairs, `TwoViewInfo`, graph utilities  
+- [Rigs](rigs.md) — stereo / multi-camera `CameraRig`, captures, incremental & global reconstructors  
 - [Matching](matching.md) — correspondences, match database, `FeatureMatcherOptions` (`src/pytheia/matching`)  
 - [MVS](mvs.md) — view selection for MVSNet-style pipelines (`pytheia.mvs`)  
 - [Bundle adjustment](bundle_adjustment.md) — Ceres-based joint refinement  

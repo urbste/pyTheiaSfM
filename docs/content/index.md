@@ -13,6 +13,7 @@ pyTheia provides extensive Python wrappers for Theia and actually extends the or
 -   Added some features to BA (e.g. pose or depth priors, covariance for points and cameras, homogeneous tangent, **relative pose edges** including scale-invariant odometry for cross-run alignment)
 -   Added **cross-reconstruction Sim(3) alignment** (pose graph + shared types); see [Cross-run alignment](cross_run_alignment.md)
 -   Added covariance estimation to BA
+-   Added calibrated **multi-camera / stereo rigs** (`CameraRig`, `RigCapture`, incremental + global reconstructors); see [Rigs](rigs.md) (pyTheia **1.2.0+**)
 
 The goal of this library is still the same: provide researchers and engineers with an out of the box tool for multi-view reconstruction that can be easily extended. Adding the Python wrappers just makes prototyping new applications that require geometric vision or SfM capabilities quicker.
 

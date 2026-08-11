@@ -4,7 +4,25 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
-## 1.1.0 (current) {#release-1-1-0}
+## 1.2.0 (current) {#release-1-2-0}
+
+Calibrated multi-camera / stereo **rig** support: abstract body frame, synchronized captures, incremental and global reconstructors, docs, and a vismatch stereo example.
+
+### Camera rigs
+
+- **`CameraRig` / `RigSensor` / `RigCapture`** on `Reconstruction` — one capture = one timestamp = one body pose; Views keep features/matches; sensor extrinsics live in the abstract rig CS (default body at identity).
+- **`PropagateCameraPosesForCapture`** / **`BuildCaptureViewGraph`** — compose View cameras from body ⊕ calibrated sensors; derive capture–capture edges from View–View `TwoViewInfo`.
+- **`IncrementalRigReconstructor`** — seed at identity, triangulate (intra-rig metric), localize later captures (generalized 2D–3D / single-view fallback).
+- **`GlobalRigReconstructor`** (MGSfM-inspired) — capture graph + selectable Theia averaging backends (`GlobalRotationEstimatorType` / `GlobalPositionEstimatorType` via `sfm_options`). Extrinsics assumed **calibrated** (not optimized in averaging).
+- Docs: [Rigs](rigs.md). Example: `pyexamples/stereo_rig_reconstruction.py` (baseline / intrinsics, vismatch `edm`, global or incremental).
+
+### Tests
+
+- `pytests/test_camera_rig.py`, `pytests/test_global_rig_reconstructor.py`.
+
+---
+
+## 1.1.0 {#release-1-1-0}
 
 Bulk calibrated two-view estimation now carries monodepth depth priors and returns relative depth-map scale.
 
@@ -62,6 +80,7 @@ Stable Python packaging line with MkDocs documentation, cross-run alignment APIs
 - **Wheels:** manylinux builds for Python 3.8–3.13 via Docker (`urbste/pytheia_base`).
 - **1.0.9:** Sturm 5-pt + monodepth 3-pt solvers; dense LM RANSAC LO for relative / monodepth / calibrated absolute pose — see [1.0.9 notes](#release-1-0-9).
 - **1.1.0:** `BulkEstimateTwoViewInfo` depth priors + `scales` — see [1.1.0 notes](#release-1-1-0).
+- **1.2.0:** Calibrated stereo / multi-camera rigs (`CameraRig`, incremental + global reconstructors) — see [1.2.0 notes](#release-1-2-0).
 
 ### Known limitations
 

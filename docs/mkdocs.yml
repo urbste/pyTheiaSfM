@@ -65,6 +65,7 @@ nav:
       - SfM: sfm.md
       - Triangulation: triangulation.md
       - View graph: view_graph.md
+      - Rigs: rigs.md
       - Matching: matching.md
       - MVS: mvs.md
       - Bundle adjustment: bundle_adjustment.md

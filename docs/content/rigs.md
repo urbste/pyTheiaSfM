@@ -1,0 +1,54 @@
+# Camera rigs (stereo / multi-camera) {#documentation-rigs}
+
+**Since pyTheia 1.2.0.** Calibrated multi-camera / stereo rigs as an additive layer on the usual `View` / `Track` / `ViewGraph` model.
+
+## Concepts
+
+| Type | Meaning |
+|------|---------|
+| **`CameraRig`** | Abstract **body** frame + per-sensor extrinsics (`RigSensor`) in that frame |
+| **`RigCapture`** | One synchronized sample: **one timestamp = one body pose** |
+| **`View`** | Still one image; features and matches stay on Views |
+| Membership | Each View may belong to `(rig_id, rig_camera_id, capture_id)` |
+
+Pose composition (Camera convention):
+
+\[
+R_{w\leftarrow c} = R_{\text{rig}\leftarrow c}\, R_{w\leftarrow\text{rig}},\quad
+c_c = c_{\text{rig}} + R_{w\leftarrow\text{rig}}^{\top} c_{\text{sensor}}
+\]
+
+`PropagateCameraPosesForCapture` writes composed extrinsics into each member `View.Camera`.
+
+**Calibrated by default:** averaging and the v1 reconstructors do **not** optimize inter-camera extrinsics. Set sensor poses (e.g. stereo baseline) when defining the `CameraRig`.
+
+## Reconstructors
+
+### `IncrementalRigReconstructor`
+
+Seeds the first capture at identity, triangulates (intra-rig matches are metric), then localizes later captures (generalized 2D–3D / single-view fallback).
+
+### `GlobalRigReconstructor` (MGSfM-inspired)
+
+1. `BuildCaptureViewGraph` — strip known sensor extrinsics from View–View `TwoViewInfo` edges → capture–capture graph  
+2. **Rotation averaging** on captures — any `GlobalRotationEstimatorType` (`ROBUST_L1L2`, `NONLINEAR`, `LINEAR`, `LAGRANGE_DUAL`, `HYBRID`)  
+3. **Position averaging** — `LEAST_UNSQUARED_DEVIATION` on the capture graph, or other `GlobalPositionEstimatorType`s (`NONLINEAR`, `LINEAR_TRIPLET`, `LIGT`, `GLOMAP`) via the View graph after propagating orientations  
+4. Propagate → triangulate → BA (then re-snap Views to the calibrated rig)
+
+```python
+opts = pt.sfm.GlobalRigReconstructorOptions()
+opts.sfm_options.global_rotation_estimator_type = pt.sfm.GlobalRotationEstimatorType.ROBUST_L1L2
+opts.sfm_options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.LEAST_UNSQUARED_DEVIATION
+summary = pt.sfm.GlobalRigReconstructor(opts).Estimate(view_graph, reconstruction)
+```
+
+## Example
+
+See [`pyexamples/stereo_rig_reconstruction.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/stereo_rig_reconstruction.py): set focal / principal point / baseline, match with **vismatch** (`edm` by default), run global or incremental rig SfM.
+
+## See also
+
+- [SfM](sfm.md) — `Reconstruction`, Views, Tracks  
+- [View graph](view_graph.md) — pairwise matches  
+- [Global pose estimation](global_pose_estimation.md) — averaging backends  
+- [Matching](matching.md) / [vismatch + SfM](examples_vismatch_sfm.md)

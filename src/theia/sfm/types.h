@@ -48,6 +48,9 @@ namespace theia {
 typedef uint32_t ViewId;
 typedef uint32_t TrackId;
 typedef uint32_t CameraIntrinsicsGroupId;
+typedef uint32_t RigId;
+typedef uint32_t RigCameraId;
+typedef uint32_t CaptureId;
 typedef std::pair<ViewId, ViewId> ViewIdPair;
 typedef std::tuple<ViewId, ViewId, ViewId> ViewIdTriplet;
 
@@ -55,6 +58,11 @@ static const ViewId kInvalidViewId = std::numeric_limits<ViewId>::max();
 static const TrackId kInvalidTrackId = std::numeric_limits<TrackId>::max();
 static const CameraIntrinsicsGroupId kInvalidCameraIntrinsicsGroupId =
     std::numeric_limits<CameraIntrinsicsGroupId>::max();
+static const RigId kInvalidRigId = std::numeric_limits<RigId>::max();
+static const RigCameraId kInvalidRigCameraId =
+    std::numeric_limits<RigCameraId>::max();
+static const CaptureId kInvalidCaptureId =
+    std::numeric_limits<CaptureId>::max();
 
 // Used as the projection matrix type.
 typedef Eigen::Matrix<double, 3, 4> Matrix3x4d;

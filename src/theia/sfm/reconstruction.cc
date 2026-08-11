@@ -105,13 +105,23 @@ ViewId Reconstruction::AddView(const std::string& view_name,
 ViewId Reconstruction::AddView(const std::string& view_name,
                                const CameraIntrinsicsGroupId group_id,
                                const double timestamp) {
+  return AddViewWithSharedTimestamp(
+      view_name, group_id, timestamp, /*enforce_unique_timestamp=*/true);
+}
+
+ViewId Reconstruction::AddViewWithSharedTimestamp(
+    const std::string& view_name,
+    const CameraIntrinsicsGroupId group_id,
+    const double timestamp,
+    const bool enforce_unique_timestamp) {
   if (ContainsKey(view_name_to_id_, view_name)) {
     LOG(WARNING) << "Could not add view with the name " << view_name
                  << " because that name already exists in the reconstruction.";
     return kInvalidViewId;
   }
 
-  if (ContainsKey(view_timestamp_to_id_, timestamp)) {
+  if (enforce_unique_timestamp &&
+      ContainsKey(view_timestamp_to_id_, timestamp)) {
     LOG(WARNING)
         << "Could not add view with the timestamp " << timestamp
         << " because that timestamp already exists in the reconstruction.";
@@ -143,7 +153,10 @@ ViewId Reconstruction::AddView(const std::string& view_name,
   // Add the view to the reconstruction.
   views_.emplace(next_view_id_, new_view);
   view_name_to_id_.emplace(view_name, next_view_id_);
-  view_timestamp_to_id_.emplace(timestamp, next_view_id_);
+  // Only the first view at a given timestamp is indexed for monocular lookup.
+  if (!ContainsKey(view_timestamp_to_id_, timestamp)) {
+    view_timestamp_to_id_.emplace(timestamp, next_view_id_);
+  }
   // Add this view to the camera intrinsics group, and vice versa.
   view_id_to_camera_intrinsics_group_id_.emplace(next_view_id_, group_id);
   camera_intrinsics_groups_[group_id].emplace(next_view_id_);
@@ -601,6 +614,178 @@ void Reconstruction::InitializeInverseDepth() {
       ref_cam.PixelToNormalizedCoordinates(reference_obs->point_)); 
     track->SetInverseDepth(1/depth);
   }
+}
+
+RigId Reconstruction::AddCameraRig(const CameraRig& camera_rig) {
+  const RigId rig_id = next_rig_id_++;
+  camera_rigs_[rig_id] = camera_rig;
+  return rig_id;
+}
+
+const CameraRig* Reconstruction::GetCameraRig(const RigId rig_id) const {
+  return FindOrNull(camera_rigs_, rig_id);
+}
+
+CameraRig* Reconstruction::MutableCameraRig(const RigId rig_id) {
+  return FindOrNull(camera_rigs_, rig_id);
+}
+
+std::vector<RigId> Reconstruction::RigIds() const {
+  std::vector<RigId> ids;
+  ids.reserve(camera_rigs_.size());
+  for (const auto& entry : camera_rigs_) {
+    ids.push_back(entry.first);
+  }
+  return ids;
+}
+
+int Reconstruction::NumCameraRigs() const {
+  return static_cast<int>(camera_rigs_.size());
+}
+
+CaptureId Reconstruction::AddCapture(const RigId rig_id,
+                                     const double timestamp) {
+  if (!ContainsKey(camera_rigs_, rig_id)) {
+    LOG(WARNING) << "Could not add capture because rig " << rig_id
+                 << " does not exist.";
+    return kInvalidCaptureId;
+  }
+  if (ContainsKey(rig_timestamp_to_capture_id_[rig_id], timestamp)) {
+    LOG(WARNING) << "Could not add capture because timestamp " << timestamp
+                 << " already exists for rig " << rig_id;
+    return kInvalidCaptureId;
+  }
+
+  const CaptureId capture_id = next_capture_id_++;
+  rig_captures_.emplace(capture_id, RigCapture(rig_id, timestamp));
+  rig_timestamp_to_capture_id_[rig_id][timestamp] = capture_id;
+  return capture_id;
+}
+
+CaptureId Reconstruction::AddRigCapture(
+    const RigId rig_id,
+    const double timestamp,
+    const std::map<RigCameraId, std::string>& rig_camera_id_to_view_name) {
+  if (GetCameraRig(rig_id) == nullptr) {
+    LOG(WARNING) << "Could not add rig capture because rig " << rig_id
+                 << " does not exist.";
+    return kInvalidCaptureId;
+  }
+  if (rig_camera_id_to_view_name.empty()) {
+    LOG(WARNING) << "AddRigCapture requires at least one view name.";
+    return kInvalidCaptureId;
+  }
+
+  const CaptureId capture_id = AddCapture(rig_id, timestamp);
+  if (capture_id == kInvalidCaptureId) {
+    return kInvalidCaptureId;
+  }
+
+  CameraRig* rig = MutableCameraRig(rig_id);
+  for (const auto& sensor_and_name : rig_camera_id_to_view_name) {
+    const RigCameraId rig_camera_id = sensor_and_name.first;
+    const std::string& view_name = sensor_and_name.second;
+    RigSensor* sensor = rig->MutableSensor(rig_camera_id);
+    if (sensor == nullptr) {
+      LOG(WARNING) << "Rig " << rig_id << " has no sensor " << rig_camera_id;
+      continue;
+    }
+
+    CameraIntrinsicsGroupId group_id = sensor->intrinsics_group_id;
+    if (group_id == kInvalidCameraIntrinsicsGroupId) {
+      group_id = next_camera_intrinsics_group_id_++;
+      sensor->intrinsics_group_id = group_id;
+    }
+
+    const ViewId view_id = AddViewWithSharedTimestamp(
+        view_name, group_id, timestamp, /*enforce_unique_timestamp=*/false);
+    if (view_id == kInvalidViewId) {
+      LOG(WARNING) << "Failed to add view " << view_name
+                   << " for rig capture.";
+      continue;
+    }
+    SetViewRigMembership(view_id, rig_id, rig_camera_id, capture_id);
+  }
+  return capture_id;
+}
+
+bool Reconstruction::SetViewRigMembership(const ViewId view_id,
+                                          const RigId rig_id,
+                                          const RigCameraId rig_camera_id,
+                                          const CaptureId capture_id) {
+  if (!ContainsKey(views_, view_id)) {
+    return false;
+  }
+  RigCapture* capture = MutableRigCapture(capture_id);
+  const CameraRig* rig = GetCameraRig(rig_id);
+  if (capture == nullptr || rig == nullptr || !rig->HasSensor(rig_camera_id)) {
+    return false;
+  }
+  if (capture->GetRigId() != rig_id) {
+    return false;
+  }
+  if (!capture->AddView(rig_camera_id, view_id) &&
+      capture->ViewIdForCamera(rig_camera_id) != view_id) {
+    return false;
+  }
+
+  ViewRigMembership membership;
+  membership.rig_id = rig_id;
+  membership.rig_camera_id = rig_camera_id;
+  membership.capture_id = capture_id;
+  view_id_to_rig_membership_[view_id] = membership;
+  return true;
+}
+
+bool Reconstruction::ViewHasRigMembership(const ViewId view_id) const {
+  return ContainsKey(view_id_to_rig_membership_, view_id);
+}
+
+const ViewRigMembership* Reconstruction::GetViewRigMembership(
+    const ViewId view_id) const {
+  return FindOrNull(view_id_to_rig_membership_, view_id);
+}
+
+const RigCapture* Reconstruction::GetRigCapture(
+    const CaptureId capture_id) const {
+  return FindOrNull(rig_captures_, capture_id);
+}
+
+RigCapture* Reconstruction::MutableRigCapture(const CaptureId capture_id) {
+  return FindOrNull(rig_captures_, capture_id);
+}
+
+std::vector<CaptureId> Reconstruction::CaptureIds() const {
+  std::vector<CaptureId> ids;
+  ids.reserve(rig_captures_.size());
+  for (const auto& entry : rig_captures_) {
+    ids.push_back(entry.first);
+  }
+  return ids;
+}
+
+std::vector<CaptureId> Reconstruction::CaptureIdsForRig(
+    const RigId rig_id) const {
+  std::vector<CaptureId> ids;
+  for (const auto& entry : rig_captures_) {
+    if (entry.second.GetRigId() == rig_id) {
+      ids.push_back(entry.first);
+    }
+  }
+  return ids;
+}
+
+CaptureId Reconstruction::CaptureIdFromRigAndTimestamp(
+    const RigId rig_id, const double timestamp) const {
+  const auto* timestamp_map = FindOrNull(rig_timestamp_to_capture_id_, rig_id);
+  if (timestamp_map == nullptr) {
+    return kInvalidCaptureId;
+  }
+  return FindWithDefault(*timestamp_map, timestamp, kInvalidCaptureId);
+}
+
+int Reconstruction::NumCaptures() const {
+  return static_cast<int>(rig_captures_.size());
 }
 
 }  // namespace theia
