@@ -444,7 +444,8 @@ A user can:
 | Optimize extrinsics by default? | **No** (calibrated stereo); opt-in per sensor | Open |
 | Store body pose where? | `RigCapture` on `Reconstruction`, propagate to `View.Camera` | **Locked** |
 | Features / matches | On **Views**; `ViewGraph` stays View–View; optional later `CaptureGraph` | **Locked** |
-| Reconstructor | **`IncrementalRigReconstructor`** first (seed + localize capture-by-capture) | **Locked** |
+| Extrinsic optimization during averaging? | **No** — calibrated rigs only for now | **Locked** |
+| Global reconstructor | **`GlobalRigReconstructor`** (MGSfM-inspired; Theia averaging backends selectable) | **Locked** |
 | Full SfM rewrite in first implementation? | **No** — data model + incremental rig reconstructor | Open |
 | Timestamp uniqueness | **One capture = one timestamp = one rig pose** | **Locked** |
 

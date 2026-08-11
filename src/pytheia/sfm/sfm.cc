@@ -108,12 +108,14 @@
 #include "theia/sfm/hybrid_reconstruction_estimator.h"
 #include "theia/sfm/incremental_reconstruction_estimator.h"
 #include "theia/sfm/incremental_rig_reconstructor.h"
+#include "theia/sfm/global_rig_reconstructor.h"
 #include "theia/sfm/reconstruction_estimator.h"
 #include "theia/sfm/reconstruction_estimator_options.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/rig/camera_rig.h"
 #include "theia/sfm/rig/rig_capture.h"
 #include "theia/sfm/rig/rig_utils.h"
+#include "theia/sfm/rig/capture_view_graph.h"
 #include "theia/sfm/track_builder.h"
 
 #include "theia/sfm/rigid_transformation.h"
@@ -1603,6 +1605,18 @@ void pytheia_sfm_classes(py::module& m) {
       m, "IncrementalRigReconstructor")
       .def(py::init<theia::IncrementalRigReconstructorOptions>())
       .def("Estimate", &theia::IncrementalRigReconstructor::Estimate);
+
+  py::class_<theia::GlobalRigReconstructorOptions>(
+      m, "GlobalRigReconstructorOptions")
+      .def(py::init<>())
+      .def_readwrite("sfm_options",
+                     &theia::GlobalRigReconstructorOptions::sfm_options);
+
+  py::class_<theia::GlobalRigReconstructor>(m, "GlobalRigReconstructor")
+      .def(py::init<theia::GlobalRigReconstructorOptions>())
+      .def("Estimate", &theia::GlobalRigReconstructor::Estimate);
+
+  m.def("BuildCaptureViewGraph", &theia::BuildCaptureViewGraph);
 
   py::class_<theia::HybridReconstructionEstimator,
              theia::ReconstructionEstimator,
