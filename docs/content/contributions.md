@@ -29,7 +29,9 @@ Use tab titles and a **four-space indent** for the body under each tab (same pat
 === "C++"
 
     ```cpp
-    theia::sfm::Reconstruction reconstruction;
+    #include "theia/sfm/reconstruction.h"
+
+    theia::Reconstruction reconstruction;
     ```
 
 The theme is configured with `content.tabs.link`, so when several tab groups on a page use the same labels (e.g. **Python** / **C++**), the selected tab stays in sync while navigating that page.
