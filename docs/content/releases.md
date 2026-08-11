@@ -4,7 +4,27 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
-## 1.2.0 (current) {#release-1-2-0}
+## 1.2.1 (current) {#release-1-2-1}
+
+Rig pipeline hardening on top of 1.2.0: metric capture–capture relative pose, clearer global-rig logging, rig PLY export, and example cleanup.
+
+### Metric relative rig pose
+
+- In-tree **5+1 generalized relative pose** (`FivePointOnePointGeneralizedRelativePose`) and upright 4-pt wrapper; RANSAC via **`EstimateRelativeRigInfo`** / **`EstimateRelativeRigInfoUpright`**.
+- **`BuildCaptureViewGraph`** defaults to metric edges from tracks (lift rays → 5+1); View–View strip is fallback only for missing pairs.
+- **`GlobalRigReconstructor`**: `capture_graph_options`, optional **`rescale_positions_to_metric_edges`**, and **INFO** logging for capture-graph / rotation / position / triangulation stages (same style as monocular global SfM).
+
+### I/O and examples
+
+- **`WriteRigPlyFile`** — tracks + capture trajectory + intra-capture sensor baselines (densely sampled polylines for MeshLab / Open3D).
+- Reorganized **`pyexamples/`** (`preprocess/`, `stereo/`, `sfm/`, …); ZED SVO extract (`zed_svo_extract_stereo.py`); stereo example `--frames_dir` + `matcher.load_image` fix.
+- Fixes: Sim3 alignment setters API, deep-matching None deref, LoFTR confidence filtering, Open3D PLY viewer stub.
+
+Docs: [Rigs](rigs.md), [Pose — generalized relative](pose.md#section-generalized-relative-pose), [IO](io.md), [Examples showcase](examples_showcase.md).
+
+---
+
+## 1.2.0 {#release-1-2-0}
 
 Calibrated multi-camera / stereo **rig** support: abstract body frame, synchronized captures, incremental and global reconstructors, docs, and a vismatch stereo example.
 
@@ -81,6 +101,7 @@ Stable Python packaging line with MkDocs documentation, cross-run alignment APIs
 - **1.0.9:** Sturm 5-pt + monodepth 3-pt solvers; dense LM RANSAC LO for relative / monodepth / calibrated absolute pose — see [1.0.9 notes](#release-1-0-9).
 - **1.1.0:** `BulkEstimateTwoViewInfo` depth priors + `scales` — see [1.1.0 notes](#release-1-1-0).
 - **1.2.0:** Calibrated stereo / multi-camera rigs (`CameraRig`, incremental + global reconstructors) — see [1.2.0 notes](#release-1-2-0).
+- **1.2.1:** Metric 5+1 capture edges, `WriteRigPlyFile`, example / logging fixes — see [1.2.1 notes](#release-1-2-1).
 
 ### Known limitations
 
