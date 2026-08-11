@@ -63,7 +63,18 @@ def _parse_args() -> argparse.Namespace:
         help="vismatch get_matcher name (default: edm)",
     )
     p.add_argument("--device", type=str, default="cuda")
-    p.add_argument("--resize", type=int, default=784)
+    p.add_argument(
+        "--resize",
+        type=int,
+        default=512,
+        help="vismatch load_image longest-side resize (smaller → fewer matches)",
+    )
+    p.add_argument(
+        "--match_thresh",
+        type=float,
+        default=0.5,
+        help="Matcher confidence threshold (EDM MCONF_THR; higher → fewer matches)",
+    )
     p.add_argument("--min_matches", type=int, default=40)
     p.add_argument(
         "--temporal_window", type=int, default=2, help="Match ±N frames same camera"
@@ -323,20 +334,18 @@ def main() -> int:
             cam = view.MutableCamera()
             cam.SetFromCameraIntrinsicsPriors(prior)
 
-    print(f"Added {n} stereo captures ({2 * n} views). Loading matcher={args.matcher}...")
-    matcher = get_matcher(args.matcher, device=args.device)
+    print(
+        f"Added {n} stereo captures ({2 * n} views). "
+        f"Loading matcher={args.matcher} resize={args.resize} thresh={args.match_thresh}..."
+    )
+    matcher = get_matcher(
+        args.matcher, device=args.device, thresh=args.match_thresh
+    )
 
-    # vismatch exposes load_image on the matcher instance (not as a package export).
-    _img_cache: dict[str, tuple[object, tuple[int, int], tuple[int, int]]] = {}
-
-    def load_pair(path: str):
-        ap = os.path.abspath(path)
-        if ap in _img_cache:
-            return _img_cache[ap]
-        tensor = matcher.load_image(ap, resize=args.resize)
-        img = cv2.imread(ap)
-        if img is None:
-            raise FileNotFoundError(f"Failed to read image: {ap}")
+    def load_pair(path):
+        # load_image is a BaseMatcher staticmethod, not a top-level vismatch export
+        tensor = matcher.load_image(path, resize=args.resize)
+        img = cv2.imread(path)
         h, w = img.shape[:2]
         if hasattr(tensor, "shape") and len(tensor.shape) >= 2:
             sh = tuple(int(x) for x in tensor.shape)
@@ -428,14 +437,14 @@ def main() -> int:
         )
         # Indoor / short-baseline stereo: allow smaller triangulation angles.
         gro.sfm_options.min_triangulation_angle_degrees = 0.5
-        gro.sfm_options.triangulation_max_reprojection_error_pixels = 6.0
+        gro.sfm_options.triangulation_max_reprojection_error_in_pixels = 6.0
         if hasattr(gro, "rescale_positions_to_metric_edges"):
             gro.rescale_positions_to_metric_edges = True
         summary = pt.sfm.GlobalRigReconstructor(gro).Estimate(view_graph, recon)
     else:
         iro = pt.sfm.IncrementalRigReconstructorOptions()
         iro.sfm_options.min_triangulation_angle_degrees = 0.5
-        iro.sfm_options.triangulation_max_reprojection_error_pixels = 6.0
+        iro.sfm_options.triangulation_max_reprojection_error_in_pixels = 6.0
         summary = pt.sfm.IncrementalRigReconstructor(iro).Estimate(view_graph, recon)
 
     print(

@@ -1816,6 +1816,10 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::ReconstructionEstimatorOptions::
                          min_triangulation_angle_degrees)
       .def_readwrite(
+          "triangulation_max_reprojection_error_in_pixels",
+          &theia::ReconstructionEstimatorOptions::
+              triangulation_max_reprojection_error_in_pixels)
+      .def_readwrite(
           "bundle_adjust_tracks",
           &theia::ReconstructionEstimatorOptions::bundle_adjust_tracks)
       .def_readwrite(
