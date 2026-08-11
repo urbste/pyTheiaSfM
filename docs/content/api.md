@@ -1,6 +1,6 @@
 # API Reference {#chapter-api}
 
-The chapters below document the underlying **C++** Theia library (classes, functions, and conventions). pyTheia exposes the same concepts through Python bindings; see [Python API overview](python_wrapper.md) for import layout and stubs. For runnable scripts see [Examples showcase](examples_showcase.md).
+The chapters below document the underlying **C++** Theia library (classes, functions, and conventions). pyTheia exposes the same concepts through Python bindings; see [Python API overview](python_wrapper.md) for import layout and stubs. For a compact dual-language usage map aimed at coding agents, see [Agent usage guide](agent_usage.md). For runnable scripts see [Examples showcase](examples_showcase.md).
 
 - [Image](image.md) — scope of image handling in pyTheia (Python / OpenCV)  
 - [Ransac](ransac.md) — robust estimation interfaces  

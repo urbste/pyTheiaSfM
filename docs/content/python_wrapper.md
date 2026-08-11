@@ -58,11 +58,13 @@ The HTML manual can show the same workflow in both languages. Use the pattern fr
 === "C++"
 
     ``` cpp
-    #include <theia/sfm/reconstruction.h>
+    #include "theia/sfm/reconstruction.h"
     
-    theia::sfm::Reconstruction reconstruction;
+    theia::Reconstruction reconstruction;
     ```
 
 ## Relationship to the C++ reference
 
 Chapters under [api](api.md) are written in the C++ domain and describe the underlying Theia types. Python names and signatures follow the bindings in `src/pytheia/` (pybind11). Where names match, the C++ chapter is the conceptual reference; use the stubs or `help()` on the Python objects for the exact wrapper surface.
+
+For a recipe-style walkthrough aimed at coding agents, see [Agent usage guide](agent_usage.md).

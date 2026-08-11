@@ -2,12 +2,21 @@
 
 Guidance for automated coding agents and contributors working in this repository.
 
+## Using the library (C++ / Python)
+
+If you need to **call** pyTheia / Theia from application code (monocular SfM, calibrated rigs, I/O), read the agent-oriented usage guide first:
+
+→ **[`docs/content/agent_usage.md`](docs/content/agent_usage.md)** (also published in the MkDocs site as *Agent usage guide*)
+
+That page covers the mental model, Python ↔ C++ name map, canonical pipelines, and do/don't rules. This file (`AGENTS.md`) is about **working inside this repo** (layout, build, tests, style).
+
 ## What this project is
 
 **pyTheia** exposes [TheiaSfM](http://www.theia-sfm.org) to Python via **pybind11**. The C++ library lives under [`src/theia/`](src/theia/) (SfM pipelines, cameras, bundle adjustment, geometric vision solvers, etc.).
 
 - **Public import:** `import pytheia as pt`
 - **Native module:** `pytheia.pytheia` — the compiled extension. [`src/pytheia/__init__.py`](src/pytheia/__init__.py) re-exports `io`, `math`, `matching`, `mvs`, `sfm`, `solvers`.
+- **C++ namespace:** `theia::` (e.g. `theia::Reconstruction`), includes under `"theia/sfm/..."`.
 
 The [README](README.md) states that **interfaces are still evolving**. Prefer backward-compatible Python API changes; when you change bindings or signatures, **regenerate or hand-update stubs** and keep docs/examples consistent.
 

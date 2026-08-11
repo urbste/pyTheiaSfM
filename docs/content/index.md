@@ -27,6 +27,8 @@ You can find examples under **`pyexamples/`** (lightweight) and **`examples/`** 
 
 For import layout, type stubs, and tabbed Python/C++ snippets see [Python API overview](python_wrapper.md).
 
+For a compact, agent-oriented map of **how to use** the library from Python and C++ (mental model, recipes, do/don't), see [Agent usage guide](agent_usage.md).
+
 ## Citation
 
 If you use Theia for an academic publication, please cite this manual, for example:
