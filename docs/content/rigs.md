@@ -22,6 +22,16 @@ c_c = c_{\text{rig}} + R_{w\leftarrow\text{rig}}^{\top} c_{\text{sensor}}
 
 **Calibrated by default:** averaging and the v1 reconstructors do **not** optimize inter-camera extrinsics. Set sensor poses (e.g. stereo baseline) when defining the `CameraRig`.
 
+## Metric relative rig pose (5+1)
+
+For capture–capture edges with a known baseline, prefer metric relative pose instead of unit-scale monocular essentials:
+
+- **`FivePointOnePointGeneralizedRelativePose`** — central 5-pt on same-sensor bearings + 1 possibly cross-sensor ray to fix scale (PoseLib `gen_relpose_5p1pt` algorithm, implemented in-tree).
+- **`FourPointUprightGeneralizedRelativePose`** — upright (gravity-axis) generalized 4-pt; wraps Theia’s Sweeney `FourPointRelativePosePartialRotation`.
+- **`EstimateRelativeRigInfo`** / **`EstimateRelativeRigInfoUpright`** — RANSAC over `GeneralizedRayCorrespondence` (ray origins + bearings in each rig frame). Output `RelativeRigInfo` has metric `translation` / `position`; call `ToTwoViewInfo()` for capture-graph edges.
+
+Lift pixels with known `RigSensor` extrinsics into the abstract body frame, then estimate.
+
 ## Reconstructors
 
 ### `IncrementalRigReconstructor`

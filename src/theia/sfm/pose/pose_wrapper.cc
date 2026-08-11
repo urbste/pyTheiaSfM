@@ -22,6 +22,10 @@
 #include "theia/sfm/pose/relative_pose_from_two_points_with_known_rotation.h"
 #include "theia/sfm/pose/seven_point_fundamental_matrix.h"
 #include "theia/sfm/pose/sim_transform_partial_rotation.h"
+#include "theia/sfm/pose/five_point_one_point_generalized_relative_pose.h"
+#include "theia/sfm/pose/four_point_upright_generalized_relative_pose.h"
+#include "theia/sfm/pose/generalized_ray_correspondence.h"
+#include "theia/sfm/rigid_transformation.h"
 #include "theia/sfm/types.h"
 
 #include "theia/sfm/bundle_adjustment/bundle_adjuster.h"
@@ -509,6 +513,73 @@ PlanarUncalibratedOrthographicPoseWrapper(
     &rotations, &translations, &magnification);
 
   return std::make_tuple(success, rotations, translations, magnification);
+}
+
+std::tuple<int,
+           std::vector<Eigen::Matrix3d>,
+           std::vector<Eigen::Vector3d>>
+FivePointOnePointGeneralizedRelativePoseWrapper(
+    const std::vector<Eigen::Vector3d>& origins1,
+    const std::vector<Eigen::Vector3d>& directions1,
+    const std::vector<Eigen::Vector3d>& origins2,
+    const std::vector<Eigen::Vector3d>& directions2) {
+  const size_t n = origins1.size();
+  std::vector<GeneralizedRayCorrespondence> corrs;
+  corrs.reserve(n);
+  for (size_t i = 0; i < n; ++i) {
+    GeneralizedRayCorrespondence c;
+    c.origin1 = origins1[i];
+    c.direction1 = directions1[i];
+    c.origin2 = origins2[i];
+    c.direction2 = directions2[i];
+    corrs.push_back(c);
+  }
+  std::vector<RigidTransformation> solutions;
+  const int num =
+      FivePointOnePointGeneralizedRelativePose(corrs, &solutions);
+  std::vector<Matrix3d> rotations;
+  std::vector<Vector3d> translations;
+  rotations.reserve(solutions.size());
+  translations.reserve(solutions.size());
+  for (const auto& s : solutions) {
+    rotations.push_back(s.rotation);
+    translations.push_back(s.translation);
+  }
+  return std::make_tuple(num, rotations, translations);
+}
+
+std::tuple<int,
+           std::vector<Eigen::Matrix3d>,
+           std::vector<Eigen::Vector3d>>
+FourPointUprightGeneralizedRelativePoseWrapper(
+    const Eigen::Vector3d& gravity_axis,
+    const std::vector<Eigen::Vector3d>& origins1,
+    const std::vector<Eigen::Vector3d>& directions1,
+    const std::vector<Eigen::Vector3d>& origins2,
+    const std::vector<Eigen::Vector3d>& directions2) {
+  const size_t n = origins1.size();
+  std::vector<GeneralizedRayCorrespondence> corrs;
+  corrs.reserve(n);
+  for (size_t i = 0; i < n; ++i) {
+    GeneralizedRayCorrespondence c;
+    c.origin1 = origins1[i];
+    c.direction1 = directions1[i];
+    c.origin2 = origins2[i];
+    c.direction2 = directions2[i];
+    corrs.push_back(c);
+  }
+  std::vector<RigidTransformation> solutions;
+  const int num = FourPointUprightGeneralizedRelativePose(
+      gravity_axis, corrs, &solutions);
+  std::vector<Matrix3d> rotations;
+  std::vector<Vector3d> translations;
+  rotations.reserve(solutions.size());
+  translations.reserve(solutions.size());
+  for (const auto& s : solutions) {
+    rotations.push_back(s.rotation);
+    translations.push_back(s.translation);
+  }
+  return std::make_tuple(num, rotations, translations);
 }
 
 }  // namespace theia

@@ -111,6 +111,19 @@ With **`use_lo=true`**, inlier refinement is a dense 5-DoF Sampson LM ([`refine_
 
 ---
 
+### `EstimateRelativeRigInfo` / `EstimateRelativeRigInfoUpright` {#estimate-relative-rig-info}
+
+**Header:** [`estimate_relative_rig_info.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_relative_rig_info.h)
+
+Metric relative pose between two **calibrated rig** frames from `GeneralizedRayCorrespondence` (ray origin + bearing in each body frame).
+
+- **`EstimateRelativeRigInfo`:** samples 5 same-origin (central) matches + 1 generalized match; minimal solver is [5+1 generalized relative pose](pose.md#section-generalized-relative-pose).
+- **`EstimateRelativeRigInfoUpright`:** rotation about a known gravity axis; minimal solver wraps Sweeney’s 4-pt partial-rotation QEP.
+
+**Returns:** `(success, RelativeRigInfo, RansacSummary)` with `rotation`, `translation` (\(X_2 = R X_1 + t\)), and `position = -R^\top t` (second rig origin in the first frame). Use `RelativeRigInfo.ToTwoViewInfo()` for capture-graph edges. See [Rigs](rigs.md).
+
+---
+
 ### `EstimateMonoDepthRelativePose` / `...SharedFocal` / `...VaryingFocal` {#estimate-monodepth-relative-pose}
 
 **Header:** [`estimate_monodepth_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_monodepth_relative_pose.h)

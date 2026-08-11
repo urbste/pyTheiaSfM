@@ -10,6 +10,7 @@
 #include "theia/sfm/estimators/estimate_radial_distortion_homography.h"
 #include "theia/sfm/estimators/estimate_relative_pose.h"
 #include "theia/sfm/estimators/estimate_relative_pose_with_known_orientation.h"
+#include "theia/sfm/estimators/estimate_relative_rig_info.h"
 #include "theia/sfm/estimators/estimate_rigid_transformation_2d_3d.h"
 #include "theia/sfm/estimators/estimate_similarity_transformation_2d_3d.h"
 #include "theia/sfm/estimators/estimate_triangulation.h"
@@ -315,6 +316,30 @@ EstimateUncalibratedRelativePoseWrapper(
                                        &relative_pose,
                                        &ransac_summary);
   return std::make_tuple(success, relative_pose, ransac_summary);
+}
+
+std::tuple<bool, RelativeRigInfo, RansacSummary>
+EstimateRelativeRigInfoWrapper(
+    const RansacParameters& ransac_params,
+    const std::vector<GeneralizedRayCorrespondence>& central_matches,
+    const std::vector<GeneralizedRayCorrespondence>& generalized_matches) {
+  RelativeRigInfo info;
+  RansacSummary summary;
+  const bool success = EstimateRelativeRigInfo(
+      ransac_params, central_matches, generalized_matches, &info, &summary);
+  return std::make_tuple(success, info, summary);
+}
+
+std::tuple<bool, RelativeRigInfo, RansacSummary>
+EstimateRelativeRigInfoUprightWrapper(
+    const RansacParameters& ransac_params,
+    const Eigen::Vector3d& gravity_axis,
+    const std::vector<GeneralizedRayCorrespondence>& matches) {
+  RelativeRigInfo info;
+  RansacSummary summary;
+  const bool success = EstimateRelativeRigInfoUpright(
+      ransac_params, gravity_axis, matches, &info, &summary);
+  return std::make_tuple(success, info, summary);
 }
 
 }  // namespace theia

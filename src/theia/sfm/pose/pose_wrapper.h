@@ -167,4 +167,26 @@ PlanarUncalibratedOrthographicPoseWrapper(
   const std::vector<FeatureCorrespondence2D3D>& correspondences,
   const Eigen::Vector2d& principal_point);
 
+// 5+1 generalized relative pose (central 5-pt + 1 scale ray). Returns
+// (num_solutions, rotations, translations) with X2 = R*X1 + t.
+std::tuple<int,
+           std::vector<Eigen::Matrix3d>,
+           std::vector<Eigen::Vector3d>>
+FivePointOnePointGeneralizedRelativePoseWrapper(
+    const std::vector<Eigen::Vector3d>& origins1,
+    const std::vector<Eigen::Vector3d>& directions1,
+    const std::vector<Eigen::Vector3d>& origins2,
+    const std::vector<Eigen::Vector3d>& directions2);
+
+// Upright generalized relative pose (Sweeney 4-pt wrapper).
+std::tuple<int,
+           std::vector<Eigen::Matrix3d>,
+           std::vector<Eigen::Vector3d>>
+FourPointUprightGeneralizedRelativePoseWrapper(
+    const Eigen::Vector3d& gravity_axis,
+    const std::vector<Eigen::Vector3d>& origins1,
+    const std::vector<Eigen::Vector3d>& directions1,
+    const std::vector<Eigen::Vector3d>& origins2,
+    const std::vector<Eigen::Vector3d>& directions2);
+
 }  // namespace theia
