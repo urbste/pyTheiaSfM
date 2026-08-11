@@ -8,7 +8,12 @@ left/right sensors offset along +X), matches with vismatch (default: edm),
 builds ViewGraph + tracks, then runs GlobalRigReconstructor or
 IncrementalRigReconstructor.
 
-Example:
+From a ZED extract folder (left/, right/, rig_calibration.json):
+  python pyexamples/stereo/stereo_rig_reconstruction.py \\
+    --frames_dir /home/steffen/Dokumente/ZED/test_frames \\
+    --matcher edm --method global
+
+Or pass dirs + calibration explicitly:
   python pyexamples/stereo/stereo_rig_reconstruction.py \\
     --left_dir /data/left --right_dir /data/right \\
     --baseline 0.12 --focal 700 --cx 640 --cy 360 \\
@@ -19,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import json
 import os
 import sys
 
@@ -27,13 +33,27 @@ def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Calibrated stereo rig SfM with vismatch + pyTheia"
     )
-    p.add_argument("--left_dir", type=str, required=True)
-    p.add_argument("--right_dir", type=str, required=True)
-    p.add_argument("--img_ext", type=str, default="png")
-    p.add_argument("--baseline", type=float, default=0.12, help="Meters (right − left along +X in rig frame)")
-    p.add_argument("--focal", type=float, required=True)
-    p.add_argument("--cx", type=float, required=True)
-    p.add_argument("--cy", type=float, required=True)
+    p.add_argument(
+        "--frames_dir",
+        type=str,
+        default="",
+        help=(
+            "SVO-extract root with left/, right/, and optional "
+            "rig_calibration.json (from zed_svo_extract_stereo.py)"
+        ),
+    )
+    p.add_argument("--left_dir", type=str, default="")
+    p.add_argument("--right_dir", type=str, default="")
+    p.add_argument("--img_ext", type=str, default="")
+    p.add_argument(
+        "--baseline",
+        type=float,
+        default=None,
+        help="Meters (right − left along +X in rig frame)",
+    )
+    p.add_argument("--focal", type=float, default=None)
+    p.add_argument("--cx", type=float, default=None)
+    p.add_argument("--cy", type=float, default=None)
     p.add_argument("--width", type=int, default=0, help="If 0, read from first image")
     p.add_argument("--height", type=int, default=0)
     p.add_argument(
@@ -45,7 +65,15 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--device", type=str, default="cuda")
     p.add_argument("--resize", type=int, default=784)
     p.add_argument("--min_matches", type=int, default=40)
-    p.add_argument("--temporal_window", type=int, default=2, help="Match ±N frames same camera")
+    p.add_argument(
+        "--temporal_window", type=int, default=2, help="Match ±N frames same camera"
+    )
+    p.add_argument(
+        "--min_track_length",
+        type=int,
+        default=2,
+        help="TrackBuilder min length (2 keeps pure stereo tracks)",
+    )
     p.add_argument(
         "--method",
         choices=("global", "incremental"),
@@ -80,6 +108,74 @@ def _sorted_images(folder: str, ext: str) -> list[str]:
     return paths
 
 
+def _guess_img_ext(left_dir: str) -> str:
+    for ext in ("png", "jpg", "jpeg", "PNG", "JPG", "JPEG"):
+        if glob.glob(os.path.join(left_dir, f"*.{ext}")):
+            return ext.lower()
+    return "png"
+
+
+def _apply_frames_dir(args: argparse.Namespace) -> argparse.Namespace:
+    """Fill left/right dirs and calibration from an SVO-extract folder."""
+    if not args.frames_dir:
+        return args
+    root = os.path.abspath(args.frames_dir)
+    if not os.path.isdir(root):
+        raise FileNotFoundError(f"--frames_dir not found: {root}")
+    left = os.path.join(root, "left")
+    right = os.path.join(root, "right")
+    if not args.left_dir:
+        args.left_dir = left
+    if not args.right_dir:
+        args.right_dir = right
+    if not os.path.isdir(args.left_dir) or not os.path.isdir(args.right_dir):
+        raise FileNotFoundError(
+            f"Expected left/ and right/ under {root} "
+            f"(got {args.left_dir!r}, {args.right_dir!r})"
+        )
+
+    calib_path = os.path.join(root, "rig_calibration.json")
+    if os.path.isfile(calib_path):
+        with open(calib_path, encoding="utf-8") as f:
+            calib = json.load(f)
+        py = calib.get("pytheia", calib)
+        if args.baseline is None and py.get("baseline") is not None:
+            args.baseline = float(py["baseline"])
+        if args.focal is None and py.get("focal") is not None:
+            args.focal = float(py["focal"])
+        if args.cx is None and py.get("cx") is not None:
+            args.cx = float(py["cx"])
+        if args.cy is None and py.get("cy") is not None:
+            args.cy = float(py["cy"])
+        if not args.width and py.get("width"):
+            args.width = int(py["width"])
+        if not args.height and py.get("height"):
+            args.height = int(py["height"])
+        print(f"Loaded calibration from {calib_path}")
+    return args
+
+
+def _require_calibration(args: argparse.Namespace) -> None:
+    missing = [
+        name
+        for name, val in (
+            ("--baseline", args.baseline),
+            ("--focal", args.focal),
+            ("--cx", args.cx),
+            ("--cy", args.cy),
+        )
+        if val is None
+    ]
+    if missing or not args.left_dir or not args.right_dir:
+        raise SystemExit(
+            "Need image dirs and calibration. Either pass:\n"
+            "  --frames_dir <SVO extract with left/, right/, rig_calibration.json>\n"
+            "or:\n"
+            "  --left_dir … --right_dir … --baseline … --focal … --cx … --cy …\n"
+            f"Missing: {', '.join(missing) if missing else 'left/right dirs'}"
+        )
+
+
 def _make_prior(pt, focal: float, cx: float, cy: float, width: int, height: int):
     prior = pt.sfm.CameraIntrinsicsPrior()
     prior.focal_length.value = [float(focal)]
@@ -110,7 +206,9 @@ def _scale_kpts(kpts, full_wh, matched_hw):
     return out
 
 
-def _correspondences_from_result(pt, result, full_wh_a, full_wh_b, matched_hw_a, matched_hw_b, min_n):
+def _correspondences_from_result(
+    pt, result, full_wh_a, full_wh_b, matched_hw_a, matched_hw_b, min_n
+):
     import numpy as np
 
     k0 = result.get("inlier_kpts0")
@@ -138,6 +236,16 @@ def _correspondences_from_result(pt, result, full_wh_a, full_wh_b, matched_hw_a,
 def main() -> int:
     args = _parse_args()
     try:
+        _apply_frames_dir(args)
+        _require_calibration(args)
+    except (FileNotFoundError, OSError, ValueError, KeyError, TypeError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    if not args.img_ext:
+        args.img_ext = _guess_img_ext(args.left_dir)
+
+    try:
         from vismatch import get_matcher
     except ImportError:
         print(
@@ -155,9 +263,19 @@ def main() -> int:
     right_paths = _sorted_images(args.right_dir, args.img_ext)
     n = min(len(left_paths), len(right_paths))
     if n < 2:
-        print("Need at least 2 synchronized stereo pairs.", file=sys.stderr)
+        print(
+            f"Need at least 2 synchronized stereo pairs "
+            f"(found left={len(left_paths)} right={len(right_paths)} "
+            f"ext=*.{args.img_ext} under {args.left_dir!r}).",
+            file=sys.stderr,
+        )
         return 1
     left_paths, right_paths = left_paths[:n], right_paths[:n]
+    print(
+        f"Using {n} pairs from\n  left:  {args.left_dir}\n  right: {args.right_dir}\n"
+        f"  baseline={args.baseline:.6f} m  focal={args.focal:.3f}  "
+        f"cx={args.cx:.3f} cy={args.cy:.3f}"
+    )
 
     im0 = cv2.imread(left_paths[0])
     if im0 is None:
@@ -177,7 +295,8 @@ def main() -> int:
     recon = pt.sfm.Reconstruction()
     rig_id = recon.AddCameraRig(rig)
     view_graph = pt.sfm.ViewGraph()
-    track_builder = pt.sfm.TrackBuilder(3, 30)
+    # min_track_length=2 keeps pure left↔right stereo tracks (needed for metric scale).
+    track_builder = pt.sfm.TrackBuilder(int(args.min_track_length), 30)
 
     captures = []
     left_views = []
@@ -208,15 +327,12 @@ def main() -> int:
     matcher = get_matcher(args.matcher, device=args.device)
 
     def load_pair(path):
-        # vismatch load_image API
         from vismatch import load_image
 
         tensor = load_image(path, resize=args.resize)
         img = cv2.imread(path)
         h, w = img.shape[:2]
-        # matched tensor HxW from tensor shape if available
         if hasattr(tensor, "shape") and len(tensor.shape) >= 2:
-            # often (C,H,W) or (H,W,C)
             sh = tuple(int(x) for x in tensor.shape)
             if sh[0] in (1, 3) and len(sh) == 3:
                 mh, mw = sh[1], sh[2]
@@ -289,6 +405,11 @@ def main() -> int:
         f"tracks={recon.NumTracks()}, views={recon.NumViews()}"
     )
 
+    if not args.out_reconstruction and args.frames_dir:
+        args.out_reconstruction = os.path.join(
+            os.path.abspath(args.frames_dir), "stereo_rig.recon"
+        )
+
     if args.method == "global":
         gro = pt.sfm.GlobalRigReconstructorOptions()
         gro.sfm_options.global_rotation_estimator_type = getattr(
@@ -297,9 +418,16 @@ def main() -> int:
         gro.sfm_options.global_position_estimator_type = getattr(
             pt.sfm.GlobalPositionEstimatorType, args.position_estimator
         )
+        # Indoor / short-baseline stereo: allow smaller triangulation angles.
+        gro.sfm_options.min_triangulation_angle_degrees = 0.5
+        gro.sfm_options.triangulation_max_reprojection_error_pixels = 6.0
+        if hasattr(gro, "rescale_positions_to_metric_edges"):
+            gro.rescale_positions_to_metric_edges = True
         summary = pt.sfm.GlobalRigReconstructor(gro).Estimate(view_graph, recon)
     else:
         iro = pt.sfm.IncrementalRigReconstructorOptions()
+        iro.sfm_options.min_triangulation_angle_degrees = 0.5
+        iro.sfm_options.triangulation_max_reprojection_error_pixels = 6.0
         summary = pt.sfm.IncrementalRigReconstructor(iro).Estimate(view_graph, recon)
 
     print(

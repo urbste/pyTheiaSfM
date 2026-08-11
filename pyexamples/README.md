@@ -29,8 +29,7 @@ python pyexamples/preprocess/zed_svo_extract_stereo.py \
   --svo /data/capture.svo2 --out_dir /data/zed_frames --every 5
 
 python pyexamples/stereo/stereo_rig_reconstruction.py \
-  --left_dir /data/zed_frames/left --right_dir /data/zed_frames/right \
-  --baseline … --focal … --cx … --cy … --matcher edm --method global
+  --frames_dir /data/zed_frames --matcher edm --method global
 ```
 
 `zed_svo_extract_stereo.py` needs the Stereolabs **ZED SDK** Python API (`pyzed`),

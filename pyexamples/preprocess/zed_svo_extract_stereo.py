@@ -12,12 +12,7 @@ Example:
     --svo /data/capture.svo2 --out_dir /data/zed_frames --every 5
 
   python pyexamples/stereo/stereo_rig_reconstruction.py \\
-    --left_dir /data/zed_frames/left --right_dir /data/zed_frames/right \\
-    --baseline $(python -c "import json; print(json.load(open('/data/zed_frames/rig_calibration.json'))['pytheia']['baseline'])") \\
-    --focal $(python -c "import json; print(json.load(open('/data/zed_frames/rig_calibration.json'))['pytheia']['focal'])") \\
-    --cx $(python -c "import json; print(json.load(open('/data/zed_frames/rig_calibration.json'))['pytheia']['cx'])") \\
-    --cy $(python -c "import json; print(json.load(open('/data/zed_frames/rig_calibration.json'))['pytheia']['cy'])") \\
-    --matcher edm --method global
+    --frames_dir /data/zed_frames --matcher edm --method global
 """
 
 from __future__ import annotations
@@ -341,11 +336,7 @@ def main() -> int:
     print(
         "Suggested next step:\n"
         f"  python pyexamples/stereo/stereo_rig_reconstruction.py \\\n"
-        f"    --left_dir {left_dir} --right_dir {right_dir} \\\n"
-        f"    --baseline {py['baseline']} --focal {py['focal']} \\\n"
-        f"    --cx {py['cx']} --cy {py['cy']} \\\n"
-        f"    --width {py['width']} --height {py['height']} \\\n"
-        f"    --img_ext {img_ext} --matcher edm --method global"
+        f"    --frames_dir {args.out_dir} --matcher edm --method global"
     )
     return 0
 
