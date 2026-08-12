@@ -4,20 +4,20 @@
 Stereo / calibrated-rig reconstruction example.
 
 Sets pinhole intrinsics and a stereo baseline (abstract body at identity,
-left/right sensors offset along +X), matches with vismatch (default: edm),
+left/right sensors offset along +X), matches with vismatch (default: xfeat),
 builds ViewGraph + tracks, then runs GlobalRigReconstructor or
 IncrementalRigReconstructor.
 
 From a ZED extract folder (left/, right/, rig_calibration.json):
   python pyexamples/stereo/stereo_rig_reconstruction.py \\
     --frames_dir /home/steffen/Dokumente/ZED/test_frames \\
-    --matcher edm --method global
+    --matcher xfeat --method global
 
 Or pass dirs + calibration explicitly:
   python pyexamples/stereo/stereo_rig_reconstruction.py \\
     --left_dir /data/left --right_dir /data/right \\
     --baseline 0.12 --focal 700 --cx 640 --cy 360 \\
-    --matcher edm --method global
+    --matcher xfeat --method global
 """
 
 from __future__ import annotations
@@ -59,31 +59,49 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument(
         "--matcher",
         type=str,
-        default="edm",
-        help="vismatch get_matcher name (default: edm)",
+        default="xfeat",
+        help="vismatch get_matcher name (default: xfeat sparse detector+descriptor)",
     )
     p.add_argument("--device", type=str, default="cuda")
     p.add_argument(
         "--resize",
         type=int,
-        default=512,
-        help="vismatch load_image longest-side resize (smaller → fewer matches)",
+        default=1024,
+        help="vismatch load_image longest-side resize",
     )
     p.add_argument(
         "--match_thresh",
         type=float,
         default=0.5,
-        help="Matcher confidence threshold (EDM MCONF_THR; higher → fewer matches)",
+        help="Dense-matcher confidence threshold (EDM MCONF_THR; ignored by xfeat)",
+    )
+    p.add_argument(
+        "--max_keypoints",
+        type=int,
+        default=2048,
+        help="Max keypoints for detector/descriptor matchers (xfeat)",
     )
     p.add_argument("--min_matches", type=int, default=40)
     p.add_argument(
-        "--temporal_window", type=int, default=2, help="Match ±N frames same camera"
+        "--temporal_window",
+        type=int,
+        default=5,
+        help="Match ±N frames same camera (larger → longer tracks with xfeat)",
     )
     p.add_argument(
         "--min_track_length",
         type=int,
         default=2,
         help="TrackBuilder min length (2 keeps pure stereo tracks)",
+    )
+    p.add_argument(
+        "--retriangulation_iterations",
+        type=int,
+        default=0,
+        help=(
+            "Extra triangulate+BA passes after the first "
+            "(Theia default is 1; 0 = one triangulate+BA only)"
+        ),
     )
     p.add_argument(
         "--method",
@@ -217,16 +235,73 @@ def _scale_kpts(kpts, full_wh, matched_hw):
     return out
 
 
+def _print_reprojection_stats(recon) -> None:
+    """Mean L2 reprojection error: overall and per rig camera (sensor)."""
+    import collections
+
+    import numpy as np
+
+    per_cam_sum: dict[int, float] = collections.defaultdict(float)
+    per_cam_n: dict[int, int] = collections.defaultdict(int)
+    cam_names: dict[int, str] = {}
+    total_sum = 0.0
+    total_n = 0
+
+    for vid in recon.ViewIds():
+        view = recon.View(vid)
+        if view is None or not view.IsEstimated():
+            continue
+        cam_id = None
+        if recon.ViewHasRigMembership(vid):
+            memb = recon.GetViewRigMembership(vid)
+            cam_id = int(memb.rig_camera_id)
+            if cam_id not in cam_names:
+                rig = recon.GetCameraRig(memb.rig_id)
+                sensor = rig.GetSensor(memb.rig_camera_id) if rig is not None else None
+                cam_names[cam_id] = (
+                    sensor.name if sensor is not None else f"camera_{cam_id}"
+                )
+        for tid in view.TrackIds():
+            track = recon.Track(tid)
+            if track is None or not track.IsEstimated():
+                continue
+            feat = view.GetFeature(tid)
+            if feat is None:
+                continue
+            # ProjectPoint → (depth, xy); match pyexamples/common/utils.py
+            proj = view.Camera().ProjectPoint(track.Point())[1]
+            err = float(np.linalg.norm(np.asarray(proj) - np.asarray(feat.point)))
+            total_sum += err
+            total_n += 1
+            if cam_id is not None:
+                per_cam_sum[cam_id] += err
+                per_cam_n[cam_id] += 1
+
+    if total_n == 0:
+        print("Reprojection error: no estimated observations")
+        return
+
+    mean_total = total_sum / total_n
+    print(f"Mean reprojection error (all): {mean_total:.4f} px  ({total_n} observations)")
+    for cam_id in sorted(per_cam_n.keys()):
+        n = per_cam_n[cam_id]
+        mean = per_cam_sum[cam_id] / n
+        name = cam_names.get(cam_id, f"camera_{cam_id}")
+        print(f"  {name}: {mean:.4f} px  ({n} observations)")
+
+
 def _correspondences_from_result(
     pt, result, full_wh_a, full_wh_b, matched_hw_a, matched_hw_b, min_n
 ):
     import numpy as np
 
-    k0 = result.get("inlier_kpts0")
-    k1 = result.get("inlier_kpts1")
+    # Prefer pre-RANSAC matches: vismatch's inlier_* are from a homography model,
+    # which is wrong for general stereo/3D scenes. EstimateTwoViewInfo does E/F RANSAC.
+    k0 = result.get("matched_kpts0")
+    k1 = result.get("matched_kpts1")
     if k0 is None or k1 is None or np.asarray(k0).size == 0:
-        k0 = result.get("matched_kpts0")
-        k1 = result.get("matched_kpts1")
+        k0 = result.get("inlier_kpts0")
+        k1 = result.get("inlier_kpts1")
     if k0 is None or k1 is None:
         return False, []
     k0 = _scale_kpts(k0, full_wh_a, matched_hw_a)
@@ -336,16 +411,24 @@ def main() -> int:
 
     print(
         f"Added {n} stereo captures ({2 * n} views). "
-        f"Loading matcher={args.matcher} resize={args.resize} thresh={args.match_thresh}..."
+        f"Loading matcher={args.matcher} resize={args.resize} "
+        f"thresh={args.match_thresh} max_keypoints={args.max_keypoints}..."
     )
     matcher = get_matcher(
-        args.matcher, device=args.device, thresh=args.match_thresh
+        args.matcher,
+        device=args.device,
+        max_num_keypoints=args.max_keypoints,
+        thresh=args.match_thresh,
     )
+    _img_cache: dict = {}
 
     def load_pair(path):
+        ap = os.path.abspath(path)
+        if ap in _img_cache:
+            return _img_cache[ap]
         # load_image is a BaseMatcher staticmethod, not a top-level vismatch export
-        tensor = matcher.load_image(path, resize=args.resize)
-        img = cv2.imread(path)
+        tensor = matcher.load_image(ap, resize=args.resize)
+        img = cv2.imread(ap)
         h, w = img.shape[:2]
         if hasattr(tensor, "shape") and len(tensor.shape) >= 2:
             sh = tuple(int(x) for x in tensor.shape)
@@ -422,6 +505,19 @@ def main() -> int:
         f"tracks={recon.NumTracks()}, views={recon.NumViews()}"
     )
 
+    # Release GPU matcher before Ceres BA: Torch CUDA + multi-threaded Ceres
+    # has been observed to SIGSEGV on this machine.
+    del matcher
+    _img_cache.clear()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+    except Exception:
+        pass
+
     if not args.out_reconstruction and args.frames_dir:
         args.out_reconstruction = os.path.join(
             os.path.abspath(args.frames_dir), "stereo_rig.recon"
@@ -438,19 +534,26 @@ def main() -> int:
         # Indoor / short-baseline stereo: allow smaller triangulation angles.
         gro.sfm_options.min_triangulation_angle_degrees = 0.5
         gro.sfm_options.triangulation_max_reprojection_error_in_pixels = 6.0
+        gro.sfm_options.num_retriangulation_iterations = args.retriangulation_iterations
+        gro.sfm_options.num_threads = 1
         if hasattr(gro, "rescale_positions_to_metric_edges"):
             gro.rescale_positions_to_metric_edges = True
         summary = pt.sfm.GlobalRigReconstructor(gro).Estimate(view_graph, recon)
     else:
         iro = pt.sfm.IncrementalRigReconstructorOptions()
-        iro.sfm_options.min_triangulation_angle_degrees = 0.5
-        iro.sfm_options.triangulation_max_reprojection_error_in_pixels = 6.0
+        iro.min_triangulation_angle_degrees = 0.5
+        iro.max_reprojection_error_in_pixels = 6.0
+        # Avoid OpenMP/Ceres crash after CUDA matching (see above).
+        iro.ba_options.num_threads = 1
+        iro.ba_options.use_inner_iterations = False
         summary = pt.sfm.IncrementalRigReconstructor(iro).Estimate(view_graph, recon)
 
     print(
         f"success={summary.success} views={len(summary.estimated_views)} "
         f"tracks={len(summary.estimated_tracks)} msg={summary.message}"
     )
+    if summary.success:
+        _print_reprojection_stats(recon)
     if args.out_reconstruction and summary.success:
         pt.io.WriteReconstruction(recon, args.out_reconstruction)
         print(f"Wrote {args.out_reconstruction}")

@@ -17,7 +17,9 @@ Rig pipeline hardening on top of 1.2.0: metric capture–capture relative pose, 
 ### I/O and examples
 
 - **`WriteRigPlyFile`** — tracks + capture trajectory + intra-capture sensor baselines (densely sampled polylines for MeshLab / Open3D).
-- Reorganized **`pyexamples/`** (`preprocess/`, `stereo/`, `sfm/`, …); ZED SVO extract (`zed_svo_extract_stereo.py`); stereo example `--frames_dir` + `matcher.load_image` fix.
+- Reorganized **`pyexamples/`** (`preprocess/`, `stereo/`, `sfm/`, …); ZED SVO extract (`zed_svo_extract_stereo.py`); stereo example `--frames_dir`, default **xfeat**, rig PLY + mean reprojection stats.
+- **`IncrementalRigReconstructorOptions`**: default BA `num_threads=1` (avoids SIGSEGV when Ceres OpenMP runs after Torch CUDA matching); stereo example clears the GPU matcher before Estimate.
+- Bindings: `ReconstructionEstimatorOptions.triangulation_max_reprojection_error_in_pixels`.
 - Fixes: Sim3 alignment setters API, deep-matching None deref, LoFTR confidence filtering, Open3D PLY viewer stub.
 
 Docs: [Rigs](rigs.md), [Pose — generalized relative](pose.md#section-generalized-relative-pose), [IO](io.md), [Examples showcase](examples_showcase.md).

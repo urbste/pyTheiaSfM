@@ -64,6 +64,10 @@ struct IncrementalRigReconstructorOptions {
     track_estimator_options.min_triangulation_angle_degrees =
         min_triangulation_angle_degrees;
     track_estimator_options.bundle_adjustment = true;
+    // Full BA after Torch/CUDA matching has been observed to SIGSEGV when Ceres
+    // uses hardware_concurrency() OpenMP threads. Keep BA single-threaded by
+    // default; callers can raise this after ensuring a clean CPU-only context.
+    ba_options.num_threads = 1;
   }
 };
 
