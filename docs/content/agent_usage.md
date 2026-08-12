@@ -84,7 +84,7 @@ Images (your code)
 
 ## 4. Canonical monocular SfM recipe
 
-Minimal happy path used by [`pyexamples/sfm_pipeline_fountain.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/sfm_pipeline_fountain.py).
+Minimal happy path used by [`pyexamples/sfm/sfm_pipeline_fountain.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/sfm/sfm_pipeline_fountain.py).
 
 ### 4.1 Create containers and intrinsics
 
@@ -298,7 +298,7 @@ Additive layer; do **not** replace Views.
     const auto summary = reconstructor.Estimate(&view_graph, &reconstruction);
     ```
 
-Full concepts and pose composition: [Rigs](rigs.md). Runnable script: [`pyexamples/stereo_rig_reconstruction.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/stereo_rig_reconstruction.py).
+Full concepts and pose composition: [Rigs](rigs.md). Runnable script: [`pyexamples/stereo/stereo_rig_reconstruction.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/stereo/stereo_rig_reconstruction.py).
 
 **Agent constraints for rigs**
 
@@ -349,9 +349,10 @@ Tune via `ReconstructionEstimatorOptions` (threads, BA loss, rotation filtering,
 |------|----------|
 | Python symbols / overloads | `src/pytheia/pytheia/` stubs, bindings in `src/pytheia/*/…` |
 | C++ API | `src/theia/sfm/*.h`, `src/theia/io/*.h` |
-| Monocular pipeline example | `pyexamples/sfm_pipeline_fountain.py` |
+| Monocular pipeline example | `pyexamples/sfm/sfm_pipeline_fountain.py` |
 | Matcher showcase | `examples/vismatch_sfm/`, [vismatch + SfM](examples_vismatch_sfm.md) |
-| Rig example / tests | `pyexamples/stereo_rig_reconstruction.py`, `pytests/test_camera_rig.py` |
+| Rig example / tests | `pyexamples/stereo/stereo_rig_reconstruction.py`, `pytests/test_camera_rig.py` |
+| ZED SVO → stereo frames | `pyexamples/preprocess/zed_svo_extract_stereo.py` (needs `pyzed`) |
 | Repo contributor map (build, CI) | Root `AGENTS.md` |
 | Human narrative API chapters | [API Reference](api.md) |
 

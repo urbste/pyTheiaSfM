@@ -127,6 +127,8 @@
 #include "theia/sfm/estimators/estimate_dominant_plane_from_points.h"
 #include "theia/sfm/estimators/estimate_radial_distortion_homography.h"
 #include "theia/sfm/estimators/estimate_relative_pose.h"
+#include "theia/sfm/estimators/estimate_relative_rig_info.h"
+#include "theia/sfm/pose/generalized_ray_correspondence.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_absolute_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_relative_pose.h"
 #include "theia/sfm/estimators/estimators_wrapper.h"
@@ -587,6 +589,10 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("NormalizedEightPointFundamentalMatrix",
         theia::NormalizedEightPointFundamentalMatrixWrapper);
   m.def("FivePointRelativePose", theia::FivePointRelativePoseWrapper);
+  m.def("FivePointOnePointGeneralizedRelativePose",
+        theia::FivePointOnePointGeneralizedRelativePoseWrapper);
+  m.def("FourPointUprightGeneralizedRelativePose",
+        theia::FourPointUprightGeneralizedRelativePoseWrapper);
   m.def("FourPointPoseAndFocalLength",
         theia::FourPointPoseAndFocalLengthWrapper);
   m.def("FourPointHomography", theia::FourPointHomographyWrapper);
@@ -958,6 +964,28 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("rotation", &theia::RelativePose::rotation)
       .def_readwrite("position", &theia::RelativePose::position);
 
+  py::class_<theia::GeneralizedRayCorrespondence>(
+      m, "GeneralizedRayCorrespondence")
+      .def(py::init<>())
+      .def_readwrite("origin1", &theia::GeneralizedRayCorrespondence::origin1)
+      .def_readwrite("direction1",
+                     &theia::GeneralizedRayCorrespondence::direction1)
+      .def_readwrite("origin2", &theia::GeneralizedRayCorrespondence::origin2)
+      .def_readwrite("direction2",
+                     &theia::GeneralizedRayCorrespondence::direction2);
+
+  py::class_<theia::RelativeRigInfo>(m, "RelativeRigInfo")
+      .def(py::init<>())
+      .def_readwrite("rotation", &theia::RelativeRigInfo::rotation)
+      .def_readwrite("translation", &theia::RelativeRigInfo::translation)
+      .def_readwrite("position", &theia::RelativeRigInfo::position)
+      .def("ToTwoViewInfo",
+           [](const theia::RelativeRigInfo& self) {
+             theia::TwoViewInfo info;
+             self.ToTwoViewInfo(&info);
+             return info;
+           });
+
   py::class_<theia::MonoDepthRelativePoseResult>(
       m, "MonoDepthRelativePoseResult")
       .def(py::init<>())
@@ -1051,6 +1079,9 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("EstimateRadialHomographyMatrix",
         theia::EstimateRadialHomographyMatrixWrapper);
   m.def("EstimateRelativePose", theia::EstimateRelativePoseWrapper);
+  m.def("EstimateRelativeRigInfo", theia::EstimateRelativeRigInfoWrapper);
+  m.def("EstimateRelativeRigInfoUpright",
+        theia::EstimateRelativeRigInfoUprightWrapper);
   m.def("EstimateMonoDepthRelativePose",
         theia::EstimateMonoDepthRelativePoseWrapper);
   m.def("EstimateMonoDepthRelativePoseSharedFocal",
@@ -1606,17 +1637,51 @@ void pytheia_sfm_classes(py::module& m) {
       .def(py::init<theia::IncrementalRigReconstructorOptions>())
       .def("Estimate", &theia::IncrementalRigReconstructor::Estimate);
 
+  py::class_<theia::BuildCaptureViewGraphOptions>(
+      m, "BuildCaptureViewGraphOptions")
+      .def(py::init<>())
+      .def_readwrite(
+          "use_metric_relative_rig_pose",
+          &theia::BuildCaptureViewGraphOptions::use_metric_relative_rig_pose)
+      .def_readwrite(
+          "fallback_to_twoview_strip",
+          &theia::BuildCaptureViewGraphOptions::fallback_to_twoview_strip)
+      .def_readwrite(
+          "relative_rig_ransac",
+          &theia::BuildCaptureViewGraphOptions::relative_rig_ransac);
+
   py::class_<theia::GlobalRigReconstructorOptions>(
       m, "GlobalRigReconstructorOptions")
       .def(py::init<>())
       .def_readwrite("sfm_options",
-                     &theia::GlobalRigReconstructorOptions::sfm_options);
+                     &theia::GlobalRigReconstructorOptions::sfm_options)
+      .def_readwrite(
+          "capture_graph_options",
+          &theia::GlobalRigReconstructorOptions::capture_graph_options)
+      .def_readwrite(
+          "rescale_positions_to_metric_edges",
+          &theia::GlobalRigReconstructorOptions::
+              rescale_positions_to_metric_edges);
 
   py::class_<theia::GlobalRigReconstructor>(m, "GlobalRigReconstructor")
       .def(py::init<theia::GlobalRigReconstructorOptions>())
       .def("Estimate", &theia::GlobalRigReconstructor::Estimate);
 
-  m.def("BuildCaptureViewGraph", &theia::BuildCaptureViewGraph);
+  m.def("BuildCaptureViewGraph",
+        [](const theia::Reconstruction& reconstruction,
+           const theia::ViewGraph& view_graph,
+           theia::ViewGraph& capture_view_graph) {
+          return theia::BuildCaptureViewGraph(
+              reconstruction, view_graph, &capture_view_graph);
+        });
+  m.def("BuildCaptureViewGraph",
+        [](const theia::Reconstruction& reconstruction,
+           const theia::ViewGraph& view_graph,
+           theia::ViewGraph& capture_view_graph,
+           const theia::BuildCaptureViewGraphOptions& options) {
+          return theia::BuildCaptureViewGraph(
+              reconstruction, view_graph, &capture_view_graph, options);
+        });
 
   py::class_<theia::HybridReconstructionEstimator,
              theia::ReconstructionEstimator,
@@ -1750,6 +1815,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("min_triangulation_angle_degrees",
                      &theia::ReconstructionEstimatorOptions::
                          min_triangulation_angle_degrees)
+      .def_readwrite(
+          "triangulation_max_reprojection_error_in_pixels",
+          &theia::ReconstructionEstimatorOptions::
+              triangulation_max_reprojection_error_in_pixels)
       .def_readwrite(
           "bundle_adjust_tracks",
           &theia::ReconstructionEstimatorOptions::bundle_adjust_tracks)

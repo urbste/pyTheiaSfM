@@ -720,6 +720,23 @@ An alternative 5-point minimal solver (adapted from [PoseLib](bibliography.md#La
 
 This solver is a C++-only internal implementation detail — there is no direct Python binding for it. It is used automatically inside the RANSAC-based relative-pose and essential-matrix estimators (`RelativePoseEstimator`, `EssentialMatrixEstimator` in `estimate_relative_pose.cc` / `estimate_essential_matrix.cc`) whenever `RansacParameters::use_sturm_5pt` (default `true`; also exposed as `pytheia.solvers.RansacParameters.use_sturm_5pt` / `pytheia.sfm.EstimateTwoViewInfoOptions.use_sturm_5pt`) is set. See [RANSAC and robust estimation](ransac.md).
 
+### Generalized relative pose (5+1 and upright 4-pt) {#section-generalized-relative-pose}
+
+For **calibrated multi-camera / stereo rigs**, relative pose between two abstract body frames can be estimated from **generalized rays** (origin + bearing in each rig frame):
+
+\[
+R\,(p_1 + \lambda_1 x_1) + t = p_2 + \lambda_2 x_2
+\]
+
+- **`FivePointOnePointGeneralizedRelativePose`** — first five correspondences share origins (central 5-pt essential); the sixth may use different origins (e.g. the other stereo sensor) to recover **metric** \(t\). Algorithm from PoseLib `gen_relpose_5p1pt`, implemented in-tree on Theia’s 5-pt solvers.
+- **`FourPointUprightGeneralizedRelativePose`** — thin wrapper around [`FourPointRelativePosePartialRotation`](#section-four-point-relative-pose-partial-rotation) (Sweeney QEP; PoseLib `gen_relpose_upright_4pt`).
+
+Scale is **degenerate** when \(t\) is parallel to the sensor offset used by the sixth ray (e.g. side-by-side stereo with pure lateral motion). Forward motion with a lateral baseline is the usual well-conditioned case.
+
+RANSAC: **`EstimateRelativeRigInfo`** / **`EstimateRelativeRigInfoUpright`** (see [Estimators](estimators.md#estimate-relative-rig-info), [Rigs](rigs.md)).
+
+**pyTheia:** `n, Rs, ts = pt.sfm.FivePointOnePointGeneralizedRelativePose(origins1, dirs1, origins2, dirs2)` with six rays; likewise `FourPointUprightGeneralizedRelativePose(gravity, ...)`.
+
 ### Monocular-depth-assisted relative pose (3-point solvers) {#section-monodepth_relative_pose}
 
 **Headers:** [`relative_pose_monodepth_3pt.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/relative_pose_monodepth_3pt.h) (minimal solvers), [`estimate_monodepth_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_monodepth_relative_pose.h) (RANSAC wrappers).
@@ -791,7 +808,7 @@ The recovered `scale` is the relative scale between the two (possibly independen
     # result.rotation, result.position, result.scale
     ```
 
-The higher-level `pytheia.sfm.EstimateTwoViewInfo` entry point (see [RANSAC — monocular-depth-assisted two-view estimation](ransac.md)) dispatches to these automatically via `EstimateTwoViewInfoOptions.use_monodepth`, falling back to the standard 5-/8-point path when depth priors are missing; see `pyexamples/monodepth_two_view_estimation_example.py` for a full worked example. Batch equivalent: `BulkEstimateTwoViewInfo` with optional `depth_i` / `depth_j` and returned `scales` (1.1.0+).
+The higher-level `pytheia.sfm.EstimateTwoViewInfo` entry point (see [RANSAC — monocular-depth-assisted two-view estimation](ransac.md)) dispatches to these automatically via `EstimateTwoViewInfoOptions.use_monodepth`, falling back to the standard 5-/8-point path when depth priors are missing; see `pyexamples/twoview/monodepth_two_view_estimation_example.py` for a full worked example. Batch equivalent: `BulkEstimateTwoViewInfo` with optional `depth_i` / `depth_j` and returned `scales` (1.1.0+).
 
 ### Dense LM pose refinement (RANSAC LO) {#section-dense-lm-pose-refinement}
 

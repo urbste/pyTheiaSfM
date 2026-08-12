@@ -199,7 +199,7 @@ pt.io.WriteNerfStudio("/path/to/images", recon, 16, "/path/to/out/transforms.jso
 # SDFStudio (all images must be undistorted)
 pt.io.WriteSdfStudio("/path/to/images", recon, (2.0, 6.0), 1.0)
 ```
-More complete examples are in `pyexamples/nerfstudio_export_reconstruction.py` and `pyexamples/sdfstudio_export_reconstruction.py`.
+More complete examples are in `pyexamples/io/nerfstudio_export_reconstruction.py` and `pyexamples/io/sdfstudio_export_reconstruction.py`.
 
 ## Building
 This section describes how to build on Ubuntu locally or on WSL2 (with sudo where noted).

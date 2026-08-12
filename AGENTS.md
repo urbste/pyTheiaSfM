@@ -29,7 +29,7 @@ The [README](README.md) states that **interfaces are still evolving**. Prefer ba
 | Core Theia C++ | [`src/theia/`](src/theia/) | Algorithms, `Reconstruction`, cameras, BA, etc. |
 | Python bindings | [`src/pytheia/`](src/pytheia/) | [`pytheia_pybind.cc`](src/pytheia/pytheia_pybind.cc), [`pytheia_pybind.h`](src/pytheia/pytheia_pybind.h), and domain sources: [`matching/`](src/pytheia/matching/), [`sfm/`](src/pytheia/sfm/), [`solvers/`](src/pytheia/solvers/), [`math/`](src/pytheia/math/), [`mvs/`](src/pytheia/mvs/), [`io/`](src/pytheia/io/) — listed in [`src/pytheia/CMakeLists.txt`](src/pytheia/CMakeLists.txt) |
 | Type stubs (PEP 561) | [`src/pytheia/pytheia.pyi`](src/pytheia/pytheia.pyi), [`src/pytheia/pytheia/`](src/pytheia/pytheia/) | Produced by the build / [`dev/generate_stubs.sh`](dev/generate_stubs.sh) |
-| Python tests & examples | [`pytests/`](pytests/), [`pyexamples/`](pyexamples/) | e.g. [`pytests/sfm_pipeline.py`](pytests/sfm_pipeline.py); pytest modules under `pytests/` |
+| Python tests & examples | [`pytests/`](pytests/), [`pyexamples/`](pyexamples/) | Topic folders under `pyexamples/` (`sfm/`, `stereo/`, `preprocess/`, …); pytest under `pytests/` |
 | Vendored dependencies | [`libraries/`](libraries/) | Vendored in-tree (`pybind11`, `cereal`, `gtest`, etc.); no `.gitmodules` |
 | Documentation | [`docs/mkdocs.yml`](docs/mkdocs.yml), [`docs/content/`](docs/content/) | MkDocs site; dual Python/C++ tabbed examples in [`docs/content/contributions.md`](docs/content/contributions.md) |
 

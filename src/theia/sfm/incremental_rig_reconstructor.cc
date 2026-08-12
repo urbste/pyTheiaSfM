@@ -200,8 +200,11 @@ bool IncrementalRigReconstructor::LocalizeCapture(
 bool IncrementalRigReconstructor::LocalizeCaptureGeneralized(
     const CaptureId capture_id, Reconstruction* reconstruction) {
   RigCapture* capture = reconstruction->MutableRigCapture(capture_id);
+  if (capture == nullptr) {
+    return false;
+  }
   const CameraRig* rig = reconstruction->GetCameraRig(capture->GetRigId());
-  if (capture == nullptr || rig == nullptr) {
+  if (rig == nullptr) {
     return false;
   }
 
@@ -264,8 +267,11 @@ bool IncrementalRigReconstructor::LocalizeCaptureGeneralized(
 bool IncrementalRigReconstructor::LocalizeCaptureFromSingleView(
     const CaptureId capture_id, Reconstruction* reconstruction) {
   RigCapture* capture = reconstruction->MutableRigCapture(capture_id);
+  if (capture == nullptr) {
+    return false;
+  }
   const CameraRig* rig = reconstruction->GetCameraRig(capture->GetRigId());
-  if (capture == nullptr || rig == nullptr) {
+  if (rig == nullptr) {
     return false;
   }
 

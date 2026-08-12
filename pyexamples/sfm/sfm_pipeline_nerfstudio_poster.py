@@ -10,9 +10,14 @@ import numpy as np
 import os, glob, argparse, time, natsort, cv2
 import pytheia as pt
 import torch, kornia
-from image_utils import load_image
+import sys as _sys
+
+_PYEXAMPLES_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _PYEXAMPLES_ROOT not in _sys.path:
+    _sys.path.insert(0, _PYEXAMPLES_ROOT)
+from common.image_utils import load_image
 from tqdm import tqdm
-from utils import reprojection_error, plot_loftr_matches
+from common.utils import reprojection_error, plot_loftr_matches
 
 min_num_inlier_matches = 50
 
@@ -67,7 +72,7 @@ def match_image_pair(img_i_data, img_j_data, matcher, min_conf, cam_prior0, cam_
     # cv2.imshow("matches", img_match)
     # cv2.waitKey(1)
 
-    correspondences = correspondence_from_indexed_matches(kpts0, kpts1)
+    correspondences = correspondence_from_indexed_matches(kp1_s, kp2_s)
 
     options = pt.sfm.EstimateTwoViewInfoOptions()
     options.ransac_type = pt.sfm.RansacType(1) # prosac sampler as sorted matches

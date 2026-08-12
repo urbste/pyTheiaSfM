@@ -106,7 +106,12 @@ def load_img_tensor(img_path, inf_shape_wh, device, dtype):
     return image.to(device).to(dtype), original_img_size
 
 def align_recon_to_gravity_dir(recon):
-    from utils import rot_between_vectors
+    import os
+    import sys
+    _PYEXAMPLES_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if _PYEXAMPLES_ROOT not in sys.path:
+        sys.path.insert(0, _PYEXAMPLES_ROOT)
+    from common.utils import rot_between_vectors
 
     R_c_to_g = np.eye(3)
     grav_dir_w = np.array([0,0,-1])

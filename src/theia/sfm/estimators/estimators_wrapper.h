@@ -13,6 +13,7 @@
 #include "theia/sfm/estimators/estimate_radial_distortion_homography.h"
 #include "theia/sfm/estimators/estimate_monodepth_relative_pose.h"
 #include "theia/sfm/estimators/estimate_relative_pose.h"
+#include "theia/sfm/estimators/estimate_relative_rig_info.h"
 #include "theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_absolute_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_relative_pose.h"
@@ -20,6 +21,7 @@
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/estimators/camera_and_feature_correspondence_2d_3d.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
+#include "theia/sfm/pose/generalized_ray_correspondence.h"
 #include "theia/sfm/rigid_transformation.h"
 #include "theia/sfm/similarity_transformation.h"
 #include "theia/solvers/sample_consensus_estimator.h"
@@ -139,5 +141,17 @@ EstimateUncalibratedRelativePoseWrapper(
     const RansacType& ransac_type,
     const std::vector<FeatureCorrespondence>& centered_correspondences,
     const Eigen::Vector2d& min_max_focal_length);
+
+std::tuple<bool, RelativeRigInfo, RansacSummary>
+EstimateRelativeRigInfoWrapper(
+    const RansacParameters& ransac_params,
+    const std::vector<GeneralizedRayCorrespondence>& central_matches,
+    const std::vector<GeneralizedRayCorrespondence>& generalized_matches);
+
+std::tuple<bool, RelativeRigInfo, RansacSummary>
+EstimateRelativeRigInfoUprightWrapper(
+    const RansacParameters& ransac_params,
+    const Eigen::Vector3d& gravity_axis,
+    const std::vector<GeneralizedRayCorrespondence>& matches);
 
 }  // namespace theia

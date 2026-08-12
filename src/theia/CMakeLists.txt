@@ -108,6 +108,7 @@ set(THEIA_SRC
   sfm/estimators/estimate_radial_distortion_homography.cc
   sfm/estimators/estimate_relative_pose_with_known_orientation.cc
   sfm/estimators/estimate_relative_pose.cc
+  sfm/estimators/estimate_relative_rig_info.cc
   sfm/estimators/estimate_rigid_transformation_2d_3d.cc
   sfm/estimators/estimate_similarity_transformation_2d_3d.cc
   sfm/estimators/estimate_triangulation.cc
@@ -156,6 +157,8 @@ set(THEIA_SRC
   sfm/pose/five_point_focal_length_radial_distortion.cc
   sfm/pose/five_point_relative_pose.cc
   sfm/pose/five_point_relative_pose_sturm.cc
+  sfm/pose/five_point_one_point_generalized_relative_pose.cc
+  sfm/pose/four_point_upright_generalized_relative_pose.cc
   sfm/pose/four_point_focal_length_helper.cc
   sfm/pose/four_point_focal_length.cc
   sfm/pose/four_point_focal_length_radial_distortion.cc
@@ -393,6 +396,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/five_point_focal_length_radial_distortion)
   gtest(sfm/pose/five_point_relative_pose)
   gtest(sfm/pose/five_point_relative_pose_sturm)
+  gtest(sfm/pose/five_point_one_point_generalized_relative_pose)
 #  gtest(sfm/pose/four_point_focal_length)
 #  gtest(sfm/pose/four_point_focal_length_radial_distortion)
 #  gtest(sfm/pose/four_point_homography)
