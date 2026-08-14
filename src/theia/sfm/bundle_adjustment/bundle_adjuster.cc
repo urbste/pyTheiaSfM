@@ -56,6 +56,9 @@
 
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
+#include "theia/sfm/rig/camera_rig.h"
+#include "theia/sfm/rig/rig_capture.h"
+#include "theia/sfm/rig/rig_utils.h"
 #include "theia/sfm/types.h"
 #include "theia/util/map_util.h"
 #include "theia/util/timer.h"
@@ -127,49 +130,52 @@ void BundleAdjuster::AddView(const ViewId view_id) {
   // Mark the view as optimized.
   optimized_views_.emplace(view_id);
 
-  // Set the grouping for schur elimination.
-  SetCameraSchurGroups(view_id);
-
   // Mark the camera intrinsics as optimized.
   const CameraIntrinsicsGroupId intrinsics_group_id =
       reconstruction_->CameraIntrinsicsGroupIdFromViewId(view_id);
   optimized_camera_intrinsics_groups_.emplace(intrinsics_group_id);
 
-  // Fetch the camera that will be optimized.
   Camera* camera = view->MutableCamera();
-  // Add residuals for all tracks in the view.
+  CaptureId capture_id = kInvalidCaptureId;
+  const RigSensor* sensor = nullptr;
+  double* rig_position = nullptr;
+  double* rig_orientation = nullptr;
+  const bool use_rig = GetRigBlocksForView(
+      view_id, &capture_id, &sensor, &rig_position, &rig_orientation, true);
+
+  SetCameraSchurGroups(view_id);
+
   for (const TrackId track_id : view->TrackIds()) {
     const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
     Track* track = CHECK_NOTNULL(reconstruction_->MutableTrack(track_id));
-    // Only consider tracks with an estimated 3d point.
     if (!track->IsEstimated()) {
       continue;
     }
 
-    // Add the reprojection error to the optimization.
-    AddReprojectionErrorResidual(*feature, camera, track);
-
-    // Add the point to group 0.
+    if (use_rig) {
+      AddRigReprojectionErrorResidual(
+          *feature, camera, track, rig_position, rig_orientation, *sensor);
+    } else {
+      AddReprojectionErrorResidual(*feature, camera, track);
+    }
     SetTrackConstant(track_id);
 
-    // Add depth priors
-    // a depth of zero does not make much sense for a camera
-    if (options_.use_depth_priors && feature->depth_prior() != 0.0) {
+    if (options_.use_depth_priors && feature->depth_prior() != 0.0 &&
+        !use_rig) {
       AddDepthPriorErrorResidual(*feature, camera, track);
     }
   }
 
-  // add a position prior if available
+  if (use_rig) {
+    return;
+  }
+
   if (options_.use_position_priors && view->HasPositionPrior()) {
     AddPositionPriorErrorResidual(view, camera);
   }
-
-  // add a gravity prior if available
   if (options_.use_gravity_priors && view->HasGravityPrior()) {
     AddGravityPriorErrorResidual(view, camera);
   }
-
-  // add a orientation prior if available
   if (options_.use_orientation_priors && view->HasOrientationPrior()) {
     AddOrientationPriorErrorResidual(view, camera);
   }
@@ -199,12 +205,23 @@ void BundleAdjuster::AddTrack(const TrackId track_id) {
     const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
     Camera* camera = view->MutableCamera();
 
-    // Add the reprojection error to the optimization.
-    AddReprojectionErrorResidual(*feature, camera, track);
-  
-    // Any camera that reaches this point was not added by AddView() and so we
-    // want to mark it as constant.
-    SetCameraExtrinsicsConstant(view_id);
+    CaptureId capture_id = kInvalidCaptureId;
+    const RigSensor* sensor = nullptr;
+    double* rig_position = nullptr;
+    double* rig_orientation = nullptr;
+    const bool use_rig = GetRigBlocksForView(
+        view_id, &capture_id, &sensor, &rig_position, &rig_orientation, false);
+    if (use_rig) {
+      AddRigReprojectionErrorResidual(
+          *feature, camera, track, rig_position, rig_orientation, *sensor);
+      if (!ContainsKey(optimized_captures_, capture_id)) {
+        problem_->SetParameterBlockConstant(rig_position);
+        problem_->SetParameterBlockConstant(rig_orientation);
+      }
+    } else {
+      AddReprojectionErrorResidual(*feature, camera, track);
+      SetCameraExtrinsicsConstant(view_id);
+    }
 
     // Mark the camera intrinsics as "potentially constant." We only set the
     // parameter block to constant if the shared intrinsics are not shared
@@ -363,6 +380,10 @@ BundleAdjustmentSummary BundleAdjuster::Optimize() {
   // no guarantees on the quality or convergence.
   summary.success = solver_summary.IsSolutionUsable();
 
+  if (summary.success && options_.use_rig_constraints) {
+    PropagateAllEstimatedCapturePoses(reconstruction_);
+  }
+
   return summary;
 }
 
@@ -414,28 +435,27 @@ void BundleAdjuster::SetCameraIntrinsicsParameterization() {
             OptimizeIntrinsicsType::SKEW |
             OptimizeIntrinsicsType::TANGENTIAL_DISTORTION);
 
+    double* params = camera_intrinsics->mutable_parameters();
+    if (!problem_->HasParameterBlock(params)) {
+      continue;
+    }
+
     // set lower bound for focal length (>1)
-    problem_->SetParameterLowerBound(camera_intrinsics->mutable_parameters(),
-                                     focal_length_id[0], 1.0);
+    if (!focal_length_id.empty()) {
+      problem_->SetParameterLowerBound(params, focal_length_id[0], 1.0);
+    }
 
     if (camera_intrinsics->Type() ==
         theia::CameraIntrinsicsModelType::DOUBLE_SPHERE) {
-      problem_->SetParameterLowerBound(
-          camera_intrinsics->mutable_parameters(), 5, -1.0);
-      problem_->SetParameterUpperBound(
-          camera_intrinsics->mutable_parameters(), 5, 1.0);
-      problem_->SetParameterLowerBound(
-          camera_intrinsics->mutable_parameters(), 6, 0.0);
-      problem_->SetParameterUpperBound(
-          camera_intrinsics->mutable_parameters(), 6, 1.0);
+      problem_->SetParameterLowerBound(params, 5, -1.0);
+      problem_->SetParameterUpperBound(params, 5, 1.0);
+      problem_->SetParameterLowerBound(params, 6, 0.0);
+      problem_->SetParameterUpperBound(params, 6, 1.0);
     } else if (camera_intrinsics->Type() ==
                theia::CameraIntrinsicsModelType::EXTENDED_UNIFIED) {
-      problem_->SetParameterLowerBound(
-          camera_intrinsics->mutable_parameters(), 5, 0.0);
-      problem_->SetParameterUpperBound(
-          camera_intrinsics->mutable_parameters(), 5, 1.0);
-      problem_->SetParameterLowerBound(
-          camera_intrinsics->mutable_parameters(), 6, 0.1);
+      problem_->SetParameterLowerBound(params, 5, 0.0);
+      problem_->SetParameterUpperBound(params, 5, 1.0);
+      problem_->SetParameterLowerBound(params, 6, 0.1);
     }
 
     // Set the constant parameters if any are requested.
@@ -492,9 +512,29 @@ BundleAdjuster::GetIntrinsicsForCameraIntrinsicsGroup(
 }
 
 void BundleAdjuster::SetCameraExtrinsicsConstant(const ViewId view_id) {
+  CaptureId capture_id = kInvalidCaptureId;
+  const RigSensor* sensor = nullptr;
+  double* rig_position = nullptr;
+  double* rig_orientation = nullptr;
+  if (GetRigBlocksForView(view_id,
+                          &capture_id,
+                          &sensor,
+                          &rig_position,
+                          &rig_orientation,
+                          false)) {
+    if (problem_->HasParameterBlock(rig_position)) {
+      problem_->SetParameterBlockConstant(rig_position);
+    }
+    if (problem_->HasParameterBlock(rig_orientation)) {
+      problem_->SetParameterBlockConstant(rig_orientation);
+    }
+    return;
+  }
   View* view = reconstruction_->MutableView(view_id);
   Camera* camera = view->MutableCamera();
-  problem_->SetParameterBlockConstant(camera->mutable_extrinsics());
+  if (problem_->HasParameterBlock(camera->mutable_extrinsics())) {
+    problem_->SetParameterBlockConstant(camera->mutable_extrinsics());
+  }
 }
 
 bool BundleAdjuster::IsViewInProblem(const ViewId view_id) const {
@@ -531,6 +571,21 @@ void BundleAdjuster::EnsureViewExtrinsicsInProblem(const ViewId view_id) {
 }
 
 void BundleAdjuster::SetCameraPositionConstant(const ViewId view_id) {
+  CaptureId capture_id = kInvalidCaptureId;
+  const RigSensor* sensor = nullptr;
+  double* rig_position = nullptr;
+  double* rig_orientation = nullptr;
+  if (GetRigBlocksForView(view_id,
+                          &capture_id,
+                          &sensor,
+                          &rig_position,
+                          &rig_orientation,
+                          false)) {
+    if (problem_->HasParameterBlock(rig_position)) {
+      problem_->SetParameterBlockConstant(rig_position);
+    }
+    return;
+  }
   static const std::vector<int> position_parameters = {
       Camera::POSITION + 0, Camera::POSITION + 1, Camera::POSITION + 2};
   ceres::SubsetManifold* subset_parameterization =
@@ -543,6 +598,21 @@ void BundleAdjuster::SetCameraPositionConstant(const ViewId view_id) {
 }
 
 void BundleAdjuster::SetCameraOrientationConstant(const ViewId view_id) {
+  CaptureId capture_id = kInvalidCaptureId;
+  const RigSensor* sensor = nullptr;
+  double* rig_position = nullptr;
+  double* rig_orientation = nullptr;
+  if (GetRigBlocksForView(view_id,
+                          &capture_id,
+                          &sensor,
+                          &rig_position,
+                          &rig_orientation,
+                          false)) {
+    if (problem_->HasParameterBlock(rig_orientation)) {
+      problem_->SetParameterBlockConstant(rig_orientation);
+    }
+    return;
+  }
   static const std::vector<int> orientation_parameters = {
       Camera::ORIENTATION + 0,
       Camera::ORIENTATION + 1,
@@ -598,17 +668,38 @@ void BundleAdjuster::SetCameraSchurGroups(const ViewId view_id) {
   View* view = reconstruction_->MutableView(view_id);
   Camera* camera = view->MutableCamera();
 
+  CaptureId capture_id = kInvalidCaptureId;
+  const RigSensor* sensor = nullptr;
+  double* rig_position = nullptr;
+  double* rig_orientation = nullptr;
+  const bool use_rig = GetRigBlocksForView(
+      view_id, &capture_id, &sensor, &rig_position, &rig_orientation, false);
+
   if (options_.optimize_for_forward_facing_trajectory) {
-    // COLLAPSED GROUPS: Put everything except points into Group 1
     static const int kCameraGroup = 1;
-    parameter_ordering_->AddElementToGroup(camera->mutable_extrinsics(), kCameraGroup);
-    parameter_ordering_->AddElementToGroup(camera->mutable_intrinsics(), kCameraGroup);
+    if (use_rig) {
+      parameter_ordering_->AddElementToGroup(rig_position, kCameraGroup);
+      parameter_ordering_->AddElementToGroup(rig_orientation, kCameraGroup);
+    } else {
+      parameter_ordering_->AddElementToGroup(camera->mutable_extrinsics(),
+                                             kCameraGroup);
+    }
+    parameter_ordering_->AddElementToGroup(camera->mutable_intrinsics(),
+                                           kCameraGroup);
   } else {
-    // Three-group elimination
     static const int kIntrinsicsParameterGroup = 1;
     static const int kExtrinsicsParameterGroup = 2;
-    parameter_ordering_->AddElementToGroup(camera->mutable_intrinsics(), kIntrinsicsParameterGroup);
-    parameter_ordering_->AddElementToGroup(camera->mutable_extrinsics(), kExtrinsicsParameterGroup);
+    parameter_ordering_->AddElementToGroup(camera->mutable_intrinsics(),
+                                           kIntrinsicsParameterGroup);
+    if (use_rig) {
+      parameter_ordering_->AddElementToGroup(rig_position,
+                                             kExtrinsicsParameterGroup);
+      parameter_ordering_->AddElementToGroup(rig_orientation,
+                                             kExtrinsicsParameterGroup);
+    } else {
+      parameter_ordering_->AddElementToGroup(camera->mutable_extrinsics(),
+                                             kExtrinsicsParameterGroup);
+    }
   }
 }
 
@@ -629,9 +720,6 @@ void BundleAdjuster::SetTrackSchurGroup(const TrackId track_id) {
 void BundleAdjuster::AddReprojectionErrorResidual(const Feature& feature,
                                                   Camera* camera,
                                                   Track* track) {
-  // Add the residual for the track to the problem. The shared intrinsics
-  // parameter block will be set to constant after the loop if no optimized
-  // cameras share the same camera intrinsics.
   problem_->AddResidualBlock(
       CreateReprojectionErrorCostFunction(
           camera->GetCameraIntrinsicsModelType(), feature),
@@ -639,6 +727,69 @@ void BundleAdjuster::AddReprojectionErrorResidual(const Feature& feature,
       camera->mutable_extrinsics(),
       camera->mutable_intrinsics(),
       track->MutablePoint()->data());
+}
+
+void BundleAdjuster::AddRigReprojectionErrorResidual(
+    const Feature& feature,
+    Camera* camera,
+    Track* track,
+    double* rig_position,
+    double* rig_orientation,
+    const RigSensor& sensor) {
+  problem_->AddResidualBlock(
+      CreateRigReprojectionErrorCostFunction(
+          camera->GetCameraIntrinsicsModelType(),
+          feature,
+          sensor.position,
+          sensor.orientation),
+      loss_function_.get(),
+      rig_position,
+      rig_orientation,
+      camera->mutable_intrinsics(),
+      track->MutablePoint()->data());
+}
+
+bool BundleAdjuster::GetRigBlocksForView(const ViewId view_id,
+                                         CaptureId* capture_id,
+                                         const RigSensor** sensor,
+                                         double** rig_position,
+                                         double** rig_orientation,
+                                         const bool mark_optimized) {
+  CHECK_NOTNULL(capture_id);
+  CHECK_NOTNULL(sensor);
+  CHECK_NOTNULL(rig_position);
+  CHECK_NOTNULL(rig_orientation);
+  if (!options_.use_rig_constraints ||
+      options_.use_inverse_depth_parametrization) {
+    return false;
+  }
+  const ViewRigMembership* membership =
+      reconstruction_->GetViewRigMembership(view_id);
+  if (membership == nullptr) {
+    return false;
+  }
+  RigCapture* capture =
+      reconstruction_->MutableRigCapture(membership->capture_id);
+  const CameraRig* rig =
+      reconstruction_->GetCameraRig(membership->rig_id);
+  if (capture == nullptr || rig == nullptr) {
+    return false;
+  }
+  *sensor = rig->GetSensor(membership->rig_camera_id);
+  if (*sensor == nullptr) {
+    return false;
+  }
+  *capture_id = membership->capture_id;
+  *rig_position = capture->MutablePosition();
+  *rig_orientation = capture->MutableOrientation();
+  if (!problem_->HasParameterBlock(*rig_position)) {
+    problem_->AddParameterBlock(*rig_position, 3);
+    problem_->AddParameterBlock(*rig_orientation, 3);
+  }
+  if (mark_optimized) {
+    optimized_captures_.insert(*capture_id);
+  }
+  return true;
 }
 
 void BundleAdjuster::AddInvReprojectionErrorResidual(const Feature& feature,

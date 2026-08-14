@@ -43,6 +43,8 @@
 #include <vector>
 #include <iostream>
 
+#include "theia/sfm/pose/fast_iterative_five_point.h"
+#include "theia/sfm/two_view_estimation_method.h"
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/inlier_support.h"
 #include "theia/solvers/mle_quality_measurement.h"
@@ -133,6 +135,13 @@ struct RansacParameters {
   // eigendecomposition, but it is strictly minimal (only used for exactly-5
   // point samples; non-minimal calls always use FivePointRelativePose).
   bool use_sturm_5pt;
+
+  // Essential matrix / relative pose solver method. Defaults to Sturm 5-point.
+  // Set to FAST_ITERATIVE_FIVE_POINT for fast Dogleg solver on forward-facing trajectories.
+  TwoViewEstimationMethod essential_solver_type = TwoViewEstimationMethod::FIVE_POINT_STURM;
+
+  // Options for the FastIterativeFivePoint solver (when essential_solver_type == FAST_ITERATIVE_FIVE_POINT).
+  FastIterativeFivePointOptions fast_iterative_5pt_options;
 };
 
 // A struct to hold useful outputs of Ransac-like methods.

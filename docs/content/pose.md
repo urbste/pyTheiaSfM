@@ -716,9 +716,62 @@ int FivePointRelativePoseSturm(
     std::vector<Eigen::Matrix3d>* essential_matrices);
 ```
 
-An alternative 5-point minimal solver (adapted from [PoseLib](bibliography.md#LarssonPoseLib), following [Nistér](bibliography.md#Nister)'s original polynomial-elimination route: QR nullspace → explicit elimination → degree-10 polynomial in \(z\) → **Sturm-sequence root bracketing** ([`theia/math/sturm.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/math/sturm.h)) → back-substitution) rather than the Stewénius-style 10×10 action-matrix eigendecomposition `FivePointRelativePose` above uses. It is faster because it never forms that eigendecomposition, but it is **strictly minimal** (always exactly 5 correspondences; `FivePointRelativePose` remains the solver for `n > 5` and for the public Python API).
+An alternative 5-point minimal solver (adapted from [PoseLib](bibliography.md#LarssonPoseLib), following [Nistér](bibliography.md#Nister)'s original polynomial-elimination route: QR nullspace → explicit elimination → degree-10 polynomial in \(z\) → **Sturm-sequence root bracketing** ([`theia/math/sturm.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/math/sturm.h)) → back-substitution) rather than the Stewénius-style 10×10 action-matrix eigendecomposition `FivePointRelativePose` above uses. It is ~2.5× faster because it never forms that eigendecomposition, but it is **strictly minimal** (always exactly 5 correspondences; `FivePointRelativePose` remains the solver for `n > 5`).
 
-This solver is a C++-only internal implementation detail — there is no direct Python binding for it. It is used automatically inside the RANSAC-based relative-pose and essential-matrix estimators (`RelativePoseEstimator`, `EssentialMatrixEstimator` in `estimate_relative_pose.cc` / `estimate_essential_matrix.cc`) whenever `RansacParameters::use_sturm_5pt` (default `true`; also exposed as `pytheia.solvers.RansacParameters.use_sturm_5pt` / `pytheia.sfm.EstimateTwoViewInfoOptions.use_sturm_5pt`) is set. See [RANSAC and robust estimation](ransac.md).
+**pyTheia:** `num_solutions, essential_matrices = pytheia.sfm.FivePointRelativePoseSturm(pts1, pts2)` (exactly 5 point pairs).
+
+It is also selectable inside RANSAC via `TwoViewEstimationMethod::FIVE_POINT_STURM` (the default).
+
+### Fast Iterative Five-Point Relative Pose (Powell's Dogleg) {#section-fast-iterative-five-point}
+
+**Signature (C++):** [`fast_iterative_five_point.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/fast_iterative_five_point.h)
+
+```cpp
+int FastIterativeFivePoint(
+    const std::vector<Eigen::Vector3d>& x1h,
+    const std::vector<Eigen::Vector3d>& x2h,
+    const FastIterativeFivePointOptions& options,
+    std::vector<Eigen::Matrix3d>* essential_matrices,
+    std::vector<RelativePose>* relative_poses = nullptr);
+```
+
+An extremely fast iterative relative pose solver using **Powell's Dogleg trust-region method with analytical Jacobians** (adapted from [Hedborg & Felsberg 2026](bibliography.md#HedborgFelsberg2026)).
+
+Unlike polynomial solvers which extract all 10 algebraic roots, this solver directly optimizes a 5-DoF pose representation \(w = (\alpha, \beta, \gamma, \theta, \phi)^T\) (Euler–Cardan angles for rotation and spherical angles for translation direction on \(S^2\)) by minimizing the epipolar Sampson/distance error:
+
+\[
+r_i(w) = \frac{x_{2,i}^T E(w) x_{1,i}}{\sqrt{(E(w) x_{1,i})_1^2 + (E(w) x_{1,i})_2^2 + (E(w)^T x_{2,i})_1^2 + (E(w)^T x_{2,i})_2^2}}
+\]
+
+**Primary Use Case & Motion Constraint:**
+This solver is initialized by default to **forward-facing trajectories** with prior translation direction \([0, 0, -1]^T\) (Theia camera convention \(t = -R c_2\) for forward motion \(c_2 = [0, 0, 1]^T\)) and identity rotation (\(w_0 = 0\)). It converges in 3–8 Dogleg iterations (~5–7 µs, **>2.7× faster than Stewénius**) on forward-dominant trajectories (autonomous driving, forward dashcam, drones, robotics visual odometry). For wide sideways motion or large rotations (>20°), use polynomial solvers (`FIVE_POINT_STURM` / `FIVE_POINT_STEWENIUS`) or provide a calibrated motion prior.
+
+**Options (`FastIterativeFivePointOptions`):**
+- `max_iterations` (default: 8)
+- `initial_trust_region_radius` (default: 1.0)
+- `prior_rotation` (default: `Eigen::Matrix3d::Identity()`)
+- `prior_translation` (default: `[0, 0, -1]^T` for forward motion)
+
+**pyTheia:** `success, essential_matrices, relative_poses = pytheia.sfm.FastIterativeFivePointRelativePose(pts1, pts2, options)`
+
+=== "Python"
+
+    ```python
+    import numpy as np
+    import pytheia as pt
+
+    # 5 normalized point pairs for forward motion
+    pts1 = np.random.uniform(-0.5, 0.5, (5, 2))
+    pts2 = pts1 + np.random.normal(0, 0.01, (5, 2))
+
+    opts = pt.sfm.FastIterativeFivePointOptions()
+    opts.max_iterations = 8
+
+    ok, Es, poses = pt.sfm.FastIterativeFivePointRelativePose(pts1, pts2, opts)
+    if ok:
+        print("Estimated rotation:", poses[0].rotation)
+        print("Estimated translation:", poses[0].position)
+    ```
 
 ### Generalized relative pose (5+1 and upright 4-pt) {#section-generalized-relative-pose}
 

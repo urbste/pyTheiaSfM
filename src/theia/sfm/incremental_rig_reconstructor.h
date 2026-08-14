@@ -38,8 +38,13 @@ struct IncrementalRigReconstructorOptions {
   // Minimum triangulation angle between views.
   double min_triangulation_angle_degrees = 2.0;
 
-  // Run bundle adjustment after each newly localized capture.
+  // Run bundle adjustment after newly localized captures.
   bool bundle_adjust_after_localize = true;
+
+  // Full BA every N successful localizations (and always once at the end).
+  // Partial BA uses the most recently estimated captures.
+  int bundle_adjust_every_n_captures = 5;
+  int partial_bundle_adjustment_num_captures = 12;
 
   // If true, try EstimateRigidTransformation2D3D using all sensors in the
   // capture (cameras posed in the abstract rig frame). Falls back to
@@ -68,6 +73,7 @@ struct IncrementalRigReconstructorOptions {
     // uses hardware_concurrency() OpenMP threads. Keep BA single-threaded by
     // default; callers can raise this after ensuring a clean CPU-only context.
     ba_options.num_threads = 1;
+    ba_options.use_rig_constraints = true;
   }
 };
 
@@ -89,8 +95,11 @@ class IncrementalRigReconstructor {
                                   Reconstruction* reconstruction);
   bool LocalizeCaptureFromSingleView(const CaptureId capture_id,
                                      Reconstruction* reconstruction);
+  // Triangulate unestimated tracks observed by the most recently estimated
+  // capture (not the whole reconstruction).
   void EstimateStructure(Reconstruction* reconstruction);
   void BundleAdjustAndPropagate(Reconstruction* reconstruction);
+  void PartialBundleAdjustAndPropagate(Reconstruction* reconstruction);
 
   std::vector<CaptureId> OrderedUnestimatedCaptures(
       const Reconstruction& reconstruction) const;
@@ -98,6 +107,7 @@ class IncrementalRigReconstructor {
                                   const Reconstruction& reconstruction) const;
 
   const IncrementalRigReconstructorOptions options_;
+  std::vector<CaptureId> estimated_captures_;
 };
 
 }  // namespace theia

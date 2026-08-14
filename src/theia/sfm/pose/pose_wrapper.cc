@@ -4,6 +4,8 @@
 #include "theia/sfm/pose/eight_point_fundamental_matrix.h"
 #include "theia/sfm/pose/five_point_focal_length_radial_distortion.h"
 #include "theia/sfm/pose/five_point_relative_pose.h"
+#include "theia/sfm/pose/five_point_relative_pose_sturm.h"
+#include "theia/sfm/pose/fast_iterative_five_point.h"
 #include "theia/sfm/pose/four_point_focal_length.h"
 #include "theia/sfm/pose/four_point_focal_length_radial_distortion.h"
 #include "theia/sfm/pose/four_point_homography.h"
@@ -174,6 +176,34 @@ std::tuple<bool, std::vector<Matrix3d>> FivePointRelativePoseWrapper(
   const bool success =
       FivePointRelativePose(image1_points, image2_points, &essential_matrices);
   return std::make_tuple(success, essential_matrices);
+}
+
+std::tuple<int, std::vector<Matrix3d>> FivePointRelativePoseSturmWrapper(
+    const std::vector<Vector2d>& image1_points,
+    const std::vector<Vector2d>& image2_points) {
+  std::vector<Vector3d> x1h, x2h;
+  x1h.reserve(image1_points.size());
+  x2h.reserve(image2_points.size());
+  for (size_t i = 0; i < image1_points.size(); ++i) {
+    x1h.emplace_back(image1_points[i].homogeneous());
+    x2h.emplace_back(image2_points[i].homogeneous());
+  }
+  std::vector<Matrix3d> essential_matrices;
+  const int num_solutions =
+      FivePointRelativePoseSturm(x1h, x2h, &essential_matrices);
+  return std::make_tuple(num_solutions, essential_matrices);
+}
+
+std::tuple<bool, std::vector<Matrix3d>, std::vector<RelativePose>>
+FastIterativeFivePointRelativePoseWrapper(
+    const std::vector<Vector2d>& image1_points,
+    const std::vector<Vector2d>& image2_points,
+    const FastIterativeFivePointOptions& options) {
+  std::vector<Matrix3d> essential_matrices;
+  std::vector<RelativePose> relative_poses;
+  const int num_solutions = FastIterativeFivePoint(
+      image1_points, image2_points, options, &essential_matrices, &relative_poses);
+  return std::make_tuple(num_solutions > 0, essential_matrices, relative_poses);
 }
 
 std::tuple<int, std::vector<Matrix<double, 3, 4>>>

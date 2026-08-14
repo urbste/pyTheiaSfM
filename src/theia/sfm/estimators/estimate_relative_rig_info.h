@@ -27,7 +27,8 @@ struct RelativeRigInfo {
   Eigen::Vector3d translation = Eigen::Vector3d::Zero();
   Eigen::Vector3d position = Eigen::Vector3d::Zero();
 
-  // Fill a TwoViewInfo with metric (non-normalized) position_2.
+  // Fill a TwoViewInfo using Theia's averaging convention: position_2 is a
+  // unit translation direction and scale_estimate is the metric baseline.
   void ToTwoViewInfo(TwoViewInfo* info) const;
 };
 

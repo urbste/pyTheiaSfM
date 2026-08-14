@@ -154,6 +154,7 @@ set(THEIA_SRC
   sfm/pose/dls_pnp.cc
   sfm/pose/eight_point_fundamental_matrix.cc
   sfm/pose/essential_matrix_utils.cc
+  sfm/pose/fast_iterative_five_point.cc
   sfm/pose/five_point_focal_length_radial_distortion.cc
   sfm/pose/five_point_relative_pose.cc
   sfm/pose/five_point_relative_pose_sturm.cc
@@ -394,6 +395,7 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/eight_point_fundamental_matrix)
   gtest(sfm/pose/essential_matrix_utils)
 #  gtest(sfm/pose/five_point_focal_length_radial_distortion)
+  gtest(sfm/pose/fast_iterative_five_point)
   gtest(sfm/pose/five_point_relative_pose)
   gtest(sfm/pose/five_point_relative_pose_sturm)
   gtest(sfm/pose/five_point_one_point_generalized_relative_pose)

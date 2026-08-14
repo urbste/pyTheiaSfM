@@ -49,11 +49,14 @@ void UpdateHomogeneousPoint(
   theia::Reconstruction& recon) {
   for (const auto& track_id : track_ids) {
     theia::Track* mutable_track = recon.MutableTrack(track_id);
-    if (!mutable_track->IsEstimated()) {
+    if (mutable_track == nullptr || !mutable_track->IsEstimated()) {
       continue;
     }
 
     const theia::View* ref_view = recon.View(mutable_track->ReferenceViewId());
+    if (ref_view == nullptr) {
+      continue;
+    }
     const theia::Camera ref_cam = ref_view->Camera();
     if (mutable_track->InverseDepth() > 0.0) {
       Eigen::Vector3d bearing = 
@@ -70,15 +73,20 @@ void UpdateInverseDepth(
   const std::vector<theia::TrackId>& track_ids,
   theia::Reconstruction& recon) {
   for (const auto& track_id : track_ids) {
-    theia::Track* mutable_track = CHECK_NOTNULL(recon.MutableTrack(track_id));
-    if (!mutable_track->IsEstimated()) {
+    theia::Track* mutable_track = recon.MutableTrack(track_id);
+    if (mutable_track == nullptr || !mutable_track->IsEstimated()) {
       continue;
     }
 
-    const theia::View* ref_view = CHECK_NOTNULL(recon.View(mutable_track->ReferenceViewId()));
+    const theia::View* ref_view = recon.View(mutable_track->ReferenceViewId());
+    if (ref_view == nullptr) {
+      continue;
+    }
     const theia::Camera ref_cam = ref_view->Camera();
     const double depth = ref_cam.ProjectPoint(mutable_track->Point(), nullptr);
-    mutable_track->SetInverseDepth(1/depth);
+    if (depth > 0.0) {
+      mutable_track->SetInverseDepth(1.0 / depth);
+    }
   }
 }
 
@@ -91,8 +99,8 @@ void UpdateInverseDepthViews(
     const auto& track_ids = view->TrackIds();
 
     for (const auto& track_id : track_ids) {
-      theia::Track* mutable_track = CHECK_NOTNULL(recon.MutableTrack(track_id));
-      if (!mutable_track->IsEstimated()) {
+      theia::Track* mutable_track = recon.MutableTrack(track_id);
+      if (mutable_track == nullptr || !mutable_track->IsEstimated()) {
         continue;
       }
 
@@ -131,8 +139,7 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
   }
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
 
-  std::vector<TrackId> tracks(track_ids.size());
-  tracks.insert(tracks.end(), track_ids.begin(), track_ids.end());
+  std::vector<TrackId> tracks(track_ids.begin(), track_ids.end());
   if (options.use_inverse_depth_parametrization) {
     UpdateHomogeneousPoint(tracks, *reconstruction);
   } else {

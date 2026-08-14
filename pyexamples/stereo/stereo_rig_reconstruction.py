@@ -4,20 +4,33 @@
 Stereo / calibrated-rig reconstruction example.
 
 Sets pinhole intrinsics and a stereo baseline (abstract body at identity,
-left/right sensors offset along +X), matches with vismatch (default: xfeat),
-builds ViewGraph + tracks, then runs GlobalRigReconstructor or
+left/right sensors offset along +X), detects keypoints once per image and
+matches with LightGlue (default: disk-lightglue), builds tracks (including
+same-timestamp stereo via the known essential) and a ViewGraph of
+*inter-capture* motion edges, then runs GlobalRigReconstructor or
 IncrementalRigReconstructor.
+
+Same-timestamp left↔right matches are used for triangulation/scale only — they
+are not ViewGraph motion edges (pure baseline translation is degenerate for
+relative pose). By default only **left** images are matched (cascade: frame i
+against every later frame) and stereo is attached only to tracks that already
+span several rig poses. Pass `--left_match_mode window` / `--match_right_temporal`
+for the older dense temporal schedule. Pass `--trajectory_has_loops` on long
+trajectories that revisit places: CosPlace (ResNet18/128) is extracted on left
+keyframes and `GraphMatch` loop candidates are matched in addition to the
+temporal/cascade schedule.
+
+Bundle adjustment uses Huber loss by default (`--ba_loss trivial` for plain L2).
+`--recon_stride N` reconstructs every Nth frame (plus first/last) and PnP-
+localizes the skipped captures from neighboring keyframes.
 
 From a ZED extract folder (left/, right/, rig_calibration.json):
   python pyexamples/stereo/stereo_rig_reconstruction.py \\
     --frames_dir /home/steffen/Dokumente/ZED/test_frames \\
-    --matcher xfeat --method global
+    --matcher disk-lightglue --method global --visualize
 
-Or pass dirs + calibration explicitly:
-  python pyexamples/stereo/stereo_rig_reconstruction.py \\
-    --left_dir /data/left --right_dir /data/right \\
-    --baseline 0.12 --focal 700 --cx 640 --cy 360 \\
-    --matcher xfeat --method global
+KITTI odometry (ATE / RPE vs ground truth):
+  python pyexamples/stereo/kitti_rig_benchmark.py --kitti_root ... --sequences 00
 """
 
 from __future__ import annotations
@@ -27,6 +40,23 @@ import glob
 import json
 import os
 import sys
+
+_THIS = os.path.dirname(os.path.abspath(__file__))
+_EXAMPLES = os.path.dirname(_THIS)
+if _EXAMPLES not in sys.path:
+    sys.path.insert(0, _EXAMPLES)
+if _THIS not in sys.path:
+    sys.path.insert(0, _THIS)
+
+from calibrated_stereo_rig import (  # noqa: E402
+    BA_LOSS_TYPES,
+    LIGHTGLUE_MATCHERS,
+    RESIZE_MODES,
+    StereoCalib,
+    StereoRigRunOptions,
+    run_calibrated_stereo_rig,
+)
+from common.rig_open3d import visualize_rig_reconstruction  # noqa: E402
 
 
 def _parse_args() -> argparse.Namespace:
@@ -59,40 +89,168 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument(
         "--matcher",
         type=str,
-        default="xfeat",
-        help="vismatch get_matcher name (default: xfeat sparse detector+descriptor)",
+        default="disk-lightglue",
+        choices=LIGHTGLUE_MATCHERS,
+        help="Detect-once + LightGlue matcher (default: disk-lightglue)",
     )
     p.add_argument("--device", type=str, default="cuda")
     p.add_argument(
         "--resize",
         type=int,
-        default=1024,
-        help="vismatch load_image longest-side resize",
+        default=960,
+        help="Target image width in pixels when --resize_mode=width (default)",
+    )
+    p.add_argument(
+        "--resize_mode",
+        choices=RESIZE_MODES,
+        default="width",
+        help="width: scale to --resize px wide; max: longest-side resize",
     )
     p.add_argument(
         "--match_thresh",
         type=float,
         default=0.5,
-        help="Dense-matcher confidence threshold (EDM MCONF_THR; ignored by xfeat)",
+        help="Unused for LightGlue matchers (kept for CLI compatibility)",
     )
     p.add_argument(
         "--max_keypoints",
         type=int,
         default=2048,
-        help="Max keypoints for detector/descriptor matchers (xfeat)",
+        help="Max keypoints for SuperPoint / DISK / ALIKED / SIFT extractors",
     )
     p.add_argument("--min_matches", type=int, default=40)
+    p.add_argument(
+        "--max_sampson_error",
+        type=float,
+        default=2.0,
+        help="Sampson threshold (pixels) for stereo E filtering and two-view RANSAC",
+    )
+    p.add_argument(
+        "--left_match_mode",
+        choices=("cascade", "window"),
+        default="cascade",
+        help=(
+            "cascade: left_i vs later left_j (default). "
+            "window: left_i vs i+1..i+temporal_window plus loop_stride."
+        ),
+    )
+    p.add_argument(
+        "--left_match_max_gap",
+        type=int,
+        default=0,
+        help=(
+            "Cascade only: match i to i+1..i+gap. 0 = all later frames. "
+            "Cap this on long sequences (KITTI)."
+        ),
+    )
     p.add_argument(
         "--temporal_window",
         type=int,
         default=5,
-        help="Match ±N frames same camera (larger → longer tracks with xfeat)",
+        help="Used when --left_match_mode window: match ±N left frames.",
+    )
+    p.add_argument(
+        "--loop_stride",
+        type=int,
+        default=20,
+        help=(
+            "Also match left frames i to i+k*stride (0 disables). "
+            "With cascade max_gap=0 this is redundant."
+        ),
+    )
+    p.add_argument(
+        "--trajectory_has_loops",
+        action="store_true",
+        help=(
+            "Precompute CosPlace (ResNet18/128) on left keyframes and match "
+            "GraphMatch loop candidates. For long trajectories that revisit places."
+        ),
+    )
+    p.add_argument(
+        "--cosplace_neighbors",
+        type=int,
+        default=5,
+        help="GraphMatch k nearest CosPlace neighbours per keyframe (default 5).",
+    )
+    p.add_argument(
+        "--cosplace_min_frame_gap",
+        type=int,
+        default=0,
+        help=(
+            "Minimum keyframe index gap for a CosPlace pair (0 = auto: just "
+            "beyond --temporal_window / --left_match_max_gap)."
+        ),
+    )
+    p.add_argument(
+        "--match_right_temporal",
+        action="store_true",
+        help="Also match right–right with the same pair schedule (off by default).",
+    )
+    p.add_argument(
+        "--cross_sensor_temporal",
+        action="store_true",
+        help=(
+            "Also match left_i↔right_j across time (motion edges + tracks). "
+            "Same-timestamp left↔right is tracks-only (known essential)."
+        ),
     )
     p.add_argument(
         "--min_track_length",
         type=int,
-        default=2,
-        help="TrackBuilder min length (2 keeps pure stereo tracks)",
+        default=3,
+        help="TrackBuilder min length (default 3 drops two-view stereo-only tracks)",
+    )
+    p.add_argument(
+        "--min_track_captures",
+        type=int,
+        default=3,
+        help="Drop tracks observed in fewer than this many rig poses.",
+    )
+    p.add_argument(
+        "--stereo_snap_pixels",
+        type=float,
+        default=3.0,
+        help="Snap per-pair matcher keypoints onto existing features (pixels).",
+    )
+    p.add_argument(
+        "--no_guided_stereo",
+        action="store_true",
+        help="Attach all stereo E-inliers instead of only long left tracks.",
+    )
+    p.add_argument(
+        "--no_detect_once",
+        action="store_true",
+        help="Re-detect keypoints on every image pair (default: extract once per frame).",
+    )
+    p.add_argument(
+        "--feature_cache_dir",
+        type=str,
+        default="",
+        help=(
+            "Directory for on-disk keypoint/descriptor cache. "
+            "Default: <dataset>/.pytheia_features/<matcher>_w<resize>_k<max_keypoints>/"
+        ),
+    )
+    p.add_argument(
+        "--no_feature_cache",
+        action="store_true",
+        help="Do not read or write the on-disk feature cache.",
+    )
+    p.add_argument("--match_cache_dir", type=str, default="")
+    p.add_argument(
+        "--no_match_cache",
+        action="store_true",
+        help="Do not read or write the on-disk LightGlue match cache.",
+    )
+    p.add_argument(
+        "--match_cache_only",
+        action="store_true",
+        help="Run full matching schedule and skip SfM/BA (populate match cache).",
+    )
+    p.add_argument(
+        "--verbose_matches",
+        action="store_true",
+        help="Print every image pair (default: progress every 25 pairs).",
     )
     p.add_argument(
         "--retriangulation_iterations",
@@ -102,6 +260,34 @@ def _parse_args() -> argparse.Namespace:
             "Extra triangulate+BA passes after the first "
             "(Theia default is 1; 0 = one triangulate+BA only)"
         ),
+    )
+    p.add_argument(
+        "--ba_loss",
+        type=str,
+        default="huber",
+        choices=BA_LOSS_TYPES,
+        help="Bundle adjustment robust kernel (default: huber).",
+    )
+    p.add_argument(
+        "--ba_robust_width",
+        type=float,
+        default=2.0,
+        help="Huber/Cauchy/… width in pixels (default 2).",
+    )
+    p.add_argument(
+        "--recon_stride",
+        type=int,
+        default=1,
+        help=(
+            "Reconstruct every Nth stereo pair (first and last always kept), "
+            "then PnP-localize the skipped captures. 1 = all frames in SfM."
+        ),
+    )
+    p.add_argument(
+        "--pnp_min_inliers",
+        type=int,
+        default=30,
+        help="Minimum PnP inliers to accept a skipped-capture pose.",
     )
     p.add_argument(
         "--method",
@@ -127,6 +313,23 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument("--out_reconstruction", type=str, default="")
+    p.add_argument(
+        "--match_debug_dir",
+        type=str,
+        default="",
+        help="Write side-by-side PNGs + left_matches.jsonl for left–left motion pairs.",
+    )
+    p.add_argument("--match_debug_max_pairs", type=int, default=0)
+    p.add_argument(
+        "--match_debug_only",
+        action="store_true",
+        help="Stop after left–left matching (skip stereo attach + SfM).",
+    )
+    p.add_argument(
+        "--visualize",
+        action="store_true",
+        help="Open an Open3D window after a successful reconstruction (if installed)",
+    )
     return p.parse_args()
 
 
@@ -205,120 +408,6 @@ def _require_calibration(args: argparse.Namespace) -> None:
         )
 
 
-def _make_prior(pt, focal: float, cx: float, cy: float, width: int, height: int):
-    prior = pt.sfm.CameraIntrinsicsPrior()
-    prior.focal_length.value = [float(focal)]
-    prior.focal_length.is_set = True
-    prior.principal_point.value = [float(cx), float(cy)]
-    prior.principal_point.is_set = True
-    prior.aspect_ratio.value = [1.0]
-    prior.aspect_ratio.is_set = True
-    prior.image_width = int(width)
-    prior.image_height = int(height)
-    prior.camera_intrinsics_model_type = "PINHOLE"
-    return prior
-
-
-def _scale_kpts(kpts, full_wh, matched_hw):
-    import numpy as np
-
-    k = np.asarray(kpts, dtype=np.float64).reshape(-1, 2)
-    fw, fh = full_wh
-    mh, mw = matched_hw
-    if mw <= 0 or mh <= 0:
-        return k
-    sx = fw / float(mw)
-    sy = fh / float(mh)
-    out = k.copy()
-    out[:, 0] *= sx
-    out[:, 1] *= sy
-    return out
-
-
-def _print_reprojection_stats(recon) -> None:
-    """Mean L2 reprojection error: overall and per rig camera (sensor)."""
-    import collections
-
-    import numpy as np
-
-    per_cam_sum: dict[int, float] = collections.defaultdict(float)
-    per_cam_n: dict[int, int] = collections.defaultdict(int)
-    cam_names: dict[int, str] = {}
-    total_sum = 0.0
-    total_n = 0
-
-    for vid in recon.ViewIds():
-        view = recon.View(vid)
-        if view is None or not view.IsEstimated():
-            continue
-        cam_id = None
-        if recon.ViewHasRigMembership(vid):
-            memb = recon.GetViewRigMembership(vid)
-            cam_id = int(memb.rig_camera_id)
-            if cam_id not in cam_names:
-                rig = recon.GetCameraRig(memb.rig_id)
-                sensor = rig.GetSensor(memb.rig_camera_id) if rig is not None else None
-                cam_names[cam_id] = (
-                    sensor.name if sensor is not None else f"camera_{cam_id}"
-                )
-        for tid in view.TrackIds():
-            track = recon.Track(tid)
-            if track is None or not track.IsEstimated():
-                continue
-            feat = view.GetFeature(tid)
-            if feat is None:
-                continue
-            # ProjectPoint → (depth, xy); match pyexamples/common/utils.py
-            proj = view.Camera().ProjectPoint(track.Point())[1]
-            err = float(np.linalg.norm(np.asarray(proj) - np.asarray(feat.point)))
-            total_sum += err
-            total_n += 1
-            if cam_id is not None:
-                per_cam_sum[cam_id] += err
-                per_cam_n[cam_id] += 1
-
-    if total_n == 0:
-        print("Reprojection error: no estimated observations")
-        return
-
-    mean_total = total_sum / total_n
-    print(f"Mean reprojection error (all): {mean_total:.4f} px  ({total_n} observations)")
-    for cam_id in sorted(per_cam_n.keys()):
-        n = per_cam_n[cam_id]
-        mean = per_cam_sum[cam_id] / n
-        name = cam_names.get(cam_id, f"camera_{cam_id}")
-        print(f"  {name}: {mean:.4f} px  ({n} observations)")
-
-
-def _correspondences_from_result(
-    pt, result, full_wh_a, full_wh_b, matched_hw_a, matched_hw_b, min_n
-):
-    import numpy as np
-
-    # Prefer pre-RANSAC matches: vismatch's inlier_* are from a homography model,
-    # which is wrong for general stereo/3D scenes. EstimateTwoViewInfo does E/F RANSAC.
-    k0 = result.get("matched_kpts0")
-    k1 = result.get("matched_kpts1")
-    if k0 is None or k1 is None or np.asarray(k0).size == 0:
-        k0 = result.get("inlier_kpts0")
-        k1 = result.get("inlier_kpts1")
-    if k0 is None or k1 is None:
-        return False, []
-    k0 = _scale_kpts(k0, full_wh_a, matched_hw_a)
-    k1 = _scale_kpts(k1, full_wh_b, matched_hw_b)
-    n = min(len(k0), len(k1))
-    if n < min_n:
-        return False, []
-    cors = []
-    for i in range(n):
-        cors.append(
-            pt.matching.FeatureCorrespondence(
-                pt.sfm.Feature(k0[i]), pt.sfm.Feature(k1[i])
-            )
-        )
-    return True, cors
-
-
 def main() -> int:
     args = _parse_args()
     try:
@@ -332,7 +421,7 @@ def main() -> int:
         args.img_ext = _guess_img_ext(args.left_dir)
 
     try:
-        from vismatch import get_matcher
+        import vismatch  # noqa: F401
     except ImportError:
         print(
             "vismatch is required for this example. Install with:\n"
@@ -341,7 +430,6 @@ def main() -> int:
         )
         return 1
 
-    import cv2
     import numpy as np
     import pytheia as pt
 
@@ -356,216 +444,83 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    left_paths, right_paths = left_paths[:n], right_paths[:n]
-    print(
-        f"Using {n} pairs from\n  left:  {args.left_dir}\n  right: {args.right_dir}\n"
-        f"  baseline={args.baseline:.6f} m  focal={args.focal:.3f}  "
-        f"cx={args.cx:.3f} cy={args.cy:.3f}"
+
+    calib = StereoCalib(
+        focal=float(args.focal),
+        cx=float(args.cx),
+        cy=float(args.cy),
+        baseline=float(args.baseline),
+        width=int(args.width),
+        height=int(args.height),
     )
-
-    im0 = cv2.imread(left_paths[0])
-    if im0 is None:
-        print(f"Failed to read {left_paths[0]}", file=sys.stderr)
-        return 1
-    h0, w0 = im0.shape[:2]
-    width = args.width or w0
-    height = args.height or h0
-    prior = _make_prior(pt, args.focal, args.cx, args.cy, width, height)
-
-    # Abstract body at identity; left/right offset symmetrically along +X.
-    half_b = 0.5 * float(args.baseline)
-    rig = pt.sfm.CameraRig("stereo")
-    left_id = rig.AddSensor("left", np.array([-half_b, 0.0, 0.0]), np.zeros(3))
-    right_id = rig.AddSensor("right", np.array([half_b, 0.0, 0.0]), np.zeros(3))
-
-    recon = pt.sfm.Reconstruction()
-    rig_id = recon.AddCameraRig(rig)
-    view_graph = pt.sfm.ViewGraph()
-    # min_track_length=2 keeps pure left↔right stereo tracks (needed for metric scale).
-    track_builder = pt.sfm.TrackBuilder(int(args.min_track_length), 30)
-
-    captures = []
-    left_views = []
-    right_views = []
-    for i in range(n):
-        t = float(i)
-        cap = recon.AddRigCapture(
-            rig_id,
-            t,
-            {
-                left_id: f"L_{i:05d}_{os.path.basename(left_paths[i])}",
-                right_id: f"R_{i:05d}_{os.path.basename(right_paths[i])}",
-            },
-        )
-        captures.append(cap)
-        capture = recon.GetRigCapture(cap)
-        vl = capture.ViewIdForCamera(left_id)
-        vr = capture.ViewIdForCamera(right_id)
-        left_views.append(vl)
-        right_views.append(vr)
-        for vid in (vl, vr):
-            view = recon.MutableView(vid)
-            view.SetCameraIntrinsicsPrior(prior)
-            cam = view.MutableCamera()
-            cam.SetFromCameraIntrinsicsPriors(prior)
-
-    print(
-        f"Added {n} stereo captures ({2 * n} views). "
-        f"Loading matcher={args.matcher} resize={args.resize} "
-        f"thresh={args.match_thresh} max_keypoints={args.max_keypoints}..."
-    )
-    matcher = get_matcher(
-        args.matcher,
+    options = StereoRigRunOptions(
+        matcher=args.matcher,
         device=args.device,
-        max_num_keypoints=args.max_keypoints,
-        thresh=args.match_thresh,
+        resize=args.resize,
+        resize_mode=args.resize_mode,
+        match_thresh=args.match_thresh,
+        max_keypoints=args.max_keypoints,
+        min_matches=args.min_matches,
+        max_sampson_error=args.max_sampson_error,
+        left_match_mode=args.left_match_mode,
+        left_match_max_gap=args.left_match_max_gap,
+        temporal_window=args.temporal_window,
+        loop_stride=args.loop_stride,
+        trajectory_has_loops=args.trajectory_has_loops,
+        cosplace_neighbors=args.cosplace_neighbors,
+        cosplace_min_frame_gap=args.cosplace_min_frame_gap,
+        match_right_temporal=args.match_right_temporal,
+        cross_sensor_temporal=args.cross_sensor_temporal,
+        stereo_snap_pixels=args.stereo_snap_pixels,
+        guided_stereo=not args.no_guided_stereo,
+        detect_once=not args.no_detect_once,
+        feature_cache=not args.no_feature_cache,
+        feature_cache_dir=args.feature_cache_dir,
+        match_cache=not args.no_match_cache,
+        match_cache_dir=args.match_cache_dir,
+        match_cache_only=args.match_cache_only,
+        min_track_length=args.min_track_length,
+        min_track_captures=args.min_track_captures,
+        retriangulation_iterations=args.retriangulation_iterations,
+        ba_loss=args.ba_loss,
+        ba_robust_width=args.ba_robust_width,
+        recon_stride=args.recon_stride,
+        pnp_min_inliers=args.pnp_min_inliers,
+        method=args.method,
+        rotation_estimator=args.rotation_estimator,
+        position_estimator=args.position_estimator,
+        verbose_matches=args.verbose_matches,
+        match_debug_dir=args.match_debug_dir,
+        match_debug_max_pairs=args.match_debug_max_pairs,
+        match_debug_only=args.match_debug_only,
     )
-    _img_cache: dict = {}
-
-    def load_pair(path):
-        ap = os.path.abspath(path)
-        if ap in _img_cache:
-            return _img_cache[ap]
-        # load_image is a BaseMatcher staticmethod, not a top-level vismatch export
-        tensor = matcher.load_image(ap, resize=args.resize)
-        img = cv2.imread(ap)
-        h, w = img.shape[:2]
-        if hasattr(tensor, "shape") and len(tensor.shape) >= 2:
-            sh = tuple(int(x) for x in tensor.shape)
-            if sh[0] in (1, 3) and len(sh) == 3:
-                mh, mw = sh[1], sh[2]
-            else:
-                mh, mw = sh[0], sh[1]
-        else:
-            mh, mw = h, w
-        out = (tensor, (w, h), (mh, mw))
-        _img_cache[ap] = out
-        return out
-
-    def match_and_add(path_a, path_b, view_a, view_b, label: str) -> bool:
-        ta, full_a, matched_a = load_pair(path_a)
-        tb, full_b, matched_b = load_pair(path_b)
-        result = matcher(ta, tb)
-        ok, cors = _correspondences_from_result(
-            pt, result, full_a, full_b, matched_a, matched_b, args.min_matches
-        )
-        if not ok:
-            return False
-        opts = pt.sfm.EstimateTwoViewInfoOptions()
-        opts.ransac_type = pt.sfm.RansacType(0)
-        opts.use_lo = True
-        opts.use_mle = True
-        opts.max_sampson_error_pixels = 2.0
-        ok2, twoview_info, inlier_idx = pt.sfm.EstimateTwoViewInfo(
-            opts, prior, prior, cors
-        )
-        if not ok2 or len(inlier_idx) < args.min_matches:
-            return False
-        twoview_info.num_verified_matches = len(inlier_idx)
-        view_graph.AddEdge(view_a, view_b, twoview_info)
-        for i in inlier_idx:
-            c = cors[i]
-            track_builder.AddFeatureCorrespondence(
-                view_a, c.feature1, view_b, c.feature2
-            )
-        print(f"  {label}: {len(inlier_idx)} inliers")
-        return True
-
-    # Stereo pairs at each timestamp + temporal same-camera links.
-    for i in range(n):
-        match_and_add(
-            left_paths[i],
-            right_paths[i],
-            left_views[i],
-            right_views[i],
-            f"stereo t={i}",
-        )
-        for dt in range(1, args.temporal_window + 1):
-            j = i + dt
-            if j >= n:
-                break
-            match_and_add(
-                left_paths[i],
-                left_paths[j],
-                left_views[i],
-                left_views[j],
-                f"left {i}-{j}",
-            )
-            match_and_add(
-                right_paths[i],
-                right_paths[j],
-                right_views[i],
-                right_views[j],
-                f"right {i}-{j}",
-            )
-
-    track_builder.BuildTracks(recon)
-    print(
-        f"ViewGraph edges={view_graph.NumEdges()}, "
-        f"tracks={recon.NumTracks()}, views={recon.NumViews()}"
-    )
-
-    # Release GPU matcher before Ceres BA: Torch CUDA + multi-threaded Ceres
-    # has been observed to SIGSEGV on this machine.
-    del matcher
-    _img_cache.clear()
     try:
-        import torch
-
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
-    except Exception:
-        pass
+        result = run_calibrated_stereo_rig(left_paths, right_paths, calib, options)
+    except (FileNotFoundError, ValueError, ImportError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
 
     if not args.out_reconstruction and args.frames_dir:
         args.out_reconstruction = os.path.join(
             os.path.abspath(args.frames_dir), "stereo_rig.recon"
         )
-
-    if args.method == "global":
-        gro = pt.sfm.GlobalRigReconstructorOptions()
-        gro.sfm_options.global_rotation_estimator_type = getattr(
-            pt.sfm.GlobalRotationEstimatorType, args.rotation_estimator
-        )
-        gro.sfm_options.global_position_estimator_type = getattr(
-            pt.sfm.GlobalPositionEstimatorType, args.position_estimator
-        )
-        # Indoor / short-baseline stereo: allow smaller triangulation angles.
-        gro.sfm_options.min_triangulation_angle_degrees = 0.5
-        gro.sfm_options.triangulation_max_reprojection_error_in_pixels = 6.0
-        gro.sfm_options.num_retriangulation_iterations = args.retriangulation_iterations
-        gro.sfm_options.num_threads = 1
-        if hasattr(gro, "rescale_positions_to_metric_edges"):
-            gro.rescale_positions_to_metric_edges = True
-        summary = pt.sfm.GlobalRigReconstructor(gro).Estimate(view_graph, recon)
-    else:
-        iro = pt.sfm.IncrementalRigReconstructorOptions()
-        iro.min_triangulation_angle_degrees = 0.5
-        iro.max_reprojection_error_in_pixels = 6.0
-        # Avoid OpenMP/Ceres crash after CUDA matching (see above).
-        iro.ba_options.num_threads = 1
-        iro.ba_options.use_inner_iterations = False
-        summary = pt.sfm.IncrementalRigReconstructor(iro).Estimate(view_graph, recon)
-
-    print(
-        f"success={summary.success} views={len(summary.estimated_views)} "
-        f"tracks={len(summary.estimated_tracks)} msg={summary.message}"
-    )
-    if summary.success:
-        _print_reprojection_stats(recon)
-    if args.out_reconstruction and summary.success:
-        pt.io.WriteReconstruction(recon, args.out_reconstruction)
+    if args.out_reconstruction and result.summary.success:
+        pt.io.WriteReconstruction(result.recon, args.out_reconstruction)
         print(f"Wrote {args.out_reconstruction}")
         ply_path = os.path.splitext(args.out_reconstruction)[0] + ".ply"
         pt.io.WriteRigPlyFile(
             ply_path,
-            recon,
+            result.recon,
             sensor_color=np.array([255, 0, 0], dtype=np.int32),
             min_num_observations_per_point=2,
         )
         print(f"Wrote {ply_path} (tracks + capture trajectory + sensor baselines)")
-    return 0 if summary.success else 2
+
+    if args.visualize and result.summary.success:
+        visualize_rig_reconstruction(
+            result.recon, window_name="pyTheia stereo rig"
+        )
+    return 0 if result.summary.success else 2
 
 
 if __name__ == "__main__":

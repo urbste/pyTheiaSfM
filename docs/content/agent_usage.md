@@ -167,6 +167,11 @@ Putative matches (OpenCV BF/FLANN, LightGlue, vismatch, …) → `FeatureCorresp
     options = pt.sfm.EstimateTwoViewInfoOptions()
     options.max_sampson_error_pixels = 1.0
     options.use_lo = True
+    # Choose two-view solver backend:
+    # pt.sfm.TwoViewEstimationMethod.FIVE_POINT_STURM (default)
+    # pt.sfm.TwoViewEstimationMethod.FAST_ITERATIVE_FIVE_POINT (forward motion)
+    # pt.sfm.TwoViewEstimationMethod.FIVE_POINT_STEWENIUS
+    options.estimation_method = pt.sfm.TwoViewEstimationMethod.FIVE_POINT_STURM
     options.use_mle = True
 
     success, twoview_info, inlier_indices = pt.sfm.EstimateTwoViewInfo(

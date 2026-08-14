@@ -89,6 +89,18 @@ class RansacParameters:
     @use_sturm_5pt.setter
     def use_sturm_5pt(*args, **kwargs):
         ...
+    @property
+    def essential_solver_type(*args, **kwargs):
+        ...
+    @essential_solver_type.setter
+    def essential_solver_type(*args, **kwargs):
+        ...
+    @property
+    def fast_iterative_5pt_options(*args, **kwargs):
+        ...
+    @fast_iterative_5pt_options.setter
+    def fast_iterative_5pt_options(*args, **kwargs):
+        ...
 class RansacSummary:
     @property
     def confidence(*args, **kwargs):

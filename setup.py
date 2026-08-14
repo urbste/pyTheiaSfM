@@ -8,11 +8,7 @@ from glob import glob
 from pathlib import Path
 from wheel.bdist_wheel import bdist_wheel
 
-import distutils.sysconfig as sysconfig
-import os
-from distutils.sysconfig import get_python_inc
-python_lib_location = os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY'))
-python_include_dir = get_python_inc()
+import sysconfig
 
 _REPO_ROOT = Path(__file__).resolve().parent
 
@@ -42,9 +38,12 @@ def configure_c_extension():
         '-DBUILD_TESTING=OFF',
         '-DPYTHON_BUILD=ON',
         '-DCMAKE_BUILD_TYPE=Release',
+        '-DPython_EXECUTABLE=' + sys.executable,
+        '-DPython3_EXECUTABLE=' + sys.executable,
         '-DPYTHON_EXECUTABLE=' + sys.executable,
-	    '-DPYTHON_LIBRARY=' + python_lib_location,
-	    '-DPYTHON_INCLUDE_DIR=' +  python_include_dir,
+        '-DPython_ROOT_DIR=' + sys.prefix,
+        '-DPython3_ROOT_DIR=' + sys.prefix,
+        '-DPYBIND11_FINDPYTHON=ON',
         '-DBUILD_WITH_MARCH_NATIVE={}'.format("ON" if build_march_native else "OFF"),
     ]
 

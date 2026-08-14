@@ -40,6 +40,8 @@
 #include "theia/sfm/feature.h"
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
 
 #include <Sophus/sophus/se3.hpp>
 #include <Sophus/sophus/sim3.hpp>
@@ -111,6 +113,61 @@ struct ReprojectionError {
 
  private:
   const Feature feature_;
+};
+
+// Reprojection through a calibrated rig: optimize the abstract-body pose
+// (position + angle-axis, Camera convention) while the sensor offset is
+// constant. Camera extrinsics are composed as:
+//   R_wc = R_rc * R_wr
+//   c_cam = c_rig + R_wr^T * c_sensor
+template <class CameraModel>
+struct RigReprojectionError {
+ public:
+  RigReprojectionError(const Feature& feature,
+                       const Eigen::Vector3d& sensor_position,
+                       const Eigen::Vector3d& sensor_orientation)
+      : inner_(feature),
+        sensor_position_(sensor_position),
+        sensor_orientation_(sensor_orientation) {}
+
+  template <typename T>
+  bool operator()(const T* rig_position,
+                  const T* rig_orientation,
+                  const T* intrinsic_parameters,
+                  const T* point,
+                  T* reprojection_error) const {
+    T R_wr[9];
+    T R_rc[9];
+    ceres::AngleAxisToRotationMatrix(
+        rig_orientation, ceres::ColumnMajorAdapter3x3(R_wr));
+    const T sensor_aa[3] = {T(sensor_orientation_[0]),
+                            T(sensor_orientation_[1]),
+                            T(sensor_orientation_[2])};
+    ceres::AngleAxisToRotationMatrix(
+        sensor_aa, ceres::ColumnMajorAdapter3x3(R_rc));
+
+    Eigen::Map<const Eigen::Matrix<T, 3, 3, Eigen::ColMajor>> Rwr(R_wr);
+    Eigen::Map<const Eigen::Matrix<T, 3, 3, Eigen::ColMajor>> Rrc(R_rc);
+    const Eigen::Matrix<T, 3, 3, Eigen::ColMajor> Rwc = Rrc * Rwr;
+
+    T camera_extrinsics[Camera::kExtrinsicsSize];
+    Eigen::Map<Eigen::Matrix<T, 3, 1>> cam_position(
+        camera_extrinsics + Camera::POSITION);
+    cam_position = Eigen::Map<const Eigen::Matrix<T, 3, 1>>(rig_position) +
+                   Rwr.transpose() * sensor_position_.cast<T>();
+    ceres::RotationMatrixToAngleAxis(
+        ceres::ColumnMajorAdapter3x3(Rwc.data()),
+        camera_extrinsics + Camera::ORIENTATION);
+    return inner_(camera_extrinsics,
+                  intrinsic_parameters,
+                  point,
+                  reprojection_error);
+  }
+
+ private:
+  ReprojectionError<CameraModel> inner_;
+  const Eigen::Vector3d sensor_position_;
+  const Eigen::Vector3d sensor_orientation_;
 };
 
 template <class CameraModel>

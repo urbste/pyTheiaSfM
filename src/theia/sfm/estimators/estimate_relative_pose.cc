@@ -43,11 +43,13 @@
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
 #include "theia/sfm/pose/essential_matrix_utils.h"
+#include "theia/sfm/pose/fast_iterative_five_point.h"
 #include "theia/sfm/pose/five_point_relative_pose.h"
 #include "theia/sfm/pose/five_point_relative_pose_sturm.h"
 #include "theia/sfm/pose/refine_relative_pose.h"
 #include "theia/sfm/pose/util.h"
 #include "theia/sfm/triangulation/triangulation.h"
+#include "theia/sfm/two_view_estimation_method.h"
 #include "theia/solvers/estimator.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
@@ -64,8 +66,13 @@ using Eigen::Vector3d;
 class RelativePoseEstimator
     : public Estimator<FeatureCorrespondence, RelativePose> {
  public:
-  explicit RelativePoseEstimator(const bool use_sturm_5pt = true)
-      : use_sturm_5pt_(use_sturm_5pt) {}
+  explicit RelativePoseEstimator(
+      const TwoViewEstimationMethod solver_type =
+          TwoViewEstimationMethod::FIVE_POINT_STURM,
+      const FastIterativeFivePointOptions& fast_iterative_options =
+          FastIterativeFivePointOptions())
+      : solver_type_(solver_type),
+        fast_iterative_options_(fast_iterative_options) {}
 
   // 5 correspondences are needed to determine an essential matrix and thus a
   // relative pose..
@@ -81,11 +88,20 @@ class RelativePoseEstimator
   bool EstimateModel(const std::vector<FeatureCorrespondence>& correspondences,
                      std::vector<RelativePose>* relative_poses) const {
     std::vector<Matrix3d> essential_matrices;
-    // The ported Sturm-sequence-based solver (theia/sfm/pose/
-    // five_point_relative_pose_sturm.h) is strictly minimal, so it is only
-    // used for exactly-5-point samples (the only case RANSAC ever calls this
-    // with); larger, non-minimal samples always use FivePointRelativePose.
-    if (use_sturm_5pt_ && correspondences.size() == 5) {
+    if (solver_type_ == TwoViewEstimationMethod::FAST_ITERATIVE_FIVE_POINT) {
+      std::vector<Vector3d> x1h, x2h;
+      x1h.reserve(correspondences.size());
+      x2h.reserve(correspondences.size());
+      for (size_t i = 0; i < correspondences.size(); i++) {
+        x1h.emplace_back(correspondences[i].feature1.point_.homogeneous());
+        x2h.emplace_back(correspondences[i].feature2.point_.homogeneous());
+      }
+      if (FastIterativeFivePoint(
+              x1h, x2h, fast_iterative_options_, &essential_matrices) == 0) {
+        return false;
+      }
+    } else if (solver_type_ == TwoViewEstimationMethod::FIVE_POINT_STURM &&
+               correspondences.size() == 5) {
       std::vector<Vector3d> x1h, x2h;
       x1h.reserve(5);
       x2h.reserve(5);
@@ -191,7 +207,8 @@ class RelativePoseEstimator
   }
 
  private:
-  const bool use_sturm_5pt_;
+  const TwoViewEstimationMethod solver_type_;
+  const FastIterativeFivePointOptions fast_iterative_options_;
   mutable Eigen::Matrix3Xd cached_x1_, cached_x2_;
   mutable const std::vector<FeatureCorrespondence>* cached_correspondences_ =
       nullptr;
@@ -207,7 +224,14 @@ bool EstimateRelativePose(
     const std::vector<FeatureCorrespondence>& normalized_correspondences,
     RelativePose* relative_pose,
     RansacSummary* ransac_summary) {
-  RelativePoseEstimator relative_pose_estimator(ransac_params.use_sturm_5pt);
+  TwoViewEstimationMethod effective_solver = ransac_params.essential_solver_type;
+  if (!ransac_params.use_sturm_5pt &&
+      effective_solver == TwoViewEstimationMethod::FIVE_POINT_STURM) {
+    effective_solver = TwoViewEstimationMethod::FIVE_POINT_STEWENIUS;
+  }
+
+  RelativePoseEstimator relative_pose_estimator(
+      effective_solver, ransac_params.fast_iterative_5pt_options);
   std::unique_ptr<SampleConsensusEstimator<RelativePoseEstimator> > ransac =
       CreateAndInitializeRansacVariant(
           ransac_type, ransac_params, relative_pose_estimator);

@@ -66,11 +66,13 @@ class RigCapture {
 
   void SetPosition(const Eigen::Vector3d& position);
   Eigen::Vector3d GetPosition() const { return position_; }
+  double* MutablePosition() { return position_.data(); }
 
   void SetOrientationFromRotationMatrix(const Eigen::Matrix3d& rotation);
   void SetOrientationFromAngleAxis(const Eigen::Vector3d& angle_axis);
   Eigen::Matrix3d GetOrientationAsRotationMatrix() const;
   Eigen::Vector3d GetOrientationAsAngleAxis() const { return orientation_; }
+  double* MutableOrientation() { return orientation_.data(); }
 
   // View membership for this capture (sensor slot -> ViewId).
   bool AddView(const RigCameraId rig_camera_id, const ViewId view_id);

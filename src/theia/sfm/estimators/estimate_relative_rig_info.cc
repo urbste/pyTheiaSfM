@@ -69,8 +69,14 @@ void RelativeRigInfo::ToTwoViewInfo(TwoViewInfo* info) const {
   ceres::RotationMatrixToAngleAxis(
       ceres::ColumnMajorAdapter3x3(rotation.data()), aa.data());
   info->rotation_2 = aa;
-  info->position_2 = position;
-  info->scale_estimate = position.norm();
+  const double scale = position.norm();
+  if (scale > 1e-12) {
+    info->position_2 = position / scale;
+    info->scale_estimate = scale;
+  } else {
+    info->position_2 = Eigen::Vector3d::Zero();
+    info->scale_estimate = -1.0;
+  }
 }
 
 bool EstimateRelativeRigInfo(
@@ -92,12 +98,6 @@ bool EstimateRelativeRigInfo(
   RandomNumberGenerator local_rng;
   RandomNumberGenerator* rng =
       ransac_params.rng ? ransac_params.rng.get() : &local_rng;
-
-  // Score against the union of both sets (central first for inlier indexing).
-  std::vector<GeneralizedRayCorrespondence> all_matches = central_matches;
-  all_matches.insert(all_matches.end(),
-                     generalized_matches.begin(),
-                     generalized_matches.end());
 
   const double sq_thresh = ransac_params.error_thresh;
   int max_iters = ransac_params.max_iterations;
@@ -134,13 +134,16 @@ bool EstimateRelativeRigInfo(
       RelativeRigInfo cand;
       FillRelativeRigInfo(pose, &cand);
       std::vector<int> inliers;
-      CountInliers(all_matches, cand, sq_thresh, &inliers);
+      // Score only same-sensor (central) matches. Cross-sensor rays on
+      // forward-moving stereo look like the calibrated baseline and will
+      // otherwise dominate consensus toward that degenerate pose.
+      CountInliers(central_matches, cand, sq_thresh, &inliers);
       if (static_cast<int>(inliers.size()) > best_count) {
         best_count = static_cast<int>(inliers.size());
         best_inliers = inliers;
         best_info = cand;
         const double ratio =
-            static_cast<double>(best_count) / all_matches.size();
+            static_cast<double>(best_count) / central_matches.size();
         max_iters = std::min(
             max_iters, ComputeMaxIterations(ransac_params, ratio, /*sample=*/6));
       }

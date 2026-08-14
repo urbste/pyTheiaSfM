@@ -1,8 +1,8 @@
 // Copyright (C) 2026 The pyTheiaSfM Authors.
 //
 // Global multi-camera SfM for calibrated rigs (MGSfM-inspired). Builds a
-// capture–capture view graph (metric 5+1 when tracks allow), then runs
-// Theia's selectable rotation / position averaging stack on capture nodes.
+// capture–capture view graph (stripped essential + stereo metric scale),
+// then runs Theia's rotation / position averaging stack on capture nodes.
 
 #ifndef THEIA_SFM_GLOBAL_RIG_RECONSTRUCTOR_H_
 #define THEIA_SFM_GLOBAL_RIG_RECONSTRUCTOR_H_
@@ -29,8 +29,8 @@ struct GlobalRigReconstructorOptions {
   ReconstructionEstimatorOptions sfm_options;
   BuildCaptureViewGraphOptions capture_graph_options;
 
-  // After direction-based position averaging, rescale capture positions so
-  // median edge lengths match metric TwoViewInfo.position_2 norms (from 5+1).
+  // After LUD, rescale capture positions so median edge lengths match
+  // metric TwoViewInfo.scale_estimate values (stereo / 5+1).
   bool rescale_positions_to_metric_edges = true;
 };
 

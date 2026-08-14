@@ -2,6 +2,8 @@
 
 #include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/estimators/estimate_radial_dist_uncalibrated_absolute_pose.h"
+#include "theia/sfm/estimators/estimate_relative_pose.h"
+#include "theia/sfm/pose/fast_iterative_five_point.h"
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/estimators/feature_correspondence_2d_3d.h"
 #include "theia/sfm/types.h"
@@ -53,6 +55,16 @@ FivePointFocalLengthRadialDistortionWrapper(
 std::tuple<bool, std::vector<Eigen::Matrix3d>> FivePointRelativePoseWrapper(
     const std::vector<Eigen::Vector2d>& image1_points,
     const std::vector<Eigen::Vector2d>& image2_points);
+
+std::tuple<int, std::vector<Eigen::Matrix3d>> FivePointRelativePoseSturmWrapper(
+    const std::vector<Eigen::Vector2d>& image1_points,
+    const std::vector<Eigen::Vector2d>& image2_points);
+
+std::tuple<bool, std::vector<Eigen::Matrix3d>, std::vector<RelativePose>>
+FastIterativeFivePointRelativePoseWrapper(
+    const std::vector<Eigen::Vector2d>& image1_points,
+    const std::vector<Eigen::Vector2d>& image2_points,
+    const FastIterativeFivePointOptions& options = FastIterativeFivePointOptions());
 
 std::tuple<int, std::vector<Eigen::Matrix<double, 3, 4>>>
 FourPointPoseAndFocalLengthWrapper(

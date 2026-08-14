@@ -176,7 +176,19 @@ bool EstimateTwoViewInfoCalibrated(
   ransac_options.max_iterations = options.max_ransac_iterations;
   ransac_options.use_lo = options.use_lo;
   ransac_options.lo_start_iterations = options.lo_start_iterations;
-  ransac_options.use_sturm_5pt = options.use_sturm_5pt;
+
+  TwoViewEstimationMethod effective_method = options.estimation_method;
+  if (!options.use_sturm_5pt &&
+      effective_method == TwoViewEstimationMethod::FIVE_POINT_STURM) {
+    effective_method = TwoViewEstimationMethod::FIVE_POINT_STEWENIUS;
+  }
+  if (options.use_monodepth) {
+    effective_method = TwoViewEstimationMethod::MONODEPTH_THREE_POINT;
+  }
+  ransac_options.essential_solver_type = effective_method;
+  ransac_options.fast_iterative_5pt_options = options.fast_iterative_5pt_options;
+  ransac_options.use_sturm_5pt =
+      (effective_method == TwoViewEstimationMethod::FIVE_POINT_STURM);
 
   // Compute the sampson error threshold to account for the resolution of the
   // images.
@@ -274,7 +286,19 @@ bool EstimateTwoViewInfoUncalibrated(
   ransac_options.max_iterations = options.max_ransac_iterations;
   ransac_options.use_lo = options.use_lo;
   ransac_options.lo_start_iterations = options.lo_start_iterations;
-  ransac_options.use_sturm_5pt = options.use_sturm_5pt;
+
+  TwoViewEstimationMethod effective_method = options.estimation_method;
+  if (!options.use_sturm_5pt &&
+      effective_method == TwoViewEstimationMethod::FIVE_POINT_STURM) {
+    effective_method = TwoViewEstimationMethod::FIVE_POINT_STEWENIUS;
+  }
+  if (options.use_monodepth) {
+    effective_method = TwoViewEstimationMethod::MONODEPTH_THREE_POINT;
+  }
+  ransac_options.essential_solver_type = effective_method;
+  ransac_options.fast_iterative_5pt_options = options.fast_iterative_5pt_options;
+  ransac_options.use_sturm_5pt =
+      (effective_method == TwoViewEstimationMethod::FIVE_POINT_STURM);
 
   // Compute the sampson error threshold to account for the resolution of the
   // images.

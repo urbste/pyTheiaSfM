@@ -50,6 +50,8 @@
 #include "theia/sfm/pose/util.h"
 
 #include "theia/sfm/feature.h"
+#include "theia/sfm/two_view_estimation_method.h"
+#include "theia/sfm/pose/fast_iterative_five_point.h"
 
 #include "theia/sfm/pose/pose_wrapper.h"
 #include "theia/sfm/triangulation/triangulation.h"
@@ -116,6 +118,7 @@
 #include "theia/sfm/rig/rig_capture.h"
 #include "theia/sfm/rig/rig_utils.h"
 #include "theia/sfm/rig/capture_view_graph.h"
+#include "theia/matching/feature_correspondence.h"
 #include "theia/sfm/track_builder.h"
 
 #include "theia/sfm/rigid_transformation.h"
@@ -181,6 +184,25 @@ namespace sfm {
 void pytheia_sfm_classes(py::module& m) {
   m.attr("kInvalidTrackId") = theia::kInvalidTrackId;
   m.attr("kInvalidViewId") = theia::kInvalidViewId;
+
+  py::enum_<theia::TwoViewEstimationMethod>(m, "TwoViewEstimationMethod")
+      .value("FIVE_POINT_STEWENIUS", theia::TwoViewEstimationMethod::FIVE_POINT_STEWENIUS)
+      .value("FIVE_POINT_STURM", theia::TwoViewEstimationMethod::FIVE_POINT_STURM)
+      .value("FAST_ITERATIVE_FIVE_POINT", theia::TwoViewEstimationMethod::FAST_ITERATIVE_FIVE_POINT)
+      .value("MONODEPTH_THREE_POINT", theia::TwoViewEstimationMethod::MONODEPTH_THREE_POINT)
+      .export_values();
+
+  py::class_<theia::FastIterativeFivePointOptions>(m, "FastIterativeFivePointOptions")
+      .def(py::init<>())
+      .def_readwrite("max_iterations", &theia::FastIterativeFivePointOptions::max_iterations)
+      .def_readwrite("initial_trust_region_radius", &theia::FastIterativeFivePointOptions::initial_trust_region_radius)
+      .def_readwrite("gradient_tolerance", &theia::FastIterativeFivePointOptions::gradient_tolerance)
+      .def_readwrite("residual_tolerance", &theia::FastIterativeFivePointOptions::residual_tolerance)
+      .def_readwrite("step_tolerance", &theia::FastIterativeFivePointOptions::step_tolerance)
+      .def_readwrite("trust_region_tolerance", &theia::FastIterativeFivePointOptions::trust_region_tolerance)
+      .def_readwrite("prior_rotation", &theia::FastIterativeFivePointOptions::prior_rotation)
+      .def_readwrite("prior_translation", &theia::FastIterativeFivePointOptions::prior_translation);
+
   // camera
   AddIntrinsicsPriorType<1>(m, "Scalar");
   AddIntrinsicsPriorType<2>(m, "Vector2d");
@@ -589,6 +611,13 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("NormalizedEightPointFundamentalMatrix",
         theia::NormalizedEightPointFundamentalMatrixWrapper);
   m.def("FivePointRelativePose", theia::FivePointRelativePoseWrapper);
+  m.def("FivePointRelativePoseSturm", theia::FivePointRelativePoseSturmWrapper,
+        "Computes essential matrix from exactly 5 points using polynomial elimination and Sturm sequence root finding (Nister/PoseLib).");
+  m.def("FastIterativeFivePointRelativePose", theia::FastIterativeFivePointRelativePoseWrapper,
+        py::arg("image1_points"),
+        py::arg("image2_points"),
+        py::arg("options") = theia::FastIterativeFivePointOptions(),
+        "Fast iterative 5-point relative pose solver using Powell's Dogleg (Hedborg & Felsberg). Constrained to forward-facing trajectories with prior [0,0,1] / identity rotation.");
   m.def("FivePointOnePointGeneralizedRelativePose",
         theia::FivePointOnePointGeneralizedRelativePoseWrapper);
   m.def("FourPointUprightGeneralizedRelativePose",
@@ -1118,6 +1147,10 @@ void pytheia_sfm_classes(py::module& m) {
 
   py::class_<theia::EstimateTwoViewInfoOptions>(m, "EstimateTwoViewInfoOptions")
       .def(py::init<>())
+      .def_readwrite("estimation_method",
+                     &theia::EstimateTwoViewInfoOptions::estimation_method)
+      .def_readwrite("fast_iterative_5pt_options",
+                     &theia::EstimateTwoViewInfoOptions::fast_iterative_5pt_options)
       .def_readwrite("ransac_type",
                      &theia::EstimateTwoViewInfoOptions::ransac_type)
       .def_readwrite(
@@ -1518,7 +1551,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("sparse_linear_algebra_library_type",
                      &theia::BundleAdjustmentOptions::sparse_linear_algebra_library_type)
       .def_readwrite("optimize_for_forward_facing_trajectory",
-                     &theia::BundleAdjustmentOptions::optimize_for_forward_facing_trajectory);
+                     &theia::BundleAdjustmentOptions::optimize_for_forward_facing_trajectory)
+      .def_readwrite("use_rig_constraints",
+                     &theia::BundleAdjustmentOptions::use_rig_constraints);
 
   // Reconstruction Options
   py::enum_<theia::TriangulationMethodType>(m, "TriangulationMethodType")
@@ -1625,6 +1660,12 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("bundle_adjust_after_localize",
                      &theia::IncrementalRigReconstructorOptions::
                          bundle_adjust_after_localize)
+      .def_readwrite("bundle_adjust_every_n_captures",
+                     &theia::IncrementalRigReconstructorOptions::
+                         bundle_adjust_every_n_captures)
+      .def_readwrite("partial_bundle_adjustment_num_captures",
+                     &theia::IncrementalRigReconstructorOptions::
+                         partial_bundle_adjustment_num_captures)
       .def_readwrite("use_generalized_localization",
                      &theia::IncrementalRigReconstructorOptions::
                          use_generalized_localization)
@@ -1646,6 +1687,15 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite(
           "fallback_to_twoview_strip",
           &theia::BuildCaptureViewGraphOptions::fallback_to_twoview_strip)
+      .def_readwrite("metric_only_for_viewgraph_pairs",
+                     &theia::BuildCaptureViewGraphOptions::
+                         metric_only_for_viewgraph_pairs)
+      .def_readwrite("skip_metric_if_baseline_degenerate",
+                     &theia::BuildCaptureViewGraphOptions::
+                         skip_metric_if_baseline_degenerate)
+      .def_readwrite("max_baseline_translation_alignment",
+                     &theia::BuildCaptureViewGraphOptions::
+                         max_baseline_translation_alignment)
       .def_readwrite(
           "relative_rig_ransac",
           &theia::BuildCaptureViewGraphOptions::relative_rig_ransac);
@@ -2047,6 +2097,26 @@ void pytheia_sfm_classes(py::module& m) {
         &theia::PropagateCameraPosesForCapture);
   m.def("PropagateAllEstimatedCapturePoses",
         &theia::PropagateAllEstimatedCapturePoses);
+  m.def("SetCapturePoseFromMemberViews",
+        &theia::SetCapturePoseFromMemberViews);
+  m.def("EssentialMatrixFromRigSensors",
+        &theia::EssentialMatrixFromRigSensors);
+  m.def(
+      "FilterCorrespondencesWithEssential",
+      [](const Eigen::Matrix3d& essential_matrix,
+         const theia::Camera& camera1,
+         const theia::Camera& camera2,
+         const std::vector<theia::FeatureCorrespondence>& correspondences,
+         double max_sampson_error_pixels) {
+        std::vector<int> inliers;
+        theia::FilterCorrespondencesWithEssential(essential_matrix,
+                                                  camera1,
+                                                  camera2,
+                                                  correspondences,
+                                                  max_sampson_error_pixels,
+                                                  &inliers);
+        return inliers;
+      });
 
   // Reconstruction Estimator Helpers
   m.def("SetUnderconstrainedTracksToUnestimated",
@@ -2402,7 +2472,10 @@ void pytheia_sfm_classes(py::module& m) {
                          use_pairwise_scale_priors)
       .def_readwrite("pairwise_scale_prior_weight",
                      &theia::GlomapPositionEstimator::Options::
-                         pairwise_scale_prior_weight);
+                         pairwise_scale_prior_weight)
+      .def_readwrite("initialize_from_reconstruction",
+                     &theia::GlomapPositionEstimator::Options::
+                         initialize_from_reconstruction);
 
   py::class_<theia::GlomapPositionEstimator, theia::PositionEstimator>(
       m, "GlomapPositionEstimator")

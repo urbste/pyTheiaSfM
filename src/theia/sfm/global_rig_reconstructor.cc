@@ -114,14 +114,14 @@ ReconstructionEstimatorSummary GlobalRigReconstructor::Estimate(
 
   LOG(INFO) << "Estimating the positions of all captures.";
   timer.Reset();
-  bool positions_ok = false;
-  if (opt.global_position_estimator_type ==
-      GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION) {
-    positions_ok = EstimateCapturePositions();
+  bool positions_ok = EstimateCapturePositions();
+  if (positions_ok && options_.rescale_positions_to_metric_edges) {
+    LOG(INFO) << "Rescaling capture positions to metric edge lengths.";
+    RescaleCapturePositionsToMetricEdges();
   }
   if (!positions_ok) {
-    LOG(INFO) << "Capture-graph position estimator failed or was skipped; "
-                 "falling back to view-graph position estimation.";
+    LOG(INFO) << "Capture-graph LUD failed; falling back to view-graph "
+                 "position estimation.";
     positions_ok = EstimateCapturePositionsFromViewGraph(view_graph);
   }
   summary.pose_estimation_time += timer.ElapsedTimeInSeconds();
@@ -134,10 +134,20 @@ ReconstructionEstimatorSummary GlobalRigReconstructor::Estimate(
   }
   LOG(INFO) << positions_.size()
             << " capture positions were estimated successfully.";
-
-  if (options_.rescale_positions_to_metric_edges) {
-    LOG(INFO) << "Rescaling capture positions to metric edge lengths.";
-    RescaleCapturePositionsToMetricEdges();
+  if (!positions_.empty()) {
+    std::vector<ViewId> ids;
+    ids.reserve(positions_.size());
+    for (const auto& pos : positions_) {
+      ids.push_back(pos.first);
+    }
+    std::sort(ids.begin(), ids.end());
+    for (size_t i = 1; i < ids.size() && i < 6; ++i) {
+      const double step = (positions_[ids[i]] - positions_[ids[i - 1]]).norm();
+      LOG(INFO) << "LUD consecutive step " << ids[i - 1] << "→" << ids[i]
+                << " ||dC||=" << step
+                << " dC=[" << (positions_[ids[i]] - positions_[ids[i - 1]]).transpose()
+                << "]";
+    }
   }
 
   LOG(INFO) << "Setting capture poses and propagating to views.";
@@ -249,13 +259,20 @@ bool GlobalRigReconstructor::EstimateCapturePositions() {
         filter_opts, orientations_, capture_view_graph_);
     const std::unordered_set<ViewId> removed =
         RemoveDisconnectedViewPairs(capture_view_graph_);
+    LOG(INFO) << "1DSfM translation filter: "
+              << capture_view_graph_->NumEdges()
+              << " capture edges remain, " << removed.size()
+              << " captures disconnected.";
     for (const ViewId id : removed) {
       orientations_.erase(id);
     }
   }
 
-  LeastUnsquaredDeviationPositionEstimator estimator(
-      opt.least_unsquared_deviation_position_estimator_options);
+  LeastUnsquaredDeviationPositionEstimator::Options lud_opts =
+      opt.least_unsquared_deviation_position_estimator_options;
+  lud_opts.use_scale_estimates = true;
+  lud_opts.min_valid_scale_estimate = 0.0;
+  LeastUnsquaredDeviationPositionEstimator estimator(lud_opts);
   return estimator.EstimatePositions(
       capture_view_graph_->GetAllEdges(), orientations_, &positions_);
 }
@@ -272,8 +289,8 @@ void GlobalRigReconstructor::RescaleCapturePositionsToMetricEdges() {
     if (!ContainsKey(positions_, a) || !ContainsKey(positions_, b)) {
       continue;
     }
-    const double metric = edge.second.position_2.norm();
-    if (metric < 1e-8) {
+    const double metric = edge.second.scale_estimate;
+    if (metric <= 0.0) {
       continue;
     }
     // TwoViewInfo.position_2 is b's center in a's identity frame. With known
@@ -361,42 +378,38 @@ bool GlobalRigReconstructor::EstimateCapturePositionsFromViewGraph(
     return false;
   }
 
-  positions_.clear();
-  for (const CaptureId capture_id : reconstruction_->CaptureIds()) {
-    RigCapture* capture = reconstruction_->MutableRigCapture(capture_id);
-    if (capture == nullptr || capture->ViewIds().empty()) {
-      continue;
-    }
-    if (!ContainsKey(orientations_, static_cast<ViewId>(capture_id))) {
-      continue;
-    }
-    const CameraRig* rig = reconstruction_->GetCameraRig(capture->GetRigId());
-    if (rig == nullptr) {
-      continue;
-    }
-
-    const auto first = *capture->ViewIds().begin();
-    const ViewId view_id = first.second;
+  for (const ViewId view_id : reconstruction_->ViewIds()) {
     if (!ContainsKey(view_positions, view_id)) {
       continue;
     }
     View* view = reconstruction_->MutableView(view_id);
-    const RigSensor* sensor = rig->GetSensor(first.first);
-    if (view == nullptr || sensor == nullptr) {
+    if (view == nullptr) {
       continue;
     }
     view->MutableCamera()->SetPosition(view_positions[view_id]);
-    view->MutableCamera()->SetOrientationFromAngleAxis(
-        view_orientations[view_id]);
+    if (ContainsKey(view_orientations, view_id)) {
+      view->MutableCamera()->SetOrientationFromAngleAxis(
+          view_orientations[view_id]);
+    }
+    view->SetEstimated(true);
+  }
 
-    Eigen::Vector3d rig_position;
-    Eigen::Matrix3d rig_orientation;
-    ComposeRigPoseFromCamera(view->Camera().GetPosition(),
-                             view->Camera().GetOrientationAsRotationMatrix(),
-                             *sensor,
-                             &rig_position,
-                             &rig_orientation);
-    positions_[static_cast<ViewId>(capture_id)] = rig_position;
+  positions_.clear();
+  for (const CaptureId capture_id : reconstruction_->CaptureIds()) {
+    if (!ContainsKey(orientations_, static_cast<ViewId>(capture_id))) {
+      continue;
+    }
+    if (!SetCapturePoseFromMemberViews(capture_id, reconstruction_)) {
+      continue;
+    }
+    const RigCapture* capture = reconstruction_->GetRigCapture(capture_id);
+    if (capture == nullptr) {
+      continue;
+    }
+    positions_[static_cast<ViewId>(capture_id)] = capture->GetPosition();
+    orientations_[static_cast<ViewId>(capture_id)] =
+        capture->GetOrientationAsAngleAxis();
+    PropagateCameraPosesForCapture(capture_id, reconstruction_);
   }
   return !positions_.empty();
 }
@@ -434,35 +447,23 @@ void GlobalRigReconstructor::EstimateStructure() {
 
 void GlobalRigReconstructor::BundleAdjustAndPropagate() {
   const auto& opt = options_.sfm_options;
-  BundleAdjustmentOptions ba_options = SetBundleAdjustmentOptions(opt, 0);
-  BundleAdjustReconstruction(ba_options, reconstruction_);
-
-  for (const CaptureId capture_id : reconstruction_->CaptureIds()) {
-    RigCapture* capture = reconstruction_->MutableRigCapture(capture_id);
-    if (capture == nullptr || !capture->IsEstimated()) {
-      continue;
+  bool has_estimated_track = false;
+  for (const TrackId track_id : reconstruction_->TrackIds()) {
+    const Track* track = reconstruction_->Track(track_id);
+    if (track != nullptr && track->IsEstimated()) {
+      has_estimated_track = true;
+      break;
     }
-    const CameraRig* rig = reconstruction_->GetCameraRig(capture->GetRigId());
-    if (rig == nullptr || capture->ViewIds().empty()) {
-      continue;
-    }
-    const auto first = *capture->ViewIds().begin();
-    const View* view = reconstruction_->View(first.second);
-    const RigSensor* sensor = rig->GetSensor(first.first);
-    if (view == nullptr || sensor == nullptr || !view->IsEstimated()) {
-      continue;
-    }
-    Eigen::Vector3d rig_position;
-    Eigen::Matrix3d rig_orientation;
-    ComposeRigPoseFromCamera(view->Camera().GetPosition(),
-                             view->Camera().GetOrientationAsRotationMatrix(),
-                             *sensor,
-                             &rig_position,
-                             &rig_orientation);
-    capture->SetPosition(rig_position);
-    capture->SetOrientationFromRotationMatrix(rig_orientation);
-    PropagateCameraPosesForCapture(capture_id, reconstruction_);
   }
+  if (!has_estimated_track) {
+    LOG(WARNING) << "Skipping bundle adjustment; no estimated tracks.";
+    return;
+  }
+
+  BundleAdjustmentOptions ba_options = SetBundleAdjustmentOptions(opt, 0);
+  ba_options.use_rig_constraints = true;
+  BundleAdjustReconstruction(ba_options, reconstruction_);
+  PropagateAllEstimatedCapturePoses(reconstruction_);
 
   SetOutlierTracksToUnestimated(opt.max_reprojection_error_in_pixels,
                                 opt.min_triangulation_angle_degrees,

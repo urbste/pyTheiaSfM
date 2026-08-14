@@ -99,11 +99,19 @@ def test_build_capture_view_graph_metric_from_tracks():
         for vid in c.GetViewIds():
             recon.MutableView(vid).SetIsEstimated(False)
 
-    vg = pt.sfm.ViewGraph()  # unused for metric path when tracks exist
+    # Production path: unit-scale left–left essential + stereo tracks for scale.
+    vg = pt.sfm.ViewGraph()
+    info = pt.sfm.TwoViewInfo()
+    info.rotation_2 = np.zeros(3)
+    info.position_2 = np.array([0.0, 0.0, 1.0])
+    info.num_verified_matches = 80
+    vg.AddEdge(vl0, vl1, info)
+
     cg = pt.sfm.ViewGraph()
     opts = pt.sfm.BuildCaptureViewGraphOptions()
     opts.use_metric_relative_rig_pose = True
     opts.fallback_to_twoview_strip = False
+    opts.metric_only_for_viewgraph_pairs = True
     opts.relative_rig_ransac.error_thresh = 1e-4
     opts.relative_rig_ransac.min_iterations = 50
     opts.relative_rig_ransac.max_iterations = 500
@@ -111,10 +119,15 @@ def test_build_capture_view_graph_metric_from_tracks():
     assert pt.sfm.BuildCaptureViewGraph(recon, vg, cg, opts)
     assert cg.NumEdges() == 1
     edge = list(cg.GetAllEdges().values())[0]
-    # Ground-truth motion is 0.4 m along +Z (rig centers).
+    # Ground-truth motion is 0.4 m along +Z. ToTwoViewInfo stores a unit
+    # direction in position_2 and the metric length in scale_estimate.
     pos = np.asarray(edge.position_2)
-    assert abs(np.linalg.norm(pos) - 0.4) < 0.05
-    assert abs(pos[2]) > 0.3
+    direction = pos / np.linalg.norm(pos)
+    scale = (
+        edge.scale_estimate if edge.scale_estimate > 0.0 else np.linalg.norm(pos)
+    )
+    assert abs(scale - 0.4) < 0.05, scale
+    assert abs(direction[2]) > 0.9, direction
 
 
 def test_build_capture_view_graph_fallback_without_tracks():

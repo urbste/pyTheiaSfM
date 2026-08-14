@@ -39,6 +39,8 @@
 #include <vector>
 
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
+#include "theia/sfm/pose/fast_iterative_five_point.h"
+#include "theia/sfm/two_view_estimation_method.h"
 
 namespace theia {
 
@@ -72,6 +74,14 @@ struct EstimateTwoViewInfoOptions {
   bool use_mle = true;
   bool use_lo = false;
   int lo_start_iterations = 10;
+
+  // Two-view estimation method. Defaults to Sturm 5-point.
+  // Set to FAST_ITERATIVE_FIVE_POINT for fast Dogleg solver on forward-facing trajectories.
+  TwoViewEstimationMethod estimation_method = TwoViewEstimationMethod::FIVE_POINT_STURM;
+
+  // Options for the FastIterativeFivePoint solver (when estimation_method == FAST_ITERATIVE_FIVE_POINT).
+  // Constrained to forward-facing trajectories with prior [0,0,1] / identity rotation.
+  FastIterativeFivePointOptions fast_iterative_5pt_options;
 
   // Use the Sturm-sequence-based 5-point solver (ported from PoseLib) instead
   // of theia's Stewenius-style eigendecomposition solver inside the RANSAC

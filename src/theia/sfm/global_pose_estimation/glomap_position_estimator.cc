@@ -182,11 +182,20 @@ bool GlomapPositionEstimator::EstimatePositions(
 
   positions->reserve(constrained_views.size());
   for (const ViewId view_id : constrained_views) {
+    if (options_.initialize_from_reconstruction) {
+      const View* view = reconstruction_->View(view_id);
+      if (view != nullptr && view->IsEstimated()) {
+        (*positions)[view_id] = view->Camera().GetPosition();
+        continue;
+      }
+    }
     (*positions)[view_id] = rng_->RandVector3d(-1.0, 1.0);
   }
 
   const ViewId fixed_view_id = SmallestViewId(*positions);
-  FindOrDie(*positions, fixed_view_id).setZero();
+  if (!options_.initialize_from_reconstruction) {
+    FindOrDie(*positions, fixed_view_id).setZero();
+  }
 
   std::vector<double> inverse_depths(observations.size(), 1.0);
   ceres::Problem problem;

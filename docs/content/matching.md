@@ -53,7 +53,7 @@ Arguments:
 - **`global_descriptors`** — one floating-point descriptor per image: typically a **2D NumPy array** of shape `(n_images, dim)` or an equivalent sequence of 1D vectors (same `dim` for every row). These are **whole-image** embeddings (e.g. from a place-recognition network), not per-keypoint descriptors.
 - **`num_nearest_neighbors_for_global_descriptor_matching`** — **k**; capped internally at `n_images - 1`.
 
-Use this to avoid an **all-pairs** \(O(n^2)\) local matching schedule on large collections. Example: [`pyexamples/sfm/sfm_pipeline_loftr_aqualoc.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/sfm/sfm_pipeline_loftr_aqualoc.py) (CosPlace-style global vectors + `GraphMatch`, then LoFTR on the selected pairs).
+Use this to avoid an **all-pairs** \(O(n^2)\) local matching schedule on large collections. Example: [`pyexamples/sfm/sfm_pipeline_loftr_aqualoc.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/sfm/sfm_pipeline_loftr_aqualoc.py) (CosPlace-style global vectors + `GraphMatch`, then LoFTR on the selected pairs). The calibrated stereo pipeline uses the same pattern when `--trajectory_has_loops` is set: CosPlace (ResNet18/128) on **left** keyframes only, cached as one `.npz` per left-image folder (`descriptors` rows keyed by numeric frame id), then `GraphMatch` loop candidates on top of the temporal/cascade schedule.
 
 ---
 

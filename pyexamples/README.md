@@ -29,7 +29,11 @@ python pyexamples/preprocess/zed_svo_extract_stereo.py \
   --svo /data/capture.svo2 --out_dir /data/zed_frames --every 5
 
 python pyexamples/stereo/stereo_rig_reconstruction.py \
-  --frames_dir /data/zed_frames --matcher edm --method global
+  --frames_dir /data/zed_frames --matcher disk-lightglue --method global --visualize
+
+# KITTI odometry (gray stereo + optional GT poses)
+python pyexamples/stereo/kitti_rig_benchmark.py \
+  --kitti_root /data/kitti/odometry --sequences 00 --max_frames 200
 ```
 
 `zed_svo_extract_stereo.py` needs the Stereolabs **ZED SDK** Python API (`pyzed`),

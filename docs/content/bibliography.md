@@ -33,6 +33,9 @@
 ## HartleyZisserman {#HartleyZisserman}
 :   R.I. Hartley & A. Zisserman, **Multiview Geometry in Computer Vision**, Cambridge University Press, 2004.
 
+## HedborgFelsberg2026 {#HedborgFelsberg2026}
+:   J. Hedborg and M. Felsberg. **Fast Iterative Five Point Relative Pose Estimation**. *ArXiv:2608.13114*, 2026.
+
 ## Hesch {#Hesch}
 :   J. Hesch, S. Roumeliotis. **A Direct Least-Squares (DLS) Approach for PnP**, *In Proceedings of the IEEE International Conference on Computer Vision (ICCV) 2013*
 

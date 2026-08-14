@@ -24,6 +24,7 @@
 #include "theia/sfm/track.h"
 #include "theia/sfm/view.h"
 #include "theia/sfm/view_graph/view_graph.h"
+#include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/util/map_util.h"
 #include "theia/util/timer.h"
 
@@ -55,6 +56,7 @@ ReconstructionEstimatorSummary IncrementalRigReconstructor::Estimate(
 
   SetCameraIntrinsicsFromPriors(reconstruction);
 
+  estimated_captures_.clear();
   timer.Reset();
   if (!SeedInitialCapture(reconstruction)) {
     summary.success = false;
@@ -96,14 +98,12 @@ ReconstructionEstimatorSummary IncrementalRigReconstructor::Estimate(
     const bool localized = LocalizeCapture(best_capture, reconstruction);
     summary.pose_estimation_time += timer.ElapsedTimeInSeconds();
     if (!localized) {
-      // Try the next-best capture next iteration by treating this as failed:
-      // mark nothing, but remove from consideration by skipping via a local set.
-      // Simpler: erase and continue.
       remaining.erase(
           std::remove(remaining.begin(), remaining.end(), best_capture),
           remaining.end());
       continue;
     }
+    estimated_captures_.push_back(best_capture);
 
     timer.Reset();
     EstimateStructure(reconstruction);
@@ -111,12 +111,24 @@ ReconstructionEstimatorSummary IncrementalRigReconstructor::Estimate(
 
     if (options_.bundle_adjust_after_localize) {
       timer.Reset();
-      BundleAdjustAndPropagate(reconstruction);
+      const bool run_full =
+          options_.bundle_adjust_every_n_captures > 0 &&
+          (static_cast<int>(estimated_captures_.size()) %
+           options_.bundle_adjust_every_n_captures) == 0;
+      if (run_full) {
+        BundleAdjustAndPropagate(reconstruction);
+      } else {
+        PartialBundleAdjustAndPropagate(reconstruction);
+      }
       summary.bundle_adjustment_time += timer.ElapsedTimeInSeconds();
     }
 
     remaining = OrderedUnestimatedCaptures(*reconstruction);
   }
+
+  timer.Reset();
+  BundleAdjustAndPropagate(reconstruction);
+  summary.bundle_adjustment_time += timer.ElapsedTimeInSeconds();
 
   for (const ViewId view_id : reconstruction->ViewIds()) {
     const View* view = reconstruction->View(view_id);
@@ -159,11 +171,24 @@ bool IncrementalRigReconstructor::SeedInitialCapture(
   CaptureId seed = captures.front();
   for (const CaptureId capture_id : captures) {
     const RigCapture* capture = reconstruction->GetRigCapture(capture_id);
-    std::unordered_set<ViewId> capture_views(
-        capture->GetViewIds().begin(), capture->GetViewIds().end());
+    if (capture == nullptr) {
+      continue;
+    }
+    // GetViewIds() returns by value; do not pass begin()/end() of two
+    // temporaries into a range constructor (dangling iterators / SIGSEGV).
+    std::unordered_set<ViewId> capture_views;
+    for (const auto& sensor_and_view : capture->ViewIds()) {
+      capture_views.insert(sensor_and_view.second);
+    }
+    if (capture_views.empty()) {
+      continue;
+    }
     bool has_intra_rig_track = false;
     for (const TrackId track_id : reconstruction->TrackIds()) {
       const Track* track = reconstruction->Track(track_id);
+      if (track == nullptr) {
+        continue;
+      }
       int observations_in_capture = 0;
       for (const ViewId view_id : track->ViewIds()) {
         if (ContainsKey(capture_views, view_id)) {
@@ -185,7 +210,11 @@ bool IncrementalRigReconstructor::SeedInitialCapture(
   capture->SetPosition(Eigen::Vector3d::Zero());
   capture->SetOrientationFromAngleAxis(Eigen::Vector3d::Zero());
   capture->SetEstimated(true);
-  return PropagateCameraPosesForCapture(seed, reconstruction);
+  if (!PropagateCameraPosesForCapture(seed, reconstruction)) {
+    return false;
+  }
+  estimated_captures_.push_back(seed);
+  return true;
 }
 
 bool IncrementalRigReconstructor::LocalizeCapture(
@@ -338,43 +367,89 @@ void IncrementalRigReconstructor::EstimateStructure(
   track_options.min_triangulation_angle_degrees =
       options_.min_triangulation_angle_degrees;
   TrackEstimator track_estimator(track_options, reconstruction);
-  track_estimator.EstimateAllTracks();
+
+  // Only triangulate tracks visible in the capture we just estimated. Retrying
+  // every unestimated track after each localization is the dominant cost on
+  // dense stereo sequences.
+  if (estimated_captures_.empty()) {
+    track_estimator.EstimateAllTracks();
+    return;
+  }
+  const RigCapture* capture =
+      reconstruction->GetRigCapture(estimated_captures_.back());
+  if (capture == nullptr) {
+    track_estimator.EstimateAllTracks();
+    return;
+  }
+  std::unordered_set<TrackId> tracks;
+  for (const ViewId view_id : capture->GetViewIds()) {
+    const View* view = reconstruction->View(view_id);
+    if (view == nullptr) {
+      continue;
+    }
+    for (const TrackId track_id : view->TrackIds()) {
+      const Track* track = reconstruction->Track(track_id);
+      if (track != nullptr && !track->IsEstimated()) {
+        tracks.insert(track_id);
+      }
+    }
+  }
+  if (!tracks.empty()) {
+    track_estimator.EstimateTracks(tracks);
+  }
 }
 
 void IncrementalRigReconstructor::BundleAdjustAndPropagate(
     Reconstruction* reconstruction) {
   BundleAdjustmentOptions ba_options = options_.ba_options;
+  ba_options.use_rig_constraints = true;
   BundleAdjustReconstruction(ba_options, reconstruction);
-  // Independent view BA can drift sensors apart; snap back to shared body
-  // poses by re-estimating each capture from its first sensor, then propagate.
-  for (const CaptureId capture_id : reconstruction->CaptureIds()) {
-    RigCapture* capture = reconstruction->MutableRigCapture(capture_id);
-    if (capture == nullptr || !capture->IsEstimated()) {
-      continue;
-    }
-    const CameraRig* rig = reconstruction->GetCameraRig(capture->GetRigId());
-    if (rig == nullptr || capture->ViewIds().empty()) {
-      continue;
-    }
-    const auto first = *capture->ViewIds().begin();
-    const RigCameraId rig_camera_id = first.first;
-    const ViewId view_id = first.second;
-    const View* view = reconstruction->View(view_id);
-    const RigSensor* sensor = rig->GetSensor(rig_camera_id);
-    if (view == nullptr || sensor == nullptr || !view->IsEstimated()) {
-      continue;
-    }
-    Eigen::Vector3d rig_position;
-    Eigen::Matrix3d rig_orientation;
-    ComposeRigPoseFromCamera(view->Camera().GetPosition(),
-                             view->Camera().GetOrientationAsRotationMatrix(),
-                             *sensor,
-                             &rig_position,
-                             &rig_orientation);
-    capture->SetPosition(rig_position);
-    capture->SetOrientationFromRotationMatrix(rig_orientation);
-    PropagateCameraPosesForCapture(capture_id, reconstruction);
+  PropagateAllEstimatedCapturePoses(reconstruction);
+}
+
+void IncrementalRigReconstructor::PartialBundleAdjustAndPropagate(
+    Reconstruction* reconstruction) {
+  const int partial_ba_size = std::min(
+      static_cast<int>(estimated_captures_.size()),
+      options_.partial_bundle_adjustment_num_captures);
+  if (partial_ba_size <= 0) {
+    return;
   }
+
+  std::unordered_set<ViewId> views_to_optimize;
+  std::unordered_set<TrackId> tracks_to_optimize;
+  for (int i = static_cast<int>(estimated_captures_.size()) - partial_ba_size;
+       i < static_cast<int>(estimated_captures_.size());
+       ++i) {
+    const RigCapture* capture =
+        reconstruction->GetRigCapture(estimated_captures_[i]);
+    if (capture == nullptr) {
+      continue;
+    }
+    for (const ViewId view_id : capture->GetViewIds()) {
+      const View* view = reconstruction->View(view_id);
+      if (view == nullptr || !view->IsEstimated()) {
+        continue;
+      }
+      views_to_optimize.insert(view_id);
+      for (const TrackId track_id : view->TrackIds()) {
+        const Track* track = reconstruction->Track(track_id);
+        if (track != nullptr && track->IsEstimated()) {
+          tracks_to_optimize.insert(track_id);
+        }
+      }
+    }
+  }
+  if (views_to_optimize.empty() || tracks_to_optimize.empty()) {
+    return;
+  }
+
+  BundleAdjustmentOptions ba_options = options_.ba_options;
+  ba_options.use_rig_constraints = true;
+  ba_options.use_inner_iterations = false;
+  BundleAdjustPartialReconstruction(
+      ba_options, views_to_optimize, tracks_to_optimize, reconstruction);
+  PropagateAllEstimatedCapturePoses(reconstruction);
 }
 
 std::vector<CaptureId> IncrementalRigReconstructor::OrderedUnestimatedCaptures(

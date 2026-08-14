@@ -9,7 +9,7 @@ Organized by topic (see [`pyexamples/README.md`](https://github.com/urbste/pyThe
 | Area | Path |
 |------|------|
 | Preprocess / ZED SVO | [`pyexamples/preprocess/`](https://github.com/urbste/pyTheiaSfM/tree/master/pyexamples/preprocess) — video/sequence extractors; [`zed_svo_extract_stereo.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/preprocess/zed_svo_extract_stereo.py) writes rectified left/right + `rig_calibration.json` (needs `pyzed`) |
-| Stereo / calibrated rig | [`pyexamples/stereo/stereo_rig_reconstruction.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/stereo/stereo_rig_reconstruction.py) — baseline + intrinsics, vismatch (`edm`), `GlobalRigReconstructor` / `IncrementalRigReconstructor` (see [Rigs](rigs.md)) |
+| Stereo / calibrated rig | [`pyexamples/stereo/stereo_rig_reconstruction.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/stereo/stereo_rig_reconstruction.py) — baseline + intrinsics, vismatch (`disk-lightglue`), `GlobalRigReconstructor` / `IncrementalRigReconstructor`; `--visualize` uses Open3D when installed (see [Rigs](rigs.md)). KITTI odometry: [`kitti_rig_benchmark.py`](https://github.com/urbste/pyTheiaSfM/blob/master/pyexamples/stereo/kitti_rig_benchmark.py). |
 | Monocular SfM | [`pyexamples/sfm/`](https://github.com/urbste/pyTheiaSfM/tree/master/pyexamples/sfm) — OpenCV fountain, Kornia deep matching, LoFTR + Aqualoc |
 | Two-view / Sim(3) / IO / MVS | [`twoview/`](https://github.com/urbste/pyTheiaSfM/tree/master/pyexamples/twoview), [`transform/`](https://github.com/urbste/pyTheiaSfM/tree/master/pyexamples/transform), [`io/`](https://github.com/urbste/pyTheiaSfM/tree/master/pyexamples/io), [`mvs/`](https://github.com/urbste/pyTheiaSfM/tree/master/pyexamples/mvs) |
 

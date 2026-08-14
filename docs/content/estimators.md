@@ -101,11 +101,14 @@ Like the multi-camera rigid case, but estimates a **7-DOF similarity** (gDLS / s
 
 **Header:** [`estimate_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/estimators/estimate_relative_pose.h)
 
-Calibrated two-view **relative pose** with RANSAC (five-point essential matrix pipeline). Uses **normalized** `FeatureCorrespondence` pairs.
+Calibrated two-view **relative pose** with RANSAC. Uses **normalized** `FeatureCorrespondence` pairs.
+
+The solver inside RANSAC is configured via `RansacParameters.essential_solver_type` (`TwoViewEstimationMethod`):
+- `TwoViewEstimationMethod.FIVE_POINT_STURM` (default) — fast root-bracketing minimal solver.
+- `TwoViewEstimationMethod.FAST_ITERATIVE_FIVE_POINT` — iterative Powell's Dogleg solver with forward-facing prior (`[0, 0, -1]^T`), optimal for autonomous driving / robotics forward motion.
+- `TwoViewEstimationMethod.FIVE_POINT_STEWENIUS` — classic 10x10 action-matrix Groebner basis solver.
 
 **Returns:** `(success, RelativePose, RansacSummary)` with `essential_matrix`, `rotation`, `position` (translation up to scale).
-
-By default (`RansacParameters.use_sturm_5pt = True`) the minimal 5-point solve inside RANSAC uses a Sturm-sequence-based solver adapted from [PoseLib](bibliography.md#LarssonPoseLib) instead of theia's original Stewénius-style solver — see [Pose — Five Point Relative Pose (Sturm-sequence solver)](pose.md#section-five_point_essential_matrix_sturm).
 
 With **`use_lo=true`**, inlier refinement is a dense 5-DoF Sampson LM ([`refine_relative_pose.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/refine_relative_pose.h); [Pose — dense LM](pose.md#section-dense-lm-pose-refinement)); see [RANSAC — local optimization](ransac.md#ransac-local-optimization).
 

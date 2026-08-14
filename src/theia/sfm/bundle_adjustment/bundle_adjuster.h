@@ -51,6 +51,7 @@ class CameraIntrinsicsModel;
 class Reconstruction;
 class Track;
 class View;
+struct RigSensor;
 
 // This class sets up nonlinear optimization problems for bundle adjustment.
 // Bundle adjustment problems are set up by adding views and tracks to be
@@ -150,6 +151,20 @@ class BundleAdjuster {
   virtual void AddReprojectionErrorResidual(const Feature& feature,
                                             Camera* camera,
                                             Track* track);
+
+  void AddRigReprojectionErrorResidual(const Feature& feature,
+                                       Camera* camera,
+                                       Track* track,
+                                       double* rig_position,
+                                       double* rig_orientation,
+                                       const RigSensor& sensor);
+
+  bool GetRigBlocksForView(const ViewId view_id,
+                           CaptureId* capture_id,
+                           const RigSensor** sensor,
+                           double** rig_position,
+                           double** rig_orientation,
+                           const bool mark_optimized);
                                         
   // Add the inverse depth reprojection error residual to the problem.
   virtual void AddInvReprojectionErrorResidual(const Feature& feature,
@@ -194,6 +209,8 @@ class BundleAdjuster {
 
   // The optimized views.
   std::unordered_set<ViewId> optimized_views_;
+  // Captures whose body pose is a variable in the problem (rig BA).
+  std::unordered_set<CaptureId> optimized_captures_;
   // The optimized tracks.
   std::unordered_set<TrackId> optimized_tracks_;
 

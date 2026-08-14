@@ -38,9 +38,11 @@
 #include <vector>
 
 #include "theia/matching/feature_correspondence.h"
+#include "theia/sfm/pose/fast_iterative_five_point.h"
 #include "theia/sfm/pose/five_point_relative_pose.h"
 #include "theia/sfm/pose/five_point_relative_pose_sturm.h"
 #include "theia/sfm/pose/util.h"
+#include "theia/sfm/two_view_estimation_method.h"
 #include "theia/solvers/estimator.h"
 #include "theia/util/util.h"
 
@@ -53,18 +55,32 @@ namespace {
 class EssentialMatrixEstimator
     : public Estimator<FeatureCorrespondence, Eigen::Matrix3d> {
  public:
-  explicit EssentialMatrixEstimator(const bool use_sturm_5pt = true)
-      : use_sturm_5pt_(use_sturm_5pt) {}
+  explicit EssentialMatrixEstimator(
+      const TwoViewEstimationMethod solver_type =
+          TwoViewEstimationMethod::FIVE_POINT_STURM,
+      const FastIterativeFivePointOptions& fast_iterative_options =
+          FastIterativeFivePointOptions())
+      : solver_type_(solver_type),
+        fast_iterative_options_(fast_iterative_options) {}
 
   // 5 correspondences are needed to determine an essential matrix.
   double SampleSize() const { return 5; }
 
-  // Estimates candidate essential matrices from correspondences. See
-  // RelativePoseEstimator::EstimateModel (estimate_relative_pose.cc) for why
-  // the Sturm solver is only used for exactly-5-point samples.
+  // Estimates candidate essential matrices from correspondences.
   bool EstimateModel(const std::vector<FeatureCorrespondence>& correspondences,
                      std::vector<Eigen::Matrix3d>* essential_matrices) const {
-    if (use_sturm_5pt_ && correspondences.size() == 5) {
+    if (solver_type_ == TwoViewEstimationMethod::FAST_ITERATIVE_FIVE_POINT) {
+      std::vector<Eigen::Vector3d> x1h, x2h;
+      x1h.reserve(correspondences.size());
+      x2h.reserve(correspondences.size());
+      for (size_t i = 0; i < correspondences.size(); i++) {
+        x1h.emplace_back(correspondences[i].feature1.point_.homogeneous());
+        x2h.emplace_back(correspondences[i].feature2.point_.homogeneous());
+      }
+      return FastIterativeFivePoint(
+                 x1h, x2h, fast_iterative_options_, essential_matrices) > 0;
+    } else if (solver_type_ == TwoViewEstimationMethod::FIVE_POINT_STURM &&
+               correspondences.size() == 5) {
       std::vector<Eigen::Vector3d> x1h, x2h;
       x1h.reserve(5);
       x2h.reserve(5);
@@ -116,7 +132,8 @@ class EssentialMatrixEstimator
   }
 
  private:
-  const bool use_sturm_5pt_;
+  const TwoViewEstimationMethod solver_type_;
+  const FastIterativeFivePointOptions fast_iterative_options_;
   mutable Eigen::Matrix3Xd cached_x1_, cached_x2_;
   mutable const std::vector<FeatureCorrespondence>* cached_correspondences_ =
       nullptr;
@@ -132,8 +149,14 @@ bool EstimateEssentialMatrix(
     const std::vector<FeatureCorrespondence>& normalized_correspondences,
     Eigen::Matrix3d* essential_matrix,
     RansacSummary* ransac_summary) {
+  TwoViewEstimationMethod effective_solver = ransac_params.essential_solver_type;
+  if (!ransac_params.use_sturm_5pt &&
+      effective_solver == TwoViewEstimationMethod::FIVE_POINT_STURM) {
+    effective_solver = TwoViewEstimationMethod::FIVE_POINT_STEWENIUS;
+  }
+
   EssentialMatrixEstimator essential_matrix_estimator(
-      ransac_params.use_sturm_5pt);
+      effective_solver, ransac_params.fast_iterative_5pt_options);
   std::unique_ptr<SampleConsensusEstimator<EssentialMatrixEstimator> > ransac =
       CreateAndInitializeRansacVariant(
           ransac_type, ransac_params, essential_matrix_estimator);

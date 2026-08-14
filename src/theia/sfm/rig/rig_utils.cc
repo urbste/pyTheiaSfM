@@ -3,9 +3,13 @@
 
 #include "theia/sfm/rig/rig_utils.h"
 
+#include <algorithm>
+#include <cmath>
 #include <glog/logging.h>
+#include <Eigen/Dense>
 
 #include "theia/sfm/camera/camera.h"
+#include "theia/sfm/pose/util.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/view.h"
 #include "theia/util/map_util.h"
@@ -99,6 +103,101 @@ void PropagateAllEstimatedCapturePoses(Reconstruction* reconstruction) {
       PropagateCameraPosesForCapture(capture_id, reconstruction);
     }
   }
+}
+
+bool SetCapturePoseFromMemberViews(const CaptureId capture_id,
+                                   Reconstruction* reconstruction) {
+  CHECK_NOTNULL(reconstruction);
+  RigCapture* capture = reconstruction->MutableRigCapture(capture_id);
+  if (capture == nullptr || capture->ViewIds().empty()) {
+    return false;
+  }
+  const CameraRig* rig = reconstruction->GetCameraRig(capture->GetRigId());
+  if (rig == nullptr) {
+    return false;
+  }
+
+  Eigen::Vector3d mean_position = Eigen::Vector3d::Zero();
+  Eigen::Matrix3d rotation_sum = Eigen::Matrix3d::Zero();
+  int count = 0;
+  for (const auto& sensor_and_view : capture->ViewIds()) {
+    const View* view = reconstruction->View(sensor_and_view.second);
+    const RigSensor* sensor = rig->GetSensor(sensor_and_view.first);
+    if (view == nullptr || sensor == nullptr || !view->IsEstimated()) {
+      continue;
+    }
+    Eigen::Vector3d rig_position;
+    Eigen::Matrix3d rig_orientation;
+    ComposeRigPoseFromCamera(view->Camera().GetPosition(),
+                             view->Camera().GetOrientationAsRotationMatrix(),
+                             *sensor,
+                             &rig_position,
+                             &rig_orientation);
+    mean_position += rig_position;
+    rotation_sum += rig_orientation;
+    ++count;
+  }
+  if (count == 0) {
+    return false;
+  }
+  mean_position /= static_cast<double>(count);
+  const Eigen::JacobiSVD<Eigen::Matrix3d> svd(
+      rotation_sum, Eigen::ComputeFullU | Eigen::ComputeFullV);
+  Eigen::Matrix3d mean_rotation = svd.matrixU() * svd.matrixV().transpose();
+  if (mean_rotation.determinant() < 0.0) {
+    Eigen::Matrix3d U = svd.matrixU();
+    U.col(2) *= -1.0;
+    mean_rotation = U * svd.matrixV().transpose();
+  }
+  capture->SetPosition(mean_position);
+  capture->SetOrientationFromRotationMatrix(mean_rotation);
+  capture->SetEstimated(true);
+  return true;
+}
+
+Eigen::Matrix3d EssentialMatrixFromRigSensors(const RigSensor& from_sensor,
+                                              const RigSensor& to_sensor) {
+  const Eigen::Matrix3d R_from = from_sensor.GetOrientationAsRotationMatrix();
+  const Eigen::Matrix3d R_to = to_sensor.GetOrientationAsRotationMatrix();
+  const Eigen::Matrix3d R = R_to * R_from.transpose();
+  const Eigen::Vector3d t =
+      R_to * (from_sensor.position - to_sensor.position);
+  Eigen::Matrix3d t_cross;
+  t_cross << 0.0, -t.z(), t.y(), t.z(), 0.0, -t.x(), -t.y(), t.x(), 0.0;
+  return t_cross * R;
+}
+
+bool FilterCorrespondencesWithEssential(
+    const Eigen::Matrix3d& essential_matrix,
+    const Camera& camera1,
+    const Camera& camera2,
+    const std::vector<FeatureCorrespondence>& correspondences,
+    double max_sampson_error_pixels,
+    std::vector<int>* inlier_indices) {
+  CHECK_NOTNULL(inlier_indices)->clear();
+  if (correspondences.empty()) {
+    return false;
+  }
+  const double focal = std::max(1.0, 0.5 * (camera1.FocalLength() +
+                                            camera2.FocalLength()));
+  const double sq_thresh =
+      (max_sampson_error_pixels / focal) * (max_sampson_error_pixels / focal);
+  inlier_indices->reserve(correspondences.size());
+  for (int i = 0; i < static_cast<int>(correspondences.size()); ++i) {
+    const Eigen::Vector3d n1 =
+        camera1.PixelToNormalizedCoordinates(correspondences[i].feature1.point_);
+    const Eigen::Vector3d n2 =
+        camera2.PixelToNormalizedCoordinates(correspondences[i].feature2.point_);
+    if (std::abs(n1.z()) < 1e-12 || std::abs(n2.z()) < 1e-12) {
+      continue;
+    }
+    const Eigen::Vector2d x1 = n1.hnormalized();
+    const Eigen::Vector2d x2 = n2.hnormalized();
+    if (SquaredSampsonDistance(essential_matrix, x1, x2) < sq_thresh) {
+      inlier_indices->push_back(i);
+    }
+  }
+  return !inlier_indices->empty();
 }
 
 }  // namespace theia

@@ -32,6 +32,9 @@ class GlomapPositionEstimator : public PositionEstimator {
     bool write_points_to_reconstruction = false;
     bool use_pairwise_scale_priors = false;
     double pairwise_scale_prior_weight = 1.0;
+    // If true, seed camera centers from Reconstruction view poses (e.g. LUD
+    // init) and hold the gauge camera at that position instead of the origin.
+    bool initialize_from_reconstruction = false;
   };
 
   GlomapPositionEstimator(const Options& options,

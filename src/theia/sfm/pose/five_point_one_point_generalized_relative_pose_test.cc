@@ -160,6 +160,8 @@ TEST(EstimateRelativeRigInfo, RansacRecoversPose) {
   TwoViewInfo twoview;
   info.ToTwoViewInfo(&twoview);
   EXPECT_GT(twoview.scale_estimate, 0.1);
+  EXPECT_NEAR(twoview.position_2.norm(), 1.0, 1e-8);
+  EXPECT_NEAR(twoview.scale_estimate, info.position.norm(), 1e-8);
 }
 
 }  // namespace

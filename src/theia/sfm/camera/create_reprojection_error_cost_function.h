@@ -46,6 +46,8 @@
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
 #include "theia/sfm/camera/reprojection_error.h"
 
+#include <Eigen/Core>
+
 namespace theia {
 // Create the appropriate reprojection error cost function based on the camera
 // intrinsics model that is passed in. The ReprojectionError struct is templated
@@ -132,6 +134,95 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
                     "for a list of valid camera models.";
       return NULL;
       break;
+  }
+}
+
+inline ceres::CostFunction* CreateRigReprojectionErrorCostFunction(
+    const CameraIntrinsicsModelType& camera_model_type,
+    const Feature& feature,
+    const Eigen::Vector3d& sensor_position,
+    const Eigen::Vector3d& sensor_orientation) {
+  static const int kResidualSize = 2;
+  static const int kPointSize = 4;
+  static const int kRigParamSize = 3;
+  switch (camera_model_type) {
+    case CameraIntrinsicsModelType::PINHOLE:
+      return new ceres::AutoDiffCostFunction<
+          RigReprojectionError<PinholeCameraModel>,
+          kResidualSize,
+          kRigParamSize,
+          kRigParamSize,
+          PinholeCameraModel::kIntrinsicsSize,
+          kPointSize>(new RigReprojectionError<PinholeCameraModel>(
+          feature, sensor_position, sensor_orientation));
+    case CameraIntrinsicsModelType::PINHOLE_RADIAL_TANGENTIAL:
+      return new ceres::AutoDiffCostFunction<
+          RigReprojectionError<PinholeRadialTangentialCameraModel>,
+          kResidualSize,
+          kRigParamSize,
+          kRigParamSize,
+          PinholeRadialTangentialCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new RigReprojectionError<PinholeRadialTangentialCameraModel>(
+              feature, sensor_position, sensor_orientation));
+    case CameraIntrinsicsModelType::FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          RigReprojectionError<FisheyeCameraModel>,
+          kResidualSize,
+          kRigParamSize,
+          kRigParamSize,
+          FisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(new RigReprojectionError<FisheyeCameraModel>(
+          feature, sensor_position, sensor_orientation));
+    case CameraIntrinsicsModelType::FOV:
+      return new ceres::AutoDiffCostFunction<
+          RigReprojectionError<FOVCameraModel>,
+          kResidualSize,
+          kRigParamSize,
+          kRigParamSize,
+          FOVCameraModel::kIntrinsicsSize,
+          kPointSize>(new RigReprojectionError<FOVCameraModel>(
+          feature, sensor_position, sensor_orientation));
+    case CameraIntrinsicsModelType::DIVISION_UNDISTORTION:
+      return new ceres::AutoDiffCostFunction<
+          RigReprojectionError<DivisionUndistortionCameraModel>,
+          kResidualSize,
+          kRigParamSize,
+          kRigParamSize,
+          DivisionUndistortionCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new RigReprojectionError<DivisionUndistortionCameraModel>(
+              feature, sensor_position, sensor_orientation));
+    case CameraIntrinsicsModelType::DOUBLE_SPHERE:
+      return new ceres::AutoDiffCostFunction<
+          RigReprojectionError<DoubleSphereCameraModel>,
+          kResidualSize,
+          kRigParamSize,
+          kRigParamSize,
+          DoubleSphereCameraModel::kIntrinsicsSize,
+          kPointSize>(new RigReprojectionError<DoubleSphereCameraModel>(
+          feature, sensor_position, sensor_orientation));
+    case CameraIntrinsicsModelType::EXTENDED_UNIFIED:
+      return new ceres::AutoDiffCostFunction<
+          RigReprojectionError<ExtendedUnifiedCameraModel>,
+          kResidualSize,
+          kRigParamSize,
+          kRigParamSize,
+          ExtendedUnifiedCameraModel::kIntrinsicsSize,
+          kPointSize>(new RigReprojectionError<ExtendedUnifiedCameraModel>(
+          feature, sensor_position, sensor_orientation));
+    case CameraIntrinsicsModelType::ORTHOGRAPHIC:
+      return new ceres::AutoDiffCostFunction<
+          RigReprojectionError<OrthographicCameraModel>,
+          kResidualSize,
+          kRigParamSize,
+          kRigParamSize,
+          OrthographicCameraModel::kIntrinsicsSize,
+          kPointSize>(new RigReprojectionError<OrthographicCameraModel>(
+          feature, sensor_position, sensor_orientation));
+    default:
+      LOG(FATAL) << "Invalid camera type for rig reprojection.";
+      return NULL;
   }
 }
 

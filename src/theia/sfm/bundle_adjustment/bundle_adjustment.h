@@ -180,6 +180,11 @@ struct BundleAdjustmentOptions {
   // World-frame gravity direction used in g_pred = R_c_w * gravity_world_direction.
   // Default (0, 0, -1); set to (0, 0, 1) when the camera is mounted upside down.
   Eigen::Vector3d gravity_world_direction = Eigen::Vector3d(0, 0, -1);
+
+  // If true, views that belong to a RigCapture share one 6-DoF body pose.
+  // Sensor extrinsics stay calibrated (constant). After Solve, view cameras
+  // are re-propagated from the optimized capture pose.
+  bool use_rig_constraints = false;
 };
 
 // A relative SE3 pose-to-pose constraint between two views, used to stiffen the
