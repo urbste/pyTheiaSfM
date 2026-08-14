@@ -9,20 +9,15 @@ and produce expected results.
 import numpy as np
 import pytest
 import pytheia as pt
-from pytheia.sfm import camera
-from pytheia.sfm import feature
-from pytheia.sfm import reconstruction
-from pytheia.sfm import view
-from pytheia.sfm import track
 
 def test_sim3_reprojection_error_basic():
     """Test basic SIM3 reprojection error functionality."""
     
     # Create a simple reconstruction
-    recon = reconstruction.Reconstruction()
+    recon = pt.sfm.Reconstruction()
     
     # Create camera model
-    camera_model = camera.PinholeCameraModel()
+    camera_model = pt.sfm.PinholeCameraModel()
     camera_model.SetFocalLength(1000.0)
     camera_model.SetPrincipalPoint(500.0, 400.0)
     

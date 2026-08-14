@@ -309,6 +309,15 @@ class TestSophusIntegration:
         transformed_point = identity_se3 * test_point
         np.testing.assert_array_almost_equal(transformed_point, test_point)
 
+    def test_view_priors_default_initialization(self):
+        """Test that a newly created View has all priors disabled by default."""
+        recon = pt.sfm.Reconstruction()
+        vid = recon.AddView("test_view", 0, 0.0)
+        view = recon.View(vid)
+        assert view is not None
+        assert not view.HasOrientationPrior()
+        assert not view.HasPositionPrior()
+
 
 if __name__ == "__main__":
     # Run the tests

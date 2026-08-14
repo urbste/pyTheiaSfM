@@ -52,11 +52,14 @@ View::View()
       is_estimated_(false),
       timestamp_(0.0),
       has_position_prior_(false),
-      has_gravity_prior_(false) {
+      has_gravity_prior_(false),
+      has_orientation_prior_(false) {
   position_prior_.setZero();
   position_prior_sqrt_information_.setIdentity();
   gravity_prior_.setZero();
   gravity_prior_sqrt_information_.setIdentity();
+  orientation_prior_.setZero();
+  orientation_prior_sqrt_information_.setIdentity();
 }
 
 View::View(const std::string& name)
@@ -64,11 +67,14 @@ View::View(const std::string& name)
       is_estimated_(false),
       timestamp_(0.0),
       has_position_prior_(false),
-      has_gravity_prior_(false) {
+      has_gravity_prior_(false),
+      has_orientation_prior_(false) {
   position_prior_.setZero();
   position_prior_sqrt_information_.setIdentity();
   gravity_prior_.setZero();
   gravity_prior_sqrt_information_.setIdentity();
+  orientation_prior_.setZero();
+  orientation_prior_sqrt_information_.setIdentity();
 }
 
 View::View(const std::string& name, const double timestamp)
@@ -76,11 +82,14 @@ View::View(const std::string& name, const double timestamp)
       is_estimated_(false),
       timestamp_(timestamp),
       has_position_prior_(false),
-      has_gravity_prior_(false) {
+      has_gravity_prior_(false),
+      has_orientation_prior_(false) {
   position_prior_.setZero();
   position_prior_sqrt_information_.setIdentity();
   gravity_prior_.setZero();
   gravity_prior_sqrt_information_.setIdentity();
+  orientation_prior_.setZero();
+  orientation_prior_sqrt_information_.setIdentity();
 }
 
 const std::string& View::Name() const { return name_; }

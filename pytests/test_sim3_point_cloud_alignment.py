@@ -165,7 +165,7 @@ def test_optimize_alignment_sim3_point_to_point():
     rotation = np.array([
         [0.866, -0.5, 0.0],
         [0.5, 0.866, 0.0],
-        [0.0, 0.0, 1.0e]
+        [0.0, 0.0, 1.0]
     ], dtype=np.float64)  # ~30 degree rotation around Z
     translation = np.array([1.0, 2.0, 0.5], dtype=np.float64)
     scale = 1.5

@@ -144,20 +144,20 @@ class View {
   std::unordered_map<Feature, TrackId> features_to_tracks_;
 
   // A prior on an absolute position (e.g. GPS)
-  Eigen::Vector3d position_prior_;
-  Eigen::Matrix3d position_prior_sqrt_information_;
-  bool has_position_prior_;
+  Eigen::Vector3d position_prior_{Eigen::Vector3d::Zero()};
+  Eigen::Matrix3d position_prior_sqrt_information_{Eigen::Matrix3d::Identity()};
+  bool has_position_prior_{false};
 
   // A prior on gravity (in the image coordinate system, z-forward, y-down,
   // x-right)
-  Eigen::Vector3d gravity_prior_;
-  Eigen::Matrix3d gravity_prior_sqrt_information_;
-  bool has_gravity_prior_;
+  Eigen::Vector3d gravity_prior_{Eigen::Vector3d::Zero()};
+  Eigen::Matrix3d gravity_prior_sqrt_information_{Eigen::Matrix3d::Identity()};
+  bool has_gravity_prior_{false};
 
   // A prior on orientation (world to camera transformation)
-  Eigen::Vector3d orientation_prior_;
-  Eigen::Matrix3d orientation_prior_sqrt_information_;
-  bool has_orientation_prior_;
+  Eigen::Vector3d orientation_prior_{Eigen::Vector3d::Zero()};
+  Eigen::Matrix3d orientation_prior_sqrt_information_{Eigen::Matrix3d::Identity()};
+  bool has_orientation_prior_{false};
 };
 
 }  // namespace theia

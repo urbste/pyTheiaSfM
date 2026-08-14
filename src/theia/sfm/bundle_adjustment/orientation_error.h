@@ -71,6 +71,14 @@ struct OrientationPriorError {
     if (current_orientation.squaredNorm() > T(kMaxAngleAxisSqNorm)) {
       return false;
     }
+    for (int k = 0; k < 3; ++k) {
+      if (!std::isfinite(prior_orientation_[k])) {
+        return false;
+      }
+    }
+    if (prior_orientation_.squaredNorm() > kMaxAngleAxisSqNorm) {
+      return false;
+    }
     Sophus::SO3<T> current_orientation_so3 = Sophus::SO3<T>::exp(current_orientation);
     Sophus::SO3<T> prior_orientation_so3 = Sophus::SO3<T>::exp(prior_orientation_.cast<T>());
     Sophus::SO3<T> error = current_orientation_so3 * prior_orientation_so3.inverse();
