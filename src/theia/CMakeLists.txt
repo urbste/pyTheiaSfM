@@ -168,6 +168,7 @@ set(THEIA_SRC
   sfm/pose/fundamental_matrix_util.cc
   sfm/pose/mlpnp.cc
   sfm/pose/mlpnp_helper.cc
+  sfm/pose/upmlpnp.cc
   sfm/pose/orthographic_four_point.cc
   sfm/pose/perspective_three_point.cc
   sfm/pose/position_from_two_rays.cc
@@ -402,7 +403,8 @@ if (BUILD_TESTING)
 #  gtest(sfm/pose/four_point_homography)
 #  gtest(sfm/pose/four_point_relative_pose_partial_rotation)
 #  gtest(sfm/pose/fundamental_matrix_util)
-#  gtest(sfm/pose/mlpnp)
+  gtest(sfm/pose/mlpnp)
+  gtest(sfm/pose/upmlpnp)
 #  gtest(sfm/pose/orthographic_four_point)
 #  gtest(sfm/pose/perspective_three_point)
 #  gtest(sfm/pose/position_from_two_rays)

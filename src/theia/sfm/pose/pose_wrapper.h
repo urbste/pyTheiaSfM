@@ -117,6 +117,25 @@ std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d> MLPnPWrapper(
     const std::vector<Eigen::Matrix3d>& feature_covariances,
     const std::vector<Eigen::Vector3d>& world_points);
 
+std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d> UPMLPnPWrapper(
+    const std::vector<Eigen::Vector2d>& norm_feature_points,
+    const std::vector<Eigen::Matrix3d>& feature_covariances,
+    const std::vector<Eigen::Vector3d>& world_points,
+    const Eigen::Vector3d& gravity_camera,
+    const Eigen::Vector3d& gravity_world,
+    const Eigen::Matrix2d& gravity_covariance,
+    bool run_refinement = true);
+
+std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d, Eigen::Matrix<double, 6, 6>>
+UPMLPnPWithCovarianceWrapper(
+    const std::vector<Eigen::Vector2d>& norm_feature_points,
+    const std::vector<Eigen::Matrix3d>& feature_covariances,
+    const std::vector<Eigen::Vector3d>& world_points,
+    const Eigen::Vector3d& gravity_camera,
+    const Eigen::Vector3d& gravity_world,
+    const Eigen::Matrix2d& gravity_covariance,
+    bool run_refinement = true);
+
 std::tuple<bool, Eigen::Vector3d> PositionFromTwoRaysWrapper(
     const Eigen::Vector2d& rotated_feature1,
     const Eigen::Vector3d& point1,

@@ -1,4 +1,4 @@
-// Copyright (C) 2023, Steffen Urban
+// Copyright (C) 2026 Steffen Urban
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,24 +32,38 @@
 // Please contact the author of this library if you have any questions.
 // Author: Steffen Urban (urbste@gmail.com)
 
-#ifndef THEIA_SFM_POSE_MLPNP_H_
-#define THEIA_SFM_POSE_MLPNP_H_
+#ifndef THEIA_SFM_POSE_UPMLPNP_H_
+#define THEIA_SFM_POSE_UPMLPNP_H_
 
 #include <Eigen/Core>
 #include <vector>
 
 namespace theia {
 
-// MLPnP requires at least six correspondences for pose disambiguation.
-constexpr int kMLPnPMinimumPoints = 6;
+constexpr int kUPMLPnPMinimumPoints = 3;
 
-bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
-           const std::vector<Eigen::Matrix3d>& feature_covariances,
-           const std::vector<Eigen::Vector3d>& world_points,
-           Eigen::Matrix3d* solution_rotations,
-           Eigen::Vector3d* solution_translations,
-           bool run_refinement = true);
+bool UPMLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
+             const std::vector<Eigen::Matrix3d>& feature_covariances,
+             const std::vector<Eigen::Vector3d>& world_points,
+             const Eigen::Vector3d& gravity_camera,
+             const Eigen::Vector3d& gravity_world,
+             const Eigen::Matrix2d& gravity_covariance,
+             Eigen::Matrix3d* rotation,
+             Eigen::Vector3d* translation,
+             bool run_refinement = true);
+
+bool UPMLPnPWithCovariance(
+    const std::vector<Eigen::Vector2d>& norm_feature_points,
+    const std::vector<Eigen::Matrix3d>& feature_covariances,
+    const std::vector<Eigen::Vector3d>& world_points,
+    const Eigen::Vector3d& gravity_camera,
+    const Eigen::Vector3d& gravity_world,
+    const Eigen::Matrix2d& gravity_covariance,
+    Eigen::Matrix3d* rotation,
+    Eigen::Vector3d* translation,
+    Eigen::Matrix<double, 6, 6>* pose_covariance,
+    bool run_refinement = true);
 
 }  // namespace theia
 
-#endif  // THEIA_SFM_POSE_MLPNP_H_
+#endif  // THEIA_SFM_POSE_UPMLPNP_H_

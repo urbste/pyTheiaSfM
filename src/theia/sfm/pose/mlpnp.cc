@@ -42,10 +42,7 @@
 #include <math.h>
 
 #include "theia/math/nullspace.h"
-
-#include <ceres/rotation.h>
-
-#include <iostream>
+#include "theia/sfm/pose/mlpnp_helper.h"
 
 namespace theia {
 
@@ -61,7 +58,8 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
            const std::vector<Eigen::Matrix3d>& feature_covariances,
            const std::vector<Eigen::Vector3d>& world_points,
            Eigen::Matrix3d* solution_rotation,
-           Eigen::Vector3d* solution_translation) {
+           Eigen::Vector3d* solution_translation,
+           bool run_refinement) {
   const size_t num_points = norm_feature_points.size();
   if (num_points < static_cast<size_t>(kMLPnPMinimumPoints) ||
       world_points.size() != num_points) {
@@ -357,24 +355,11 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
 
   *(solution_rotation) = Rout;
   *solution_translation = tout;
-	// //////////////////////////////////////
-	// // 5. gauss newton
-	// //////////////////////////////////////
-	// Eigen::Vector3d omega; 
-  //   ceres::RotationMatrixToAngleAxis(Rout.data(), omega.data());
-	// Eigen::VectorXd minx(6);
-	// minx[0] = omega[0];
-	// minx[1] = omega[1];
-	// minx[2] = omega[2];
-	// minx[3] = tout[0];
-	// minx[4] = tout[1];
-	// minx[5] = tout[2];
 
-	// // modules::mlpnp::mlpnp_gn(minx,
-	// // 	points3v, nullspaces, P, use_cov);
-
-  // Eigen::Vector3d omega_opt = Eigen::Vector3d(minx[0], minx[1], minx[2]);
-	// ceres::AngleAxisToRotationMatrix(omega_opt.data(), solution_rotation->data());
+  if (run_refinement) {
+    MLPnPGaussNewton(norm_feature_points, feature_covariances, world_points, 25,
+                     solution_rotation, solution_translation);
+  }
   return true;
 }
 } // namespace theia

@@ -29,8 +29,11 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
            const std::vector<Eigen::Matrix3d>& feature_covariances,
            const std::vector<Eigen::Vector3d>& world_points,
            Eigen::Matrix3d* solution_rotation,
-           Eigen::Vector3d* solution_translation);
+           Eigen::Vector3d* solution_translation,
+           bool run_refinement = true);
 ```
+
+After the linear SVD initialization, **MLPnP** optionally runs a Levenberg–Marquardt refinement on whitened tangent-plane residuals (`run_refinement=true` by default). Set `run_refinement=false` to return the linear solution only.
 
 **Inputs**
 
@@ -101,6 +104,12 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
     ```
 
 **Reference:** S. Urban, J. Leitloff, S. Hinz, *MLPnP – A Real-Time Maximum Likelihood Solution to the Perspective-n-Point Problem*, ISPRS Annals III-3, 2016 ([DOI](https://doi.org/10.5194/isprs-annals-III-3-131-2016), [arXiv:1607.08112](https://arxiv.org/abs/1607.08112)).
+
+### UPMLPnP (upright MLPnP with gravity) {#section-upmlpnp}
+
+**UPMLPnP** extends MLPnP with an upright gravity prior and per-feature uncertainty. It requires **at least three** correspondences (`kUPMLPnPMinimumPoints`). Returns world-to-camera `(R, t)`; optional `UPMLPnPWithCovariance` also returns a 6×6 posterior pose covariance (Laplace approximation).
+
+**pyTheia:** `ok, R, t = pytheia.sfm.UPMLPnP(norm_features, covariances, world_points, gravity_camera, gravity_world, gravity_covariance)`; `UPMLPnPWithCovariance(...)` adds a 6×6 covariance matrix.
 
 ### Perspective Three Point (P3P) {#section-p3p}
 

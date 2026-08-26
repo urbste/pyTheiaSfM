@@ -157,21 +157,6 @@ TEST(MLPnP, NoNoiseTest) {
 //                       kMaxAllowedTranslationDifference);
 // }
 
-TEST(MLPnP, RejectsTooFewPoints) {
-  const std::vector<Vector3d> world_points = {
-      Vector3d(-1.0, 3.0, 3.0), Vector3d(1.0, -1.0, 2.0),
-      Vector3d(-1.0, 1.0, 2.0), Vector3d(2.0, 1.0, 3.0),
-      Vector3d(-1.0, -3.0, 2.0)};
-  std::vector<Vector2d> feature_points(world_points.size());
-  for (size_t i = 0; i < world_points.size(); ++i) {
-    feature_points[i] = Vector2d(0.1 * i, -0.2 * i);
-  }
-
-  Matrix3d rotation;
-  Vector3d translation;
-  EXPECT_FALSE(MLPnP(feature_points, {}, world_points, &rotation, &translation));
-}
-
 TEST(MLPnP, NoiseTest) {
   const std::vector<Eigen::Vector3d> points_3d = {Vector3d(-1.0, 3.0, 3.0),
                                            Vector3d(1.0, -1.0, 2.0),
@@ -196,6 +181,74 @@ TEST(MLPnP, NoiseTest) {
                       kMaxReprojectionError,
                       kMaxAllowedRotationDifference,
                       kMaxAllowedTranslationDifference);
+}
+
+TEST(MLPnP, RejectsTooFewPoints) {
+  const std::vector<Vector3d> world_points = {
+      Vector3d(-1.0, 3.0, 3.0), Vector3d(1.0, -1.0, 2.0),
+      Vector3d(-1.0, 1.0, 2.0), Vector3d(2.0, 1.0, 3.0),
+      Vector3d(-1.0, -3.0, 2.0)};
+  std::vector<Vector2d> feature_points(world_points.size());
+  for (size_t i = 0; i < world_points.size(); ++i) {
+    feature_points[i] = Vector2d(0.1 * i, -0.2 * i);
+  }
+
+  Matrix3d rotation;
+  Vector3d translation;
+  EXPECT_FALSE(MLPnP(feature_points, {}, world_points, &rotation, &translation));
+}
+
+TEST(MLPnP, RefinementImprovesNoisySolution) {
+  const std::vector<Eigen::Vector3d> points_3d = {
+      Vector3d(-1.0, 3.0, 3.0), Vector3d(1.0, -1.0, 2.0), Vector3d(-1.0, 1.0, 2.0),
+      Vector3d(2.0, 1.0, 3.0), Vector3d(-1.0, -3.0, 2.0), Vector3d(1.0, -2.0, 1.0),
+      Vector3d(-1.0, 4.0, 2.0), Vector3d(-2.0, 2.0, 3.0)};
+  const Eigen::Matrix3d expected_rotation =
+      Eigen::AngleAxisd(DegToRad(13.0), Vector3d(0.0, 0.0, 1.0)).toRotationMatrix();
+  const Vector3d expected_translation(1.0, 1.0, 1.0);
+  const double kNoise = 1.0 / 512.0;
+
+  Matrix3x4d expected_transform;
+  expected_transform << expected_rotation, expected_translation;
+
+  std::vector<Vector2d> feature_points;
+  for (const Vector3d& point : points_3d) {
+    feature_points.push_back(
+        (expected_transform * point.homogeneous()).eval().hnormalized());
+    AddNoiseToProjection(kNoise, &rng, &feature_points.back());
+  }
+
+  auto mean_reprojection_error = [](const Matrix3x4d& transform,
+                                    const std::vector<Vector2d>& features,
+                                    const std::vector<Vector3d>& points) {
+    double error = 0.0;
+    for (size_t i = 0; i < points.size(); ++i) {
+      const Vector2d repro =
+          (transform * points[i].homogeneous()).eval().hnormalized();
+      error += (features[i] - repro).squaredNorm();
+    }
+    return error / static_cast<double>(points.size());
+  };
+
+  Matrix3d linear_rotation;
+  Vector3d linear_translation;
+  ASSERT_TRUE(MLPnP(feature_points, {}, points_3d, &linear_rotation,
+                    &linear_translation, false));
+  Matrix3x4d linear_transform;
+  linear_transform << linear_rotation, linear_translation;
+  const double linear_error =
+      mean_reprojection_error(linear_transform, feature_points, points_3d);
+
+  Matrix3d refined_rotation;
+  Vector3d refined_translation;
+  ASSERT_TRUE(MLPnP(feature_points, {}, points_3d, &refined_rotation,
+                    &refined_translation, true));
+  Matrix3x4d refined_transform;
+  refined_transform << refined_rotation, refined_translation;
+  const double refined_error =
+      mean_reprojection_error(refined_transform, feature_points, points_3d);
+
+  EXPECT_LT(refined_error, linear_error);
 }
 
 }  // namespace theia

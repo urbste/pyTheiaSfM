@@ -586,6 +586,12 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("MLPnP", theia::MLPnPWrapper,
         "Maximum-likelihood PnP. Requires at least six normalized 2D-3D "
         "correspondences (see kMLPnPMinimumPoints).");
+  m.def("UPMLPnP", theia::UPMLPnPWrapper,
+        "Upright maximum-likelihood PnP with gravity and per-feature "
+        "uncertainty. Requires at least three normalized 2D-3D correspondences "
+        "(see kUPMLPnPMinimumPoints).");
+  m.def("UPMLPnPWithCovariance", theia::UPMLPnPWithCovarianceWrapper,
+        "UPMLPnP with a 6x6 posterior pose covariance (Laplace approximation).");
   m.def("NormalizedEightPointFundamentalMatrix",
         theia::NormalizedEightPointFundamentalMatrixWrapper);
   m.def("FivePointRelativePose", theia::FivePointRelativePoseWrapper);

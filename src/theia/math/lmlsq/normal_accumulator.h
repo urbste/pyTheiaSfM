@@ -154,6 +154,8 @@ class NormalAccumulator {
     return -step.dot(lambda * step + scale * Jtr_);
   }
 
+  const Eigen::MatrixXd& JtJ() const { return JtJ_; }
+
  private:
   double ResidualScale() const {
     return 1.0 / std::max(1.0, static_cast<double>(residual_count_));

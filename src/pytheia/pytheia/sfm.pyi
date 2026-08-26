@@ -4047,6 +4047,14 @@ def MLPnP(*args, **kwargs):
     """
     Maximum-likelihood PnP. Requires at least six normalized 2D-3D correspondences (see kMLPnPMinimumPoints).
     """
+def UPMLPnP(*args, **kwargs):
+    """
+    Upright maximum-likelihood PnP with gravity and per-feature uncertainty. Requires at least three normalized 2D-3D correspondences (see kUPMLPnPMinimumPoints).
+    """
+def UPMLPnPWithCovariance(*args, **kwargs):
+    """
+    UPMLPnP with a 6x6 posterior pose covariance (Laplace approximation).
+    """
 def NormalizedEightPointFundamentalMatrix(*args, **kwargs):
     ...
 def NumEstimatedTracks(*args, **kwargs):

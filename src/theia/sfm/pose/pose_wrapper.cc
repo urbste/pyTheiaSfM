@@ -15,6 +15,7 @@
 
 #include "theia/sfm/pose/dls_pnp.h"
 #include "theia/sfm/pose/mlpnp.h"
+#include "theia/sfm/pose/upmlpnp.h"
 #include "theia/sfm/pose/sqpnp.h"
 #include "theia/sfm/pose/essential_matrix_utils.h"
 #include "theia/sfm/pose/fundamental_matrix_util.h"
@@ -343,6 +344,41 @@ std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d> MLPnPWrapper(
   const bool ok = MLPnP(norm_feature_points, feature_covariances, world_points, &R,
                          &t);
   return std::make_tuple(ok, R, t);
+}
+
+std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d> UPMLPnPWrapper(
+    const std::vector<Eigen::Vector2d>& norm_feature_points,
+    const std::vector<Eigen::Matrix3d>& feature_covariances,
+    const std::vector<Eigen::Vector3d>& world_points,
+    const Eigen::Vector3d& gravity_camera,
+    const Eigen::Vector3d& gravity_world,
+    const Eigen::Matrix2d& gravity_covariance,
+    bool run_refinement) {
+  Eigen::Matrix3d R;
+  Eigen::Vector3d t;
+  const bool ok =
+      UPMLPnP(norm_feature_points, feature_covariances, world_points,
+              gravity_camera, gravity_world, gravity_covariance, &R, &t,
+              run_refinement);
+  return std::make_tuple(ok, R, t);
+}
+
+std::tuple<bool, Eigen::Matrix3d, Eigen::Vector3d, Eigen::Matrix<double, 6, 6>>
+UPMLPnPWithCovarianceWrapper(
+    const std::vector<Eigen::Vector2d>& norm_feature_points,
+    const std::vector<Eigen::Matrix3d>& feature_covariances,
+    const std::vector<Eigen::Vector3d>& world_points,
+    const Eigen::Vector3d& gravity_camera,
+    const Eigen::Vector3d& gravity_world,
+    const Eigen::Matrix2d& gravity_covariance,
+    bool run_refinement) {
+  Eigen::Matrix3d R;
+  Eigen::Vector3d t;
+  Eigen::Matrix<double, 6, 6> covariance;
+  const bool ok = UPMLPnPWithCovariance(
+      norm_feature_points, feature_covariances, world_points, gravity_camera,
+      gravity_world, gravity_covariance, &R, &t, &covariance, run_refinement);
+  return std::make_tuple(ok, R, t, covariance);
 }
 
 std::tuple<bool, Eigen::Vector3d> PositionFromTwoRaysWrapper(
