@@ -308,7 +308,11 @@ if (BUILD_TESTING)
       ${CMAKE_SOURCE_DIR}
       ${CMAKE_SOURCE_DIR}/include
       ${CMAKE_SOURCE_DIR}/src
-      ${CMAKE_SOURCE_DIR}/libraries/cereal/include)
+      ${CMAKE_SOURCE_DIR}/libraries
+      ${CMAKE_SOURCE_DIR}/libraries/spectra
+      ${CMAKE_SOURCE_DIR}/libraries/Sophus
+      ${CMAKE_SOURCE_DIR}/libraries/cereal/include
+      ${CMAKE_SOURCE_DIR}/libraries/stlplus3)
     add_test(NAME ${TEST_NAME}_test
       COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TEST_NAME}_test)
   endmacro (GTEST)
