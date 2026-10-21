@@ -42,6 +42,7 @@
 #include <Eigen/SparseCholesky>
 #include <Eigen/SparseLU>
 
+#include <cassert>
 #include <limits>
 #include <unordered_map>
 #include <vector>
