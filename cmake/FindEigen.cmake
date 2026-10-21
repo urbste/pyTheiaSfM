@@ -150,7 +150,11 @@ if (EIGEN_PREFER_EXPORTED_EIGEN_CMAKE_CONFIGURATION)
                       NO_MODULE
                       NO_CMAKE_PACKAGE_REGISTRY
                       NO_CMAKE_BUILDS_PATH)
-  if (EIGEN3_FOUND)
+  # find_package() sets <PackageName>_FOUND with the exact case passed to it
+  # ("Eigen3_FOUND"). The all-caps EIGEN3_FOUND / EIGEN3_INCLUDE_DIR were only
+  # legacy aliases set by Eigen 3.3/3.4's Eigen3Config.cmake and were dropped in
+  # Eigen 5.0, which exposes the include path only via the Eigen3::Eigen target.
+  if (Eigen3_FOUND)
     message(STATUS "Found installed version of Eigen: ${Eigen3_DIR}")
   else()
     # Failed to find an installed version of Eigen, repeat search allowing
@@ -162,14 +166,20 @@ if (EIGEN_PREFER_EXPORTED_EIGEN_CMAKE_CONFIGURATION)
     find_package(Eigen3 QUIET
                         NO_MODULE
                         NO_CMAKE_BUILDS_PATH)
-    if (EIGEN3_FOUND)
+    if (Eigen3_FOUND)
       message(STATUS "Found exported Eigen build directory: ${Eigen3_DIR}")
     endif()
   endif()
-  if (EIGEN3_FOUND)
+  if (Eigen3_FOUND)
     set(FOUND_INSTALLED_EIGEN_CMAKE_CONFIGURATION TRUE)
-    set(EIGEN_FOUND ${EIGEN3_FOUND})
-    set(EIGEN_INCLUDE_DIR "${EIGEN3_INCLUDE_DIR}" CACHE STRING
+    set(EIGEN_FOUND ${Eigen3_FOUND})
+    if (TARGET Eigen3::Eigen)
+      get_target_property(_eigen_include_dir Eigen3::Eigen
+        INTERFACE_INCLUDE_DIRECTORIES)
+    else()
+      set(_eigen_include_dir "${EIGEN3_INCLUDE_DIR}")
+    endif()
+    set(EIGEN_INCLUDE_DIR "${_eigen_include_dir}" CACHE STRING
       "Eigen include directory" FORCE)
   else()
     message(STATUS "Failed to find an installed/exported CMake configuration "
