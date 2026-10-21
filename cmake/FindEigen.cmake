@@ -181,6 +181,10 @@ if (EIGEN_PREFER_EXPORTED_EIGEN_CMAKE_CONFIGURATION)
     endif()
     set(EIGEN_INCLUDE_DIR "${_eigen_include_dir}" CACHE STRING
       "Eigen include directory" FORCE)
+    # Trust the version reported by Eigen's own package configuration. The
+    # Macros.h regex below cannot read Eigen 5.0+, which moved its version
+    # macros into the new Eigen/Version header.
+    set(EIGEN_VERSION "${Eigen3_VERSION}")
   else()
     message(STATUS "Failed to find an installed/exported CMake configuration "
       "for Eigen, will perform search for installed Eigen components.")
@@ -222,8 +226,9 @@ if (NOT EIGEN_FOUND)
   set(EIGEN_FOUND TRUE)
 endif()
 
-# Extract Eigen version from Eigen/src/Core/util/Macros.h
-if (EIGEN_INCLUDE_DIR)
+# Extract Eigen version from Eigen/src/Core/util/Macros.h, unless Eigen's
+# CMake package configuration already provided it.
+if (EIGEN_INCLUDE_DIR AND NOT EIGEN_VERSION)
   set(EIGEN_VERSION_FILE ${EIGEN_INCLUDE_DIR}/Eigen/src/Core/util/Macros.h)
   if (NOT EXISTS ${EIGEN_VERSION_FILE})
     eigen_report_not_found(
@@ -252,7 +257,7 @@ if (EIGEN_INCLUDE_DIR)
     # elements and insert ';' separators which would result in 3.;2.;0 nonsense.
     set(EIGEN_VERSION "${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION}")
   endif (NOT EXISTS ${EIGEN_VERSION_FILE})
-endif (EIGEN_INCLUDE_DIR)
+endif (EIGEN_INCLUDE_DIR AND NOT EIGEN_VERSION)
 
 # Set standard CMake FindPackage variables if found.
 if (EIGEN_FOUND)
