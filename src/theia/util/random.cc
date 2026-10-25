@@ -34,9 +34,12 @@
 
 #include "theia/util/random.h"
 
+#include <atomic>
 #include <chrono>  // NOLINT
+#include <cstdlib>
 #include <glog/logging.h>
 #include <random>
+#include <string>
 
 #include "theia/util/util.h"
 
@@ -49,11 +52,39 @@ thread_local std::mt19937 util_generator;
 static std::mt19937 util_generator;
 #endif  // THEIA_HAS_THREAD_LOCAL_KEYWORD
 
+// Process-wide override for the seed used by the default constructor. Every
+// RANSAC sampler and global estimator that is not handed an RNG constructs one
+// with the default constructor, which reseeds this thread's engine. With an
+// override set, each of them starts from the same state no matter which thread
+// runs it, so results no longer depend on the clock or on thread scheduling.
+// Initialised from THEIA_RANDOM_SEED (decimal) if set; -1 means "use the clock".
+std::atomic<long long> default_seed_override{[] {
+  const char* env = std::getenv("THEIA_RANDOM_SEED");
+  if (env == nullptr || *env == '\0') return -1LL;
+  try {
+    return static_cast<long long>(std::stoul(env));
+  } catch (...) {
+    return -1LL;
+  }
+}()};
+
 }  // namespace
 
+void SetDefaultRandomSeed(const unsigned seed) {
+  default_seed_override.store(static_cast<long long>(seed));
+}
+
+void ClearDefaultRandomSeed() { default_seed_override.store(-1LL); }
+
+bool HasDefaultRandomSeed() { return default_seed_override.load() >= 0; }
+
 RandomNumberGenerator::RandomNumberGenerator() {
+  const long long override_seed = default_seed_override.load();
   const unsigned seed =
-      std::chrono::system_clock::now().time_since_epoch().count();
+      override_seed >= 0
+          ? static_cast<unsigned>(override_seed)
+          : static_cast<unsigned>(
+                std::chrono::system_clock::now().time_since_epoch().count());
   util_generator.seed(seed);
 }
 

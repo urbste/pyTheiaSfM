@@ -64,6 +64,12 @@ namespace pytheia {
 namespace solvers {
 
 void pytheia_solvers_classes(py::module& m) {
+  m.def("SetDefaultRandomSeed", &theia::SetDefaultRandomSeed,
+        "Seed default-constructed RNGs (RANSAC samplers, global estimators) "
+        "with a fixed value instead of the clock.");
+  m.def("ClearDefaultRandomSeed", &theia::ClearDefaultRandomSeed);
+  m.def("HasDefaultRandomSeed", &theia::HasDefaultRandomSeed);
+
   // RandomNumberGenerator
   py::class_<theia::RandomNumberGenerator>(m, "RandomNumberGenerator")
       .def(py::init<>())
