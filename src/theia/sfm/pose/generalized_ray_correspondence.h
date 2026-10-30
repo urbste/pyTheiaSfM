@@ -10,6 +10,7 @@
 #define THEIA_SFM_POSE_GENERALIZED_RAY_CORRESPONDENCE_H_
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <limits>
 
 namespace theia {
