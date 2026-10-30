@@ -367,26 +367,46 @@ BundleAdjustmentSummary BundleAdjuster::Optimize() {
 }
 
 void BundleAdjuster::SetCameraExtrinsicsParameterization() {
-  if (options_.constant_camera_orientation &&
-      options_.constant_camera_position) {
-    // If all extrinsics are constant then mark the entire parameter block
-    // as constant.
-    for (const ViewId view_id : optimized_views_) {
-      SetCameraExtrinsicsConstant(view_id);
-    }
-  } else if (options_.constant_camera_orientation) {
-    for (const ViewId view_id : optimized_views_) {
-      SetCameraOrientationConstant(view_id);
-    }
-  } else if (options_.constant_camera_position) {
-    for (const ViewId view_id : optimized_views_) {
-      SetCameraPositionConstant(view_id);
+  // Collect all constant extrinsics parameters in a single subset. Ceres only
+  // keeps one manifold per parameter block, so setting the orientation,
+  // position and tz subsets one after another would overwrite each other.
+  std::vector<int> constant_parameters;
+  if (options_.constant_camera_orientation) {
+    for (int i = 0; i < 3; ++i) {
+      constant_parameters.emplace_back(Camera::ORIENTATION + i);
     }
   }
-  // for orthographic cameras we set tz constant = 0
-  if (options_.orthographic_camera) {
-    for (const ViewId view_id : optimized_views_) {
-      SetTzConstant(view_id);
+  if (options_.constant_camera_position) {
+    for (int i = 0; i < 3; ++i) {
+      constant_parameters.emplace_back(Camera::POSITION + i);
+    }
+  } else if (options_.orthographic_camera) {
+    // for orthographic cameras we set tz constant = 0
+    constant_parameters.emplace_back(Camera::POSITION + 2);
+  }
+  if (constant_parameters.empty()) {
+    return;
+  }
+
+  for (const ViewId view_id : optimized_views_) {
+    double* extrinsics =
+        reconstruction_->MutableView(view_id)->MutableCamera()
+            ->mutable_extrinsics();
+    // Views without any residual (e.g. no estimated tracks) were never added
+    // to the problem; Ceres aborts if we set a manifold on them.
+    if (!problem_->HasParameterBlock(extrinsics)) {
+      continue;
+    }
+    if (static_cast<int>(constant_parameters.size()) ==
+        Camera::kExtrinsicsSize) {
+      // If all extrinsics are constant then mark the entire parameter block
+      // as constant.
+      problem_->SetParameterBlockConstant(extrinsics);
+    } else {
+      problem_->SetManifold(
+          extrinsics,
+          new ceres::SubsetManifold(Camera::kExtrinsicsSize,
+                                    constant_parameters));
     }
   }
 }
