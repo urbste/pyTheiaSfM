@@ -174,13 +174,13 @@ Sim3AlignmentSummary OptimizeAlignmentSim3(
     return summary;
   }
   
-  // Initialize SIM3 parameters (identity transformation)
-  Sophus::Vector7d sim3_params = Sophus::Vector7d::Zero();
-  sim3_params[6] = 1.0;  // scale = 1.0 (last parameter)
-      
+  // SIM3 parameters in Sophus tangent space (log of the transformation). The
+  // optimization below starts from this initial guess.
+  Sophus::Vector7d sim3_params;
+
   // If initial guess is provided, use it
   if (options.initial_sim3_params) {
-    summary.sim3_params = *options.initial_sim3_params;
+    sim3_params = *options.initial_sim3_params;
   } else {
     // Use robust Umeyama for initial alignment
     Eigen::Matrix3d rotation;
@@ -192,9 +192,10 @@ Sim3AlignmentSummary OptimizeAlignmentSim3(
     AlignPointCloudsUmeyamaWithWeights(source_points, target_points, weights, 
                                       &rotation, &translation, &scale);
     
-    // Convert to SIM3 parameters [translation, rotation, scale]
-    summary.sim3_params = Sim3FromRotationTranslationScale(rotation, translation, scale);
+    // Convert to SIM3 tangent-space parameters.
+    sim3_params = Sim3FromRotationTranslationScale(rotation, translation, scale);
   }
+  summary.sim3_params = sim3_params;
   summary.success = true;
   
   if (options.perform_optimization) {

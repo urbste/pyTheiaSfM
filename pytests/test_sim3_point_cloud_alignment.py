@@ -451,21 +451,21 @@ def test_sim3_alignment_options():
     # Test default values
     assert options.alignment_type == pt.sfm.Sim3AlignmentType.POINT_TO_POINT
     assert options.max_iterations == 100
-    assert options.function_tolerance == 1e-6
-    assert options.gradient_tolerance == 1e-10
-    assert options.parameter_tolerance == 1e-8
+    assert options.point_weight == 1.0
     assert options.huber_threshold == 0.1
+    assert options.outlier_threshold == 1.0
+    assert options.perform_optimization == True
     assert options.verbose == False
     
     # Test setting value
     options.alignment_type = pt.sfm.Sim3AlignmentType.ROBUST_POINT_TO_POINT
     options.max_iterations = 50
-    options.function_tolerance = 1e-5
+    options.huber_threshold = 0.05
     options.verbose = True
     
     assert options.alignment_type == pt.sfm.Sim3AlignmentType.ROBUST_POINT_TO_POINT
     assert options.max_iterations == 50
-    assert options.function_tolerance == 1e-5
+    assert options.huber_threshold == 0.05
     assert options.verbose == True
     
     # Test setter functions
