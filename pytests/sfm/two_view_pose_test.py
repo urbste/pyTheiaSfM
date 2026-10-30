@@ -1,6 +1,6 @@
 import pytheia as pt
 import numpy as np
-import cv2
+import pytest
 from scipy.spatial.transform import Rotation as R
 from random_recon_gen import RandomReconGenerator
 from random_recon_gen import CameraPrior
@@ -14,13 +14,52 @@ class GroundTruthRelPose:
 
         R0 = cam0.GetOrientationAsRotationMatrix()
         R1 = cam1.GetOrientationAsRotationMatrix()
-        self.R_rel_gt = R1 * R0.T
+        self.R_rel_gt = R1 @ R0.T
         self.t_rel_gt = R0 @ (cam0.GetPosition() - cam1.GetPosition())
         self.t_rel_gt /= np.linalg.norm(self.t_rel_gt)
         self.p_rel_gt = -R0.T @ self.t_rel_gt
 
 
-def test_8ptFundamentalMatrix(pts0, pts1):
+class TwoViewScene:
+    """Two nearly fronto-parallel pinhole views observing 10 random points."""
+
+    def __init__(self):
+        pinhole_cam = CameraPrior(300., 1.0, (1000, 1000))
+        gen = RandomReconGenerator(verbose=False, cam_prior=pinhole_cam)
+        gen.generate_random_recon(
+            nr_views=2, nr_tracks=10, cam_rot_max_angle=1e-3)
+
+        view0 = gen.recon.View(0)
+        view1 = gen.recon.View(1)
+        cam0 = view0.Camera()
+        cam1 = view1.Camera()
+
+        # get observations visible in both cameras
+        self.img_pts0_norm = []
+        self.img_pts1_norm = []
+        self.normalized_corrs = []
+        for t_id in gen.recon.TrackIds():
+            feat1 = view0.GetFeature(t_id)
+            feat2 = view1.GetFeature(t_id)
+            if not feat1 or not feat2:
+                continue
+            img_pt0_norm = cam0.PixelToNormalizedCoordinates(feat1.point)[:2]
+            img_pt1_norm = cam1.PixelToNormalizedCoordinates(feat2.point)[:2]
+            self.img_pts0_norm.append(img_pt0_norm)
+            self.img_pts1_norm.append(img_pt1_norm)
+            self.normalized_corrs.append(
+                pt.matching.FeatureCorrespondence(
+                    pt.sfm.Feature(img_pt0_norm), pt.sfm.Feature(img_pt1_norm)))
+
+        self.gt_pose = GroundTruthRelPose(cam0, cam1)
+
+
+@pytest.fixture(scope="module")
+def scene():
+    return TwoViewScene()
+
+
+def _check_8ptFundamentalMatrix(pts0, pts1):
 
     success, F = pt.sfm.NormalizedEightPointFundamentalMatrix(pts0, pts1)
     # do some decompositions
@@ -57,7 +96,7 @@ def test_8ptFundamentalMatrix(pts0, pts1):
 #     assert np.linalg.norm(f1 - gt_pose.cam1.FocalLength) < 1e-4
 
 
-def test_5ptEssentialMatrix(img_pts0, img_pts1, normalized_corrs, gt_pose, max_error_deg):
+def _check_5ptEssentialMatrix(img_pts0, img_pts1, normalized_corrs, gt_pose, max_error_deg):
 
     success, Es = pt.sfm.FivePointRelativePose(img_pts0[:5], img_pts1[:5])
 
@@ -81,19 +120,7 @@ def test_5ptEssentialMatrix(img_pts0, img_pts1, normalized_corrs, gt_pose, max_e
 # def test_PositionFromTwoRays():
 
 
-def test_RelativePoseFromTwoPointsWithKnownRotation(R0, R1, pts0, pts1, gt_pose):
-
-    unrotated_norm_img_pts0 = []
-    unrotated_norm_img_pts1 = []
-    for p0, p1 in zip(img_pts0, img_pts1):
-        unrotated_norm_img_pts0.append(R0.T @ np.extend(p0, 1))
-        unrotated_norm_img_pts1.append(R1.T @ np.extend(p1, 1))
-
-    success, position2 = pt.sfm.RelativePoseFromTwoPointsWithKnownRotation(
-        unrotated_norm_img_pts0, unrotated_norm_img_pts1)
-
-
-def test_EstimateRelativeOrientation(normalized_corrs, gt_pose, max_error_deg):
+def _check_EstimateRelativeOrientation(normalized_corrs, gt_pose, max_error_deg):
     params = pt.solvers.RansacParameters()
     # Seed the RNG for a deterministic, reproducible test. Without this, RANSAC
     # uses a time-seeded generator, and with this scene's near-degenerate,
@@ -126,69 +153,23 @@ def test_EstimateRelativeOrientation(normalized_corrs, gt_pose, max_error_deg):
 # def test_TwoPointPosePartialRotation():
 
 
+def test_8ptFundamentalMatrix(scene):
+    _check_8ptFundamentalMatrix(scene.img_pts0_norm, scene.img_pts1_norm)
+
+
+def test_5ptEssentialMatrix(scene):
+    _check_5ptEssentialMatrix(scene.img_pts0_norm, scene.img_pts1_norm,
+                              scene.normalized_corrs, scene.gt_pose,
+                              max_error_deg=0.1)
+
+
+def test_EstimateRelativeOrientation(scene):
+    _check_EstimateRelativeOrientation(
+        scene.normalized_corrs, scene.gt_pose, max_error_deg=0.1)
+
+
 if __name__ == "__main__":
-    pinhole_cam = CameraPrior(300., 1.0, (1000, 1000))
-    gen = RandomReconGenerator(verbose=False, cam_prior=pinhole_cam)
-
-    # generate a random scene
-    gen.generate_random_recon(nr_views=2, nr_tracks=10, cam_rot_max_angle=1e-3)
-
-    # get ground truth relative orientation and get observations
-    view0 = gen.recon.View(0)
-    view1 = gen.recon.View(1)
-    cam0 = view0.Camera()
-    cam1 = view1.Camera()
-    principal_point0 = np.array([cam0.PrincipalPointX(), cam0.PrincipalPointY()])
-    principal_point1 = np.array([cam1.PrincipalPointX(), cam1.PrincipalPointY()])
-
-    # get observations visible in both cameras
-    img_pts0 = []
-    img_pts0_norm = []
-    img_pts1 = []
-    img_pts1_norm = []
-    normalized_corr = []
-    for t_id in gen.recon.TrackIds():
-        feat1 = view0.GetFeature(t_id)
-        feat2 = view1.GetFeature(t_id)
-        if not feat1 or not feat2:
-            continue
-        # remove pp to recover focal lenghts
-        img_pts0.append(feat1.point - principal_point0)
-        img_pts1.append(feat2.point - principal_point1)
-        img_pt0_norm = cam0.PixelToNormalizedCoordinates(feat1.point)[:2]
-        img_pt1_norm = cam1.PixelToNormalizedCoordinates(feat2.point)[:2]
-        img_pts0_norm.append(img_pt0_norm)
-        img_pts1_norm.append(img_pt1_norm)
-        normalized_corr.append(
-            pt.matching.FeatureCorrespondence(
-                pt.sfm.Feature(img_pt0_norm), pt.sfm.Feature(img_pt1_norm)))
-
-    gt_pose = GroundTruthRelPose(cam0, cam1)
-
-    test_8ptFundamentalMatrix(img_pts0_norm, img_pts1_norm)
-    test_5ptEssentialMatrix(img_pts0_norm, img_pts1_norm,
-                            normalized_corr, gt_pose, max_error_deg=0.1)
-    test_EstimateRelativeOrientation(
-        normalized_corr, gt_pose, max_error_deg=0.1)
-
-    # add noise and test again
-    test_8ptFundamentalMatrix(img_pts0_norm, img_pts1_norm)
-    test_5ptEssentialMatrix(img_pts0_norm, img_pts1_norm,
-                            normalized_corr, gt_pose, max_error_deg=0.1)
-    test_EstimateRelativeOrientation(
-        normalized_corr, gt_pose, max_error_deg=0.1)
-
-    #
-    # RelativePoseFromTwoPointsWithKnownRotation
-    # PositionFromTwoRays
-    # SimTransformPartialRotation
-    # FourPointRelativePosePartialRotation
-    # ThreePointRelativePosePartialRotation
-    # TwoPointPosePartialRotation
-
-    distorted_cam = CameraPrior(500., 1.0, (1000, 1000))
-    distorted_cam.set_to_division_undistortion(distortion=1e-6)
-    gen = RandomReconGenerator(cam_prior=distorted_cam)
+    pytest.main([__file__])
 
 # rt = pt.sfm.PoseFromThreePoints(pts2d_cam1.T, pts3d.T)
 # print('PoseFromThreePoints')

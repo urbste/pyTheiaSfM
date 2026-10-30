@@ -3,7 +3,7 @@ import numpy as np
 from random_recon_gen import RandomReconGenerator
 
 
-def test_BundleAdjustView(gen, ba_options):
+def _check_BundleAdjustView(gen, ba_options):
 
     for vid in gen.recon.ViewIds():
         orig_pos = gen.recon.View(vid).Camera().GetPosition()
@@ -14,14 +14,14 @@ def test_BundleAdjustView(gen, ba_options):
         assert dist_pos < 1e-4
         assert result.success
 
-def test_BundleAdjustTrack(gen, ba_options):
+def _check_BundleAdjustTrack(gen, ba_options):
 
     gen.add_noise_to_tracks(noise_track=1e-3)
     for t_id in gen.recon.TrackIds():
         result = pt.sfm.BundleAdjustTrack(gen.recon, ba_options, t_id)
         assert result.success
 
-def test_BundleAdjustWithPositionPrior(gen, ba_options):
+def _check_BundleAdjustWithPositionPrior(gen, ba_options):
     ba_options.use_position_priors = True
 
     for vid in gen.recon.ViewIds():
@@ -44,7 +44,7 @@ def test_BundleAdjustWithPositionPrior(gen, ba_options):
         assert result.success
 
 
-def test_BundleAdjustWithPositionPriorAndInformation(gen, ba_options):
+def _check_BundleAdjustWithPositionPriorAndInformation(gen, ba_options):
     ba_options.use_position_priors = True
 
     # set a low standard dev for the position prior
@@ -73,39 +73,49 @@ def test_BundleAdjustWithPositionPriorAndInformation(gen, ba_options):
         assert result.success
 
 
-if __name__ == "__main__":
-    gen = RandomReconGenerator()
-
-    # test 1
-    gen.generate_random_recon(nr_views=1, nr_tracks=20)
+def _make_ba_options():
     ba_options = pt.sfm.BundleAdjustmentOptions()
     ba_options.constant_camera_orientation = False
     ba_options.constant_camera_position = False
     ba_options.loss_function_type = pt.sfm.LossFunctionType(0)
     ba_options.robust_loss_width = 1.345
     ba_options.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
-    ba_options.verbose = True
-    ba_options.use_position_priors = False            
+    ba_options.verbose = False
+    ba_options.use_position_priors = False
     ba_options.use_homogeneous_point_parametrization = False
-
-    ba_options.dense_linear_algebra_library_type = pt.sfm.DenseLinearAlgebraLibraryType.CUDA
     ba_options.linear_solver_type = pt.sfm.LinearSolverType.SPARSE_SCHUR
+    return ba_options
 
-    test_BundleAdjustView(gen, ba_options)
 
-    # test 2
+def test_BundleAdjustView():
     gen = RandomReconGenerator()
     gen.generate_random_recon(nr_views=1, nr_tracks=20)
-    test_BundleAdjustWithPositionPrior(gen, ba_options)
+    _check_BundleAdjustView(gen, _make_ba_options())
 
-    # test 2
+
+def test_BundleAdjustWithPositionPrior():
+    gen = RandomReconGenerator()
+    gen.generate_random_recon(nr_views=1, nr_tracks=20)
+    _check_BundleAdjustWithPositionPrior(gen, _make_ba_options())
+
+
+def test_BundleAdjustWithPositionPriorAndInformation():
     gen = RandomReconGenerator()
     gen.generate_random_recon(nr_views=1, nr_tracks=20, pixel_noise=1.0)
-    test_BundleAdjustWithPositionPriorAndInformation(gen, ba_options)
+    _check_BundleAdjustWithPositionPriorAndInformation(gen, _make_ba_options())
 
+
+def test_BundleAdjustTrack():
     gen = RandomReconGenerator()
+    gen.generate_random_recon(nr_views=5, nr_tracks=20, pixel_noise=0.5)
+    ba_options = _make_ba_options()
     ba_options.constant_camera_orientation = True
     ba_options.constant_camera_position = True
-    gen.generate_random_recon(nr_views=5, nr_tracks=20, pixel_noise=0.5)
-    test_BundleAdjustTrack(gen, ba_options)
-    
+    _check_BundleAdjustTrack(gen, ba_options)
+
+
+if __name__ == "__main__":
+    test_BundleAdjustView()
+    test_BundleAdjustWithPositionPrior()
+    test_BundleAdjustWithPositionPriorAndInformation()
+    test_BundleAdjustTrack()

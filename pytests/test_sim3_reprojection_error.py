@@ -1,197 +1,132 @@
 #!/usr/bin/env python3
 """
-Test for SIM3 reprojection errors in pyTheiaSfM.
+Tests for Sim(3) camera poses in pyTheiaSfM.
 
-This test verifies that the SIM3 reprojection errors work correctly
-and produce expected results.
+Verifies that the Sim(3) pose helpers (GetSim3LieFromView,
+RelativeSim3BetweenViews, Sim3FromRotationTranslationScale, ...) agree with the
+regular camera model, i.e. that reprojecting through the Sim(3) pose gives the
+same pixels as Camera.ProjectPoint.
 """
 
 import numpy as np
 import pytest
 import pytheia as pt
 
+
+def _add_view(recon, name, position, angle_axis):
+    view_id = recon.AddView(name, 0, float(recon.NumViews()))
+    camera = recon.MutableView(view_id).MutableCamera()
+    camera.SetFocalLength(1000.0)
+    camera.SetPrincipalPoint(500.0, 400.0)
+    camera.SetPosition(np.asarray(position, dtype=float))
+    camera.SetOrientationFromAngleAxis(np.asarray(angle_axis, dtype=float))
+    recon.MutableView(view_id).SetIsEstimated(True)
+    return view_id
+
+
+def _project_with_sim3(sim3_lie, camera, point_3d):
+    """Projects a world point using the 4x4 Sim(3) camera-from-world matrix."""
+    T_c_w = pt.sfm.Sim3ToHomogeneousMatrix(sim3_lie)
+    point_camera = T_c_w[:3, :3] @ point_3d + T_c_w[:3, 3]
+    K = camera.GetCalibrationMatrix()
+    pixel = K @ (point_camera / point_camera[2])
+    return pixel[:2]
+
+
 def test_sim3_reprojection_error_basic():
-    """Test basic SIM3 reprojection error functionality."""
-    
-    # Create a simple reconstruction
+    """Projecting through the Sim(3) pose matches Camera.ProjectPoint."""
     recon = pt.sfm.Reconstruction()
-    
-    # Create camera model
-    camera_model = pt.sfm.PinholeCameraModel()
-    camera_model.SetFocalLength(1000.0)
-    camera_model.SetPrincipalPoint(500.0, 400.0)
-    
-    # Create view with SIM3 pose
-    view_obj = view.View()
-    view_obj.SetName("test_view")
-    view_obj.SetCamera(camera_model)
-    
-    # Set identity SIM3 pose
-    sim3_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
-    view_obj.SetSim3Pose(sim3_pose)
-    view_obj.SetEstimated(True)
-    
-    view_id = recon.AddView(view_obj)
-    
-    # Create a 3D point
-    point_3d = np.array([1.0, 0.0, 2.0])
-    
-    # Create track
-    track_obj = track.Track()
-    track_obj.SetPoint(point_3d)
-    track_obj.SetEstimated(True)
-    track_id = recon.AddTrack(track_obj)
-    
-    # Project point to get expected pixel coordinates
-    point_camera = sim3_pose[:3]  # Translation part
-    pixel_coords = camera_model.CameraToPixelCoordinates(point_camera)
-    
-    # Create feature
-    feat = feature.Feature()
-    feat.point_ = pixel_coords
-    feat.covariance_ = np.eye(2)
-    
-    # Add feature to view
-    view_obj.AddFeature(track_id, feat)
-    
-    # Verify the setup
-    assert view_obj.IsEstimated()
-    assert track_obj.IsEstimated()
-    assert view_obj.HasFeature(track_id)
-    
-    # Test that we can access the SIM3 pose
-    retrieved_pose = view_obj.GetSim3Pose()
-    np.testing.assert_array_almost_equal(retrieved_pose, sim3_pose)
+    view_id = _add_view(recon, "test_view", [1.0, 2.0, 3.0], [0.1, -0.2, 0.05])
+    view = recon.View(view_id)
+    camera = view.Camera()
+
+    sim3_lie = pt.sfm.GetSim3LieFromView(view)
+    # A view's camera pose has unit scale, i.e. log(scale) == 0.
+    assert abs(sim3_lie[6]) < 1e-12
+
+    point_3d = np.array([1.5, 2.2, 8.0])
+    depth, expected_pixel = camera.ProjectPoint(np.append(point_3d, 1.0))
+    assert depth > 0.0
+
+    pixel = _project_with_sim3(sim3_lie, camera, point_3d)
+    np.testing.assert_allclose(pixel, expected_pixel, atol=1e-8)
+
 
 def test_sim3_pose_consistency():
-    """Test that SIM3 poses are handled consistently."""
-    
-    # Create reconstruction
-    recon = reconstruction.Reconstruction()
-    
-    # Create camera model
-    camera_model = camera.PinholeCameraModel()
-    camera_model.SetFocalLength(1000.0)
-    camera_model.SetPrincipalPoint(500.0, 400.0)
-    
-    # Create two views with different SIM3 poses
-    view1 = view.View()
-    view1.SetName("view1")
-    view1.SetCamera(camera_model)
-    
-    # Identity pose
-    sim3_pose1 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
-    view1.SetSim3Pose(sim3_pose1)
-    view1.SetEstimated(True)
-    
-    view2 = view.View()
-    view2.SetName("view2")
-    view2.SetCamera(camera_model)
-    
-    # Translated and scaled pose
-    sim3_pose2 = np.array([0.1, 0.0, 0.0, 1.0, 0.0, 0.0, 1.2])
-    view2.SetSim3Pose(sim3_pose2)
-    view2.SetEstimated(True)
-    
-    view1_id = recon.AddView(view1)
-    view2_id = recon.AddView(view2)
-    
-    # Verify poses are different
-    retrieved_pose1 = view1.GetSim3Pose()
-    retrieved_pose2 = view2.GetSim3Pose()
-    
-    np.testing.assert_array_almost_equal(retrieved_pose1, sim3_pose1)
-    np.testing.assert_array_almost_equal(retrieved_pose2, sim3_pose2)
-    
-    # Verify poses are different from each other
-    assert not np.allclose(retrieved_pose1, retrieved_pose2)
+    """RelativeSim3BetweenViews equals S_i^{-1} * S_j."""
+    recon = pt.sfm.Reconstruction()
+    view1_id = _add_view(recon, "view1", [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+    view2_id = _add_view(recon, "view2", [1.0, 0.2, -0.3], [0.05, 0.1, -0.02])
+    view1 = recon.View(view1_id)
+    view2 = recon.View(view2_id)
 
-def test_sim3_scale_handling():
-    """Test that SIM3 scale is handled correctly."""
-    
-    # Create reconstruction
-    recon = reconstruction.Reconstruction()
-    
-    # Create camera model
-    camera_model = camera.PinholeCameraModel()
-    camera_model.SetFocalLength(1000.0)
-    camera_model.SetPrincipalPoint(500.0, 400.0)
-    
-    # Create view
-    view_obj = view.View()
-    view_obj.SetName("test_view")
-    view_obj.SetCamera(camera_model)
-    
-    # Test different scale values
-    scales = [0.5, 1.0, 1.5, 2.0]
-    
-    for scale in scales:
-        # Set SIM3 pose with specific scale
-        sim3_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, scale])
-        view_obj.SetSim3Pose(sim3_pose)
-        
-        # Retrieve and verify scale
-        retrieved_pose = view_obj.GetSim3Pose()
-        assert retrieved_pose[6] == scale  # Scale is the 7th parameter
+    # Relative pose of a view to itself is the identity.
+    np.testing.assert_allclose(
+        pt.sfm.RelativeSim3BetweenViews(view1, view1), np.zeros(7), atol=1e-12)
+
+    S1 = pt.sfm.Sim3ToHomogeneousMatrix(pt.sfm.GetSim3LieFromView(view1))
+    S2 = pt.sfm.Sim3ToHomogeneousMatrix(pt.sfm.GetSim3LieFromView(view2))
+    S12 = pt.sfm.Sim3ToHomogeneousMatrix(
+        pt.sfm.RelativeSim3BetweenViews(view1, view2))
+    np.testing.assert_allclose(S12, np.linalg.inv(S1) @ S2, atol=1e-10)
+
+    assert not np.allclose(pt.sfm.GetSim3LieFromView(view1),
+                           pt.sfm.GetSim3LieFromView(view2))
+
+
+@pytest.mark.parametrize("scale", [0.5, 1.0, 1.5, 2.0])
+def test_sim3_scale_handling(scale):
+    """Rotation, translation and scale survive a round trip through Sim(3)."""
+    angle = 0.3
+    rotation = np.array([[np.cos(angle), -np.sin(angle), 0.0],
+                         [np.sin(angle), np.cos(angle), 0.0],
+                         [0.0, 0.0, 1.0]])
+    translation = np.array([0.1, -0.4, 2.0])
+
+    sim3_lie = pt.sfm.Sim3FromRotationTranslationScale(
+        rotation, translation, scale)
+    np.testing.assert_allclose(sim3_lie[6], np.log(scale), atol=1e-12)
+
+    R, t, s = pt.sfm.Sim3ToRotationTranslationScale(sim3_lie)
+    np.testing.assert_allclose(R, rotation, atol=1e-10)
+    np.testing.assert_allclose(t, translation, atol=1e-10)
+    assert s == pytest.approx(scale)
+
+    T = pt.sfm.Sim3ToHomogeneousMatrix(sim3_lie)
+    np.testing.assert_allclose(T[:3, :3], scale * rotation, atol=1e-10)
+    np.testing.assert_allclose(T[:3, 3], translation, atol=1e-10)
+
 
 def test_sim3_with_3d_points():
-    """Test SIM3 poses with 3D points."""
-    
-    # Create reconstruction
-    recon = reconstruction.Reconstruction()
-    
-    # Create camera model
-    camera_model = camera.PinholeCameraModel()
-    camera_model.SetFocalLength(1000.0)
-    camera_model.SetPrincipalPoint(500.0, 400.0)
-    
-    # Create view
-    view_obj = view.View()
-    view_obj.SetName("test_view")
-    view_obj.SetCamera(camera_model)
-    
-    # Set SIM3 pose
-    sim3_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
-    view_obj.SetSim3Pose(sim3_pose)
-    view_obj.SetEstimated(True)
-    
-    view_id = recon.AddView(view_obj)
-    
-    # Create multiple 3D points
+    """Observations created from Camera.ProjectPoint are reproduced by Sim(3)."""
+    recon = pt.sfm.Reconstruction()
+    view_id = _add_view(recon, "test_view", [0.0, 0.0, -1.0], [0.0, 0.1, 0.0])
+    camera = recon.View(view_id).Camera()
+
     points_3d = [
         np.array([1.0, 0.0, 2.0]),
         np.array([0.0, 1.0, 2.0]),
         np.array([-1.0, 0.0, 2.0]),
-        np.array([0.0, -1.0, 2.0])
+        np.array([0.0, -1.0, 2.0]),
     ]
-    
-    # Create tracks for each point
-    for i, point_3d in enumerate(points_3d):
-        track_obj = track.Track()
-        track_obj.SetPoint(point_3d)
-        track_obj.SetEstimated(True)
-        track_id = recon.AddTrack(track_obj)
-        
-        # Create feature
-        feat = feature.Feature()
-        feat.point_ = np.array([100.0 + i * 50, 200.0 + i * 50])  # Dummy pixel coordinates
-        feat.covariance_ = np.eye(2)
-        
-        # Add feature to view
-        view_obj.AddFeature(track_id, feat)
-    
-    # Verify all tracks are created
+    for point_3d in points_3d:
+        track_id = recon.AddTrack()
+        recon.MutableTrack(track_id).SetPoint(np.append(point_3d, 1.0))
+        recon.MutableTrack(track_id).SetIsEstimated(True)
+        _, pixel = camera.ProjectPoint(np.append(point_3d, 1.0))
+        assert recon.AddObservation(view_id, track_id, pt.sfm.Feature(pixel))
+
     assert len(recon.TrackIds()) == len(points_3d)
-    
-    # Verify all features are added
+
+    view = recon.View(view_id)
+    sim3_lie = pt.sfm.GetSim3LieFromView(view)
     for track_id in recon.TrackIds():
-        assert view_obj.HasFeature(track_id)
+        feature = view.GetFeature(track_id)
+        assert feature is not None
+        point_3d = recon.Track(track_id).Point()[:3]
+        pixel = _project_with_sim3(sim3_lie, camera, point_3d)
+        np.testing.assert_allclose(pixel, feature.point, atol=1e-8)
+
 
 if __name__ == "__main__":
-    # Run tests
-    test_sim3_reprojection_error_basic()
-    test_sim3_pose_consistency()
-    test_sim3_scale_handling()
-    test_sim3_with_3d_points()
-    
-    print("All SIM3 reprojection error tests passed!") 
+    pytest.main([__file__])

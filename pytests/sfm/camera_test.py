@@ -112,7 +112,7 @@ def test_DefaultReprojection():
 
 def test_Reprojection():
     camera = pt.sfm.PinholeCameraModel()
-    camera.FocalLength = 600.0
+    camera.SetFocalLength(600.0)
     camera.SetPrincipalPoint(300.0, 300.0)
     Reprojection(camera)
 
