@@ -65,7 +65,9 @@ namespace solvers {
 
 void pytheia_solvers_classes(py::module& m) {
   // RandomNumberGenerator
-  py::class_<theia::RandomNumberGenerator>(m, "RandomNumberGenerator")
+  py::class_<theia::RandomNumberGenerator,
+             std::shared_ptr<theia::RandomNumberGenerator>>(
+      m, "RandomNumberGenerator")
       .def(py::init<>())
       .def(py::init<int>())
       .def("Seed", &theia::RandomNumberGenerator::Seed)
