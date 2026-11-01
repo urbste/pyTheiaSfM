@@ -16,6 +16,7 @@ build*
 !docs/content/building.md
 cmake_build*
 *.csv
+dist/*
 
 *.ply
 *.json

@@ -11,6 +11,8 @@ It contains Python bindings for most of the functionalities of TheiaSfM and more
 
 With pyTheia you have access to a variety of different camera models, structure-from-motion pipelines and geometric vision algorithms.
 
+**Calibrated multi-camera rigs (stereo / N-camera):** since **1.2.0**, use `CameraRig`, `RigCapture`, and `IncrementalRigReconstructor` / `GlobalRigReconstructor` — see [Camera rigs](https://urbste.github.io/pyTheiaSfM/rigs/) and `pyexamples/stereo/stereo_rig_reconstruction.py`.
+
 # Differences to the original library TheiaSfM
 pyTheia does not aim at being an end-to-end SfM library. For example, building robust feature detection and matching pipelines is usually application and data specific (e.g. image resolution, runtime, pose priors, invariances, ...). This includes image pre- and postprocessing. 
 

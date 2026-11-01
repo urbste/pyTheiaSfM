@@ -24,6 +24,18 @@
 ## Devernay {#Devernay}
 :   Devernay, and Faugeras. **Straight Lines Have to be Straight: Automatic Calibration and Removal of Distortion from Scenes of Structured Environments**, *Machine Vision and Applications*, 2001.
 
+## ErikssonCVPR2018 {#ErikssonCVPR2018}
+:   Eriksson, A. and Olsson, C. and Kahl, F. and Chin, T-J. **Rotation Averaging and Strong Duality**. *Computer Vision and Pattern Recognition (CVPR)*, 2018.
+
+## Fitzgibbon {#Fitzgibbon}
+:   Fitzgibbon, A. W. **Simultaneous Linear Estimation of Multiple View Geometry and Lens Distortion**. *Computer Vision and Pattern Recognition (CVPR)*, 2001.
+
+## PanGLOMAP2024 {#PanGLOMAP2024}
+:   Pan, L. and Barath, D. and Pollefeys, M. and Schönberger, J. L. **Global Structure-from-Motion Revisited**. *European Conference on Computer Vision (ECCV)*, 2024.
+
+## Usenko2018 {#Usenko2018}
+:   Usenko, V. and Demmel, N. and Cremers, D. **The Double Sphere Camera Model**. *arXiv:1807.08957*, 2018.
+
 ## DingRePoseD2025 {#DingRePoseD2025}
 :   Y. Ding, V. Larsson, et al. **RePoseD: Efficient Relative Pose Estimation With Known Depth Information**. *International Conference on Computer Vision (ICCV)*, 2025.
 
