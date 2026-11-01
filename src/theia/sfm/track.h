@@ -91,15 +91,30 @@ class Track {
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
+  // Version 1 does NOT write view_ids_: a Track only knows its views through
+  // the Reconstruction, which rebuilds view_ids_ from the views on load (see
+  // Reconstruction::serialize, version >= 2). A version 1 Track therefore only
+  // round-trips inside a Reconstruction archive; serialized on its own it loads
+  // with an empty view_ids_.
   template <class Archive>
   void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
+    if (version == 0) {
+      ar(is_estimated_,
+         view_ids_,
+         reference_view_id_,
+         inverse_depth_,
+         point_,
+         color_,
+         reference_bearing_,
+         reference_descriptor_);
+      return;
+    }
     ar(is_estimated_,
-       view_ids_,
        reference_view_id_,
        inverse_depth_,
-       point_,
-       color_,
-       reference_bearing_,
+       cereal::binary_data(point_.data(), 4 * sizeof(double)),
+       cereal::binary_data(color_.data(), 3 * sizeof(uint8_t)),
+       cereal::binary_data(reference_bearing_.data(), 3 * sizeof(double)),
        reference_descriptor_);
   }
 
@@ -115,6 +130,6 @@ class Track {
 
 }  // namespace theia
 
-CEREAL_CLASS_VERSION(theia::Track, 0);
+CEREAL_CLASS_VERSION(theia::Track, 1);
 
 #endif  // THEIA_SFM_TRACK_H_

@@ -38,6 +38,8 @@
 #define THEIA_SFM_FEATURE_H_
 
 #include <Eigen/Core>
+#include <cereal/cereal.hpp>
+#include <cstdint>
 #include <functional>
 #include <utility>
 
@@ -106,15 +108,78 @@ class Feature {
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
   friend class cereal::access;
+  // Version 1 ("compact") layout: a flags byte followed by only the fields that
+  // differ from their defaults. Coordinates are stored as float when that is
+  // exact. Version 0 (legacy) is unchanged.
   template <class Archive>
   void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
-    ar(point_, covariance_, depth_prior_, depth_prior_variance_);
+    if (version == 0) {
+      ar(point_, covariance_, depth_prior_, depth_prior_variance_);
+      return;
+    }
+    SerializeCompact(ar);
+  }
+
+  static constexpr std::uint8_t kPointFloat = 1 << 0;   // point stored as float
+  static constexpr std::uint8_t kCovariance = 1 << 1;   // covariance_ present
+  static constexpr std::uint8_t kDepthPrior = 1 << 2;   // depth prior present
+
+  template <class Archive>
+  void SerializeCompact(Archive& ar) {
+    std::uint8_t flags = 0;
+    if constexpr (Archive::is_saving::value) {
+      const double x = point_[0];
+      const double y = point_[1];
+      const bool point_is_float =
+          static_cast<double>(static_cast<float>(x)) == x &&
+          static_cast<double>(static_cast<float>(y)) == y;
+      const bool has_covariance =
+          covariance_(0, 0) != 1.0 || covariance_(0, 1) != 0.0 ||
+          covariance_(1, 0) != 0.0 || covariance_(1, 1) != 1.0;
+      const bool has_depth_prior =
+          depth_prior_ != 0.0 || depth_prior_variance_ != 1.0;
+      if (point_is_float) flags |= kPointFloat;
+      if (has_covariance) flags |= kCovariance;
+      if (has_depth_prior) flags |= kDepthPrior;
+    }
+    ar(flags);
+
+    if (flags & kPointFloat) {
+      float x = 0.0f, y = 0.0f;
+      if constexpr (Archive::is_saving::value) {
+        x = static_cast<float>(point_[0]);
+        y = static_cast<float>(point_[1]);
+      }
+      ar(x, y);
+      if constexpr (Archive::is_loading::value) {
+        point_ << static_cast<double>(x), static_cast<double>(y);
+      }
+    } else {
+      double x = point_[0], y = point_[1];
+      ar(x, y);
+      if constexpr (Archive::is_loading::value) {
+        point_ << x, y;
+      }
+    }
+
+    if (flags & kCovariance) {
+      ar(cereal::binary_data(covariance_.data(), 4 * sizeof(double)));
+    } else if constexpr (Archive::is_loading::value) {
+      covariance_ = Eigen::Matrix2d::Identity();
+    }
+
+    if (flags & kDepthPrior) {
+      ar(depth_prior_, depth_prior_variance_);
+    } else if constexpr (Archive::is_loading::value) {
+      depth_prior_ = 0.0;
+      depth_prior_variance_ = 1.0;
+    }
   }
 };
 
 }  // namespace theia
 
-CEREAL_CLASS_VERSION(theia::Feature, 0);
+CEREAL_CLASS_VERSION(theia::Feature, 1);
 
 namespace std {
 template <>

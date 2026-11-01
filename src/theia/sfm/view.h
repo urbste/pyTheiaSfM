@@ -117,13 +117,33 @@ class View {
   friend class cereal::access;
   template <class Archive>
   void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
+    if (version == 0) {
+      ar(name_,
+         timestamp_,
+         is_estimated_,
+         camera_,
+         camera_intrinsics_prior_,
+         features_,
+         features_to_tracks_,
+         position_prior_,
+         position_prior_sqrt_information_,
+         has_position_prior_,
+         gravity_prior_,
+         gravity_prior_sqrt_information_,
+         has_gravity_prior_,
+         orientation_prior_,
+         orientation_prior_sqrt_information_,
+         has_orientation_prior_);
+      return;
+    }
+    // Version 1: features_to_tracks_ is not written. It is the inverse of
+    // features_ and is rebuilt on load.
     ar(name_,
        timestamp_,
        is_estimated_,
        camera_,
        camera_intrinsics_prior_,
        features_,
-       features_to_tracks_,
        position_prior_,
        position_prior_sqrt_information_,
        has_position_prior_,
@@ -133,6 +153,12 @@ class View {
        orientation_prior_,
        orientation_prior_sqrt_information_,
        has_orientation_prior_);
+    if constexpr (Archive::is_loading::value) {
+      features_to_tracks_.clear();
+      for (const auto& [track_id, feature] : features_) {
+        features_to_tracks_[feature] = track_id;
+      }
+    }
   }
 
   std::string name_;
@@ -162,6 +188,6 @@ class View {
 
 }  // namespace theia
 
-CEREAL_CLASS_VERSION(theia::View, 0);
+CEREAL_CLASS_VERSION(theia::View, 1);
 
 #endif  // THEIA_SFM_VIEW_H_

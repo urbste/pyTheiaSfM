@@ -86,6 +86,24 @@ Reconstruction::Reconstruction()
 
 Reconstruction::~Reconstruction() {}
 
+void Reconstruction::RebuildTrackViewIds() {
+  bool warned_missing_track = false;
+  for (const auto& [view_id, view] : views_) {
+    for (const TrackId track_id : view.TrackIds()) {
+      class Track* track = FindOrNull(tracks_, track_id);
+      if (track == nullptr) {
+        if (!warned_missing_track) {
+          LOG(WARNING) << "View " << view_id << " references track " << track_id
+                       << " which is not in the reconstruction; skipping.";
+          warned_missing_track = true;
+        }
+        continue;
+      }
+      track->AddView(view_id);
+    }
+  }
+}
+
 ViewId Reconstruction::ViewIdFromName(const std::string& view_name) const {
   return FindWithDefault(view_name_to_id_, view_name, kInvalidViewId);
 }

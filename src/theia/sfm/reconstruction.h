@@ -237,7 +237,17 @@ class Reconstruction {
          view_id_to_rig_membership_,
          rig_timestamp_to_capture_id_);
     }
+    if constexpr (Archive::is_loading::value) {
+      // Version 2+ does not store Track::view_ids_; they are the inverse of the
+      // views' feature maps and are rebuilt here.
+      if (version >= 2) {
+        RebuildTrackViewIds();
+      }
+    }
   }
+
+  // Fills Track::view_ids_ for every track from the views' features.
+  void RebuildTrackViewIds();
 
   // Helper used by AddRigCapture: like AddView but allows a shared timestamp
   // when the View will be attached to a RigCapture.
@@ -272,6 +282,6 @@ class Reconstruction {
 
 }  // namespace theia
 
-CEREAL_CLASS_VERSION(theia::Reconstruction, 1);
+CEREAL_CLASS_VERSION(theia::Reconstruction, 2);
 
 #endif  // THEIA_SFM_RECONSTRUCTION_H_

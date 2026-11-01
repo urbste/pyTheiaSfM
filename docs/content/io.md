@@ -59,6 +59,23 @@ List-file row: `filename`, `second_entry`, `focal_length`.
 
 ---
 
+## Binary `.recon` format (compact)
+
+`ReadReconstruction` / `WriteReconstruction` use a cereal `PortableBinaryArchive`. Since
+Reconstruction format version 2 (pyTheia 1.3.0) the file is written in a compact layout:
+
+- Each observation is stored once (in the view's `TrackId -> Feature` map). The inverse
+  `Feature -> TrackId` map is rebuilt on load instead of being written.
+- A `Feature` is a flags byte plus its coordinates. Coordinates are stored as `float32` when that
+  is exact, otherwise as `float64`. The default covariance (identity) and depth prior (0, variance 1)
+  are omitted.
+- `Track::view_ids_` is not written. It is rebuilt from the views on load.
+
+Roughly 13 bytes per observation for the feature data, instead of about 190 bytes before. The
+format is lossless. Files written by older builds (Reconstruction version 0 or 1) still load
+exactly, because each class keeps its legacy code path for the old class versions. Files written
+by the new build cannot be read by pyTheia 1.2.x.
+
 ## Export to Nerfstudio
 
 Writes a `transforms.json` compatible with Nerfstudio.
