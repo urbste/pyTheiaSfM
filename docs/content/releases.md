@@ -4,7 +4,46 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
-## 1.2.1 (current) {#release-1-2-1}
+## 1.3.1 (current) {#release-1-3-1}
+
+Opt-in reproducible RNG seeding and a bundle-adjuster fix.
+
+### Reproducible runs
+
+- **Fixed seed for default-constructed RNGs.** RANSAC samplers and global estimators that are not handed a `RandomNumberGenerator` seed from the clock by default. They can now use a fixed seed, so repeated runs draw identical sample sequences.
+    - Python: `pt.solvers.SetDefaultRandomSeed(seed)`, `pt.solvers.ClearDefaultRandomSeed()`, `pt.solvers.HasDefaultRandomSeed()`.
+    - C++: the same names in the `theia::` namespace (`theia/util/random.h`).
+    - Environment: `THEIA_RANDOM_SEED=<unsigned decimal>` sets the seed at process start. An invalid value is ignored and the clock is used.
+    - The seed is process-wide and re-applied on every default construction, so each RANSAC / estimator run restarts from the same state. Without a seed, behavior is unchanged.
+
+### Fixes
+
+- `BundleAdjuster::SetCameraExtrinsicsConstant` no longer aborts in Ceres for a view that has no residual block (all observations removed, no gravity prior). The extrinsics block is added before it is marked constant.
+
+### Maintenance
+
+- Type stubs regenerated with pybind11-stubgen 3.0.0; they now include the seed functions and previously missing entries such as `io.WriteRigPlyFile`.
+- Bumped vulnerable pins in the vendored pybind11 `requirements.txt` files (no effect on the built package).
+
+Docs: [RANSAC](ransac.md).
+
+---
+
+## 1.3.0 {#release-1-3-0}
+
+Compact binary format for reconstructions.
+
+### I/O
+
+- **Reconstruction format version 2.** `ReadReconstruction` / `WriteReconstruction` write a compact, lossless layout: about 27 B/observation instead of 191 on a synthetic 50-view / 2000-track set.
+- Older files (Reconstruction version 0 or 1) still load exactly. Files written by 1.3.x cannot be read by 1.2.x.
+- Tests and fixtures: `pytests/io/test_compact_reconstruction_format.py` (legacy load, lossless round-trip, size).
+
+Docs: [IO — binary `.recon` format](io.md#binary-recon-format-compact).
+
+---
+
+## 1.2.1 {#release-1-2-1}
 
 Rig pipeline hardening on top of 1.2.0: metric capture–capture relative pose, clearer global-rig logging, rig PLY export, and example cleanup.
 
