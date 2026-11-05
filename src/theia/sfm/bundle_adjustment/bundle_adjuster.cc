@@ -514,7 +514,14 @@ BundleAdjuster::GetIntrinsicsForCameraIntrinsicsGroup(
 void BundleAdjuster::SetCameraExtrinsicsConstant(const ViewId view_id) {
   View* view = reconstruction_->MutableView(view_id);
   Camera* camera = view->MutableCamera();
-  problem_->SetParameterBlockConstant(camera->mutable_extrinsics());
+  double* extrinsics = camera->mutable_extrinsics();
+  // A constant view whose observations were all removed (and that has no gravity
+  // prior) has no residual block yet; Ceres aborts on SetParameterBlockConstant
+  // for an unknown block. An isolated constant block is harmless.
+  if (!problem_->HasParameterBlock(extrinsics)) {
+    problem_->AddParameterBlock(extrinsics, Camera::kExtrinsicsSize);
+  }
+  problem_->SetParameterBlockConstant(extrinsics);
 }
 
 bool BundleAdjuster::IsViewInProblem(const ViewId view_id) const {

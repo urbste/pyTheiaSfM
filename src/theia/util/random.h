@@ -40,6 +40,16 @@
 
 namespace theia {
 
+// Makes default-constructed RandomNumberGenerators use `seed` instead of the
+// current time (process-wide; also settable via the THEIA_RANDOM_SEED env var).
+// Use for reproducible runs; RANSAC then draws the same sample sequence in every
+// estimation.
+void SetDefaultRandomSeed(const unsigned seed);
+// Restores clock seeding for default-constructed generators.
+void ClearDefaultRandomSeed();
+// True when a default seed override is active.
+bool HasDefaultRandomSeed();
+
 // A wrapper around the c++11 random generator utilities. This allows for a
 // thread-safe random number generator that may be easily instantiated and
 // passed around as an object.
