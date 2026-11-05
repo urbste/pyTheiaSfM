@@ -1,58 +1,5 @@
 from __future__ import annotations
-__all__: list[str] = ['BundlerCamera', 'BundlerFileReader', 'BundlerObservation', 'BundlerPoint', 'ImportNVMFile', 'ListImgEntry', 'PopulateImageSizesAndPrincipalPoints', 'Read1DSFM', 'ReadBundlerFiles', 'ReadReconstruction', 'ReadStrechaDataset', 'WriteBundlerFiles', 'WriteColmapFiles', 'WriteNVMFile', 'WriteNerfStudio', 'WritePlyFile', 'WriteReconstruction', 'WriteReconstructionJson', 'WriteSdfStudio']
-class BundlerCamera:
-    @staticmethod
-    def __init__(*args, **kwargs):
-        ...
-    @property
-    def focal_length(*args, **kwargs):
-        ...
-    @focal_length.setter
-    def focal_length(*args, **kwargs):
-        ...
-    @property
-    def radial_coeff_1(*args, **kwargs):
-        ...
-    @radial_coeff_1.setter
-    def radial_coeff_1(*args, **kwargs):
-        ...
-    @property
-    def radial_coeff_2(*args, **kwargs):
-        ...
-    @radial_coeff_2.setter
-    def radial_coeff_2(*args, **kwargs):
-        ...
-    @property
-    def rotation(*args, **kwargs):
-        ...
-    @rotation.setter
-    def rotation(*args, **kwargs):
-        ...
-    @property
-    def translation(*args, **kwargs):
-        ...
-    @translation.setter
-    def translation(*args, **kwargs):
-        ...
-class BundlerFileReader:
-    @staticmethod
-    def ParseBundleFile(*args, **kwargs):
-        ...
-    @staticmethod
-    def ParseListsFile(*args, **kwargs):
-        ...
-    @staticmethod
-    def __init__(*args, **kwargs):
-        ...
-    @staticmethod
-    def cameras(*args, **kwargs):
-        ...
-    @staticmethod
-    def img_entries(*args, **kwargs):
-        ...
-    @staticmethod
-    def points(*args, **kwargs):
-        ...
+__all__: list[str] = ['BundlerCamera', 'BundlerFileReader', 'BundlerObservation', 'BundlerPoint', 'ImportNVMFile', 'ListImgEntry', 'PopulateImageSizesAndPrincipalPoints', 'Read1DSFM', 'ReadBundlerFiles', 'ReadReconstruction', 'ReadStrechaDataset', 'WriteBundlerFiles', 'WriteColmapFiles', 'WriteNVMFile', 'WriteNerfStudio', 'WritePlyFile', 'WriteReconstruction', 'WriteReconstructionJson', 'WriteRigPlyFile', 'WriteSdfStudio']
 class BundlerObservation:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -103,6 +50,59 @@ class BundlerPoint:
     @view_list.setter
     def view_list(*args, **kwargs):
         ...
+class BundlerFileReader:
+    @staticmethod
+    def ParseBundleFile(*args, **kwargs):
+        ...
+    @staticmethod
+    def ParseListsFile(*args, **kwargs):
+        ...
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @staticmethod
+    def cameras(*args, **kwargs):
+        ...
+    @staticmethod
+    def img_entries(*args, **kwargs):
+        ...
+    @staticmethod
+    def points(*args, **kwargs):
+        ...
+class BundlerCamera:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def focal_length(*args, **kwargs):
+        ...
+    @focal_length.setter
+    def focal_length(*args, **kwargs):
+        ...
+    @property
+    def radial_coeff_1(*args, **kwargs):
+        ...
+    @radial_coeff_1.setter
+    def radial_coeff_1(*args, **kwargs):
+        ...
+    @property
+    def radial_coeff_2(*args, **kwargs):
+        ...
+    @radial_coeff_2.setter
+    def radial_coeff_2(*args, **kwargs):
+        ...
+    @property
+    def rotation(*args, **kwargs):
+        ...
+    @rotation.setter
+    def rotation(*args, **kwargs):
+        ...
+    @property
+    def translation(*args, **kwargs):
+        ...
+    @translation.setter
+    def translation(*args, **kwargs):
+        ...
 class ListImgEntry:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -147,16 +147,15 @@ def WriteNerfStudio(*args, **kwargs):
     ...
 def WritePlyFile(*args, **kwargs):
     ...
-def WriteRigPlyFile(*args, **kwargs):
-    """
-    Write a PLY with tracks, capture centers, sensor centers, and sampled polylines for the rig trajectory and intra-capture baselines.
-    """
-    ...
 def WriteReconstruction(*args, **kwargs):
     """
     Write reconstruction to binary file. By default writes only estimated views and multi-view tracks (smaller file). Pass write_full_reconstruction=True to save the complete model.
     """
 def WriteReconstructionJson(*args, **kwargs):
     ...
+def WriteRigPlyFile(*args, **kwargs):
+    """
+    Write a PLY with tracks, capture centers, sensor centers, and sampled polylines for the rig trajectory and intra-capture baselines.
+    """
 def WriteSdfStudio(*args, **kwargs):
     ...

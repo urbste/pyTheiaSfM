@@ -1,5 +1,5 @@
 from __future__ import annotations
-__all__: list[str] = ['RandomNumberGenerator', 'RansacParameters', 'RansacSummary']
+__all__: list[str] = ['ClearDefaultRandomSeed', 'HasDefaultRandomSeed', 'RandomNumberGenerator', 'RansacParameters', 'RansacSummary', 'SetDefaultRandomSeed']
 class RandomNumberGenerator:
     @staticmethod
     def RandDouble(*args, **kwargs):
@@ -19,15 +19,40 @@ class RandomNumberGenerator:
     @staticmethod
     def __init__(*args, **kwargs):
         ...
+class RansacSummary:
+    @property
+    def confidence(*args, **kwargs):
+        ...
+    @confidence.setter
+    def confidence(*args, **kwargs):
+        ...
+    @property
+    def inliers(*args, **kwargs):
+        ...
+    @inliers.setter
+    def inliers(*args, **kwargs):
+        ...
+    @property
+    def num_input_data_points(*args, **kwargs):
+        ...
+    @num_input_data_points.setter
+    def num_input_data_points(*args, **kwargs):
+        ...
+    @property
+    def num_iterations(*args, **kwargs):
+        ...
+    @num_iterations.setter
+    def num_iterations(*args, **kwargs):
+        ...
+    @property
+    def num_lo_iterations(*args, **kwargs):
+        ...
+    @num_lo_iterations.setter
+    def num_lo_iterations(*args, **kwargs):
+        ...
 class RansacParameters:
     @staticmethod
     def __init__(*args, **kwargs):
-        ...
-    @property
-    def rng(*args, **kwargs):
-        ...
-    @rng.setter
-    def rng(*args, **kwargs):
         ...
     @property
     def error_thresh(*args, **kwargs):
@@ -66,6 +91,12 @@ class RansacParameters:
     def min_iterations(*args, **kwargs):
         ...
     @property
+    def rng(*args, **kwargs):
+        ...
+    @rng.setter
+    def rng(*args, **kwargs):
+        ...
+    @property
     def use_Tdd_test(*args, **kwargs):
         ...
     @use_Tdd_test.setter
@@ -89,34 +120,11 @@ class RansacParameters:
     @use_sturm_5pt.setter
     def use_sturm_5pt(*args, **kwargs):
         ...
-class RansacSummary:
-    @property
-    def confidence(*args, **kwargs):
-        ...
-    @confidence.setter
-    def confidence(*args, **kwargs):
-        ...
-    @property
-    def inliers(*args, **kwargs):
-        ...
-    @inliers.setter
-    def inliers(*args, **kwargs):
-        ...
-    @property
-    def num_input_data_points(*args, **kwargs):
-        ...
-    @num_input_data_points.setter
-    def num_input_data_points(*args, **kwargs):
-        ...
-    @property
-    def num_iterations(*args, **kwargs):
-        ...
-    @num_iterations.setter
-    def num_iterations(*args, **kwargs):
-        ...
-    @property
-    def num_lo_iterations(*args, **kwargs):
-        ...
-    @num_lo_iterations.setter
-    def num_lo_iterations(*args, **kwargs):
-        ...
+def ClearDefaultRandomSeed(*args, **kwargs):
+    ...
+def HasDefaultRandomSeed(*args, **kwargs):
+    ...
+def SetDefaultRandomSeed(*args, **kwargs):
+    """
+    Seed default-constructed RNGs (RANSAC samplers, global estimators) with a fixed value instead of the clock.
+    """

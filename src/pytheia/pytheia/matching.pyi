@@ -1,21 +1,33 @@
 from __future__ import annotations
 import typing
 __all__: list[str] = ['FeatureCorrespondence', 'FeatureMatcherOptions', 'GLOBAL', 'GraphMatch', 'INCREMENTAL', 'ImagePairMatch', 'IndexedFeatureMatch', 'MatchingStrategy']
-class FeatureCorrespondence:
+class ImagePairMatch:
     @staticmethod
     def __init__(*args, **kwargs):
         ...
     @property
-    def feature1(*args, **kwargs):
+    def correspondences(*args, **kwargs):
         ...
-    @feature1.setter
-    def feature1(*args, **kwargs):
+    @correspondences.setter
+    def correspondences(*args, **kwargs):
         ...
     @property
-    def feature2(*args, **kwargs):
+    def image1(*args, **kwargs):
         ...
-    @feature2.setter
-    def feature2(*args, **kwargs):
+    @image1.setter
+    def image1(*args, **kwargs):
+        ...
+    @property
+    def image2(*args, **kwargs):
+        ...
+    @image2.setter
+    def image2(*args, **kwargs):
+        ...
+    @property
+    def twoview_info(*args, **kwargs):
+        ...
+    @twoview_info.setter
+    def twoview_info(*args, **kwargs):
         ...
 class FeatureMatcherOptions:
     @staticmethod
@@ -63,34 +75,6 @@ class FeatureMatcherOptions:
     @use_lowes_ratio.setter
     def use_lowes_ratio(*args, **kwargs):
         ...
-class ImagePairMatch:
-    @staticmethod
-    def __init__(*args, **kwargs):
-        ...
-    @property
-    def correspondences(*args, **kwargs):
-        ...
-    @correspondences.setter
-    def correspondences(*args, **kwargs):
-        ...
-    @property
-    def image1(*args, **kwargs):
-        ...
-    @image1.setter
-    def image1(*args, **kwargs):
-        ...
-    @property
-    def image2(*args, **kwargs):
-        ...
-    @image2.setter
-    def image2(*args, **kwargs):
-        ...
-    @property
-    def twoview_info(*args, **kwargs):
-        ...
-    @twoview_info.setter
-    def twoview_info(*args, **kwargs):
-        ...
 class IndexedFeatureMatch:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -113,6 +97,22 @@ class IndexedFeatureMatch:
     @feature2_ind.setter
     def feature2_ind(*args, **kwargs):
         ...
+class FeatureCorrespondence:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def feature1(*args, **kwargs):
+        ...
+    @feature1.setter
+    def feature1(*args, **kwargs):
+        ...
+    @property
+    def feature2(*args, **kwargs):
+        ...
+    @feature2.setter
+    def feature2(*args, **kwargs):
+        ...
 class MatchingStrategy:
     """
     Members:
@@ -121,9 +121,9 @@ class MatchingStrategy:
     
       INCREMENTAL
     """
-    GLOBAL: typing.ClassVar[MatchingStrategy]  # value = <MatchingStrategy.GLOBAL: 0>
-    INCREMENTAL: typing.ClassVar[MatchingStrategy]  # value = <MatchingStrategy.GLOBAL: 0>
-    __members__: typing.ClassVar[dict[str, MatchingStrategy]]  # value = {'GLOBAL': <MatchingStrategy.GLOBAL: 0>, 'INCREMENTAL': <MatchingStrategy.GLOBAL: 0>}
+    GLOBAL: typing.ClassVar[MatchingStrategy]
+    INCREMENTAL: typing.ClassVar[MatchingStrategy]
+    __members__: typing.ClassVar[dict[str, MatchingStrategy]]
     @staticmethod
     def __eq__(*args, **kwargs):
         ...
@@ -162,5 +162,5 @@ class MatchingStrategy:
         ...
 def GraphMatch(*args, **kwargs):
     ...
-GLOBAL: MatchingStrategy  # value = <MatchingStrategy.GLOBAL: 0>
-INCREMENTAL: MatchingStrategy  # value = <MatchingStrategy.GLOBAL: 0>
+GLOBAL: MatchingStrategy
+INCREMENTAL: MatchingStrategy
