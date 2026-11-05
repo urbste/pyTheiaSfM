@@ -21,7 +21,7 @@ Aligned with [`RansacParameters`](https://github.com/urbste/pyTheiaSfM/blob/mast
 
 | Field | Notes |
 |-------|--------|
-| **`rng`** | Optional `pytheia.solvers.RandomNumberGenerator`. **Set this to a seeded generator for reproducible/deterministic RANSAC runs** (e.g. in tests); if left unset, a time-seeded generator is created internally and results will vary run to run. |
+| **`rng`** | Optional `pytheia.solvers.RandomNumberGenerator`. **Set this to a seeded generator for reproducible/deterministic RANSAC runs** (e.g. in tests); if left unset, a time-seeded generator is created internally and results will vary run to run unless a process-wide default seed is set (see [Reproducible runs](#reproducible-runs)). |
 | **`error_thresh`** | Inlier threshold for the estimator’s residuals (often squared error). **You should set this** for meaningful results. |
 | **`failure_probability`** | Target failure probability (default `0.01`). |
 | **`min_inlier_ratio`** | Lower bound on inlier fraction used to cap iteration count (default `0`). |
@@ -32,6 +32,20 @@ Aligned with [`RansacParameters`](https://github.com/urbste/pyTheiaSfM/blob/mast
 | **`use_sturm_5pt`** | Default `true`. Use the Sturm-sequence-based 5-point minimal solver ([`FivePointRelativePoseSturm`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/pose/five_point_relative_pose_sturm.h), ported from [PoseLib](bibliography.md#LarssonPoseLib), [Nistér](bibliography.md#Nister)) instead of theia's own Stewénius-style eigendecomposition solver ([Stewenius5pt](bibliography.md#Stewenius5pt)) inside the two relative-pose/essential-matrix RANSAC estimators. Faster since it never forms a 10x10 eigendecomposition; only applies to exactly-5-point minimal samples (non-minimal calls, e.g. `n > 5`, always use the original solver). See [Pose — relative pose](pose.md) and [Performance](performance.md). |
 
 `RansacSummary` exposes **`inliers`**, **`num_iterations`**, **`confidence`**, **`num_lo_iterations`**, etc., after a run.
+
+### Reproducible runs
+
+Estimators and RANSAC samplers that are not handed an `rng` construct a default `RandomNumberGenerator`, which seeds from the clock. To make all of them deterministic without passing an `rng` everywhere, set a process-wide default seed (pyTheia 1.3.1+):
+
+``` python
+import pytheia as pt
+pt.solvers.SetDefaultRandomSeed(42)   # fixed seed for every default-constructed RNG
+assert pt.solvers.HasDefaultRandomSeed()
+# ... run estimation ...
+pt.solvers.ClearDefaultRandomSeed()   # back to clock seeding
+```
+
+The same can be set at process start with the environment variable `THEIA_RANDOM_SEED=42` (unsigned decimal; an invalid value is ignored). The seed is re-applied on every default construction, so each estimation restarts from the same state and draws the same sample sequence. An explicitly passed `rng` is unaffected.
 
 ## Local optimization (`use_lo`) {#ransac-local-optimization}
 
