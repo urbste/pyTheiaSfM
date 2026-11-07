@@ -131,8 +131,7 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
   }
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
 
-  std::vector<TrackId> tracks(track_ids.size());
-  tracks.insert(tracks.end(), track_ids.begin(), track_ids.end());
+  const std::vector<TrackId> tracks(track_ids.begin(), track_ids.end());
   if (options.use_inverse_depth_parametrization) {
     UpdateHomogeneousPoint(tracks, *reconstruction);
   } else {

@@ -84,5 +84,10 @@ nav:
   - Bibliography: bibliography.md
   - License: license.md
 
+validation:
+  anchors: warn
+  unrecognized_links: warn
+  absolute_links: warn
+
 extra:
   copyright: Copyright &copy; 2016 Chris Sweeney

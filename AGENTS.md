@@ -70,6 +70,8 @@ Convenience script (cleans artifacts, builds wheel, reinstalls): `sh build_and_i
 
 Root [`CMakeLists.txt`](CMakeLists.txt) defines `PYTHON_BUILD` and other build options.
 
+`-DBUILD_APPS=ON` (default `OFF`) adds the native command line tools in [`src/apps/`](src/apps/) (`theia_global_sfm`, `theia_incremental_sfm`, `theia_hybrid_sfm`, `theia_info`, `theia_convert`; see [docs/content/cli.md](docs/content/cli.md#native-applications)). It is independent of `PYTHON_BUILD`, which the wheel build uses, and does not change the wheel. Build it in a separate directory, e.g. `mkdir build_apps && cd build_apps && cmake .. -DBUILD_APPS=ON -DPYTHON_BUILD=OFF`.
+
 ## Testing and verification
 
 After C++ or binding changes:

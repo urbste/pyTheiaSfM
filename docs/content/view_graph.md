@@ -22,6 +22,10 @@ Vertices are implied by any **`ViewId`** that appears in an edge or that you tre
 | `GetAllEdges` | Map \((\min id,\max id)\rightarrow\) **`TwoViewInfo`** (each edge once). |
 | `ReadFromDisk` / `WriteToDisk` | **cereal** serialization of the graph. |
 
+!!! warning "Edge direction"
+
+    The edge is stored under the key \((\min id,\max id)\), but `AddEdge` stores the `TwoViewInfo` **unchanged**. The estimators read every edge as the pose of the **larger** view id relative to the **smaller** one. If `view_id_1 > view_id_2`, first call `pt.sfm.SwapCameras(info)` (C++: `theia::SwapCameras`), or pass the ids in ascending order. `ReconstructionBuilder` does the same swap internally. With the wrong order, rotation estimation and triangulation fail silently or register 0 views.
+
 !!! note "Python bindings"
 
     `ExtractSubgraph` and `GetLargestConnectedComponentIds` are **not** currently exposed in pybind (see `sfm.cc`). You can still prune the graph by removing views/edges from Python or by operating on edge lists you build yourself.
@@ -31,8 +35,8 @@ Vertices are implied by any **`ViewId`** that appears in an edge or that you tre
 Stores **relative pose of view 2 with respect to view 1**, with **view 1 at the origin** and identity rotation by convention:
 
 - `focal_length_1`, `focal_length_2`
-- `rotation_2` — angle-axis (Ceres convention) for \(R_2\)
-- `position_2` — center of camera 2 in the **coordinate system of camera 1**
+- `rotation_2` — angle-axis (Ceres convention) for the relative rotation \(R_{12} = R_2 R_1^\top\) (`RelativeRotationFromTwoRotations(r1, r2)`), where \(X_{cam} = R (X - c)\)
+- `position_2` — unit-length direction \(\frac{R_1 (c_2 - c_1)}{\lVert c_2 - c_1 \rVert}\), i.e. the direction from camera 1 to camera 2 in the coordinate system of camera 1 (the scale is not observable from two views)
 - `num_verified_matches`, `num_homography_inliers`, `visibility_score`, `scale_estimate` — bookkeeping for reconstruction heuristics
 
 Use **`EstimateTwoViewInfo`** (and related filters) to populate edges from raw matches; see [Pose](pose.md) and [SfM](sfm.md).

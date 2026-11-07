@@ -345,11 +345,6 @@ def test_fisheye_and_fov_forward_match_colmap():
     assert worst_fov < 1e-5, worst_fov
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="pyTheia FISHEYE UndistortPoint is a fixed-point iteration (100 steps); "
-           "it does not converge at ray angles near 80 degrees with |k| ~ 0.05.",
-)
 def test_fisheye_unprojection_converges_at_large_angles():
     k = [0.0337, -0.0485, 0.0218, -0.0102]
     fisheye = pt.sfm.FisheyeCameraModel()
@@ -362,6 +357,91 @@ def test_fisheye_unprojection_converges_at_large_angles():
     pixel = np.array(fisheye.CameraToImageCoordinates(X))
     ray = np.array(fisheye.ImageToCameraCoordinates(pixel))
     np.testing.assert_allclose(ray[0] / ray[2], X[0] / X[2], atol=1e-6)
+
+
+def _fisheye_model(fx, fy, cx, cy, k):
+    m = pt.sfm.FisheyeCameraModel()
+    m.SetFocalLength(fx)
+    m.SetAspectRatio(fy / fx)
+    m.SetSkew(0.0)
+    m.SetPrincipalPoint(cx, cy)
+    m.SetRadialDistortion(*k)
+    return m
+
+
+def _fisheye_theta_derivative_min(k, max_deg):
+    """Minimum of d(theta_d)/d(theta) over theta in [0, max_deg].
+
+    theta_d(theta) = theta * (1 + k1 theta^2 + ... + k4 theta^8). The distortion
+    can only be inverted where this derivative stays positive, so the test
+    coefficients must keep it positive over the whole angular range.
+    """
+    theta = np.radians(np.linspace(0.0, max_deg, 2000))
+    deriv = (1 + 3 * k[0] * theta**2 + 5 * k[1] * theta**4 +
+             7 * k[2] * theta**6 + 9 * k[3] * theta**8)
+    return deriv.min()
+
+
+# Typical COLMAP OPENCV_FISHEYE-scale coefficients (k1..k4), including
+# negative k1 (barrel) and mixed signs for the higher-order terms. All of them
+# keep theta_d monotonic up to 85 degrees.
+FISHEYE_K_SETS = [
+    [0.0, 0.0, 0.0, 0.0],
+    [0.02, -0.01, 0.002, -0.0005],
+    [-0.03, 0.01, -0.003, 0.001],
+    [-0.05, 0.01, -0.002, 0.0005],
+    [0.08, -0.03, 0.01, -0.004],
+    [-0.1, 0.05, -0.02, 0.008],
+]
+
+
+@pytest.mark.parametrize("k", FISHEYE_K_SETS)
+def test_fisheye_round_trip_up_to_85_degrees(k):
+    assert _fisheye_theta_derivative_min(k, 85.0) > 0.0
+    rng = np.random.default_rng(6)
+    model = _fisheye_model(800.0, 790.0, 600.0, 450.0, k)
+    worst_pixel = worst_ray = 0.0
+    for theta_deg in np.linspace(0.5, 85.0, 60):
+        theta = math.radians(theta_deg)
+        phi = rng.uniform(0.0, 2.0 * math.pi)
+        X = np.array([math.sin(theta) * math.cos(phi),
+                      math.sin(theta) * math.sin(phi),
+                      math.cos(theta)])
+        pixel = np.array(model.CameraToImageCoordinates(X))
+        ray = np.array(model.ImageToCameraCoordinates(pixel))
+        assert ray[2] > 0.0
+        # The recovered direction must match the original one (normalized
+        # coordinates grow like tan(theta), so compare relative to that).
+        worst_ray = max(worst_ray, np.abs(ray[:2] / ray[2] - X[:2] / X[2]).max())
+        # Re-projecting the recovered ray must reproduce the pixel.
+        worst_pixel = max(worst_pixel, np.abs(np.array(model.CameraToImageCoordinates(ray)) - pixel).max())
+    assert worst_ray < 1e-7, "normalized ray error %g" % worst_ray
+    assert worst_pixel < 1e-5, "pixel round-trip error %g px" % worst_pixel
+
+
+def test_fisheye_undistort_matches_distort_at_random_angles():
+    """Random k and angles up to 85 degrees: the Newton inverse must be exact."""
+    rng = np.random.default_rng(7)
+    worst = 0.0
+    for _ in range(50):
+        # Redraw coefficients whose distortion folds back before 85 degrees.
+        while True:
+            k = [rng.uniform(-0.08, 0.08), rng.uniform(-0.04, 0.04),
+                 rng.uniform(-0.02, 0.02), rng.uniform(-0.01, 0.01)]
+            if _fisheye_theta_derivative_min(k, 85.0) > 0.2:
+                break
+        model = _fisheye_model(rng.uniform(400, 1100), rng.uniform(400, 1100),
+                               rng.uniform(300, 900), rng.uniform(200, 700), k)
+        for _ in range(20):
+            theta = rng.uniform(0.0, math.radians(85.0))
+            phi = rng.uniform(0.0, 2.0 * math.pi)
+            X = np.array([math.sin(theta) * math.cos(phi),
+                          math.sin(theta) * math.sin(phi),
+                          math.cos(theta)])
+            pixel = np.array(model.CameraToImageCoordinates(X))
+            ray = np.array(model.ImageToCameraCoordinates(pixel))
+            worst = max(worst, np.abs(ray[:2] / ray[2] - X[:2] / X[2]).max())
+    assert worst < 1e-7, worst
 
 
 def _scene(name, params, rng, n_views=5, n_points=60):

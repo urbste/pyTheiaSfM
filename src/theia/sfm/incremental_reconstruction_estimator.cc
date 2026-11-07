@@ -312,6 +312,8 @@ void IncrementalReconstructionEstimator::InitializeCamerasFromTwoViewInfo(
   // The pose of camera 1 will be the identity pose, so we only need to set
   // camera 2's pose.
   Camera* camera1 = view1->MutableCamera();
+  camera1->SetOrientationFromAngleAxis(Eigen::Vector3d::Zero());
+  camera1->SetPosition(Eigen::Vector3d::Zero());
   camera1->SetFocalLength(info->focal_length_1);
   Camera* camera2 = view2->MutableCamera();
   camera2->SetOrientationFromAngleAxis(info->rotation_2);
@@ -436,6 +438,13 @@ void IncrementalReconstructionEstimator::FindViewsToLocalize(
 
     // Count the number of estimated tracks for this view.
     const auto& track_ids = view->TrackIds();
+    if (camera.ImageWidth() <= 0 || camera.ImageHeight() <= 0) {
+      LOG(ERROR) << "View " << view_id
+                 << " has no image size. Set a CameraIntrinsicsPrior with "
+                    "image_width and image_height before running the "
+                    "incremental estimator.";
+      continue;
+    }
     VisibilityPyramid pyramid(
         camera.ImageWidth(), camera.ImageHeight(), kNumPyramidLevels);
     int num_estimated_tracks = 0;

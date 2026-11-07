@@ -54,7 +54,7 @@ List-file row: `filename`, `second_entry`, `focal_length`.
 | `WriteBundlerFiles(reconstruction, lists_file, bundle_file)` | `bool` | Bundler lists + bundle from a reconstruction. |
 | `WriteNVMFile(nvm_filepath, reconstruction)` | `bool` | NVM text. |
 | `WriteColmapFiles(reconstruction, output_directory, binary=False)` | `bool` | COLMAP files under `output_directory`: text (`cameras.txt`, `images.txt`, `points3D.txt`) by default, or the COLMAP binary model (`cameras.bin`, `images.bin`, `points3D.bin`, little-endian) with `binary=True`. |
-| `WriteTransformsJson(path_to_images, reconstruction, out_json_file)` | `bool` | `transforms.json` for instant-ngp, gsplat and Nerfstudio. `transform_matrix` is camera-to-world in OpenGL axes (y and z flipped relative to OpenCV). See [Gaussian splatting export](export.md#transformsjson-convention). |
+| `WriteTransformsJson(path_to_images, reconstruction, out_json_file)` | `bool` | `transforms.json` for instant-ngp, gsplat and Nerfstudio. `transform_matrix` is camera-to-world in OpenGL axes (y and z flipped relative to OpenCV). See [Gaussian splatting export](export.md#transforms-json-convention). |
 | `WriteNerfStudio(path_to_images, reconstruction, aabb_scale, out_json_file)` | `bool` | [`transforms.json`](https://docs.nerf.studio/en/latest/quickstart/data_conventions.html)-style export (PINHOLE / FISHEYE mapping per [`write_nerfstudio.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/io/write_nerfstudio.h)). |
 | `WriteSdfStudio(path_to_images, reconstruction, nearfar, radius)` | `bool` | SDFStudio JSON; **PINHOLE**, undistorted images ([`write_sdfstudio.h`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/io/write_sdfstudio.h)). `nearfar` is `(near, far)` floats. |
 

@@ -68,8 +68,10 @@ Undistortion uses the pyTheia PINHOLE model: `r_d = r_u (1 + k1 r^2 + k2 r^4)` o
 ### COLMAP binary
 
 ```python
+import os
 import pytheia as pt
 
+os.makedirs("sparse/0", exist_ok=True)   # the writer does not create the folder
 pt.io.WriteColmapFiles(recon, "sparse/0", binary=True)   # cameras.bin, images.bin, points3D.bin
 pt.io.WriteColmapFiles(recon, "sparse/0")                # text: cameras.txt, images.txt, points3D.txt
 ```

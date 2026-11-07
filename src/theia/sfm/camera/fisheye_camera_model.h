@@ -46,6 +46,7 @@
 #include <vector>
 
 #include "theia/sfm/camera/camera_intrinsics_model.h"
+#include "theia/sfm/camera/distortion_inversion.h"
 #include "theia/sfm/camera_intrinsics_prior.h"
 
 namespace theia {
@@ -133,6 +134,16 @@ class FisheyeCameraModel : public CameraIntrinsicsModel {
                              const T* distorted_point,
                              T* undistorted_point);
 
+  // Applies the radial (angle) distortion to the angle-scaled point (u, v),
+  // i.e. (u, v) * (1 + k1 r^2 + k2 r^4 + k3 r^6 + k4 r^8) with r^2 = u^2 + v^2.
+  // extra_params points to k1, k2, k3, k4.
+  template <typename T>
+  static void ApplyDistortion(const T* extra_params,
+                              const T u,
+                              const T v,
+                              T* x,
+                              T* y);
+
   // ----------------------- Getter and Setter methods ---------------------- //
   void SetAspectRatio(const double aspect_ratio);
   double AspectRatio() const;
@@ -211,8 +222,12 @@ bool FisheyeCameraModel::PixelToCameraCoordinates(const T* intrinsic_parameters,
 
   // Undo the radial distortion.
   T undistorted_point[2];
-  FisheyeCameraModel::UndistortPoint(
-      intrinsic_parameters, distorted_point, point);
+  if (!FisheyeCameraModel::UndistortPoint(
+          intrinsic_parameters, distorted_point, undistorted_point)) {
+    return false;
+  }
+  point[0] = undistorted_point[0];
+  point[1] = undistorted_point[1];
   point[2] = T(1.0);
 
   return true;
@@ -275,69 +290,42 @@ template <typename T>
 bool FisheyeCameraModel::UndistortPoint(const T* intrinsic_parameters,
                                         const T* distorted_point,
                                         T* undistorted_point) {
-  static const T kVerySmallNumber = T(1e-8);
-  const int kNumUndistortionIterations = 100;
-  const T kUndistortionEpsilon = T(1e-10);
-
-  // Get convenient references to the lens distortion camera parameters.
-  const T& radial_distortion1 =
-      intrinsic_parameters[FisheyeCameraModel::RADIAL_DISTORTION_1];
-  const T& radial_distortion2 =
-      intrinsic_parameters[FisheyeCameraModel::RADIAL_DISTORTION_2];
-  const T& radial_distortion3 =
-      intrinsic_parameters[FisheyeCameraModel::RADIAL_DISTORTION_3];
-  const T& radial_distortion4 =
-      intrinsic_parameters[FisheyeCameraModel::RADIAL_DISTORTION_4];
-
-  T prev_undistorted_point[2];
-  undistorted_point[0] = distorted_point[0];
-  undistorted_point[1] = distorted_point[1];
-  for (size_t i = 0; i < kNumUndistortionIterations; ++i) {
-    prev_undistorted_point[0] = undistorted_point[0];
-    prev_undistorted_point[1] = undistorted_point[1];
-
-    // Compute an estimate of the radius of the undistorted point from the
-    // center of distortion (which is assumed to be the principal point).
-    const T r_sq = undistorted_point[0] * undistorted_point[0] +
-                   undistorted_point[1] * undistorted_point[1];
-    const T r = ceres::sqrt(r_sq);
-
-    // If the radius of the undistorted is too small then the divide by r below
-    // is unstable. In this case, the point is very close to the center of
-    // distortion and so we can assume there is no distortion.
-    if (r < kVerySmallNumber) {
-      undistorted_point[0] = distorted_point[0];
-      undistorted_point[1] = distorted_point[1];
-      return true;
-    }
-
-    const T theta = ceres::atan2(r, T(1.0));
-    const T theta_sq = theta * theta;
-
-    // Compute the distortion factor.
-    const T theta_d =
-        theta *
-        (1.0 + radial_distortion1 * theta_sq +
-         radial_distortion2 * theta_sq * theta_sq +
-         radial_distortion3 * theta_sq * theta_sq * theta_sq +
-         radial_distortion4 * theta_sq * theta_sq * theta_sq * theta_sq);
-
-    // We know that the distorted point = theta_d / r * undistorted point, so we
-    // can solve for a better estimate of the undistorted point by taking the
-    // inverse of this equation:
-    //   undistorted_point = r * distorted_point / theta_d.
-    undistorted_point[0] = r * distorted_point[0] / theta_d;
-    undistorted_point[1] = r * distorted_point[1] / theta_d;
-
-    // Repeat until convergence.
-    if (ceres::abs(undistorted_point[0] - prev_undistorted_point[0]) <
-            kUndistortionEpsilon &&
-        ceres::abs(undistorted_point[1] - prev_undistorted_point[1]) <
-            kUndistortionEpsilon) {
-      break;
-    }
+  // The distortion maps the angle-scaled point theta * dir to
+  // (1 + k1 theta^2 + ...) * theta * dir. Invert it with Newton's method on the
+  // angle-scaled point, then map the result back to a normalized point with
+  // tan(theta). A fixed-point iteration on the radius does not converge at
+  // large ray angles.
+  T angle_scaled_point[2];
+  if (!internal::InvertDistortion<FisheyeCameraModel, 4>(
+          &intrinsic_parameters[FisheyeCameraModel::RADIAL_DISTORTION_1],
+          distorted_point,
+          angle_scaled_point)) {
+    return false;
   }
+  internal::NormalFromFisheye(angle_scaled_point[0],
+                              angle_scaled_point[1],
+                              &undistorted_point[0],
+                              &undistorted_point[1]);
   return true;
+}
+
+template <typename T>
+void FisheyeCameraModel::ApplyDistortion(const T* extra_params,
+                                         const T u,
+                                         const T v,
+                                         T* x,
+                                         T* y) {
+  const T k1 = extra_params[0];
+  const T k2 = extra_params[1];
+  const T k3 = extra_params[2];
+  const T k4 = extra_params[3];
+
+  const T theta2 = u * u + v * v;
+  const T theta4 = theta2 * theta2;
+  const T radial = k1 * theta2 + k2 * theta4 + k3 * theta4 * theta2 +
+                   k4 * theta4 * theta4;
+  *x = u + u * radial;
+  *y = v + v * radial;
 }
 
 }  // namespace theia

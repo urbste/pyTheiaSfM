@@ -146,6 +146,12 @@ class BundleAdjuster {
   virtual void SetCameraSchurGroups(const ViewId view_id);
   virtual void SetTrackSchurGroup(const TrackId track_id);
 
+  // Removes the parameter blocks of optimized views and tracks that never
+  // received a residual block (and are therefore not in the problem) from the
+  // linear solver ordering. Ceres requires the ordering to match the blocks of
+  // the problem exactly.
+  void RemoveBlocksNotInProblemFromOrdering();
+
   // Add the reprojection error residual to the problem.
   virtual void AddReprojectionErrorResidual(const Feature& feature,
                                             Camera* camera,

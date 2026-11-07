@@ -7,7 +7,7 @@ At the base of structure-from-motion is the imaging device. Theia represents eac
 Theia uses three right-handed frames:
 
 - **World:** global 3D coordinates for points and camera centers.
-- **Camera:** origin at the camera center; **+Z is the optical axis** (a point straight ahead projects near the principal point). In this frame the optical axis direction is \((0,0,1)^\).
+- **Camera:** origin at the camera center; **+Z is the optical axis** (a point straight ahead projects near the principal point). In this frame the optical axis direction is \((0,0,1)^\top\).
 - **Image:** pixel coordinates; origin at the **top-left**, **+X** right, **+Y** down.
 
 For projection, a homogeneous world point is first mapped to camera coordinates using the stored pose, then intrinsics map the camera ray to pixels.

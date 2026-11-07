@@ -19,44 +19,73 @@ sys.path.insert(0, SFM_TEST_DIR)
 from random_recon_gen import RandomReconGenerator  # noqa: E402
 
 
-def _synthetic_scene(root, nr_views=8, nr_tracks=80, seed=3):
-    """Write an SfM input directory (reconstruction.recon + view_graph.bin) and return GT path.
+def _synthetic_scene(root, nr_views=8, nr_tracks=200, seed=3):
+    """Write an SfM input directory (reconstruction.recon + view_graph.bin) and return (input_dir, GT path).
 
-    The view graph is built from the ground-truth poses. The relative rotation
-    uses the argument order that the global estimator accepts on this fixture.
+    Conventions (see docs/content/view_graph.md):
+
+    * ``ViewGraph`` stores an edge under the key (min id, max id) and does not
+      swap the ``TwoViewInfo`` it is given. The info must therefore describe
+      the smaller view id as "view 1" and the larger one as "view 2", so the
+      pairs are generated from the sorted view ids.
+    * ``rotation_2 = R_2 R_1^T`` (``RelativeRotationFromTwoRotations(r1, r2)``
+      with r1 = view 1 and r2 = view 2).
+    * ``position_2 = normalize(R_1 (c_2 - c_1))``: the direction from camera 1
+      to camera 2 in the frame of camera 1.
+    * ``num_verified_matches`` is above the incremental initialization
+      threshold (100 tracks) and the scene has enough tracks shared by a pair.
     """
     gen = RandomReconGenerator(seed=seed)
     gt = gen.generate_random_recon(nr_views=nr_views, nr_tracks=nr_tracks)
     gt_path = os.path.join(root, "gt.recon")
     assert pt.io.WriteReconstruction(gt, gt_path, True)
 
-    view_ids = gt.ViewIds()
+    view_ids = sorted(gt.ViewIds())
     graph = pt.sfm.ViewGraph()
     for i, a in enumerate(view_ids):
         cam_a = gt.View(a).Camera()
+        rot_a = cam_a.GetOrientationAsRotationMatrix()
         for b in view_ids[i + 1:]:
             cam_b = gt.View(b).Camera()
             info = pt.sfm.TwoViewInfo()
             info.focal_length_1 = cam_a.FocalLength()
             info.focal_length_2 = cam_b.FocalLength()
             info.rotation_2 = pt.math.RelativeRotationFromTwoRotations(
-                cam_b.GetOrientationAsAngleAxis(), cam_a.GetOrientationAsAngleAxis())
-            d = cam_a.GetOrientationAsRotationMatrix() @ (
-                np.asarray(cam_b.GetPosition()) - np.asarray(cam_a.GetPosition()))
-            info.position_2 = d / np.linalg.norm(d)
-            info.num_verified_matches = 50
+                cam_a.GetOrientationAsAngleAxis(), cam_b.GetOrientationAsAngleAxis())
+            direction = rot_a @ (np.asarray(cam_b.GetPosition()) - np.asarray(cam_a.GetPosition()))
+            info.position_2 = direction / np.linalg.norm(direction)
+            info.num_verified_matches = 150
             graph.AddEdge(a, b, info)
 
-    # Input poses are discarded by the sfm command; only tracks and the graph matter.
+    # The sfm command re-estimates all poses from the tracks and the graph.
     for tid in gt.TrackIds():
         gt.MutableTrack(tid).SetIsEstimated(False)
     for vid in view_ids:
-        gt.MutableView(vid).SetIsEstimated(False)
+        view = gt.MutableView(vid)
+        view.SetIsEstimated(False)
+        # Intrinsics priors are what the estimators use to (re)set cameras.
+        # Without them the image size becomes 0 inside the incremental estimator.
+        view.SetCameraIntrinsicsPrior(view.Camera().CameraIntrinsicsPriorFromIntrinsics())
     input_dir = os.path.join(root, "sfm_input")
     os.makedirs(input_dir)
     assert pt.io.WriteReconstruction(gt, os.path.join(input_dir, "reconstruction.recon"), True)
     assert graph.WriteToDisk(os.path.join(input_dir, "view_graph.bin"))
     return input_dir, gt_path
+
+
+def _assert_centers_match_gt(recon_path, gt_path, tol=1e-6):
+    """Camera centers of the estimated views must match GT up to a similarity."""
+    ok, est = pt.io.ReadReconstruction(recon_path)
+    assert ok
+    ok, gt = pt.io.ReadReconstruction(gt_path)
+    assert ok
+    view_ids = [v for v in est.ViewIds() if est.View(v).IsEstimated()]
+    assert len(view_ids) >= 6
+    src = np.array([est.View(v).Camera().GetPosition() for v in view_ids], dtype=np.float64)
+    dst = np.array([gt.View(v).Camera().GetPosition() for v in view_ids], dtype=np.float64)
+    scale, rot, trans = cli.umeyama(src, dst)
+    residual = np.linalg.norm(scale * src @ rot.T + trans - dst, axis=1)
+    assert residual.max() < tol, residual
 
 
 # ---------------------------------------------------------------------------
@@ -317,9 +346,25 @@ def test_sfm_global_end_to_end(tmp_path, capsys):
     assert (out / "reconstruction.recon").stat().st_size > 0
     assert (out / "reconstruction.ply").stat().st_size > 0
 
+    # Noise-free synthetic data: the registered camera centers must match GT.
+    _assert_centers_match_gt(str(out / "reconstruction.recon"), gt_path)
+
     # The written reconstruction loads and can be inspected.
     assert cli.main(["info", str(out / "reconstruction.recon")]) == 0
     assert cli.main(["align", str(out / "reconstruction.recon"), gt_path]) == 0
+
+
+def test_sfm_incremental_end_to_end(tmp_path, capsys):
+    input_dir, gt_path = _synthetic_scene(str(tmp_path))
+    out = tmp_path / "out"
+    status = cli.main(["sfm", "--input", input_dir, "--out", str(out),
+                       "--method", "incremental", "--seed", "1"])
+    assert status == 0, capsys.readouterr().err
+    summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
+    assert summary["success"] is True
+    assert summary["estimated_views"] >= 6
+    assert summary["mean_reprojection_error_px"] < 1.0
+    _assert_centers_match_gt(str(out / "reconstruction.recon"), gt_path)
 
 
 def test_sfm_missing_input_is_error(tmp_path, capsys):

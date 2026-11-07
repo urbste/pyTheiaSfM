@@ -2994,16 +2994,24 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("num_threads",
                      &theia::NonlinearPositionEstimator::Options::num_threads)
       .def_readwrite(
+          "max_num_iterations",
+          &theia::NonlinearPositionEstimator::Options::max_num_iterations)
+      .def_readwrite(
+          "robust_loss_width",
+          &theia::NonlinearPositionEstimator::Options::robust_loss_width)
+      .def_readwrite(
+          "min_num_points_per_view",
+          &theia::NonlinearPositionEstimator::Options::min_num_points_per_view)
+      .def_readwrite(
+          "point_to_camera_weight",
+          &theia::NonlinearPositionEstimator::Options::point_to_camera_weight)
+      // Deprecated aliases kept for backward compatibility.
+      .def_readwrite(
           "max_power_iterations",
           &theia::NonlinearPositionEstimator::Options::max_num_iterations)
       .def_readwrite(
           "eigensolver_threshold",
-          &theia::NonlinearPositionEstimator::Options::robust_loss_width)
-      .def_readwrite("min_num_points_per_view",
-                     &theia::NonlinearPositionEstimator::Options::num_threads)
-      .def_readwrite(
-          "point_to_camera_weight",
-          &theia::NonlinearPositionEstimator::Options::max_num_iterations);
+          &theia::NonlinearPositionEstimator::Options::robust_loss_width);
 
   py::class_<theia::NonlinearPositionEstimator, theia::PositionEstimator>(
       m, "NonlinearPositionEstimator")

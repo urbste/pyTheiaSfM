@@ -94,7 +94,7 @@ Outputs in `--out`:
 - `reconstruction.ply`,
 - `summary.json` (method, seed, success, message, estimated views and tracks, mean reprojection error, wall time).
 
-`--method` is `global` (default), `incremental` or `hybrid`. `--seed N` calls `pytheia.solvers.SetDefaultRandomSeed(N)` before estimation, so repeated runs draw the same samples (see [RANSAC](ransac.md)).
+`--method` is `global` (default), `incremental` or `hybrid`. `--seed N` calls `pytheia.solvers.SetDefaultRandomSeed(N)` before estimation, so repeated runs draw the same samples (see [RANSAC](ransac.md)). `--view-graph FILE` reads the view graph from another file instead of `INPUT/view_graph.bin`.
 
 #### Options
 
@@ -121,6 +121,56 @@ To list every option with its default value:
 pytheia sfm --list-options
 ```
 
+## Native applications
+
+The same workflows are available as native C++ programs, built only with `BUILD_APPS` (off by default and not part of the Python wheel). They need the same system dependencies as the library (Eigen, Ceres 2.x, gflags, glog); the rapidjson copy that ships with cereal is used for JSON.
+
+```bash
+mkdir build_apps && cd build_apps
+cmake /path/to/pyTheiaSfM -DBUILD_APPS=ON -DPYTHON_BUILD=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
+make -j
+./bin/theia_info reconstruction.recon
+cmake --install . --prefix /usr/local     # optional: installs the binaries to PREFIX/bin (and the library and headers, as for any build)
+```
+
+Use `-DPYTHON_BUILD=OFF` for a native build. The wheel build (`setup.py`) never sets `BUILD_APPS`, so the applications are not in the wheel.
+
+| Binary | Purpose |
+|--------|---------|
+| `theia_global_sfm` | Global SfM (the `pytheia sfm --method global` pipeline). |
+| `theia_incremental_sfm` | Incremental SfM (`--method incremental`). |
+| `theia_hybrid_sfm` | Hybrid SfM (`--method hybrid`). |
+| `theia_info RECON [--json]` | Same report as `pytheia info`. |
+| `theia_convert --input RECON --output PATH --format FMT` | Formats `colmap`, `colmap-bin`, `bundler`, `nvm`, `ply`, `nerfstudio`, `transforms`, `json`. Also accepts the positional form `theia_convert RECON PATH --format FMT`. |
+
+The SfM binaries read and write the same directories as `pytheia sfm`: `--input DIR` holds `reconstruction.recon` and `view_graph.bin`, and `--out DIR` receives `reconstruction.recon`, `reconstruction.ply` and `summary.json`. Options work the same way: defaults, then `--config FILE.json`, then each `--set key=value` (the flag may be repeated). The option names, nested groups and enum names are identical to the Python API. `--seed N` fixes the RNG seed, and `--list_options` prints every option with its default.
+
+Differences from the Python CLI:
+
+- Flags are parsed by gflags, which accepts `-` and `_` interchangeably: `--list_options` and `--list-options` are the same flag.
+- `--set` may be repeated, and `--set=key=value` works as well.
+- `intrinsics_to_optimize` also accepts combinations such as `FOCAL_LENGTH|RADIAL_DISTORTION` (quote them in the shell). The Python CLI accepts only the single named members.
+- The random generator in `ReconstructionEstimatorOptions.rng` cannot be set from a file or `--set`; use `--seed`.
+- `theia_convert` writes `transforms` (instant-ngp / gsplat style `transforms.json`), which the Python CLI does not offer.
+- Log messages go to stderr (glog). Use `--minloglevel=2` to hide the INFO lines.
+- Exit status is the same: `0` success, `1` runtime failure, `2` usage error.
+
+Examples:
+
+```bash
+./bin/theia_global_sfm --input scene_input/ --out result_global/ --seed 1
+./bin/theia_incremental_sfm --input scene_input/ --out result_inc/ --seed 1 \
+    --config options.json --set max_num_iterations=50
+./bin/theia_hybrid_sfm --input scene_input/ --out result_hybrid/ \
+    --set 'intrinsics_to_optimize=FOCAL_LENGTH|RADIAL_DISTORTION'
+./bin/theia_global_sfm --list_options
+./bin/theia_info result_global/reconstruction.recon
+./bin/theia_convert result_global/reconstruction.recon out/colmap_bin --format colmap-bin
+./bin/theia_convert result_global/reconstruction.recon out/transforms.json --format transforms --images images/
+```
+
+The applications do not detect features or match images. Feature detection and matching stay in your pipeline, as for `pytheia sfm`.
+
 ## Python entry points
 
 The command is a thin layer over:
@@ -136,6 +186,5 @@ opts = build_estimator_options("options.json", ["max_num_iterations=50"])
 
 ## Not included
 
-- Native C++ command line tools (`theia_global_sfm` and others) are a separate, planned feature and are not part of the wheel.
+- Native C++ command line tools are built only with `BUILD_APPS` (see [Native applications](#native-applications)). The `pytheia bench` hook is planned.
 - Feature detection and matching are not part of the command. Use your own pipeline to write the `sfm` input directory.
-- The benchmark hook (`pytheia bench`) is planned.

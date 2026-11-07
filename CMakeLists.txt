@@ -69,6 +69,10 @@ option(PYTHON_BUILD "If we are building python bindings" OFF)
 if (PYTHON_BUILD)
     add_definitions(-DPYTHON_BUILD)
 endif()
+# Native command line applications (src/apps: theia_global_sfm, theia_incremental_sfm,
+# theia_hybrid_sfm, theia_info, theia_convert). Off by default and not part of the
+# Python wheel build.
+option(BUILD_APPS "Build the native command line applications in src/apps" OFF)
 
 enable_testing()
 if (NOT MSVC)
@@ -253,6 +257,11 @@ include(OptimizeTheiaCompilerFlags)
 optimizetheiacompilerflags()
 
 add_subdirectory(src/theia)
+
+if (BUILD_APPS)
+  message(STATUS "Native applications (src/apps): ENABLED")
+  add_subdirectory(src/apps)
+endif (BUILD_APPS)
 
 if (BUILD_DOCUMENTATION)
   message("-- Documentation building is enabled")

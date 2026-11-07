@@ -86,6 +86,11 @@ class ViewGraph {
   // two_view_info. New vertices are added to the graph if they did not already
   // exist. If an edge already existed between the two views then the edge value
   // is updated.
+  //
+  // NOTE: the edge is stored under the key (min id, max id) but two_view_info
+  // is stored unchanged and is interpreted as the pose of the larger view id
+  // relative to the smaller one. If view_id_1 > view_id_2, call SwapCameras()
+  // on two_view_info first.
   void AddEdge(const ViewId view_id_1,
                const ViewId view_id_2,
                const TwoViewInfo& two_view_info);

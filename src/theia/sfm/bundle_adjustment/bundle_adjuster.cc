@@ -335,6 +335,10 @@ BundleAdjustmentSummary BundleAdjuster::Optimize() {
   // intrinsics model.
   SetCameraIntrinsicsParameterization();
 
+  // Views (or tracks) that were added to the ordering but never received a
+  // residual block are not part of the problem. Drop them from the ordering.
+  RemoveBlocksNotInProblemFromOrdering();
+
   // NOTE: csweeney found a thread on the Ceres Solver email group that
   // indicated using the reverse BA order (i.e., using cameras then points) is a
   // good idea for inner iterations.
@@ -364,6 +368,29 @@ BundleAdjustmentSummary BundleAdjuster::Optimize() {
   summary.success = solver_summary.IsSolutionUsable();
 
   return summary;
+}
+
+void BundleAdjuster::RemoveBlocksNotInProblemFromOrdering() {
+  // Every parameter block that is ever added to the ordering belongs to an
+  // optimized view or an optimized track.
+  for (const ViewId view_id : optimized_views_) {
+    Camera* camera = reconstruction_->MutableView(view_id)->MutableCamera();
+    for (double* block : {camera->mutable_extrinsics(),
+                          camera->mutable_intrinsics()}) {
+      if (!problem_->HasParameterBlock(block)) {
+        parameter_ordering_->Remove(block);
+      }
+    }
+  }
+  for (const TrackId track_id : optimized_tracks_) {
+    Track* track = reconstruction_->MutableTrack(track_id);
+    double* block = options_.use_inverse_depth_parametrization
+                        ? track->MutableInverseDepth()
+                        : track->MutablePoint()->data();
+    if (!problem_->HasParameterBlock(block)) {
+      parameter_ordering_->Remove(block);
+    }
+  }
 }
 
 void BundleAdjuster::SetCameraExtrinsicsParameterization() {
@@ -419,6 +446,13 @@ void BundleAdjuster::SetCameraIntrinsicsParameterization() {
     // Get the shared camera intrinsics parameters.
     std::shared_ptr<CameraIntrinsicsModel> camera_intrinsics =
         GetIntrinsicsForCameraIntrinsicsGroup(camera_intrinsics_group);
+
+    // The shared intrinsics block only enters the problem through a residual.
+    // If no view of this group has one (e.g. views without observations), there
+    // is nothing to parameterize.
+    if (!problem_->HasParameterBlock(camera_intrinsics->mutable_parameters())) {
+      continue;
+    }
 
     // Get the subset parameterization of the intrinsics to keep constant.
     const std::vector<int> constant_intrinsics =
@@ -809,8 +843,8 @@ bool BundleAdjuster::GetCovarianceForTrack(const TrackId track_id,
   std::vector<std::pair<const double*, const double*>> covariance_blocks = {
       std::make_pair(track->Point().data(), track->Point().data())};
 
-  if (!problem_->IsParameterBlockConstant(track->Point().data()) &&
-      problem_->HasParameterBlock(track->Point().data())) {
+  if (problem_->HasParameterBlock(track->Point().data()) &&
+      !problem_->IsParameterBlockConstant(track->Point().data())) {
     if (!covariance_estimator.Compute(covariance_blocks, problem_.get())) {
       return false;
     }
@@ -831,8 +865,8 @@ bool BundleAdjuster::GetCovarianceForTracks(
   std::vector<TrackId> est_track_ids;
   for (const auto& t_id : track_ids) {
     const Track* track = reconstruction_->Track(t_id);
-    if (!problem_->IsParameterBlockConstant(track->Point().data()) &&
-        problem_->HasParameterBlock(track->Point().data())) {
+    if (problem_->HasParameterBlock(track->Point().data()) &&
+        !problem_->IsParameterBlockConstant(track->Point().data())) {
       est_track_ids.push_back(t_id);
       covariance_blocks.push_back(
           std::make_pair(track->Point().data(), track->Point().data()));
@@ -868,8 +902,8 @@ bool BundleAdjuster::GetCovarianceForView(const ViewId view_id,
   std::vector<std::pair<const double*, const double*>> covariance_blocks = {
       std::make_pair(camera.extrinsics(), camera.extrinsics())};
 
-  if (!problem_->IsParameterBlockConstant(camera.extrinsics()) &&
-      problem_->HasParameterBlock(camera.extrinsics())) {
+  if (problem_->HasParameterBlock(camera.extrinsics()) &&
+      !problem_->IsParameterBlockConstant(camera.extrinsics())) {
     if (!covariance_estimator.Compute(covariance_blocks, problem_.get())) {
       return false;
     }
@@ -889,8 +923,8 @@ bool BundleAdjuster::GetCovarianceForViews(
   std::vector<ViewId> est_view_ids;
   for (const auto& v_id : view_ids) {
     const auto extr_ptr = reconstruction_->View(v_id)->Camera().extrinsics();
-    if (!problem_->IsParameterBlockConstant(extr_ptr) &&
-        problem_->HasParameterBlock(extr_ptr)) {
+    if (problem_->HasParameterBlock(extr_ptr) &&
+        !problem_->IsParameterBlockConstant(extr_ptr)) {
       est_view_ids.push_back(v_id);
       covariance_blocks.push_back(std::make_pair(extr_ptr, extr_ptr));
     } else {
