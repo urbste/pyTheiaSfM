@@ -91,7 +91,11 @@ set(THEIA_SRC
   sfm/camera/double_sphere_camera_model.cc
   sfm/camera/fisheye_camera_model.cc
   sfm/camera/fov_camera_model.cc
+  sfm/camera/full_opencv_camera_model.cc
   sfm/camera/orthographic_camera_model.cc
+  sfm/camera/rad_tan_thin_prism_fisheye_camera_model.cc
+  sfm/camera/radial_fisheye_camera_model.cc
+  sfm/camera/thin_prism_fisheye_camera_model.cc
   sfm/camera/pinhole_camera_model.cc
   sfm/camera/pinhole_radial_tangential_camera_model.cc
   sfm/camera/projection_matrix_utils.cc
@@ -348,6 +352,10 @@ if (BUILD_TESTING)
 #  gtest(sfm/camera/extended_unified_camera_model)
 #  gtest(sfm/camera/fisheye_camera_model)
 #  gtest(sfm/camera/fov_camera_model)
+#  gtest(sfm/camera/full_opencv_camera_model)
+#  gtest(sfm/camera/rad_tan_thin_prism_fisheye_camera_model)
+#  gtest(sfm/camera/radial_fisheye_camera_model)
+#  gtest(sfm/camera/thin_prism_fisheye_camera_model)
 #  gtest(sfm/camera/orthographic_camera_model)
 #  gtest(sfm/camera/pinhole_camera_model)
 #  gtest(sfm/camera/pinhole_radial_tangential_camera_model)

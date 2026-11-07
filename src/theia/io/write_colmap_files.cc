@@ -42,6 +42,8 @@
 #include <cstring>
 #include <fstream>  // NOLINT
 #include <glog/logging.h>
+#include <iomanip>
+#include <limits>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -50,7 +52,11 @@
 
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera/camera_intrinsics_model.h"
+#include "theia/sfm/camera/full_opencv_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
+#include "theia/sfm/camera/rad_tan_thin_prism_fisheye_camera_model.h"
+#include "theia/sfm/camera/radial_fisheye_camera_model.h"
+#include "theia/sfm/camera/thin_prism_fisheye_camera_model.h"
 #include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
@@ -61,6 +67,96 @@
 
 namespace theia {
 namespace {
+
+// A COLMAP camera model with its binary model id and parameters in COLMAP order.
+struct ColmapModelSpec {
+  int binary_id;
+  std::string name;
+  std::vector<double> params;
+};
+
+// COLMAP model ids for the models that are not pinhole models
+// (colmap/src/colmap/sensor/models.h).
+enum ColmapExtendedModelId : int {
+  kColmapRadialFisheye = 9,
+  kColmapFullOpenCv = 6,
+  kColmapThinPrismFisheye = 10,
+  kColmapRadTanThinPrismFisheye = 11,
+};
+
+// Returns true if the camera uses a model that COLMAP has an equivalent for
+// and that is not a pinhole model.
+bool IsExtendedColmapCamera(const Camera& camera) {
+  switch (camera.GetCameraIntrinsicsModelType()) {
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      return true;
+    default:
+      return false;
+  }
+}
+
+// Converts a camera with an extended model to the COLMAP model. Parameters are
+// written in COLMAP order: fx, fy, cx, cy followed by the distortion terms, which
+// are stored at the same indices in the pyTheia models. Returns false (and logs
+// an error) if COLMAP cannot represent the camera.
+bool ExtendedColmapModel(const Camera& camera,
+                         const std::string& view_name,
+                         ColmapModelSpec* spec) {
+  const CameraIntrinsicsModel& intrinsics = *camera.CameraIntrinsics();
+  Eigen::Matrix3d K;
+  camera.GetCalibrationMatrix(&K);
+  const double fx = K(0, 0);
+  const double fy = K(1, 1);
+  const double cx = K(0, 2);
+  const double cy = K(1, 2);
+
+  // Distortion parameters start after the focal length, aspect ratio and
+  // principal point (indices 0..3).
+  const int kFirstDistortionIndex = 4;
+  std::vector<double> distortion;
+  for (int i = kFirstDistortionIndex; i < intrinsics.NumParameters(); ++i) {
+    distortion.push_back(intrinsics.GetParameter(i));
+  }
+
+  switch (camera.GetCameraIntrinsicsModelType()) {
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+      spec->binary_id = kColmapFullOpenCv;
+      spec->name = "FULL_OPENCV";
+      spec->params = {fx, fy, cx, cy};
+      break;
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+      spec->binary_id = kColmapThinPrismFisheye;
+      spec->name = "THIN_PRISM_FISHEYE";
+      spec->params = {fx, fy, cx, cy};
+      break;
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      spec->binary_id = kColmapRadTanThinPrismFisheye;
+      spec->name = "RAD_TAN_THIN_PRISM_FISHEYE";
+      spec->params = {fx, fy, cx, cy};
+      break;
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+      // COLMAP's RADIAL_FISHEYE has a single focal length.
+      if (std::abs(fx - fy) > 1e-9 * std::max(1.0, fx)) {
+        LOG(ERROR) << "Could not add camera " << view_name
+                   << " to the COLMAP output file because COLMAP's "
+                      "RADIAL_FISHEYE model has one focal length and this "
+                      "camera has a non-unit aspect ratio.";
+        return false;
+      }
+      spec->binary_id = kColmapRadialFisheye;
+      spec->name = "RADIAL_FISHEYE";
+      spec->params = {fx, cx, cy};
+      break;
+    default:
+      LOG(ERROR) << "Camera " << view_name << " uses an unsupported model.";
+      return false;
+  }
+  spec->params.insert(spec->params.end(), distortion.begin(), distortion.end());
+  return true;
+}
 
 bool WriteCamerasFile(const Reconstruction& reconstruction,
                       const std::string& cameras_file) {
@@ -76,6 +172,22 @@ bool WriteCamerasFile(const Reconstruction& reconstruction,
     const View* view = reconstruction.View(
         *reconstruction.GetViewsInCameraIntrinsicGroup(group_id).begin());
     const Camera& camera = view->Camera();
+    if (IsExtendedColmapCamera(camera)) {
+      ColmapModelSpec spec;
+      if (!ExtendedColmapModel(camera, view->Name(), &spec)) {
+        return false;
+      }
+      const std::streamsize precision =
+          ofs_cameras.precision(std::numeric_limits<double>::max_digits10);
+      ofs_cameras << group_id << " " << spec.name << " " << camera.ImageWidth()
+                  << " " << camera.ImageHeight();
+      for (const double param : spec.params) {
+        ofs_cameras << " " << param;
+      }
+      ofs_cameras << std::endl;
+      ofs_cameras.precision(precision);
+      continue;
+    }
     if (camera.GetCameraIntrinsicsModelType() !=
         CameraIntrinsicsModelType::PINHOLE) {
       LOG(ERROR) << "Could not add camera " << view->Name()
@@ -209,6 +321,22 @@ bool WriteCamerasBinaryFile(const Reconstruction& reconstruction,
     const View* view = reconstruction.View(
         *reconstruction.GetViewsInCameraIntrinsicGroup(group_id).begin());
     const Camera& camera = view->Camera();
+    if (IsExtendedColmapCamera(camera)) {
+      ColmapModelSpec spec;
+      if (!ExtendedColmapModel(camera, view->Name(), &spec)) {
+        return false;
+      }
+      WriteLittleEndian<uint32_t>(&ofs, group_id);
+      WriteLittleEndian<int32_t>(&ofs, spec.binary_id);
+      WriteLittleEndian<uint64_t>(&ofs,
+                                  static_cast<uint64_t>(camera.ImageWidth()));
+      WriteLittleEndian<uint64_t>(&ofs,
+                                  static_cast<uint64_t>(camera.ImageHeight()));
+      for (double param : spec.params) {
+        WriteLittleEndian<double>(&ofs, param);
+      }
+      continue;
+    }
     if (camera.GetCameraIntrinsicsModelType() !=
         CameraIntrinsicsModelType::PINHOLE) {
       LOG(ERROR) << "Could not add camera " << view->Name()

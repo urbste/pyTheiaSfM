@@ -26,6 +26,10 @@ These are the values of `CameraIntrinsicsModelType` in [`camera_intrinsics_model
 | `DOUBLE_SPHERE` | `DoubleSphereCameraModel` | 7 | yes | yes (`DoubleSphereCameraModel`) |
 | `EXTENDED_UNIFIED` | `ExtendedUnifiedCameraModel` | 7 | yes | yes (`ExtendedUnifiedCameraModel`) |
 | `ORTHOGRAPHIC` | `OrthographicCameraModel` | 7 | yes | yes |
+| `FULL_OPENCV` | `FullOpenCVCameraModel` | 12 | no | yes (`FullOpenCVCameraModel`) |
+| `RADIAL_FISHEYE` | `RadialFisheyeCameraModel` | 6 | no | yes (`RadialFisheyeCameraModel`) |
+| `THIN_PRISM_FISHEYE` | `ThinPrismFisheyeCameraModel` | 12 | no | yes (`ThinPrismFisheyeCameraModel`) |
+| `RAD_TAN_THIN_PRISM_FISHEYE` | `RadTanThinPrismFisheyeCameraModel` | 16 | no | yes (`RadTanThinPrismFisheyeCameraModel`) |
 
 Strings accepted by I/O and `StringToCameraIntrinsicsModelType` match the enum names above (e.g. `"PINHOLE_RADIAL_TANGENTIAL"`, `"DOUBLE_SPHERE"`).
 
@@ -195,6 +199,81 @@ x' = x/\text{norm},\; y' = y/\text{norm}
 **7** parameters: stored under the same index names as pinhole—`FOCAL_LENGTH` acts as **magnification** \(m\), `ASPECT_RATIO` relates effective focal lengths in \(x\) and \(y\), `SKEW` is supported, `PRINCIPAL_POINT_*` are the principal point, and two radial factors \(k_1,k_2\) apply in the **plane** after scaling \((x_c,y_c)\) from camera coordinates by magnification (depth does not affect \((x,y)\) in the orthographic ideal model; the implementation still produces a direction with \(z=1\) after back-projection for consistency with other models).
 
 Distortion on the magnified plane matches the pinhole-style polynomial \(d = 1 + k_1 r^2 + k_2 r^4\) before applying the affine pixel mapping (see `orthographic_camera_model.h`).
+
+---
+
+## COLMAP camera models
+
+The four models below are the COLMAP models that pyTheia did not have before. Each one keeps COLMAP's parameter order after the focal length(s) and principal point, so `read_colmap_model` imports these cameras without dropping terms, and `WriteColmapFiles` writes them back as the same COLMAP model. The pixel-to-ray inverse is computed with a Newton iteration on the distortion map, and its derivatives are carried through autodiff.
+
+Every model here stores the focal length \(f\) and the aspect ratio \(a\), so \(f_x = f\) and \(f_y = f\,a\). None of them has a skew term, which matches COLMAP.
+
+---
+
+## `FullOpenCVCameraModel` (`FULL_OPENCV`)
+
+**12** parameters: \(f, a, p_x, p_y, k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6\) (COLMAP `FULL_OPENCV` order).
+
+On the normalized plane \((u, v) = (x/z, y/z)\) with \(r^2 = u^2 + v^2\):
+
+\[
+d = \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6},\quad
+x_d = u\,d + 2 p_1 u v + p_2 (r^2 + 2u^2),\quad
+y_d = v\,d + 2 p_2 u v + p_1 (r^2 + 2v^2).
+\]
+
+Pixels are \(x_{px} = f\, x_d + p_x\) and \(y_{px} = f a\, y_d + p_y\). The inverse solves the distortion map with Newton's method.
+
+Priors: `radial_distortion_6` holds \(k_1..k_6\) and `tangential_distortion` holds \(p_1, p_2\). The first four entries of `radial_distortion` are used as \(k_1..k_4\) when `radial_distortion_6` is not set.
+
+---
+
+## `RadialFisheyeCameraModel` (`RADIAL_FISHEYE`)
+
+**6** parameters: \(f, a, p_x, p_y, k_1, k_2\). COLMAP's `RADIAL_FISHEYE` has one focal length, so the writer requires \(a = 1\). COLMAP's `SIMPLE_RADIAL_FISHEYE` is this model with \(k_2 = 0\).
+
+With the angle-scaled point \(\tilde u = \theta (u, v)/r\), \(\theta = \arctan r\) and \(\theta^2 = \tilde u^2 + \tilde v^2\):
+
+\[
+\tilde u_d = \tilde u\,(1 + k_1 \theta^2 + k_2 \theta^4),
+\]
+
+and the pixels follow as for the other fisheye models.
+
+---
+
+## `ThinPrismFisheyeCameraModel` (`THIN_PRISM_FISHEYE`)
+
+**12** parameters: \(f, a, p_x, p_y, k_1, k_2, p_1, p_2, k_3, k_4, s_{x1}, s_{y1}\) (COLMAP order).
+
+With \(\rho = \theta^2 = \tilde u^2 + \tilde v^2\) and the radial factor \(d = k_1 \rho + k_2 \rho^2 + k_3 \rho^3 + k_4 \rho^4\):
+
+\[
+\tilde u_d = \tilde u + \tilde u\,d + 2 p_1 \tilde u \tilde v + p_2 (\rho + 2\tilde u^2) + s_{x1}\rho,
+\]
+\[
+\tilde v_d = \tilde v + \tilde v\,d + 2 p_2 \tilde u \tilde v + p_1 (\rho + 2\tilde v^2) + s_{y1}\rho.
+\]
+
+The thin-prism terms \(s_{x1}, s_{y1}\) are stored in `thin_prism_distortion`. The `GetSubsetFromOptimizeIntrinsicsType` flag `TANGENTIAL_DISTORTION` controls the tangential and thin-prism terms together.
+
+---
+
+## `RadTanThinPrismFisheyeCameraModel` (`RAD_TAN_THIN_PRISM_FISHEYE`)
+
+**16** parameters: \(f, a, p_x, p_y, k_0..k_5, p_0, p_1, s_0..s_3\) (COLMAP order, also the "FISHEYE624" model of Project Aria).
+
+With \(\theta^2 = \tilde u^2 + \tilde v^2\) and \(t = 1 + \sum_{i=0}^{5} k_i \theta^{2(i+1)}\):
+
+\[
+x = t\,\tilde u,\quad y = t\,\tilde v,\quad r^2 = x^2 + y^2,
+\]
+\[
+x_d = x + 2 p_1 x y + p_0 (r^2 + 2x^2) + s_0 r^2 + s_1 r^4,\quad
+y_d = y + 2 p_0 x y + p_1 (r^2 + 2y^2) + s_2 r^2 + s_3 r^4.
+\]
+
+Priors: `radial_distortion_6` holds \(k_0..k_5\), `tangential_distortion` holds \(p_0, p_1\) and `thin_prism_distortion` holds \(s_0..s_3\).
 
 ---
 

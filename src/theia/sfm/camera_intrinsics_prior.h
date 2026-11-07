@@ -100,6 +100,14 @@ struct CameraIntrinsicsPrior {
   Prior<4> radial_distortion;
   Prior<2> tangential_distortion;
 
+  // Models with more radial or thin-prism terms. radial_distortion_6 holds the
+  // six radial coefficients of FULL_OPENCV (k1..k6) or RAD_TAN_THIN_PRISM_FISHEYE
+  // (k0..k5). thin_prism_distortion holds the thin-prism coefficients of
+  // THIN_PRISM_FISHEYE (sx1, sy1 in the first two entries) or
+  // RAD_TAN_THIN_PRISM_FISHEYE (s0..s3).
+  Prior<6> radial_distortion_6;
+  Prior<4> thin_prism_distortion;
+
   // Extrinsics that may be available from EXIF or elsewhere. Position is
   // specified as x,y,z and orientation is specified as the angle-axis rotation.
   Prior<3> position;
@@ -116,7 +124,24 @@ struct CameraIntrinsicsPrior {
   friend class cereal::access;
   template <class Archive>
   void serialize(Archive& ar, const std::uint32_t version) {  // NOLINT
-    if (version >= 4) {
+    if (version >= 5) {
+      ar(image_width,
+         image_height,
+         camera_intrinsics_model_type,
+         focal_length,
+         principal_point,
+         aspect_ratio,
+         skew,
+         radial_distortion,
+         tangential_distortion,
+         position,
+         orientation,
+         latitude,
+         longitude,
+         altitude,
+         radial_distortion_6,
+         thin_prism_distortion);
+    } else if (version == 4) {
       ar(image_width,
          image_height,
          camera_intrinsics_model_type,
@@ -187,6 +212,6 @@ struct CameraIntrinsicsPrior {
 // Note that this version will correspond to both the Prior class and the
 // CameraIntrinsiscPrior class until we figure out how to pass templated classes
 // to the cereal macro.
-CEREAL_CLASS_VERSION(theia::CameraIntrinsicsPrior, 4);
+CEREAL_CLASS_VERSION(theia::CameraIntrinsicsPrior, 5);
 
 #endif  // THEIA_SFM_CAMERA_INTRINSICS_PRIOR_H_

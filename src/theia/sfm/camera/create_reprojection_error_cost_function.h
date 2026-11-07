@@ -41,10 +41,14 @@
 #include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/sfm/camera/fisheye_camera_model.h"
 #include "theia/sfm/camera/fov_camera_model.h"
+#include "theia/sfm/camera/full_opencv_camera_model.h"
 #include "theia/sfm/camera/orthographic_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
+#include "theia/sfm/camera/rad_tan_thin_prism_fisheye_camera_model.h"
+#include "theia/sfm/camera/radial_fisheye_camera_model.h"
 #include "theia/sfm/camera/reprojection_error.h"
+#include "theia/sfm/camera/thin_prism_fisheye_camera_model.h"
 
 namespace theia {
 // Create the appropriate reprojection error cost function based on the camera
@@ -117,6 +121,42 @@ inline ceres::CostFunction* CreateReprojectionErrorCostFunction(
           ExtendedUnifiedCameraModel::kIntrinsicsSize,
           kPointSize>(
           new ReprojectionError<ExtendedUnifiedCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+      return new ceres::AutoDiffCostFunction<
+          ReprojectionError<FullOpenCVCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize,
+          FullOpenCVCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new ReprojectionError<FullOpenCVCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          ReprojectionError<RadialFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize,
+          RadialFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new ReprojectionError<RadialFisheyeCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          ReprojectionError<ThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize,
+          ThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new ReprojectionError<ThinPrismFisheyeCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          ReprojectionError<RadTanThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize,
+          RadTanThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new ReprojectionError<RadTanThinPrismFisheyeCameraModel>(feature));
       break;
     case CameraIntrinsicsModelType::ORTHOGRAPHIC:
       return new ceres::AutoDiffCostFunction<
@@ -209,6 +249,46 @@ inline ceres::CostFunction* CreateInvReprojectionErrorCostFunction(
           kPointSize>(
           new InvReprojectionError<ExtendedUnifiedCameraModel>(feature, ref_bearing));
       break;
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<FullOpenCVCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          FullOpenCVCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionError<FullOpenCVCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<RadialFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          RadialFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionError<RadialFisheyeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<ThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          ThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionError<ThinPrismFisheyeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionError<RadTanThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, // anch
+          Camera::kExtrinsicsSize, // other
+          RadTanThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionError<RadTanThinPrismFisheyeCameraModel>(feature, ref_bearing));
+      break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "
                     "for a list of valid camera models.";
@@ -283,6 +363,42 @@ inline ceres::CostFunction* CreateInvReprojectionPoseErrorCostFunction(
           ExtendedUnifiedCameraModel::kIntrinsicsSize,
           kPointSize>(
           new InvReprojectionPoseError<ExtendedUnifiedCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionPoseError<FullOpenCVCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, 
+          FullOpenCVCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionPoseError<FullOpenCVCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionPoseError<RadialFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, 
+          RadialFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionPoseError<RadialFisheyeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionPoseError<ThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, 
+          ThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionPoseError<ThinPrismFisheyeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          InvReprojectionPoseError<RadTanThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize, 
+          RadTanThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new InvReprojectionPoseError<RadTanThinPrismFisheyeCameraModel>(feature, ref_bearing));
       break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "
@@ -368,6 +484,46 @@ inline ceres::CostFunction* CreateSim3InvReprojectionErrorCostFunction(
           kPointSize>(
           new Sim3InvReprojectionError<ExtendedUnifiedCameraModel>(feature, ref_bearing));
       break;
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+      return new ceres::AutoDiffCostFunction<
+          Sim3InvReprojectionError<FullOpenCVCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // anch
+          Camera::kExtrinsicsSize + 1, // other
+          FullOpenCVCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3InvReprojectionError<FullOpenCVCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3InvReprojectionError<RadialFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // anch
+          Camera::kExtrinsicsSize + 1, // other
+          RadialFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3InvReprojectionError<RadialFisheyeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3InvReprojectionError<ThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // anch
+          Camera::kExtrinsicsSize + 1, // other
+          ThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3InvReprojectionError<ThinPrismFisheyeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3InvReprojectionError<RadTanThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // anch
+          Camera::kExtrinsicsSize + 1, // other
+          RadTanThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3InvReprojectionError<RadTanThinPrismFisheyeCameraModel>(feature, ref_bearing));
+      break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "
                     "for a list of valid camera models.";
@@ -443,6 +599,42 @@ inline ceres::CostFunction* CreateSim3InvReprojectionPoseErrorCostFunction(
           kPointSize>(
           new Sim3InvReprojectionPoseError<ExtendedUnifiedCameraModel>(feature, ref_bearing));
       break;
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+      return new ceres::AutoDiffCostFunction<
+          Sim3InvReprojectionPoseError<FullOpenCVCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // anch
+          FullOpenCVCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3InvReprojectionPoseError<FullOpenCVCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3InvReprojectionPoseError<RadialFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // anch
+          RadialFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3InvReprojectionPoseError<RadialFisheyeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3InvReprojectionPoseError<ThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // anch
+          ThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3InvReprojectionPoseError<ThinPrismFisheyeCameraModel>(feature, ref_bearing));
+      break;
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3InvReprojectionPoseError<RadTanThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // anch
+          RadTanThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3InvReprojectionPoseError<RadTanThinPrismFisheyeCameraModel>(feature, ref_bearing));
+      break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "
                     "for a list of valid camera models.";
@@ -517,6 +709,42 @@ inline ceres::CostFunction* CreateSim3ReprojectionErrorCostFunction(
           ExtendedUnifiedCameraModel::kIntrinsicsSize,
           kPointSize>(
           new Sim3ReprojectionError<ExtendedUnifiedCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<FullOpenCVCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          FullOpenCVCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3ReprojectionError<FullOpenCVCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<RadialFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          RadialFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3ReprojectionError<RadialFisheyeCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<ThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          ThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3ReprojectionError<ThinPrismFisheyeCameraModel>(feature));
+      break;
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      return new ceres::AutoDiffCostFunction<
+          Sim3ReprojectionError<RadTanThinPrismFisheyeCameraModel>,
+          kResidualSize,
+          Camera::kExtrinsicsSize + 1, // SIM3 pose (7 parameters)
+          RadTanThinPrismFisheyeCameraModel::kIntrinsicsSize,
+          kPointSize>(
+          new Sim3ReprojectionError<RadTanThinPrismFisheyeCameraModel>(feature));
       break;
     default:
       LOG(FATAL) << "Invalid camera type. Please see camera_intrinsics_model.h "

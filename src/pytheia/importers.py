@@ -25,13 +25,19 @@ Conventions:
 * Poses. COLMAP and OpenMVG store a world-to-camera rotation and a camera
   center (COLMAP stores ``tvec = -R C`` with a quaternion ``qvec`` in
   ``(w, x, y, z)`` order). pyTheia stores the same rotation and center.
-* Camera models. ``SIMPLE_PINHOLE``, ``PINHOLE``, ``SIMPLE_RADIAL`` and
-  ``RADIAL`` map to ``PINHOLE`` (radial terms ``k1``, ``k2``). ``OPENCV``
-  maps to ``PINHOLE_RADIAL_TANGENTIAL`` (``k1``, ``k2``, ``p1``, ``p2``).
-  ``FULL_OPENCV`` maps to ``PINHOLE_RADIAL_TANGENTIAL`` with ``k1``, ``k2``,
-  ``k3``, ``p1``, ``p2``. The rational terms ``k4``, ``k5``, ``k6`` cannot be
-  represented, so they are dropped with a warning. Fisheye, FOV and thin
-  prism models raise ``ValueError``.
+* Camera models. Every COLMAP camera model is imported with all of its
+  parameters, under the pyTheia model of the same name where one exists:
+  ``SIMPLE_PINHOLE``, ``PINHOLE``, ``SIMPLE_RADIAL`` and ``RADIAL`` map to
+  ``PINHOLE`` (radial terms ``k1``, ``k2``). ``OPENCV`` maps to
+  ``PINHOLE_RADIAL_TANGENTIAL`` (``k1``, ``k2``, ``p1``, ``p2``).
+  ``FULL_OPENCV`` maps to ``FULL_OPENCV`` (``k1`` to ``k6``, ``p1``, ``p2``).
+  ``OPENCV_FISHEYE`` maps to ``FISHEYE`` (``k1`` to ``k4``). ``FOV`` maps to
+  ``FOV`` (``omega``). ``RADIAL_FISHEYE`` maps to ``RADIAL_FISHEYE`` (``k1``,
+  ``k2``) and ``SIMPLE_RADIAL_FISHEYE`` maps to the same model with ``k2 = 0``.
+  ``THIN_PRISM_FISHEYE`` and ``RAD_TAN_THIN_PRISM_FISHEYE`` map to the pyTheia
+  models of the same name. COLMAP's fisheye models use the same projection
+  as pyTheia's ``FISHEYE``, ``FOV`` and related models, so the projections
+  agree with COLMAP.
 * Views are added in COLMAP image-id order (or OpenMVG view-key order). The
   COLMAP camera id (or OpenMVG intrinsic key) is used as the camera
   intrinsics group id.
@@ -88,7 +94,23 @@ _COLMAP_MODELS: Dict[str, Tuple[int, int]] = {
     "RAD_TAN_THIN_PRISM_FISHEYE": (11, 16),
 }
 _COLMAP_MODEL_BY_ID = {mid: name for name, (mid, _) in _COLMAP_MODELS.items()}
-_COLMAP_SUPPORTED = ("SIMPLE_PINHOLE", "PINHOLE", "SIMPLE_RADIAL", "RADIAL", "OPENCV", "FULL_OPENCV")
+_COLMAP_SUPPORTED = tuple(_COLMAP_MODELS)
+
+# pyTheia camera model used for each COLMAP model.
+_COLMAP_PYTHEIA_MODEL: Dict[str, str] = {
+    "SIMPLE_PINHOLE": "PINHOLE",
+    "PINHOLE": "PINHOLE",
+    "SIMPLE_RADIAL": "PINHOLE",
+    "RADIAL": "PINHOLE",
+    "OPENCV": "PINHOLE_RADIAL_TANGENTIAL",
+    "OPENCV_FISHEYE": "FISHEYE",
+    "FULL_OPENCV": "FULL_OPENCV",
+    "FOV": "FOV",
+    "SIMPLE_RADIAL_FISHEYE": "RADIAL_FISHEYE",
+    "RADIAL_FISHEYE": "RADIAL_FISHEYE",
+    "THIN_PRISM_FISHEYE": "THIN_PRISM_FISHEYE",
+    "RAD_TAN_THIN_PRISM_FISHEYE": "RAD_TAN_THIN_PRISM_FISHEYE",
+}
 
 _SPARSE_FILES = ("cameras", "images", "points3D")
 _SPARSE_SEARCH_DEPTH = 4
@@ -139,6 +161,10 @@ class _Intrinsics:
     k3: float = 0.0
     p1: float = 0.0
     p2: float = 0.0
+    # Distortion terms of the models that are not pinhole models, in COLMAP's
+    # order (for example FISHEYE: k1..k4, FOV: omega, FULL_OPENCV: k1, k2, p1,
+    # p2, k3, k4, k5, k6). Empty for the pinhole models.
+    extra: Tuple[float, ...] = ()
 
 
 @dataclass
@@ -158,6 +184,33 @@ class _TrackSpec:
     observations: List[Tuple[int, float, float]] = field(default_factory=list)
 
 
+def _set_extended_distortion(model, model_type, extra: Sequence[float]) -> None:
+    """Sets the distortion of a non-pinhole model from COLMAP-ordered terms."""
+    d = [float(v) for v in extra]
+    if model_type == _model_type("FISHEYE"):
+        model.SetRadialDistortion(d[0], d[1], d[2], d[3])
+    elif model_type == _model_type("FOV"):
+        model.SetRadialDistortion(d[0])
+    elif model_type == _model_type("FULL_OPENCV"):
+        # COLMAP order: k1, k2, p1, p2, k3, k4, k5, k6.
+        model.SetRadialDistortion(d[0], d[1], d[4], d[5], d[6], d[7])
+        model.SetTangentialDistortion(d[2], d[3])
+    elif model_type == _model_type("RADIAL_FISHEYE"):
+        model.SetRadialDistortion(d[0], d[1])
+    elif model_type == _model_type("THIN_PRISM_FISHEYE"):
+        # COLMAP order: k1, k2, p1, p2, k3, k4, sx1, sy1.
+        model.SetRadialDistortion(d[0], d[1], d[4], d[5])
+        model.SetTangentialDistortion(d[2], d[3])
+        model.SetThinPrismDistortion(d[6], d[7])
+    elif model_type == _model_type("RAD_TAN_THIN_PRISM_FISHEYE"):
+        # COLMAP order: k0..k5, p0, p1, s0..s3.
+        model.SetRadialDistortion(d[0], d[1], d[2], d[3], d[4], d[5])
+        model.SetTangentialDistortion(d[6], d[7])
+        model.SetThinPrismDistortion(d[8], d[9], d[10], d[11])
+    else:
+        raise ValueError("No distortion mapping for camera model type %s." % (model_type,))
+
+
 def _configure_camera(camera, intr: _Intrinsics, rotation, center) -> None:
     # The model type must be set first: changing it creates a new model with
     # default parameters.
@@ -167,12 +220,15 @@ def _configure_camera(camera, intr: _Intrinsics, rotation, center) -> None:
     camera.SetPrincipalPoint(float(intr.cx), float(intr.cy))
     model = camera.CameraIntrinsics()
     model.SetAspectRatio(float(intr.fy) / float(intr.fx))
-    model.SetSkew(0.0)
+    if hasattr(model, "SetSkew"):
+        model.SetSkew(0.0)
     if intr.model_type == _model_type("PINHOLE_RADIAL_TANGENTIAL"):
         model.SetRadialDistortion(float(intr.k1), float(intr.k2), float(intr.k3))
         model.SetTangentialDistortion(float(intr.p1), float(intr.p2))
-    else:
+    elif intr.model_type == _model_type("PINHOLE"):
         model.SetRadialDistortion(float(intr.k1), float(intr.k2))
+    else:
+        _set_extended_distortion(model, intr.model_type, intr.extra)
     if rotation is not None:
         camera.SetOrientationFromRotationMatrix(np.asarray(rotation, dtype=float))
         camera.SetPosition(np.asarray(center, dtype=float))
@@ -453,9 +509,10 @@ def _colmap_intrinsics(camera: _ColmapCamera, pixel_offset: float = 0.0) -> _Int
             "COLMAP camera model %s (camera %d) is not supported by pytheia.importers. "
             "Supported: %s." % (camera.model, camera.camera_id, ", ".join(_COLMAP_SUPPORTED))
         )
-    p = camera.params
+    p = [float(v) for v in camera.params]
     name = camera.model
     k1 = k2 = k3 = p1 = p2 = 0.0
+    extra: Tuple[float, ...] = ()
     if name == "SIMPLE_PINHOLE":
         fx = fy = p[0]
         cx, cy = p[1], p[2]
@@ -472,19 +529,31 @@ def _colmap_intrinsics(camera: _ColmapCamera, pixel_offset: float = 0.0) -> _Int
     elif name == "OPENCV":
         fx, fy, cx, cy = p[0], p[1], p[2], p[3]
         k1, k2, p1, p2 = p[4], p[5], p[6], p[7]
-    else:  # FULL_OPENCV
+    elif name == "SIMPLE_RADIAL_FISHEYE":
+        # COLMAP: f, cx, cy, k. The same model as RADIAL_FISHEYE with k2 = 0.
+        fx = fy = p[0]
+        cx, cy = p[1], p[2]
+        extra = (p[3], 0.0)
+    elif name == "RADIAL_FISHEYE":
+        # COLMAP: f, cx, cy, k1, k2.
+        fx = fy = p[0]
+        cx, cy = p[1], p[2]
+        extra = (p[3], p[4])
+    elif name == "FOV":
         fx, fy, cx, cy = p[0], p[1], p[2], p[3]
-        k1, k2, p1, p2, k3, k4, k5, k6 = p[4:12]
-        if any(v != 0.0 for v in (k4, k5, k6)):
-            _warn(
-                "COLMAP FULL_OPENCV camera %d: rational distortion terms k4, k5, k6 "
-                "are not representable in pyTheia and were dropped." % camera.camera_id
-            )
+        extra = (p[4],)
+    else:
+        # OPENCV_FISHEYE, FULL_OPENCV, THIN_PRISM_FISHEYE and
+        # RAD_TAN_THIN_PRISM_FISHEYE: fx, fy, cx, cy followed by the distortion terms.
+        fx, fy, cx, cy = p[0], p[1], p[2], p[3]
+        extra = tuple(p[4:])
 
     if name in ("SIMPLE_PINHOLE", "PINHOLE", "SIMPLE_RADIAL", "RADIAL"):
         model_type = _model_type("PINHOLE")
-    else:
+    elif name == "OPENCV":
         model_type = _model_type("PINHOLE_RADIAL_TANGENTIAL")
+    else:
+        model_type = _model_type(_COLMAP_PYTHEIA_MODEL[name])
 
     return _Intrinsics(
         model_type=model_type,
@@ -499,6 +568,7 @@ def _colmap_intrinsics(camera: _ColmapCamera, pixel_offset: float = 0.0) -> _Int
         k3=k3,
         p1=p1,
         p2=p2,
+        extra=extra,
     )
 
 

@@ -52,7 +52,11 @@ enum class CameraIntrinsicsModelType {
   DIVISION_UNDISTORTION = 4,
   DOUBLE_SPHERE = 5,
   EXTENDED_UNIFIED = 6,
-  ORTHOGRAPHIC = 7
+  ORTHOGRAPHIC = 7,
+  FULL_OPENCV = 8,
+  RADIAL_FISHEYE = 9,
+  THIN_PRISM_FISHEYE = 10,
+  RAD_TAN_THIN_PRISM_FISHEYE = 11
 };
 
 // Converts an input string to the corresponding camera intrinsics model type.
@@ -74,6 +78,14 @@ inline CameraIntrinsicsModelType StringToCameraIntrinsicsModelType(
     return CameraIntrinsicsModelType::EXTENDED_UNIFIED;
   } else if (camera_model_type_string == "ORTHOGRAPHIC") {
     return CameraIntrinsicsModelType::ORTHOGRAPHIC;
+  } else if (camera_model_type_string == "FULL_OPENCV") {
+    return CameraIntrinsicsModelType::FULL_OPENCV;
+  } else if (camera_model_type_string == "RADIAL_FISHEYE") {
+    return CameraIntrinsicsModelType::RADIAL_FISHEYE;
+  } else if (camera_model_type_string == "THIN_PRISM_FISHEYE") {
+    return CameraIntrinsicsModelType::THIN_PRISM_FISHEYE;
+  } else if (camera_model_type_string == "RAD_TAN_THIN_PRISM_FISHEYE") {
+    return CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE;
   } else {
     LOG(FATAL) << "Invalid camera model type supplied: "
                << camera_model_type_string;
@@ -99,6 +111,14 @@ inline std::string CameraIntrinsicsModelTypeToString(
       return "EXTENDED_UNIFIED";
     case CameraIntrinsicsModelType::ORTHOGRAPHIC:
       return "ORTHOGRAPHIC";
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+      return "FULL_OPENCV";
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+      return "RADIAL_FISHEYE";
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+      return "THIN_PRISM_FISHEYE";
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      return "RAD_TAN_THIN_PRISM_FISHEYE";
     default:
       LOG(FATAL) << "Invalid Camera model chosen.";
       break;
@@ -126,6 +146,14 @@ inline bool IsCameraIntrinsicsModelTypeValid(
   } else if (camera_model_type_string == "EXTENDED_UNIFIED") {
     return true;
   } else if (camera_model_type_string == "ORTHOGRAPHIC") {
+    return true;
+  } else if (camera_model_type_string == "FULL_OPENCV") {
+    return true;
+  } else if (camera_model_type_string == "RADIAL_FISHEYE") {
+    return true;
+  } else if (camera_model_type_string == "THIN_PRISM_FISHEYE") {
+    return true;
+  } else if (camera_model_type_string == "RAD_TAN_THIN_PRISM_FISHEYE") {
     return true;
   }
   return false;

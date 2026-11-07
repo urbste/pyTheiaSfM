@@ -57,7 +57,10 @@ class Reconstruction;
 // Only estimated views and tracks are written. Cameras are written with the
 // PINHOLE family of COLMAP models: SIMPLE_PINHOLE or PINHOLE without
 // distortion, OPENCV (fx, fy, cx, cy, k1, k2, 0, 0) with distortion (binary
-// only). Non-pinhole cameras (fisheye, FOV, ...) are rejected.
+// only). FULL_OPENCV, RADIAL_FISHEYE, THIN_PRISM_FISHEYE and
+// RAD_TAN_THIN_PRISM_FISHEYE cameras are written with their COLMAP model and
+// all of their parameters, in text and binary. RADIAL_FISHEYE requires square
+// pixels. Other non-pinhole cameras (fisheye, FOV, ...) are rejected.
 bool WriteColmapFiles(const Reconstruction& reconstruction,
                       const std::string& output_directory,
                       bool binary = false);

@@ -38,10 +38,15 @@ Camera models:
 | `SIMPLE_PINHOLE`, `PINHOLE` | `PINHOLE` | `PINHOLE` sets the aspect ratio `fy / fx` |
 | `SIMPLE_RADIAL`, `RADIAL` | `PINHOLE` | radial `k1`, `k2` |
 | `OPENCV` | `PINHOLE_RADIAL_TANGENTIAL` | `k1`, `k2`, `p1`, `p2` |
-| `FULL_OPENCV` | `PINHOLE_RADIAL_TANGENTIAL` | `k1`, `k2`, `k3`, `p1`, `p2`. The rational terms `k4`, `k5`, `k6` are dropped with a `UserWarning` (they are not zero in general) |
-| `OPENCV_FISHEYE`, `FOV`, `*_FISHEYE`, `THIN_PRISM_FISHEYE`, `RAD_TAN_THIN_PRISM_FISHEYE` | none | `ValueError` |
+| `FULL_OPENCV` | `FULL_OPENCV` | `k1`..`k6`, `p1`, `p2`; no term is dropped |
+| `OPENCV_FISHEYE` | `FISHEYE` | `k1`..`k4` |
+| `FOV` | `FOV` | `omega` |
+| `RADIAL_FISHEYE` | `RADIAL_FISHEYE` | `k1`, `k2` |
+| `SIMPLE_RADIAL_FISHEYE` | `RADIAL_FISHEYE` | `k1`; `k2` is set to 0 |
+| `THIN_PRISM_FISHEYE` | `THIN_PRISM_FISHEYE` | `k1`..`k4`, `p1`, `p2`, `sx1`, `sy1` |
+| `RAD_TAN_THIN_PRISM_FISHEYE` | `RAD_TAN_THIN_PRISM_FISHEYE` | `k0`..`k5`, `p0`, `p1`, `s0`..`s3` |
 
-The model ids and parameter counts follow `colmap/sensor/models.h`. The `OPENCV` and `FULL_OPENCV` parameter order is `fx, fy, cx, cy, k1, k2, p1, p2` (and `k3, k4, k5, k6` for `FULL_OPENCV`).
+Every COLMAP model is imported with all of its parameters, so no warning is raised for a valid COLMAP file. Only an unknown model name raises `ValueError`. The parameter order of each COLMAP model is in `colmap/sensor/models.h`; the pyTheia models keep the same order after the focal length, aspect ratio and principal point (see [Camera models](cameras.md)).
 
 ### Pixel convention
 

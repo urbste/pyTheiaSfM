@@ -59,8 +59,34 @@ def _project_openmvg(R, C, X, f, cx, cy, k=(0.0, 0.0, 0.0)):
     return np.array([f * xn * d + cx, f * yn * d + cy])
 
 
-def _make_recon(k1=0.0, k2=0.0, n_points=40, seed=0):
-    """Three views (two intrinsics groups) with projected tracks, all estimated."""
+def _set_colmap_params(cam, model, params):
+    """Sets a camera from COLMAP-ordered parameters (fx, fy, cx, cy, extra...).
+
+    RADIAL_FISHEYE has one focal length: f, cx, cy, k1, k2.
+    """
+    model_type = getattr(pt.sfm.CameraIntrinsicsModelType, model)
+    cam.SetCameraIntrinsicsModelType(model_type)
+    intrinsics = cam.CameraIntrinsics()
+    if model == "RADIAL_FISHEYE":
+        fx = fy = params[0]
+        cx, cy = params[1], params[2]
+        extra = params[3:]
+    else:
+        fx, fy, cx, cy = params[:4]
+        extra = params[4:]
+    cam.SetFocalLength(float(fx))
+    cam.SetPrincipalPoint(float(cx), float(cy))
+    intrinsics.SetAspectRatio(float(fy) / float(fx))
+    for i, value in enumerate(extra):
+        intrinsics.SetParameter(4 + i, float(value))
+
+
+def _make_recon(k1=0.0, k2=0.0, n_points=40, seed=0, model=None, model_params=None):
+    """Three views (two intrinsics groups) with projected tracks, all estimated.
+
+    With ``model`` set, the cameras use that model with ``model_params`` (COLMAP
+    order) instead of the radial PINHOLE camera.
+    """
     rng = np.random.default_rng(seed)
     recon = pt.sfm.Reconstruction()
     poses = [
@@ -74,9 +100,12 @@ def _make_recon(k1=0.0, k2=0.0, n_points=40, seed=0):
         vid = recon.AddView(name, group, float(idx))
         cam = recon.MutableView(vid).MutableCamera()
         cam.SetImageSize(WIDTH, HEIGHT)
-        cam.SetFocalLength(FOCAL)
-        cam.SetPrincipalPoint(CX, CY)
-        cam.CameraIntrinsics().SetRadialDistortion(k1, k2)
+        if model is None:
+            cam.SetFocalLength(FOCAL)
+            cam.SetPrincipalPoint(CX, CY)
+            cam.CameraIntrinsics().SetRadialDistortion(k1, k2)
+        else:
+            _set_colmap_params(cam, model, model_params)
         cam.SetOrientationFromRotationMatrix(rotation)
         cam.SetPosition(center)
         recon.MutableView(vid).SetIsEstimated(True)
@@ -283,6 +312,30 @@ def test_colmap_distorted_roundtrip_keeps_projection(tmp_path):
     _check_roundtrip(recon, read)
 
 
+_WRITER_EXTENDED_CASES = [
+    ("FULL_OPENCV", [FOCAL, FOCAL * 1.01, CX, CY, 0.03, -0.004, 0.001, -0.002, 0.0005, 0.1, -0.2, 0.3]),
+    ("RADIAL_FISHEYE", [FOCAL, CX, CY, 0.1, -0.02]),
+    ("THIN_PRISM_FISHEYE",
+     [FOCAL, FOCAL * 1.01, CX, CY, 0.1, -0.02, 0.001, -0.002, 0.003, -0.004, 0.0005, -0.0006]),
+    ("RAD_TAN_THIN_PRISM_FISHEYE",
+     [FOCAL, FOCAL * 1.01, CX, CY, 0.1, -0.02, 0.03, -0.004, 0.005, -0.006, 0.001, -0.002,
+      0.0003, -0.0004, 0.0005, -0.0006]),
+]
+
+
+@pytest.mark.parametrize("binary", [False, True])
+@pytest.mark.parametrize("model,params", _WRITER_EXTENDED_CASES, ids=[c[0] for c in _WRITER_EXTENDED_CASES])
+def test_colmap_writer_extended_models_roundtrip(tmp_path, model, params, binary):
+    # The writer emits the COLMAP model with every parameter; reading it back
+    # reprojects every observation of the original cameras.
+    recon = _make_recon(model=model, model_params=params)
+    assert pt.io.WriteColmapFiles(recon, str(tmp_path), binary=binary)
+    read = read_colmap_model(str(tmp_path))
+    cam = read.View(read.ViewIdFromName(VIEW_NAMES[0])).Camera()
+    assert cam.GetCameraIntrinsicsModelType() == getattr(pt.sfm.CameraIntrinsicsModelType, model)
+    _check_roundtrip(recon, read, tol=1e-9 if binary else 1e-4)
+
+
 # --------------------------------------------------------------------------- #
 # COLMAP model variants and error handling (hand-written fixtures)
 # --------------------------------------------------------------------------- #
@@ -298,7 +351,7 @@ def _single_view_model(directory, model, params, binary):
     if binary:
         ids = {"SIMPLE_PINHOLE": 0, "PINHOLE": 1, "SIMPLE_RADIAL": 2, "RADIAL": 3, "OPENCV": 4,
                "OPENCV_FISHEYE": 5, "FULL_OPENCV": 6, "FOV": 7, "SIMPLE_RADIAL_FISHEYE": 8,
-               "RADIAL_FISHEYE": 9, "THIN_PRISM_FISHEYE": 10}
+               "RADIAL_FISHEYE": 9, "THIN_PRISM_FISHEYE": 10, "RAD_TAN_THIN_PRISM_FISHEYE": 11}
         _write_colmap_binary(
             directory, [(1, ids[model], 800, 600, params)],
             [(1, IDENTITY_Q, ZERO_T, 1, "a.jpg", [(100.5, 50.5, -1)])], points,
@@ -353,27 +406,117 @@ def test_colmap_model_mappings(tmp_path, binary):
     assert model.GetParameter(9) == pytest.approx(-0.002)
 
 
-def test_colmap_full_opencv_drops_rational_terms(tmp_path):
-    params = [400.0, 400.0, 300.0, 200.0, 0.03, -0.004, 0.001, -0.002, 0.0005, 0.1, 0.0, 0.0]
-    with pytest.warns(UserWarning, match="rational"):
-        recon = _single_view_model(tmp_path / "f", "FULL_OPENCV", params, binary=False)
-    model = recon.View(recon.ViewIds()[0]).Camera().CameraIntrinsics()
-    assert model.GetParameter(7) == pytest.approx(0.0005)  # k3 kept (r^6 term)
+def _colmap_reference_project(model, params, X):
+    """numpy version of the COLMAP projection (colmap/src/colmap/sensor/models.h)."""
+    X = np.asarray(X, dtype=float)
+    u, v = X[0] / X[2], X[1] / X[2]
+    if model in ("FULL_OPENCV",):
+        fx, fy, cx, cy = params[:4]
+        k1, k2, p1, p2, k3, k4, k5, k6 = params[4:12]
+        r2 = u * u + v * v
+        radial = (1 + k1 * r2 + k2 * r2**2 + k3 * r2**3) / (1 + k4 * r2 + k5 * r2**2 + k6 * r2**3)
+        x = u * radial + 2 * p1 * u * v + p2 * (r2 + 2 * u * u)
+        y = v * radial + 2 * p2 * u * v + p1 * (r2 + 2 * v * v)
+        return np.array([fx * x + cx, fy * y + cy])
+    if model == "FOV":
+        fx, fy, cx, cy, omega = params
+        r = math.sqrt(u * u + v * v)
+        factor = 1.0 if r < 1e-12 else math.atan(2 * r * math.tan(omega / 2)) / (r * omega)
+        return np.array([fx * u * factor + cx, fy * v * factor + cy])
+    # Fisheye models: the angle scaled point, then the model distortion.
+    if model in ("OPENCV_FISHEYE", "RADIAL_FISHEYE", "THIN_PRISM_FISHEYE", "RAD_TAN_THIN_PRISM_FISHEYE"):
+        r = math.sqrt(u * u + v * v)
+        scale = math.atan(r) / r if r > 1e-8 else 1.0
+        uu, vv = u * scale, v * scale
+        t2 = uu * uu + vv * vv
+        if model == "OPENCV_FISHEYE":
+            fx, fy, cx, cy = params[:4]
+            k1, k2, k3, k4 = params[4:8]
+            radial = k1 * t2 + k2 * t2**2 + k3 * t2**3 + k4 * t2**4
+            x, y = uu + uu * radial, vv + vv * radial
+        elif model == "RADIAL_FISHEYE":
+            f, cx, cy = params[:3]
+            fx = fy = f
+            k1, k2 = params[3:5]
+            radial = k1 * t2 + k2 * t2**2
+            x, y = uu + uu * radial, vv + vv * radial
+        elif model == "THIN_PRISM_FISHEYE":
+            fx, fy, cx, cy = params[:4]
+            k1, k2, p1, p2, k3, k4, sx1, sy1 = params[4:12]
+            radial = k1 * t2 + k2 * t2**2 + k3 * t2**3 + k4 * t2**4
+            x = uu + uu * radial + 2 * p1 * uu * vv + p2 * (t2 + 2 * uu * uu) + sx1 * t2
+            y = vv + vv * radial + 2 * p2 * uu * vv + p1 * (t2 + 2 * vv * vv) + sy1 * t2
+        else:
+            fx, fy, cx, cy = params[:4]
+            th = 1.0
+            power = 1.0
+            for i in range(6):
+                power *= t2
+                th += params[4 + i] * power
+            xr, yr = th * uu, th * vv
+            p0, p1 = params[10], params[11]
+            s0, s1, s2, s3 = params[12:16]
+            x2, y2, xy = xr * xr, yr * yr, xr * yr
+            r2 = x2 + y2
+            r4 = r2 * r2
+            x = xr + 2 * p1 * xy + p0 * (r2 + 2 * x2) + s0 * r2 + s1 * r4
+            y = yr + 2 * p0 * xy + p1 * (r2 + 2 * y2) + s2 * r2 + s3 * r4
+        return np.array([fx * x + cx, fy * y + cy])
+    raise ValueError(model)
 
-    # No warning when k4..k6 are zero.
-    params[9] = 0.0
+
+# COLMAP models that pyTheia imports with every parameter (all pyTheia models
+# besides FULL_OPENCV, FISHEYE and FOV are reached through this list too).
+_EXTENDED_COLMAP_CASES = [
+    ("OPENCV_FISHEYE", "FISHEYE", [400.0, 402.0, 300.0, 200.0, 0.1, -0.02, 0.003, -0.0004]),
+    ("FOV", "FOV", [400.0, 404.0, 300.0, 200.0, 0.8]),
+    ("FULL_OPENCV", "FULL_OPENCV",
+     [400.0, 401.0, 300.0, 200.0, 0.03, -0.004, 0.001, -0.002, 0.0005, 0.1, -0.2, 0.3]),
+    ("SIMPLE_RADIAL_FISHEYE", "RADIAL_FISHEYE", [400.0, 300.0, 200.0, 0.1]),
+    ("RADIAL_FISHEYE", "RADIAL_FISHEYE", [400.0, 300.0, 200.0, 0.1, -0.02]),
+    ("THIN_PRISM_FISHEYE", "THIN_PRISM_FISHEYE",
+     [400.0, 401.0, 300.0, 200.0, 0.1, -0.02, 0.001, -0.002, 0.003, -0.004, 0.0005, -0.0006]),
+    ("RAD_TAN_THIN_PRISM_FISHEYE", "RAD_TAN_THIN_PRISM_FISHEYE",
+     [400.0, 401.0, 300.0, 200.0, 0.1, -0.02, 0.03, -0.004, 0.005, -0.006, 0.001, -0.002,
+      0.0003, -0.0004, 0.0005, -0.0006]),
+]
+
+
+@pytest.mark.parametrize("binary", [False, True])
+@pytest.mark.parametrize("colmap_model,pytheia_model,params", _EXTENDED_COLMAP_CASES,
+                         ids=[c[0] for c in _EXTENDED_COLMAP_CASES])
+def test_colmap_extended_models_keep_all_terms(tmp_path, colmap_model, pytheia_model, params, binary):
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        _single_view_model(tmp_path / "f2", "FULL_OPENCV", params, binary=False)
+        recon = _single_view_model(tmp_path / colmap_model, colmap_model, params, binary)
+    cam = recon.View(recon.ViewIds()[0]).Camera()
+    assert cam.GetCameraIntrinsicsModelType() == getattr(pt.sfm.CameraIntrinsicsModelType, pytheia_model)
+    # COLMAP and pyTheia must project a set of points identically: a dropped term
+    # would change the projection of points away from the principal point.
+    # SIMPLE_RADIAL_FISHEYE is RADIAL_FISHEYE with k2 = 0.
+    if colmap_model == "SIMPLE_RADIAL_FISHEYE":
+        reference_model, reference_params = "RADIAL_FISHEYE", list(params) + [0.0]
+    else:
+        reference_model, reference_params = colmap_model, params
+    for X in ([0.3, -0.2, 2.0], [-0.9, 0.7, 1.5], [0.1, 0.05, 4.0]):
+        _, pixel = cam.ProjectPoint(np.array(X))
+        expected = _colmap_reference_project(reference_model, reference_params, X)
+        np.testing.assert_allclose(pixel, expected, atol=1e-6)
 
 
-@pytest.mark.parametrize("model", ["OPENCV_FISHEYE", "FOV", "RADIAL_FISHEYE"])
-def test_colmap_unsupported_models_raise(tmp_path, model):
-    params = {"OPENCV_FISHEYE": [400.0, 400.0, 300.0, 200.0, 0.1, 0.0, 0.0, 0.0],
-              "FOV": [400.0, 400.0, 300.0, 200.0, 0.8],
-              "RADIAL_FISHEYE": [400.0, 300.0, 200.0, 0.1, 0.0]}[model]
+def test_colmap_full_opencv_warns_nothing(tmp_path):
+    params = [400.0, 400.0, 300.0, 200.0, 0.03, -0.004, 0.001, -0.002, 0.0005, 0.1, 0.0, 0.0]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        recon = _single_view_model(tmp_path / "f", "FULL_OPENCV", params, binary=False)
+    model = recon.View(recon.ViewIds()[0]).Camera().CameraIntrinsics()
+    assert model.GetParameter(8) == pytest.approx(0.0005)  # k3 (r^6 term)
+    assert model.GetParameter(9) == pytest.approx(0.1)  # k4 kept
+
+
+def test_colmap_unknown_model_raises(tmp_path):
     with pytest.raises(ValueError, match="not supported"):
-        _single_view_model(tmp_path / model, model, params, binary=False)
+        _single_view_model(tmp_path / "bogus", "BOGUS_MODEL", [400.0, 300.0, 200.0], binary=False)
 
 
 def test_colmap_auto_detects_nested_sparse_folder(tmp_path):

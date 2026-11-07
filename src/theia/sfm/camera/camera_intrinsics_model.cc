@@ -42,9 +42,13 @@
 #include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/sfm/camera/fisheye_camera_model.h"
 #include "theia/sfm/camera/fov_camera_model.h"
+#include "theia/sfm/camera/full_opencv_camera_model.h"
 #include "theia/sfm/camera/orthographic_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
+#include "theia/sfm/camera/rad_tan_thin_prism_fisheye_camera_model.h"
+#include "theia/sfm/camera/radial_fisheye_camera_model.h"
+#include "theia/sfm/camera/thin_prism_fisheye_camera_model.h"
 
 namespace theia {
 
@@ -75,6 +79,18 @@ std::shared_ptr<CameraIntrinsicsModel> CameraIntrinsicsModel::Create(
       break;
     case CameraIntrinsicsModelType::ORTHOGRAPHIC:
       return std::make_shared<OrthographicCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::FULL_OPENCV:
+      return std::make_shared<FullOpenCVCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::RADIAL_FISHEYE:
+      return std::make_shared<RadialFisheyeCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::THIN_PRISM_FISHEYE:
+      return std::make_shared<ThinPrismFisheyeCameraModel>();
+      break;
+    case CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE:
+      return std::make_shared<RadTanThinPrismFisheyeCameraModel>();
       break;
     default:
       break;
@@ -113,6 +129,10 @@ CameraIntrinsicsModel& CameraIntrinsicsModel::operator=(
     CAMERA_MODEL_CASE(DOUBLE_SPHERE, DoubleSphereCameraModel)                 \
     CAMERA_MODEL_CASE(EXTENDED_UNIFIED, ExtendedUnifiedCameraModel)           \
     CAMERA_MODEL_CASE(ORTHOGRAPHIC, OrthographicCameraModel)                  \
+    CAMERA_MODEL_CASE(FULL_OPENCV, FullOpenCVCameraModel)                 \
+    CAMERA_MODEL_CASE(RADIAL_FISHEYE, RadialFisheyeCameraModel)           \
+    CAMERA_MODEL_CASE(THIN_PRISM_FISHEYE, ThinPrismFisheyeCameraModel)    \
+    CAMERA_MODEL_CASE(RAD_TAN_THIN_PRISM_FISHEYE, RadTanThinPrismFisheyeCameraModel) \
     default:                                                                  \
       LOG(FATAL)                                                              \
           << "Invalid camera type. Please see camera_intrinsics_model.h "     \

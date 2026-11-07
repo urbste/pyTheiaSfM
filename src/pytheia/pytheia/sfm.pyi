@@ -1,6 +1,6 @@
 from __future__ import annotations
 import typing
-__all__: list[str] = ['ACCELERATE_SPARSE', 'ALL', 'ARCTAN', 'ASPECT_RATIO', 'AddFeatureCorrespondencesToTrackBuilder', 'AddFullFeatureCorrespondencesToTrackBuilder', 'AddObservations', 'AddTracks', 'AlignPointCloudsUmeyama', 'AlignPointCloudsUmeyamaWithWeights', 'AlignReconstructions', 'AlignReconstructionsRobust', 'AlignReconstructionsWithPoseGraph', 'AlignRotations', 'BuildCaptureViewGraph', 'BuildCaptureViewGraphOptions', 'BulkAddViewGraphEdgesAndCorrespondences', 'BulkEstimateTwoViewInfo', 'BundleAdjustPartialReconstruction', 'BundleAdjustPartialViewsConstant', 'BundleAdjustPartialViewsConstantWithRelativePoseEdges', 'BundleAdjustReconstruction', 'BundleAdjustReconstructionWithConstantTracks', 'BundleAdjustReconstructionWithRelativePoseEdges', 'BundleAdjustTrack', 'BundleAdjustTrackWithCov', 'BundleAdjustTracks', 'BundleAdjustTracksWithCov', 'BundleAdjustTwoViewsAngular', 'BundleAdjustView', 'BundleAdjustViewWithCov', 'BundleAdjustViews', 'BundleAdjustViewsWithCov', 'BundleAdjuster', 'BundleAdjustmentOptions', 'BundleAdjustmentSummary', 'CANONICAL_VIEWS', 'CAUCHY', 'CGNR', 'CLUSTER_JACOBI', 'CLUSTER_TRIDIAGONAL', 'CUDA', 'CUDA_SPARSE', 'CalibratedAbsolutePose', 'CalibrationMatrixToIntrinsics', 'Camera', 'CameraAndFeatureCorrespondence2D3D', 'CameraIntrinsicsModel', 'CameraIntrinsicsModelType', 'CameraIntrinsicsPrior', 'CameraRig', 'ColorizeReconstruction', 'ComposeFundamentalMatrix', 'ComposeProjectionMatrix', 'ComputeMeanReprojectionError', 'ComputeTripletBaselineRatios', 'CreateEstimatedSubreconstruction', 'CrossReconstructionConstraints', 'CrossReconstructionPoseGraphOptions', 'CrossReconstructionPoseGraphSummary', 'CrossReconstructionSim3PoseGraphOptimizer', 'CrossViewAnchorEdge', 'DENSE_NORMAL_CHOLESKY', 'DENSE_QR', 'DENSE_SCHUR', 'DIRECTION_CROSS', 'DISTORTION', 'DIVISION_UNDISTORTION', 'DLS', 'DOUBLE_SPHERE', 'DecomposeEssentialMatrix', 'DecomposeProjectionMatrix', 'DenseLinearAlgebraLibraryType', 'DivisionUndistortionCameraModel', 'DlsPnp', 'DoubleSphereCameraModel', 'EIGEN', 'EIGEN_SPARSE', 'EXHAUSTIVE', 'EXTENDED_UNIFIED', 'EssentialMatrixFromFundamentalMatrix', 'EssentialMatrixFromTwoProjectionMatrices', 'EstimateAbsolutePoseWithKnownOrientation', 'EstimateCalibratedAbsolutePose', 'EstimateDominantPlaneFromPoints', 'EstimateEssentialMatrix', 'EstimateFundamentalMatrix', 'EstimateHomography', 'EstimateMonoDepthRelativePose', 'EstimateMonoDepthRelativePoseSharedFocal', 'EstimateMonoDepthRelativePoseVaryingFocal', 'EstimateRadialDistUncalibratedAbsolutePose', 'EstimateRadialHomographyMatrix', 'EstimateRelativePose', 'EstimateRelativePoseWithKnownOrientation', 'EstimateRelativeRigInfo', 'EstimateRelativeRigInfoUpright', 'EstimateRigidTransformation2D3D', 'EstimateRigidTransformation2D3DNormalized', 'EstimateSimilarityTransformation2D3D', 'EstimateTriangulation', 'EstimateTwoViewInfo', 'EstimateTwoViewInfoOptions', 'EstimateUncalibratedAbsolutePose', 'EstimateUncalibratedRelativePose', 'ExtendedUnifiedCameraModel', 'ExtractMaximallyParallelRigidSubgraph', 'FISHEYE', 'FOCAL_LENGTH', 'FOCAL_LENGTH_DISTORTION', 'FOCAL_LENGTH_RADIAL_DISTORTION', 'FOV', 'FOVCameraModel', 'Feature', 'FeatureCorrespondence2D3D', 'FilterViewGraphCyclesByRotation', 'FilterViewPairsFromOrientation', 'FilterViewPairsFromRelativeTranslation', 'FilterViewPairsFromRelativeTranslationOptions', 'FindCommonTracksByFeatureInReconstructions', 'FindCommonTracksInViews', 'FindCommonViewsByName', 'FisheyeCameraModel', 'FivePointFocalLengthRadialDistortion', 'FivePointOnePointGeneralizedRelativePose', 'FivePointRelativePose', 'FocalLengthsFromFundamentalMatrix', 'FourPointHomography', 'FourPointPoseAndFocalLength', 'FourPointRelativePosePartialRotation', 'FourPointUprightGeneralizedRelativePose', 'FourPointsPoseFocalLengthRadialDistortion', 'FundamentalMatrixFromProjectionMatrices', 'GLOBAL', 'GLOMAP', 'GPSConverter', 'GdlsSimilarityTransform', 'GeneralizedRayCorrespondence', 'GetBestPoseFromEssentialMatrix', 'GetEstimatedTracksFromReconstruction', 'GetEstimatedViewsFromReconstruction', 'GetSim3LieFromView', 'GlobalPositionEstimatorType', 'GlobalReconstructionEstimator', 'GlobalRigReconstructor', 'GlobalRigReconstructorOptions', 'GlobalRotationEstimatorType', 'GlomapPositionEstimator', 'GlomapPositionEstimatorOptions', 'GravityPriorErrorType', 'HUBER', 'HYBRID', 'HybridReconstructionEstimator', 'HybridRotationEstimator', 'IDENTITY', 'INCREMENTAL', 'INVALID', 'INVERSE_DEPTH', 'ITERATIVE_SCHUR', 'IncrementalReconstructionEstimator', 'IncrementalRigReconstructor', 'IncrementalRigReconstructorOptions', 'IntrinsicsToCalibrationMatrix', 'IsTriangulatedPointInFrontOfCameras', 'JACOBI', 'KNEIP', 'L2_MINIMIZATION', 'LAGRANGE_DUAL', 'LAPACK', 'LEAST_UNSQUARED_DEVIATION', 'LIGT', 'LINEAR', 'LINEAR_TRIPLET', 'LMED', 'LagrangeDualRotationEstimator', 'LeastUnsquaredDeviationPositionEstimator', 'LeastUnsquaredDeviationPositionEstimatorOptions', 'LiGTPositionEstimator', 'LiGTPositionEstimatorOptions', 'LinearPositionEstimator', 'LinearPositionEstimatorOptions', 'LinearRotationEstimator', 'LinearSolverType', 'LocalizeViewToReconstruction', 'LocalizeViewToReconstructionOptions', 'LossFunctionType', 'MIDPOINT', 'MLPnP', 'MonoDepthRelativePoseResult', 'NONE', 'NONLINEAR', 'NonlinearPositionEstimator', 'NonlinearPositionEstimatorOptions', 'NonlinearRotationEstimator', 'NormalizedEightPointFundamentalMatrix', 'NumEstimatedTracks', 'NumEstimatedViews', 'ORTHOGRAPHIC', 'OptimizeAbsolutePoseOnNormFeatures', 'OptimizeAlignmentSim3', 'OptimizeIntrinsicsType', 'OptimizeRelativePositionWithKnownRotation', 'OrthographicCameraModel', 'PINHOLE', 'PINHOLE_RADIAL_TANGENTIAL', 'POINT_TO_PLANE', 'POINT_TO_POINT', 'PRINCIPAL_POINTS', 'PROSAC', 'PinholeCameraModel', 'PinholeRadialTangentialCameraModel', 'PlanarUncalibratedOrthographicPose', 'Plane', 'PnPType', 'PoseFromThreePoints', 'PositionEstimator', 'PositionFromTwoRays', 'PreconditionerType', 'PriorScalar', 'PriorVector2d', 'PriorVector3d', 'PriorVector4d', 'ProjectionMatricesFromFundamentalMatrix', 'PropagateAllEstimatedCapturePoses', 'PropagateCameraPosesForCapture', 'RADIAL_DISTORTION', 'RANSAC', 'ROBUST_L1L2', 'ROBUST_POINT_TO_POINT', 'RadialDistUncalibratedAbsolutePose', 'RadialDistUncalibratedAbsolutePoseMetaData', 'RadialDistortionFeatureCorrespondence', 'RansacType', 'Reconstruction', 'ReconstructionEstimator', 'ReconstructionEstimatorOptions', 'ReconstructionEstimatorSummary', 'ReconstructionEstimatorType', 'RelativePose', 'RelativePoseConstraint', 'RelativePoseFromTwoPointsWithKnownRotation', 'RelativeRigInfo', 'RelativeRotationsFromViewGraph', 'RelativeSim3BetweenViews', 'RemoveDisconnectedViewPairs', 'RigCapture', 'RigSensor', 'RigidTransformation', 'RobustRotationEstimator', 'RobustRotationEstimatorOptions', 'RotationEstimator', 'SCHUR_JACOBI', 'SINGLE_LINKAGE', 'SKEW', 'SOFTLONE', 'SPARSE_NORMAL_CHOLESKY', 'SPARSE_SCHUR', 'SQPnP', 'SUITE_SPARSE', 'SVD', 'SelectGoodTracksForBundleAdjustment', 'SequentialSim3Edge', 'SetCameraIntrinsicsFromPriors', 'SetOutlierTracksToUnestimated', 'SetReconstructionFromEstimatedPoses', 'SetUnderconstrainedTracksToUnestimated', 'SetUnderconstrainedViewsToUnestimated', 'SevenPointFundamentalMatrix', 'SharedFocalLengthsFromFundamentalMatrix', 'Sim3AlignmentOptions', 'Sim3AlignmentSummary', 'Sim3AlignmentType', 'Sim3FromRotationTranslationScale', 'Sim3ToHomogeneousMatrix', 'Sim3ToRotationTranslationScale', 'SimTransformPartialRotation', 'SimilarityTransformation', 'SparseLinearAlgebraLibraryType', 'SufficientTriangulationAngle', 'SwapCameras', 'TANGENTIAL_DISTORTION', 'TRIVIAL', 'TUKEY', 'ThreePointRelativePosePartialRotation', 'Track', 'TrackBuilder', 'TrackEstimator', 'TrackEstimatorOptions', 'TrackEstimatorSummary', 'TrackParametrizationType', 'TransformReconstruction', 'TransformReconstruction4', 'Triangulate', 'TriangulateDLT', 'TriangulateMidpoint', 'TriangulateNView', 'TriangulateNViewSVD', 'TriangulationMethodType', 'TwoPointPosePartialRotation', 'TwoViewBundleAdjustmentOptions', 'TwoViewInfo', 'UPMLPnP', 'UPMLPnPWithCovariance', 'UncalibratedAbsolutePose', 'UncalibratedRelativePose', 'UpdateFeaturesInView', 'VECTOR_DIFF', 'View', 'ViewGraph', 'ViewRigMembership', 'VisibilityClusteringType', 'VisibilityPyramid', 'XYZW', 'XYZW_MANIFOLD', 'kInvalidTrackId', 'kInvalidViewId']
+__all__: list[str] = ['ACCELERATE_SPARSE', 'ALL', 'ARCTAN', 'ASPECT_RATIO', 'AddFeatureCorrespondencesToTrackBuilder', 'AddFullFeatureCorrespondencesToTrackBuilder', 'AddObservations', 'AddTracks', 'AlignPointCloudsUmeyama', 'AlignPointCloudsUmeyamaWithWeights', 'AlignReconstructions', 'AlignReconstructionsRobust', 'AlignReconstructionsWithPoseGraph', 'AlignRotations', 'BuildCaptureViewGraph', 'BuildCaptureViewGraphOptions', 'BulkAddViewGraphEdgesAndCorrespondences', 'BulkEstimateTwoViewInfo', 'BundleAdjustPartialReconstruction', 'BundleAdjustPartialViewsConstant', 'BundleAdjustPartialViewsConstantWithRelativePoseEdges', 'BundleAdjustReconstruction', 'BundleAdjustReconstructionWithConstantTracks', 'BundleAdjustReconstructionWithRelativePoseEdges', 'BundleAdjustTrack', 'BundleAdjustTrackWithCov', 'BundleAdjustTracks', 'BundleAdjustTracksWithCov', 'BundleAdjustTwoViewsAngular', 'BundleAdjustView', 'BundleAdjustViewWithCov', 'BundleAdjustViews', 'BundleAdjustViewsWithCov', 'BundleAdjuster', 'BundleAdjustmentOptions', 'BundleAdjustmentSummary', 'CANONICAL_VIEWS', 'CAUCHY', 'CGNR', 'CLUSTER_JACOBI', 'CLUSTER_TRIDIAGONAL', 'CUDA', 'CUDA_SPARSE', 'CalibratedAbsolutePose', 'CalibrationMatrixToIntrinsics', 'Camera', 'CameraAndFeatureCorrespondence2D3D', 'CameraIntrinsicsModel', 'CameraIntrinsicsModelType', 'CameraIntrinsicsPrior', 'CameraRig', 'ColorizeReconstruction', 'ComposeFundamentalMatrix', 'ComposeProjectionMatrix', 'ComputeMeanReprojectionError', 'ComputeTripletBaselineRatios', 'CreateEstimatedSubreconstruction', 'CrossReconstructionConstraints', 'CrossReconstructionPoseGraphOptions', 'CrossReconstructionPoseGraphSummary', 'CrossReconstructionSim3PoseGraphOptimizer', 'CrossViewAnchorEdge', 'DENSE_NORMAL_CHOLESKY', 'DENSE_QR', 'DENSE_SCHUR', 'DIRECTION_CROSS', 'DISTORTION', 'DIVISION_UNDISTORTION', 'DLS', 'DOUBLE_SPHERE', 'DecomposeEssentialMatrix', 'DecomposeProjectionMatrix', 'DenseLinearAlgebraLibraryType', 'DivisionUndistortionCameraModel', 'DlsPnp', 'DoubleSphereCameraModel', 'EIGEN', 'EIGEN_SPARSE', 'EXHAUSTIVE', 'EXTENDED_UNIFIED', 'EssentialMatrixFromFundamentalMatrix', 'EssentialMatrixFromTwoProjectionMatrices', 'EstimateAbsolutePoseWithKnownOrientation', 'EstimateCalibratedAbsolutePose', 'EstimateDominantPlaneFromPoints', 'EstimateEssentialMatrix', 'EstimateFundamentalMatrix', 'EstimateHomography', 'EstimateMonoDepthRelativePose', 'EstimateMonoDepthRelativePoseSharedFocal', 'EstimateMonoDepthRelativePoseVaryingFocal', 'EstimateRadialDistUncalibratedAbsolutePose', 'EstimateRadialHomographyMatrix', 'EstimateRelativePose', 'EstimateRelativePoseWithKnownOrientation', 'EstimateRelativeRigInfo', 'EstimateRelativeRigInfoUpright', 'EstimateRigidTransformation2D3D', 'EstimateRigidTransformation2D3DNormalized', 'EstimateSimilarityTransformation2D3D', 'EstimateTriangulation', 'EstimateTwoViewInfo', 'EstimateTwoViewInfoOptions', 'EstimateUncalibratedAbsolutePose', 'EstimateUncalibratedRelativePose', 'ExtendedUnifiedCameraModel', 'ExtractMaximallyParallelRigidSubgraph', 'FISHEYE', 'FOCAL_LENGTH', 'FOCAL_LENGTH_DISTORTION', 'FOCAL_LENGTH_RADIAL_DISTORTION', 'FOV', 'FOVCameraModel', 'FULL_OPENCV', 'Feature', 'FeatureCorrespondence2D3D', 'FilterViewGraphCyclesByRotation', 'FilterViewPairsFromOrientation', 'FilterViewPairsFromRelativeTranslation', 'FilterViewPairsFromRelativeTranslationOptions', 'FindCommonTracksByFeatureInReconstructions', 'FindCommonTracksInViews', 'FindCommonViewsByName', 'FisheyeCameraModel', 'FivePointFocalLengthRadialDistortion', 'FivePointOnePointGeneralizedRelativePose', 'FivePointRelativePose', 'FocalLengthsFromFundamentalMatrix', 'FourPointHomography', 'FourPointPoseAndFocalLength', 'FourPointRelativePosePartialRotation', 'FourPointUprightGeneralizedRelativePose', 'FourPointsPoseFocalLengthRadialDistortion', 'FullOpenCVCameraModel', 'FundamentalMatrixFromProjectionMatrices', 'GLOBAL', 'GLOMAP', 'GPSConverter', 'GdlsSimilarityTransform', 'GeneralizedRayCorrespondence', 'GetBestPoseFromEssentialMatrix', 'GetEstimatedTracksFromReconstruction', 'GetEstimatedViewsFromReconstruction', 'GetSim3LieFromView', 'GlobalPositionEstimatorType', 'GlobalReconstructionEstimator', 'GlobalRigReconstructor', 'GlobalRigReconstructorOptions', 'GlobalRotationEstimatorType', 'GlomapPositionEstimator', 'GlomapPositionEstimatorOptions', 'GravityPriorErrorType', 'HUBER', 'HYBRID', 'HybridReconstructionEstimator', 'HybridRotationEstimator', 'IDENTITY', 'INCREMENTAL', 'INVALID', 'INVERSE_DEPTH', 'ITERATIVE_SCHUR', 'IncrementalReconstructionEstimator', 'IncrementalRigReconstructor', 'IncrementalRigReconstructorOptions', 'IntrinsicsToCalibrationMatrix', 'IsTriangulatedPointInFrontOfCameras', 'JACOBI', 'KNEIP', 'L2_MINIMIZATION', 'LAGRANGE_DUAL', 'LAPACK', 'LEAST_UNSQUARED_DEVIATION', 'LIGT', 'LINEAR', 'LINEAR_TRIPLET', 'LMED', 'LagrangeDualRotationEstimator', 'LeastUnsquaredDeviationPositionEstimator', 'LeastUnsquaredDeviationPositionEstimatorOptions', 'LiGTPositionEstimator', 'LiGTPositionEstimatorOptions', 'LinearPositionEstimator', 'LinearPositionEstimatorOptions', 'LinearRotationEstimator', 'LinearSolverType', 'LocalizeViewToReconstruction', 'LocalizeViewToReconstructionOptions', 'LossFunctionType', 'MIDPOINT', 'MLPnP', 'MonoDepthRelativePoseResult', 'NONE', 'NONLINEAR', 'NonlinearPositionEstimator', 'NonlinearPositionEstimatorOptions', 'NonlinearRotationEstimator', 'NormalizedEightPointFundamentalMatrix', 'NumEstimatedTracks', 'NumEstimatedViews', 'ORTHOGRAPHIC', 'OptimizeAbsolutePoseOnNormFeatures', 'OptimizeAlignmentSim3', 'OptimizeIntrinsicsType', 'OptimizeRelativePositionWithKnownRotation', 'OrthographicCameraModel', 'PINHOLE', 'PINHOLE_RADIAL_TANGENTIAL', 'POINT_TO_PLANE', 'POINT_TO_POINT', 'PRINCIPAL_POINTS', 'PROSAC', 'PinholeCameraModel', 'PinholeRadialTangentialCameraModel', 'PlanarUncalibratedOrthographicPose', 'Plane', 'PnPType', 'PoseFromThreePoints', 'PositionEstimator', 'PositionFromTwoRays', 'PreconditionerType', 'PriorScalar', 'PriorVector2d', 'PriorVector3d', 'PriorVector4d', 'PriorVector6d', 'ProjectionMatricesFromFundamentalMatrix', 'PropagateAllEstimatedCapturePoses', 'PropagateCameraPosesForCapture', 'RADIAL_DISTORTION', 'RADIAL_FISHEYE', 'RAD_TAN_THIN_PRISM_FISHEYE', 'RANSAC', 'ROBUST_L1L2', 'ROBUST_POINT_TO_POINT', 'RadTanThinPrismFisheyeCameraModel', 'RadialDistUncalibratedAbsolutePose', 'RadialDistUncalibratedAbsolutePoseMetaData', 'RadialDistortionFeatureCorrespondence', 'RadialFisheyeCameraModel', 'RansacType', 'Reconstruction', 'ReconstructionEstimator', 'ReconstructionEstimatorOptions', 'ReconstructionEstimatorSummary', 'ReconstructionEstimatorType', 'RelativePose', 'RelativePoseConstraint', 'RelativePoseFromTwoPointsWithKnownRotation', 'RelativeRigInfo', 'RelativeRotationsFromViewGraph', 'RelativeSim3BetweenViews', 'RemoveDisconnectedViewPairs', 'RigCapture', 'RigSensor', 'RigidTransformation', 'RobustRotationEstimator', 'RobustRotationEstimatorOptions', 'RotationEstimator', 'SCHUR_JACOBI', 'SINGLE_LINKAGE', 'SKEW', 'SOFTLONE', 'SPARSE_NORMAL_CHOLESKY', 'SPARSE_SCHUR', 'SQPnP', 'SUITE_SPARSE', 'SVD', 'SelectGoodTracksForBundleAdjustment', 'SequentialSim3Edge', 'SetCameraIntrinsicsFromPriors', 'SetOutlierTracksToUnestimated', 'SetReconstructionFromEstimatedPoses', 'SetUnderconstrainedTracksToUnestimated', 'SetUnderconstrainedViewsToUnestimated', 'SevenPointFundamentalMatrix', 'SharedFocalLengthsFromFundamentalMatrix', 'Sim3AlignmentOptions', 'Sim3AlignmentSummary', 'Sim3AlignmentType', 'Sim3FromRotationTranslationScale', 'Sim3ToHomogeneousMatrix', 'Sim3ToRotationTranslationScale', 'SimTransformPartialRotation', 'SimilarityTransformation', 'SparseLinearAlgebraLibraryType', 'SufficientTriangulationAngle', 'SwapCameras', 'TANGENTIAL_DISTORTION', 'THIN_PRISM_FISHEYE', 'TRIVIAL', 'TUKEY', 'ThinPrismFisheyeCameraModel', 'ThreePointRelativePosePartialRotation', 'Track', 'TrackBuilder', 'TrackEstimator', 'TrackEstimatorOptions', 'TrackEstimatorSummary', 'TrackParametrizationType', 'TransformReconstruction', 'TransformReconstruction4', 'Triangulate', 'TriangulateDLT', 'TriangulateMidpoint', 'TriangulateNView', 'TriangulateNViewSVD', 'TriangulationMethodType', 'TwoPointPosePartialRotation', 'TwoViewBundleAdjustmentOptions', 'TwoViewInfo', 'UPMLPnP', 'UPMLPnPWithCovariance', 'UncalibratedAbsolutePose', 'UncalibratedRelativePose', 'UpdateFeaturesInView', 'VECTOR_DIFF', 'View', 'ViewGraph', 'ViewRigMembership', 'VisibilityClusteringType', 'VisibilityPyramid', 'XYZW', 'XYZW_MANIFOLD', 'kInvalidTrackId', 'kInvalidViewId']
 class PriorScalar:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -50,6 +50,22 @@ class PriorVector3d:
     def value(*args, **kwargs):
         ...
 class PriorVector4d:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def is_set(*args, **kwargs):
+        ...
+    @is_set.setter
+    def is_set(*args, **kwargs):
+        ...
+    @property
+    def value(*args, **kwargs):
+        ...
+    @value.setter
+    def value(*args, **kwargs):
+        ...
+class PriorVector6d:
     @staticmethod
     def __init__(*args, **kwargs):
         ...
@@ -485,6 +501,259 @@ class FOVCameraModel(CameraIntrinsicsModel):
     @property
     def kIntrinsicsSize(*args, **kwargs):
         ...
+class FullOpenCVCameraModel(CameraIntrinsicsModel):
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
+        ...
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
+        ...
+    @staticmethod
+    def NumParameters(*args, **kwargs):
+        ...
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion2(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion3(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion4(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion5(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion6(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetTangentialDistortion(*args, **kwargs):
+        ...
+    @staticmethod
+    def TangentialDistortion1(*args, **kwargs):
+        ...
+    @staticmethod
+    def TangentialDistortion2(*args, **kwargs):
+        ...
+    @staticmethod
+    def Type(*args, **kwargs):
+        ...
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def kIntrinsicsSize(*args, **kwargs):
+        ...
+class RadialFisheyeCameraModel(CameraIntrinsicsModel):
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
+        ...
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
+        ...
+    @staticmethod
+    def NumParameters(*args, **kwargs):
+        ...
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion2(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
+        ...
+    @staticmethod
+    def Type(*args, **kwargs):
+        ...
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def kIntrinsicsSize(*args, **kwargs):
+        ...
+class ThinPrismFisheyeCameraModel(CameraIntrinsicsModel):
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
+        ...
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
+        ...
+    @staticmethod
+    def NumParameters(*args, **kwargs):
+        ...
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion2(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion3(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion4(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetTangentialDistortion(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetThinPrismDistortion(*args, **kwargs):
+        ...
+    @staticmethod
+    def TangentialDistortion1(*args, **kwargs):
+        ...
+    @staticmethod
+    def TangentialDistortion2(*args, **kwargs):
+        ...
+    @staticmethod
+    def ThinPrismDistortion1(*args, **kwargs):
+        ...
+    @staticmethod
+    def ThinPrismDistortion2(*args, **kwargs):
+        ...
+    @staticmethod
+    def Type(*args, **kwargs):
+        ...
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def kIntrinsicsSize(*args, **kwargs):
+        ...
+class RadTanThinPrismFisheyeCameraModel(CameraIntrinsicsModel):
+    @staticmethod
+    def AspectRatio(*args, **kwargs):
+        ...
+    @staticmethod
+    def CameraIntrinsicsPriorFromIntrinsics(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetCalibrationMatrix(*args, **kwargs):
+        ...
+    @staticmethod
+    def GetSubsetFromOptimizeIntrinsicsType(*args, **kwargs):
+        ...
+    @staticmethod
+    def NumParameters(*args, **kwargs):
+        ...
+    @staticmethod
+    def PrintIntrinsics(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion1(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion2(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion3(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion4(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion5(*args, **kwargs):
+        ...
+    @staticmethod
+    def RadialDistortion6(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetAspectRatio(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetFromCameraIntrinsicsPriors(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetRadialDistortion(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetTangentialDistortion(*args, **kwargs):
+        ...
+    @staticmethod
+    def SetThinPrismDistortion(*args, **kwargs):
+        ...
+    @staticmethod
+    def TangentialDistortion1(*args, **kwargs):
+        ...
+    @staticmethod
+    def TangentialDistortion2(*args, **kwargs):
+        ...
+    @staticmethod
+    def ThinPrismDistortion1(*args, **kwargs):
+        ...
+    @staticmethod
+    def ThinPrismDistortion2(*args, **kwargs):
+        ...
+    @staticmethod
+    def ThinPrismDistortion3(*args, **kwargs):
+        ...
+    @staticmethod
+    def ThinPrismDistortion4(*args, **kwargs):
+        ...
+    @staticmethod
+    def Type(*args, **kwargs):
+        ...
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def kIntrinsicsSize(*args, **kwargs):
+        ...
 class Camera:
     @staticmethod
     def CameraIntrinsics(*args, **kwargs):
@@ -591,16 +860,28 @@ class CameraIntrinsicsModelType:
       EXTENDED_UNIFIED
     
       ORTHOGRAPHIC
+    
+      FULL_OPENCV
+    
+      RADIAL_FISHEYE
+    
+      THIN_PRISM_FISHEYE
+    
+      RAD_TAN_THIN_PRISM_FISHEYE
     """
     DIVISION_UNDISTORTION: typing.ClassVar[CameraIntrinsicsModelType]
     DOUBLE_SPHERE: typing.ClassVar[CameraIntrinsicsModelType]
     EXTENDED_UNIFIED: typing.ClassVar[CameraIntrinsicsModelType]
     FISHEYE: typing.ClassVar[CameraIntrinsicsModelType]
     FOV: typing.ClassVar[CameraIntrinsicsModelType]
+    FULL_OPENCV: typing.ClassVar[CameraIntrinsicsModelType]
     INVALID: typing.ClassVar[CameraIntrinsicsModelType]
     ORTHOGRAPHIC: typing.ClassVar[CameraIntrinsicsModelType]
     PINHOLE: typing.ClassVar[CameraIntrinsicsModelType]
     PINHOLE_RADIAL_TANGENTIAL: typing.ClassVar[CameraIntrinsicsModelType]
+    RADIAL_FISHEYE: typing.ClassVar[CameraIntrinsicsModelType]
+    RAD_TAN_THIN_PRISM_FISHEYE: typing.ClassVar[CameraIntrinsicsModelType]
+    THIN_PRISM_FISHEYE: typing.ClassVar[CameraIntrinsicsModelType]
     __members__: typing.ClassVar[dict[str, CameraIntrinsicsModelType]]
     @staticmethod
     def __eq__(*args, **kwargs):
@@ -715,6 +996,12 @@ class CameraIntrinsicsPrior:
     def radial_distortion(*args, **kwargs):
         ...
     @property
+    def radial_distortion_6(*args, **kwargs):
+        ...
+    @radial_distortion_6.setter
+    def radial_distortion_6(*args, **kwargs):
+        ...
+    @property
     def skew(*args, **kwargs):
         ...
     @skew.setter
@@ -725,6 +1012,12 @@ class CameraIntrinsicsPrior:
         ...
     @tangential_distortion.setter
     def tangential_distortion(*args, **kwargs):
+        ...
+    @property
+    def thin_prism_distortion(*args, **kwargs):
+        ...
+    @thin_prism_distortion.setter
+    def thin_prism_distortion(*args, **kwargs):
         ...
 class Sim3AlignmentType:
     """
@@ -4568,6 +4861,7 @@ FOCAL_LENGTH: OptimizeIntrinsicsType
 FOCAL_LENGTH_DISTORTION: OptimizeIntrinsicsType
 FOCAL_LENGTH_RADIAL_DISTORTION: OptimizeIntrinsicsType
 FOV: CameraIntrinsicsModelType
+FULL_OPENCV: CameraIntrinsicsModelType
 GLOBAL: ReconstructionEstimatorType
 GLOMAP: GlobalPositionEstimatorType
 HUBER: LossFunctionType
@@ -4598,6 +4892,8 @@ POINT_TO_POINT: Sim3AlignmentType
 PRINCIPAL_POINTS: OptimizeIntrinsicsType
 PROSAC: RansacType
 RADIAL_DISTORTION: OptimizeIntrinsicsType
+RADIAL_FISHEYE: CameraIntrinsicsModelType
+RAD_TAN_THIN_PRISM_FISHEYE: CameraIntrinsicsModelType
 RANSAC: RansacType
 ROBUST_L1L2: GlobalRotationEstimatorType
 ROBUST_POINT_TO_POINT: Sim3AlignmentType
@@ -4611,6 +4907,7 @@ SQPnP: PnPType
 SUITE_SPARSE: SparseLinearAlgebraLibraryType
 SVD: TriangulationMethodType
 TANGENTIAL_DISTORTION: OptimizeIntrinsicsType
+THIN_PRISM_FISHEYE: CameraIntrinsicsModelType
 TRIVIAL: LossFunctionType
 TUKEY: LossFunctionType
 VECTOR_DIFF: GravityPriorErrorType

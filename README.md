@@ -78,7 +78,7 @@ prior.radial_distortion.value = [0., 0., 0., 0]
 prior.tangential_distortion.value = [0., 0.]
 prior.skew.value = [0]
 prior.camera_intrinsics_model_type = 'PINHOLE' 
-#'PINHOLE', 'DOUBLE_SPHERE', 'EXTENDED_UNIFIED', 'FISHEYE', 'FOV', 'DIVISION_UNDISTORTION'
+#'PINHOLE', 'DOUBLE_SPHERE', 'EXTENDED_UNIFIED', 'FISHEYE', 'FOV', 'DIVISION_UNDISTORTION', 'FULL_OPENCV', 'RADIAL_FISHEYE', 'THIN_PRISM_FISHEYE', 'RAD_TAN_THIN_PRISM_FISHEYE'
 camera = pt.sfm.Camera()
 camera.SetFromCameraIntrinsicsPriors(prior)
 

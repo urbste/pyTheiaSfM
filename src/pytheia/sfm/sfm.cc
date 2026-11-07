@@ -69,10 +69,14 @@
 #include "theia/sfm/camera/division_undistortion_camera_model.h"
 #include "theia/sfm/camera/extended_unified_camera_model.h"
 #include "theia/sfm/camera/fisheye_camera_model.h"
+#include "theia/sfm/camera/full_opencv_camera_model.h"
 #include "theia/sfm/camera/fov_camera_model.h"
 #include "theia/sfm/camera/orthographic_camera_model.h"
 #include "theia/sfm/camera/pinhole_camera_model.h"
 #include "theia/sfm/camera/pinhole_radial_tangential_camera_model.h"
+#include "theia/sfm/camera/rad_tan_thin_prism_fisheye_camera_model.h"
+#include "theia/sfm/camera/radial_fisheye_camera_model.h"
+#include "theia/sfm/camera/thin_prism_fisheye_camera_model.h"
 
 #include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
 #include "theia/sfm/bundle_adjustment/bundle_adjuster.h"
@@ -186,6 +190,7 @@ void pytheia_sfm_classes(py::module& m) {
   AddIntrinsicsPriorType<2>(m, "Vector2d");
   AddIntrinsicsPriorType<3>(m, "Vector3d");
   AddIntrinsicsPriorType<4>(m, "Vector4d");
+  AddIntrinsicsPriorType<6>(m, "Vector6d");
   /*
   AddIntrinsicsPriorType<1>(m, "Focallength");
   AddIntrinsicsPriorType<2>(m, "Principalpoint");
@@ -538,6 +543,147 @@ void pytheia_sfm_classes(py::module& m) {
       .def("SetRadialDistortion", &theia::FOVCameraModel::SetRadialDistortion,
            py::arg("radial_distortion_1"));
 
+  // FullOpenCVCameraModel
+  py::class_<theia::FullOpenCVCameraModel, std::shared_ptr<theia::FullOpenCVCameraModel>>(
+      m, "FullOpenCVCameraModel", camera_intrinsics_model)
+      .def(py::init<>())
+      .def("Type", &theia::FullOpenCVCameraModel::Type)
+      .def("NumParameters", &theia::FullOpenCVCameraModel::NumParameters)
+      .def("SetFromCameraIntrinsicsPriors",
+           &theia::FullOpenCVCameraModel::SetFromCameraIntrinsicsPriors,
+           py::arg("prior"))
+      .def("CameraIntrinsicsPriorFromIntrinsics",
+           &theia::FullOpenCVCameraModel::CameraIntrinsicsPriorFromIntrinsics)
+      .def("GetSubsetFromOptimizeIntrinsicsType",
+           &theia::FullOpenCVCameraModel::GetSubsetFromOptimizeIntrinsicsType,
+           py::arg("intrinsics_to_optimize"))
+      .def("GetCalibrationMatrix",
+           &theia::FullOpenCVCameraModel::GetCalibrationMatrix,
+           py::arg("kmatrix"))
+      .def("PrintIntrinsics", &theia::FullOpenCVCameraModel::PrintIntrinsics)
+      .def_property_readonly("kIntrinsicsSize",
+                             &theia::FullOpenCVCameraModel::NumParameters)
+      .def("AspectRatio", &theia::FullOpenCVCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::FullOpenCVCameraModel::SetAspectRatio,
+           py::arg("aspect_ratio"))
+      .def("RadialDistortion1", &theia::FullOpenCVCameraModel::RadialDistortion1)
+      .def("RadialDistortion2", &theia::FullOpenCVCameraModel::RadialDistortion2)
+      .def("RadialDistortion3", &theia::FullOpenCVCameraModel::RadialDistortion3)
+      .def("RadialDistortion4", &theia::FullOpenCVCameraModel::RadialDistortion4)
+      .def("RadialDistortion5", &theia::FullOpenCVCameraModel::RadialDistortion5)
+      .def("RadialDistortion6", &theia::FullOpenCVCameraModel::RadialDistortion6)
+      .def("TangentialDistortion1", &theia::FullOpenCVCameraModel::TangentialDistortion1)
+      .def("TangentialDistortion2", &theia::FullOpenCVCameraModel::TangentialDistortion2)
+      .def("SetRadialDistortion", &theia::FullOpenCVCameraModel::SetRadialDistortion,
+           py::arg("radial_distortion_1"), py::arg("radial_distortion_2"), py::arg("radial_distortion_3"), py::arg("radial_distortion_4"), py::arg("radial_distortion_5"), py::arg("radial_distortion_6"))
+      .def("SetTangentialDistortion", &theia::FullOpenCVCameraModel::SetTangentialDistortion,
+           py::arg("tangential_distortion_1"), py::arg("tangential_distortion_2"));
+  // RadialFisheyeCameraModel
+  py::class_<theia::RadialFisheyeCameraModel, std::shared_ptr<theia::RadialFisheyeCameraModel>>(
+      m, "RadialFisheyeCameraModel", camera_intrinsics_model)
+      .def(py::init<>())
+      .def("Type", &theia::RadialFisheyeCameraModel::Type)
+      .def("NumParameters", &theia::RadialFisheyeCameraModel::NumParameters)
+      .def("SetFromCameraIntrinsicsPriors",
+           &theia::RadialFisheyeCameraModel::SetFromCameraIntrinsicsPriors,
+           py::arg("prior"))
+      .def("CameraIntrinsicsPriorFromIntrinsics",
+           &theia::RadialFisheyeCameraModel::CameraIntrinsicsPriorFromIntrinsics)
+      .def("GetSubsetFromOptimizeIntrinsicsType",
+           &theia::RadialFisheyeCameraModel::GetSubsetFromOptimizeIntrinsicsType,
+           py::arg("intrinsics_to_optimize"))
+      .def("GetCalibrationMatrix",
+           &theia::RadialFisheyeCameraModel::GetCalibrationMatrix,
+           py::arg("kmatrix"))
+      .def("PrintIntrinsics", &theia::RadialFisheyeCameraModel::PrintIntrinsics)
+      .def_property_readonly("kIntrinsicsSize",
+                             &theia::RadialFisheyeCameraModel::NumParameters)
+      .def("AspectRatio", &theia::RadialFisheyeCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::RadialFisheyeCameraModel::SetAspectRatio,
+           py::arg("aspect_ratio"))
+      .def("RadialDistortion1", &theia::RadialFisheyeCameraModel::RadialDistortion1)
+      .def("RadialDistortion2", &theia::RadialFisheyeCameraModel::RadialDistortion2)
+      .def("SetRadialDistortion", &theia::RadialFisheyeCameraModel::SetRadialDistortion,
+           py::arg("radial_distortion_1"), py::arg("radial_distortion_2"));
+  // ThinPrismFisheyeCameraModel
+  py::class_<theia::ThinPrismFisheyeCameraModel, std::shared_ptr<theia::ThinPrismFisheyeCameraModel>>(
+      m, "ThinPrismFisheyeCameraModel", camera_intrinsics_model)
+      .def(py::init<>())
+      .def("Type", &theia::ThinPrismFisheyeCameraModel::Type)
+      .def("NumParameters", &theia::ThinPrismFisheyeCameraModel::NumParameters)
+      .def("SetFromCameraIntrinsicsPriors",
+           &theia::ThinPrismFisheyeCameraModel::SetFromCameraIntrinsicsPriors,
+           py::arg("prior"))
+      .def("CameraIntrinsicsPriorFromIntrinsics",
+           &theia::ThinPrismFisheyeCameraModel::CameraIntrinsicsPriorFromIntrinsics)
+      .def("GetSubsetFromOptimizeIntrinsicsType",
+           &theia::ThinPrismFisheyeCameraModel::GetSubsetFromOptimizeIntrinsicsType,
+           py::arg("intrinsics_to_optimize"))
+      .def("GetCalibrationMatrix",
+           &theia::ThinPrismFisheyeCameraModel::GetCalibrationMatrix,
+           py::arg("kmatrix"))
+      .def("PrintIntrinsics", &theia::ThinPrismFisheyeCameraModel::PrintIntrinsics)
+      .def_property_readonly("kIntrinsicsSize",
+                             &theia::ThinPrismFisheyeCameraModel::NumParameters)
+      .def("AspectRatio", &theia::ThinPrismFisheyeCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::ThinPrismFisheyeCameraModel::SetAspectRatio,
+           py::arg("aspect_ratio"))
+      .def("RadialDistortion1", &theia::ThinPrismFisheyeCameraModel::RadialDistortion1)
+      .def("RadialDistortion2", &theia::ThinPrismFisheyeCameraModel::RadialDistortion2)
+      .def("RadialDistortion3", &theia::ThinPrismFisheyeCameraModel::RadialDistortion3)
+      .def("RadialDistortion4", &theia::ThinPrismFisheyeCameraModel::RadialDistortion4)
+      .def("SetRadialDistortion", &theia::ThinPrismFisheyeCameraModel::SetRadialDistortion,
+           py::arg("radial_distortion_1"), py::arg("radial_distortion_2"), py::arg("radial_distortion_3"), py::arg("radial_distortion_4"))
+      .def("TangentialDistortion1", &theia::ThinPrismFisheyeCameraModel::TangentialDistortion1)
+      .def("TangentialDistortion2", &theia::ThinPrismFisheyeCameraModel::TangentialDistortion2)
+      .def("SetTangentialDistortion", &theia::ThinPrismFisheyeCameraModel::SetTangentialDistortion,
+           py::arg("tangential_distortion_1"), py::arg("tangential_distortion_2"))
+      .def("ThinPrismDistortion1", &theia::ThinPrismFisheyeCameraModel::ThinPrismDistortion1)
+      .def("ThinPrismDistortion2", &theia::ThinPrismFisheyeCameraModel::ThinPrismDistortion2)
+      .def("SetThinPrismDistortion", &theia::ThinPrismFisheyeCameraModel::SetThinPrismDistortion,
+           py::arg("thin_prism_distortion_1"), py::arg("thin_prism_distortion_2"));
+  // RadTanThinPrismFisheyeCameraModel
+  py::class_<theia::RadTanThinPrismFisheyeCameraModel, std::shared_ptr<theia::RadTanThinPrismFisheyeCameraModel>>(
+      m, "RadTanThinPrismFisheyeCameraModel", camera_intrinsics_model)
+      .def(py::init<>())
+      .def("Type", &theia::RadTanThinPrismFisheyeCameraModel::Type)
+      .def("NumParameters", &theia::RadTanThinPrismFisheyeCameraModel::NumParameters)
+      .def("SetFromCameraIntrinsicsPriors",
+           &theia::RadTanThinPrismFisheyeCameraModel::SetFromCameraIntrinsicsPriors,
+           py::arg("prior"))
+      .def("CameraIntrinsicsPriorFromIntrinsics",
+           &theia::RadTanThinPrismFisheyeCameraModel::CameraIntrinsicsPriorFromIntrinsics)
+      .def("GetSubsetFromOptimizeIntrinsicsType",
+           &theia::RadTanThinPrismFisheyeCameraModel::GetSubsetFromOptimizeIntrinsicsType,
+           py::arg("intrinsics_to_optimize"))
+      .def("GetCalibrationMatrix",
+           &theia::RadTanThinPrismFisheyeCameraModel::GetCalibrationMatrix,
+           py::arg("kmatrix"))
+      .def("PrintIntrinsics", &theia::RadTanThinPrismFisheyeCameraModel::PrintIntrinsics)
+      .def_property_readonly("kIntrinsicsSize",
+                             &theia::RadTanThinPrismFisheyeCameraModel::NumParameters)
+      .def("AspectRatio", &theia::RadTanThinPrismFisheyeCameraModel::AspectRatio)
+      .def("SetAspectRatio", &theia::RadTanThinPrismFisheyeCameraModel::SetAspectRatio,
+           py::arg("aspect_ratio"))
+      .def("RadialDistortion1", &theia::RadTanThinPrismFisheyeCameraModel::RadialDistortion1)
+      .def("RadialDistortion2", &theia::RadTanThinPrismFisheyeCameraModel::RadialDistortion2)
+      .def("RadialDistortion3", &theia::RadTanThinPrismFisheyeCameraModel::RadialDistortion3)
+      .def("RadialDistortion4", &theia::RadTanThinPrismFisheyeCameraModel::RadialDistortion4)
+      .def("RadialDistortion5", &theia::RadTanThinPrismFisheyeCameraModel::RadialDistortion5)
+      .def("RadialDistortion6", &theia::RadTanThinPrismFisheyeCameraModel::RadialDistortion6)
+      .def("SetRadialDistortion", &theia::RadTanThinPrismFisheyeCameraModel::SetRadialDistortion,
+           py::arg("radial_distortion_1"), py::arg("radial_distortion_2"), py::arg("radial_distortion_3"), py::arg("radial_distortion_4"), py::arg("radial_distortion_5"), py::arg("radial_distortion_6"))
+      .def("TangentialDistortion1", &theia::RadTanThinPrismFisheyeCameraModel::TangentialDistortion1)
+      .def("TangentialDistortion2", &theia::RadTanThinPrismFisheyeCameraModel::TangentialDistortion2)
+      .def("SetTangentialDistortion", &theia::RadTanThinPrismFisheyeCameraModel::SetTangentialDistortion,
+           py::arg("tangential_distortion_1"), py::arg("tangential_distortion_2"))
+      .def("ThinPrismDistortion1", &theia::RadTanThinPrismFisheyeCameraModel::ThinPrismDistortion1)
+      .def("ThinPrismDistortion2", &theia::RadTanThinPrismFisheyeCameraModel::ThinPrismDistortion2)
+      .def("ThinPrismDistortion3", &theia::RadTanThinPrismFisheyeCameraModel::ThinPrismDistortion3)
+      .def("ThinPrismDistortion4", &theia::RadTanThinPrismFisheyeCameraModel::ThinPrismDistortion4)
+      .def("SetThinPrismDistortion", &theia::RadTanThinPrismFisheyeCameraModel::SetThinPrismDistortion,
+           py::arg("thin_prism_distortion_1"), py::arg("thin_prism_distortion_2"), py::arg("thin_prism_distortion_3"), py::arg("thin_prism_distortion_4"));
+
   m.def("ComposeProjectionMatrix", theia::ComposeProjectionMatrixWrapper,
         py::arg("calibration_matrix"), py::arg("rotation"),
         py::arg("position"));
@@ -625,6 +771,12 @@ void pytheia_sfm_classes(py::module& m) {
       .value("EXTENDED_UNIFIED",
              theia::CameraIntrinsicsModelType::EXTENDED_UNIFIED)
       .value("ORTHOGRAPHIC", theia::CameraIntrinsicsModelType::ORTHOGRAPHIC)
+      .value("FULL_OPENCV", theia::CameraIntrinsicsModelType::FULL_OPENCV)
+      .value("RADIAL_FISHEYE", theia::CameraIntrinsicsModelType::RADIAL_FISHEYE)
+      .value("THIN_PRISM_FISHEYE",
+             theia::CameraIntrinsicsModelType::THIN_PRISM_FISHEYE)
+      .value("RAD_TAN_THIN_PRISM_FISHEYE",
+             theia::CameraIntrinsicsModelType::RAD_TAN_THIN_PRISM_FISHEYE)
       .export_values();
 
   py::class_<theia::CameraIntrinsicsPrior>(m, "CameraIntrinsicsPrior")
@@ -646,6 +798,10 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::CameraIntrinsicsPrior::radial_distortion)
       .def_readwrite("tangential_distortion",
                      &theia::CameraIntrinsicsPrior::tangential_distortion)
+      .def_readwrite("radial_distortion_6",
+                     &theia::CameraIntrinsicsPrior::radial_distortion_6)
+      .def_readwrite("thin_prism_distortion",
+                     &theia::CameraIntrinsicsPrior::thin_prism_distortion)
       .def_readwrite("position", &theia::CameraIntrinsicsPrior::position)
       .def_readwrite("orientation", &theia::CameraIntrinsicsPrior::orientation)
       .def_readwrite("latitude", &theia::CameraIntrinsicsPrior::latitude)
