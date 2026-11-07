@@ -53,6 +53,7 @@
 #include "theia/io/write_nvm_file.h"
 #include "theia/io/write_ply_file.h"
 #include "theia/io/write_sdfstudio.h"
+#include "theia/io/write_transforms_json.h"
 
 namespace py = pybind11;
 
@@ -127,7 +128,12 @@ void pytheia_io_classes(py::module& m) {
         py::arg("reconstruction"), py::arg("lists_file"),
         py::arg("bundle_file"));
   m.def("WriteColmapFiles", theia::WriteColmapFiles,
-        py::arg("reconstruction"), py::arg("output_directory"));
+        py::arg("reconstruction"), py::arg("output_directory"),
+        py::arg("binary") = false,
+        "Write COLMAP files for the estimated views and tracks. With "
+        "binary=False writes cameras.txt, images.txt, points3D.txt. With "
+        "binary=True writes cameras.bin, images.bin, points3D.bin (COLMAP "
+        "little-endian binary format).");
   m.def("WriteNVMFile", theia::WriteNVMFile, py::arg("nvm_filepath"),
         py::arg("reconstruction"));
   m.def("WritePlyFile", theia::WritePlyFile, py::arg("ply_file"),
@@ -165,6 +171,12 @@ void pytheia_io_classes(py::module& m) {
   m.def("WriteNerfStudio", theia::WriteNerfStudio,
         py::arg("path_to_images"), py::arg("reconstruction"),
         py::arg("aabb_scale"), py::arg("out_json_nerfstudio_file"));
+  m.def("WriteTransformsJson", theia::WriteTransformsJson,
+        py::arg("path_to_images"), py::arg("reconstruction"),
+        py::arg("out_json_file"),
+        "Write transforms.json (instant-ngp / gsplat / Nerfstudio style) with "
+        "camera-to-world matrices in OpenGL camera axes (y and z flipped "
+        "relative to OpenCV). See theia/io/write_transforms_json.h.");
   m.def("WriteSdfStudio", theia::WriteSdfStudio,
         py::arg("path_to_images"), py::arg("reconstruction"),
         py::arg("nearfar"), py::arg("radius"));

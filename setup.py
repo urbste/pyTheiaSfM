@@ -137,7 +137,13 @@ setuptools.setup(
         '*/*.pyi',
         '*/*/*.pyi',
         'py.typed',
+        'viewer/assets/*',
         ]
      },
     cmdclass={'bdist_wheel': platform_bdist_wheel},
+    entry_points={
+        'console_scripts': [
+            'pytheia=pytheia.cli:main',
+        ],
+    },
 )

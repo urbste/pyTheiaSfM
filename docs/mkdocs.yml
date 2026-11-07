@@ -53,7 +53,11 @@ nav:
       - "vismatch + SfM": examples_vismatch_sfm.md
   - Building: building.md
   - Python API overview: python_wrapper.md
+  - Browser viewer: viewer.md
   - Agent usage guide: agent_usage.md
+  - Command line interface: cli.md
+  - Gaussian splatting export: export.md
+  - Importers (COLMAP, OpenMVG): importers.md
   - API Reference:
       - Overview: api.md
       - Image (Python): image.md

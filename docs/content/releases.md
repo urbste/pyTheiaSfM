@@ -4,6 +4,23 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
+## 1.4.0 (unreleased) {#release-1-4-0}
+
+Tooling around the library: command line, browser viewer and exporters for Gaussian splatting.
+
+### Features
+
+- **Gaussian splatting export.** `WriteColmapFiles(..., binary=True)` writes the COLMAP binary model (`cameras.bin`, `images.bin`, `points3D.bin`). `WriteTransformsJson` writes `transforms.json` with OpenGL camera-to-world matrices. The new `pytheia.export.export_for_gaussian_splatting` writes undistorted images, `sparse/0` and a seed `points3d.ply` in one call. See [Gaussian splatting export](export.md).
+- **Browser viewer.** New `pytheia.viewer` package: `export_html(recon, path)` writes one self-contained HTML file (three.js r160 and OrbitControls inlined, scene data as base64 buffers, works offline); `show(recon)` embeds it in a notebook and `serve(recon, port)` serves it locally. Orbit controls, camera frusta, point size, RGB / track-length / reprojection-error colors, error and track-length filters, click-to-inspect cameras (thumbnails) and points (track residuals), per-view table, unregistered-view highlight, dark/light theme, PNG screenshot. Also: compare mode (`viewer.compare(a, b, path)`) aligns a second reconstruction onto the first with a Sim(3) fit on shared view names and shows per-camera errors; depth coloring, camera trajectory, a two-click measure tool and a WASD fly mode. Only numpy is required. See [Browser viewer](viewer.md).
+- **Command line interface.** New `pytheia` command (also `python -m pytheia`) with `info`, `convert`, `view`, `export-splat`, `align` and `sfm` subcommands. `sfm` takes every `ReconstructionEstimatorOptions` field from a JSON config and `--set key=value` overrides, and `--seed` for reproducible runs. See [Command line interface](cli.md).
+- **Importers.** New pure-Python `pytheia.importers` module: `read_colmap_model(path)` reads a COLMAP or GLOMAP sparse model in text or binary form (`SIMPLE_PINHOLE`, `PINHOLE`, `SIMPLE_RADIAL`, `RADIAL`, `OPENCV`, and `FULL_OPENCV` with a warning for the rational terms) into a `pt.sfm.Reconstruction`. `read_openmvg_sfm_data(path)` reads an OpenMVG `sfm_data.json` (views, pinhole and radial intrinsics, poses, structure). `read_colmap_database(path)` returns keypoints, matches and two-view geometries of a COLMAP `database.db` as numpy arrays. See [Importers](importers.md).
+
+### Fixes
+
+- **`WriteColmapFiles` text cameras**: the second radial term was written as `k1` (`... k1 k1`). It now writes `k2`.
+
+---
+
 ## 1.3.2 {#release-1-3-2}
 
 Robustness: a robust default bundle-adjustment loss, and fixes for the `LINEAR_TRIPLET` and `LIGT` global position estimators.

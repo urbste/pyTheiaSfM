@@ -51,6 +51,7 @@ set(THEIA_SRC
   io/write_colmap_files.cc
   io/write_matches.cc
   io/write_nerfstudio.cc
+  io/write_transforms_json.cc
   io/write_sdfstudio.cc
   io/write_nvm_file.cc
   io/write_ply_file.cc

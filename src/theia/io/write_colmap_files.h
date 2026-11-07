@@ -41,16 +41,26 @@ namespace theia {
 
 class Reconstruction;
 
-// Writes all information from a Reconstruction into the COLMAP text format.
+// Writes all information from a Reconstruction into the COLMAP format.
 //
 // Input params are as follows:
 //   reconstruction: A Theia Reconstruction containing the camera, track, and
 //       point cloud information. See theia/sfm/reconstruction.h for more
 //       information.
-//   output_directory: The directory to which the COLMAP text files will be
-//   written. This includes three files: cameras.txt, images.txt, points3D.txt
+//   output_directory: The directory to which the COLMAP files will be written.
+//       With binary = false this is cameras.txt, images.txt, points3D.txt.
+//       With binary = true this is cameras.bin, images.bin, points3D.bin in
+//       the COLMAP binary model format (little-endian).
+//   binary: Write the binary format instead of the text format. Defaults to
+//       false, which keeps the original behavior.
+//
+// Only estimated views and tracks are written. Cameras are written with the
+// PINHOLE family of COLMAP models: SIMPLE_PINHOLE or PINHOLE without
+// distortion, OPENCV (fx, fy, cx, cy, k1, k2, 0, 0) with distortion (binary
+// only). Non-pinhole cameras (fisheye, FOV, ...) are rejected.
 bool WriteColmapFiles(const Reconstruction& reconstruction,
-                      const std::string& output_directory);
+                      const std::string& output_directory,
+                      bool binary = false);
 
 }  // namespace theia
 

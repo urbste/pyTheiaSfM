@@ -1,3 +1,4 @@
 include VERSION
 include src/pytheia/py.typed
 recursive-include src/pytheia *.pyi
+recursive-include src/pytheia/viewer/assets *

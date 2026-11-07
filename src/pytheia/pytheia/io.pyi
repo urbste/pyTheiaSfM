@@ -1,5 +1,5 @@
 from __future__ import annotations
-__all__: list[str] = ['BundlerCamera', 'BundlerFileReader', 'BundlerObservation', 'BundlerPoint', 'ImportNVMFile', 'ListImgEntry', 'PopulateImageSizesAndPrincipalPoints', 'Read1DSFM', 'ReadBundlerFiles', 'ReadReconstruction', 'ReadStrechaDataset', 'WriteBundlerFiles', 'WriteColmapFiles', 'WriteNVMFile', 'WriteNerfStudio', 'WritePlyFile', 'WriteReconstruction', 'WriteReconstructionJson', 'WriteRigPlyFile', 'WriteSdfStudio']
+__all__: list[str] = ['BundlerCamera', 'BundlerFileReader', 'BundlerObservation', 'BundlerPoint', 'ImportNVMFile', 'ListImgEntry', 'PopulateImageSizesAndPrincipalPoints', 'Read1DSFM', 'ReadBundlerFiles', 'ReadReconstruction', 'ReadStrechaDataset', 'WriteBundlerFiles', 'WriteColmapFiles', 'WriteNVMFile', 'WriteNerfStudio', 'WritePlyFile', 'WriteReconstruction', 'WriteReconstructionJson', 'WriteRigPlyFile', 'WriteSdfStudio', 'WriteTransformsJson']
 class BundlerObservation:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -140,7 +140,9 @@ def ReadStrechaDataset(*args, **kwargs):
 def WriteBundlerFiles(*args, **kwargs):
     ...
 def WriteColmapFiles(*args, **kwargs):
-    ...
+    """
+    Write COLMAP files for the estimated views and tracks. With binary=False writes cameras.txt, images.txt, points3D.txt. With binary=True writes cameras.bin, images.bin, points3D.bin (COLMAP little-endian binary format).
+    """
 def WriteNVMFile(*args, **kwargs):
     ...
 def WriteNerfStudio(*args, **kwargs):
@@ -159,3 +161,7 @@ def WriteRigPlyFile(*args, **kwargs):
     """
 def WriteSdfStudio(*args, **kwargs):
     ...
+def WriteTransformsJson(*args, **kwargs):
+    """
+    Write transforms.json (instant-ngp / gsplat / Nerfstudio style) with camera-to-world matrices in OpenGL camera axes (y and z flipped relative to OpenCV). See theia/io/write_transforms_json.h.
+    """

@@ -7,7 +7,7 @@ This is the public import path. The implementation lives in the compiled module
     rec = pt.sfm.Reconstruction()
 
 Submodules re-exported here: ``io``, ``math``, ``matching``, ``mvs``, ``sfm``,
-``solvers``. Inline types and functions are documented via ``.pyi`` stubs
+``solvers``, and the pure-Python ``export`` helpers for Gaussian splatting. Inline types and functions are documented via ``.pyi`` stubs
 (:pep:`561`) next to the extension.
 
 For narrative documentation see the project manual (MkDocs: Python overview and
@@ -29,3 +29,6 @@ except metadata.PackageNotFoundError:
 
 from pytheia.pytheia import (io, math, matching, mvs, sfm, solvers)
 import pytheia.pytheia as pytheia
+
+# Pure-Python helpers (numpy/OpenCV only imported when used).
+from pytheia import export
