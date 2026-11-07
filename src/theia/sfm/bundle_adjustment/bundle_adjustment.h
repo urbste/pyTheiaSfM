@@ -135,9 +135,11 @@ struct BundleAdjustmentOptions {
   // space. Reduce from dim 4 -> 3
   bool use_homogeneous_point_parametrization = true;
 
-  // EXPERIMENTAL (default off): use hand-derived Jacobians for the
-  // DIVISION_UNDISTORTION reprojection residual instead of Ceres autodiff.
-  bool experimental_analytic_division_jacobian = false;
+  // Use hand-derived (analytic) Jacobians for the reprojection residuals
+  // (XYZ and inverse depth) of all camera models except ORTHOGRAPHIC instead of
+  // Ceres autodiff. Results agree with autodiff to ~1e-9; set to false to use
+  // autodiff everywhere.
+  bool analytic_jacobians = true;
 
   // if inverse depth parametrization should be used
   // if this is set to true use_homogeneous_point_parametrization is ignored
@@ -185,6 +187,17 @@ struct BundleAdjustmentOptions {
   // World-frame gravity direction used in g_pred = R_c_w * gravity_world_direction.
   // Default (0, 0, -1); set to (0, 0, 1) when the camera is mounted upside down.
   Eigen::Vector3d gravity_world_direction = Eigen::Vector3d(0, 0, -1);
+
+  // Use 3D point priors. A track with a position prior (Track::SetPositionPrior)
+  // that is optimized adds the residual sqrt_information * (X - prior). Only
+  // supported with the homogeneous point parametrization; tracks with inverse
+  // depth parametrization are skipped with a warning. Tracks held constant get
+  // no prior residual. Default false leaves BA unchanged.
+  bool use_point_priors = false;
+
+  // Huber (or the loss given by loss_function_type) width in the units of the
+  // whitened point prior residual. 0 disables the robust loss (plain quadratic).
+  double robust_loss_width_point_prior = 0.0;
 };
 
 // A relative SE3 pose-to-pose constraint between two views, used to stiffen the

@@ -1907,7 +1907,20 @@ void pytheia_sfm_classes(py::module& m) {
            py::arg("ref_bearing"))
       .def("ReferenceBearingVector", &theia::Track::ReferenceBearingVector)
       .def("SetReferenceDescriptor", &theia::Track::SetReferenceDescriptor, py::arg("descriptor"))
-      .def("ReferenceDescriptor", &theia::Track::ReferenceDescriptor);
+      .def("ReferenceDescriptor", &theia::Track::ReferenceDescriptor)
+      .def("SetPositionPrior",
+           &theia::Track::SetPositionPrior,
+           py::arg("position"),
+           py::arg("sqrt_information"))
+      .def("SetPositionPriorCovariance",
+           &theia::Track::SetPositionPriorCovariance,
+           py::arg("position"),
+           py::arg("covariance"))
+      .def("HasPositionPrior", &theia::Track::HasPositionPrior)
+      .def("PositionPrior", &theia::Track::PositionPrior)
+      .def("PositionPriorSqrtInformation",
+           &theia::Track::PositionPriorSqrtInformation)
+      .def("RemovePositionPrior", &theia::Track::RemovePositionPrior);
 
   // Track builder class
   py::class_<theia::TrackBuilder>(m, "TrackBuilder")
@@ -1978,14 +1991,18 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::BundleAdjustmentOptions::use_depth_priors)
       .def_readwrite("orthographic_camera",
                      &theia::BundleAdjustmentOptions::orthographic_camera)
-      .def_readwrite("experimental_analytic_division_jacobian",
-                     &theia::BundleAdjustmentOptions::
-                         experimental_analytic_division_jacobian)
+      .def_readwrite("analytic_jacobians",
+                     &theia::BundleAdjustmentOptions::analytic_jacobians)
       .def_readwrite("use_homogeneous_point_parametrization",
                      &theia::BundleAdjustmentOptions::
                          use_homogeneous_point_parametrization)
       .def_readwrite("robust_loss_width_depth_prior",
                      &theia::BundleAdjustmentOptions::robust_loss_width_depth_prior)
+      .def_readwrite("use_point_priors",
+                     &theia::BundleAdjustmentOptions::use_point_priors)
+      .def_readwrite("robust_loss_width_point_prior",
+                     &theia::BundleAdjustmentOptions::
+                         robust_loss_width_point_prior)
       .def_readwrite(
           "use_inverse_depth_parametrization",
           &theia::BundleAdjustmentOptions::use_inverse_depth_parametrization)

@@ -50,11 +50,12 @@
 #include "theia/sfm/bundle_adjustment/gravity_direction_error.h"
 #include "theia/sfm/bundle_adjustment/gravity_error.h"
 #include "theia/sfm/bundle_adjustment/depth_prior_error.h"
+#include "theia/sfm/bundle_adjustment/point_prior_error.h"
 #include "theia/sfm/bundle_adjustment/orientation_error.h"
 #include "theia/sfm/bundle_adjustment/relative_pose_error.h"
 #include "theia/sfm/bundle_adjustment/scaled_relative_pose_error.h"
 
-#include "theia/sfm/bundle_adjustment/analytic_division_reprojection_error.h"
+#include "theia/sfm/bundle_adjustment/analytic_reprojection_error.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/types.h"
@@ -107,6 +108,11 @@ BundleAdjuster::BundleAdjuster(const BundleAdjustmentOptions& options,
   // Get the loss function that will be used for BA.
   depth_prior_loss_function_ =
       CreateLossFunction(options.loss_function_type, options.robust_loss_width_depth_prior);
+  // Point priors use a plain quadratic loss unless a robust width is given.
+  if (options.robust_loss_width_point_prior > 0.0) {
+    point_prior_loss_function_ = CreateLossFunction(
+        options.loss_function_type, options.robust_loss_width_point_prior);
+  }
 
   ceres::Problem::Options problem_options;
   problem_options.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
@@ -222,6 +228,25 @@ void BundleAdjuster::AddTrack(const TrackId track_id) {
     SetHomogeneousPointParametrization(track_id);
   }
 
+  // Point priors are only added for optimized tracks (this function) and only
+  // for the homogeneous (or Euclidean 4-vector) point parametrization.
+  if (options_.use_point_priors && track->HasPositionPrior()) {
+    if (options_.use_inverse_depth_parametrization) {
+      if (!warned_point_prior_inverse_depth_) {
+        LOG(WARNING) << "Point priors (use_point_priors) are not supported with "
+                        "the inverse depth parametrization and are ignored.";
+        warned_point_prior_inverse_depth_ = true;
+      }
+    } else if (!options_.use_homogeneous_point_parametrization) {
+      if (!warned_point_prior_inverse_depth_) {
+        LOG(WARNING) << "Point priors (use_point_priors) require "
+                        "use_homogeneous_point_parametrization and are ignored.";
+        warned_point_prior_inverse_depth_ = true;
+      }
+    } else {
+      AddPointPriorErrorResidual(track);
+    }
+  }
 }
 
 bool BundleAdjuster::AddInvTrack(
@@ -306,6 +331,13 @@ bool BundleAdjuster::AddInvTrack(
           intrinsics_group_id);
       SetCameraExtrinsicsConstant(view_id);
     }
+  }
+
+  if (options_.use_point_priors && track->HasPositionPrior() &&
+      !warned_point_prior_inverse_depth_) {
+    LOG(WARNING) << "Point priors (use_point_priors) are not supported with "
+                    "the inverse depth parametrization and are ignored.";
+    warned_point_prior_inverse_depth_ = true;
   }
 
   SetTrackVariable(track_id);
@@ -710,12 +742,11 @@ void BundleAdjuster::AddReprojectionErrorResidual(const Feature& feature,
   // parameter block will be set to constant after the loop if no optimized
   // cameras share the same camera intrinsics.
   ceres::CostFunction* cost_function = nullptr;
-  if (options_.experimental_analytic_division_jacobian &&
-      !options_.orthographic_camera &&
-      camera->GetCameraIntrinsicsModelType() ==
-          CameraIntrinsicsModelType::DIVISION_UNDISTORTION) {
-    cost_function = new AnalyticDivisionReprojectionError(feature);
-  } else {
+  if (options_.analytic_jacobians && !options_.orthographic_camera) {
+    cost_function = CreateAnalyticReprojectionErrorCostFunction(
+        camera->GetCameraIntrinsicsModelType(), feature);
+  }
+  if (cost_function == nullptr) {
     cost_function = CreateReprojectionErrorCostFunction(
         camera->GetCameraIntrinsicsModelType(), feature);
   }
@@ -736,19 +767,33 @@ void BundleAdjuster::AddInvReprojectionErrorResidual(const Feature& feature,
   // parameter block will be set to constant after the loop if no optimized
   // cameras share the same camera intrinsics.
   if (camera_ref == camera_other) {
+      ceres::CostFunction* pose_cf = nullptr;
+      if (options_.analytic_jacobians) {
+        pose_cf = CreateAnalyticInvReprojectionPoseErrorCostFunction(
+            camera_ref->GetCameraIntrinsicsModelType(), feature, ref_bearing);
+      }
+      if (pose_cf == nullptr) {
+        pose_cf = CreateInvReprojectionPoseErrorCostFunction(
+            camera_ref->GetCameraIntrinsicsModelType(), feature, ref_bearing);
+      }
       problem_->AddResidualBlock(
-        CreateInvReprojectionPoseErrorCostFunction(
-            camera_ref->GetCameraIntrinsicsModelType(), 
-            feature, ref_bearing),
+        pose_cf,
         loss_function_.get(),
         camera_ref->mutable_extrinsics(),
         camera_ref->mutable_intrinsics(),
         track->MutableInverseDepth());
   } else {
+    ceres::CostFunction* inv_cf = nullptr;
+    if (options_.analytic_jacobians) {
+      inv_cf = CreateAnalyticInvReprojectionErrorCostFunction(
+          camera_other->GetCameraIntrinsicsModelType(), feature, ref_bearing);
+    }
+    if (inv_cf == nullptr) {
+      inv_cf = CreateInvReprojectionErrorCostFunction(
+          camera_other->GetCameraIntrinsicsModelType(), feature, ref_bearing);
+    }
     problem_->AddResidualBlock(
-        CreateInvReprojectionErrorCostFunction(
-            camera_other->GetCameraIntrinsicsModelType(), 
-            feature, ref_bearing),
+        inv_cf,
         loss_function_.get(),
         camera_ref->mutable_extrinsics(),
         camera_other->mutable_extrinsics(),
@@ -795,6 +840,15 @@ void BundleAdjuster::AddDepthPriorErrorResidual(const Feature& feature,
     DepthPriorError::Create(feature),
     depth_prior_loss_function_.get(),
     camera->mutable_extrinsics(), track->MutablePoint()->data());
+}
+
+void BundleAdjuster::AddPointPriorErrorResidual(Track* track) {
+  // Whitened residual sqrt_information * (X - prior) on the homogeneous point.
+  problem_->AddResidualBlock(
+      PointPriorError::Create(track->PositionPrior(),
+                              track->PositionPriorSqrtInformation()),
+      point_prior_loss_function_.get(),
+      track->MutablePoint()->data());
 }
 
 void BundleAdjuster::AddOrientationPriorErrorResidual(View* view, Camera* camera) {

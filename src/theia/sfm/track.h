@@ -91,6 +91,28 @@ class Track {
   void SetReferenceDescriptor(const Eigen::VectorXf& descriptor);
   const Eigen::VectorXf& ReferenceDescriptor() const;
 
+  // Optional prior on the 3D position of the track (e.g. a ground control point
+  // or a LiDAR point). When present and BundleAdjustmentOptions::
+  // use_point_priors is set, bundle adjustment adds the residual
+  // sqrt_information * (X - position) for optimized tracks. The position is in
+  // the same units as the reconstruction (e.g. meters).
+  //
+  // The sqrt information S satisfies S^T S = Sigma^-1 (Sigma: covariance of the
+  // position). The residual is whitened by S, so a larger S means a tighter
+  // prior.
+  void SetPositionPrior(const Eigen::Vector3d& position,
+                        const Eigen::Matrix3d& sqrt_information);
+  // Same as SetPositionPrior() but takes the 3x3 covariance of the position
+  // and computes the sqrt information from its inverse. Returns false (and
+  // leaves the track unchanged) if the covariance is not symmetric positive
+  // definite.
+  bool SetPositionPriorCovariance(const Eigen::Vector3d& position,
+                                  const Eigen::Matrix3d& covariance);
+  bool HasPositionPrior() const;
+  const Eigen::Vector3d& PositionPrior() const;
+  const Eigen::Matrix3d& PositionPriorSqrtInformation() const;
+  void RemovePositionPrior();
+
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
@@ -120,6 +142,18 @@ class Track {
        cereal::binary_data(color_.data(), 3 * sizeof(uint8_t)),
        cereal::binary_data(reference_bearing_.data(), 3 * sizeof(double)),
        reference_descriptor_);
+    // Version 2 appends the optional position prior: a flag, followed by the
+    // prior only if it is set (so tracks without a prior stay compact). Version
+    // 1 archives (e.g. existing .recon files) do not contain these fields and
+    // load without a prior.
+    if (version >= 2) {
+      ar(has_position_prior_);
+      if (has_position_prior_) {
+        ar(cereal::binary_data(position_prior_.data(), 3 * sizeof(double)),
+           cereal::binary_data(position_prior_sqrt_information_.data(),
+                               9 * sizeof(double)));
+      }
+    }
   }
 
   bool is_estimated_;
@@ -130,10 +164,13 @@ class Track {
   Eigen::Matrix<uint8_t, 3, 1> color_;
   Eigen::Vector3d reference_bearing_;
   Eigen::VectorXf reference_descriptor_;
+  bool has_position_prior_;
+  Eigen::Vector3d position_prior_;
+  Eigen::Matrix3d position_prior_sqrt_information_;
 };
 
 }  // namespace theia
 
-CEREAL_CLASS_VERSION(theia::Track, 1);
+CEREAL_CLASS_VERSION(theia::Track, 2);
 
 #endif  // THEIA_SFM_TRACK_H_

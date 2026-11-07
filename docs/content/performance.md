@@ -13,7 +13,7 @@ This page describes practical performance considerations for **pyTheia** (the Py
 Bundle adjustment and many solvers use **Ceres Solver**. Defaults favor portable CPU backends (`EIGEN` dense, `EIGEN_SPARSE` sparse).
 
 - **Pre-built wheels** link a **CPU** Ceres build. For GPU linear algebra, build Ceres locally with CUDA (and optionally cuDSS for sparse CUDA), then build pyTheia against that Ceres. See [Building](building.md) and [Bundle adjustment](bundle_adjustment.md).
-- **SuiteSparse / CHOLMOD:** this fork removed GPL-dependent SuiteSparse code from `sparse_cholesky_llt.cc` and uses **Eigen::SimplicialLDLT** instead. That improves portability but can be slower or slightly less stable on very large sparse problems than a SuiteSparse-enabled Ceres build.
+- **SuiteSparse / CHOLMOD:** this fork removed GPL-dependent SuiteSparse code from `sparse_cholesky_llt.cc` and uses **Eigen::SimplicialLDLT** instead. That improves portability but can be slower or slightly less stable on very large sparse problems than a SuiteSparse-enabled Ceres build. SuiteSparse is intentionally not used (GPL); the BA speedup comes from analytic Jacobians instead ([Bundle adjustment](bundle_adjustment.md#ba-analytic-jacobians)).
 
 ## Python / pybind11 boundary
 

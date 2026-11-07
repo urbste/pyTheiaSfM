@@ -158,6 +158,24 @@ With `use_inverse_depth_parametrization = True` every track is anchored in a **r
 
 When you run **incremental / global** reconstruction, the pipeline sets these from **`TrackParametrizationType`** (`XYZW`, `XYZW_MANIFOLD`, `INVERSE_DEPTH`) via `SetBundleAdjustmentOptions` — see [SfM](sfm.md).
 
+### Analytic Jacobians (`analytic_jacobians`) {#ba-analytic-jacobians}
+
+| Field | Default | Meaning |
+|-------|---------|---------|
+| `analytic_jacobians` | `true` | Use hand-derived Jacobians for the reprojection residuals instead of Ceres automatic differentiation. |
+
+Covered camera models: `PINHOLE`, `PINHOLE_RADIAL_TANGENTIAL`, `FISHEYE`, `DOUBLE_SPHERE`, `EXTENDED_UNIFIED`, `FOV`, `DIVISION_UNDISTORTION`, `FULL_OPENCV`, `RADIAL_FISHEYE`, `THIN_PRISM_FISHEYE` and `RAD_TAN_THIN_PRISM_FISHEYE`. This applies to the homogeneous XYZ residual (extrinsics, intrinsics and the 4-vector point; Ceres applies the `SphereManifold`) and to the inverse-depth residuals (reference-view and other-view residual, including the pose-only variant), and to the reprojection residuals of `BundleAdjustTwoViews`. The residuals, the whitening by the feature covariance and the handling of invalid points (point at the camera center, behind a double-sphere / unified camera, `FOV` / fisheye branches) are the same as in the autodiff versions; Jacobians agree with autodiff to about 1e-8 relative (checked over many random evaluations for every model). `ORTHOGRAPHIC` cameras, `Sim3` residuals and all prior / relative-pose / depth-prior residuals still use autodiff.
+
+The Jacobian and residual phase of a Ceres iteration is about 3x faster single-threaded (about 2x with 8 threads). Measured Ceres solve time (median over the models, 1 thread): about 4x for pose refinement with constant points, 2.3-2.9x for 3 to 10 views, 1.7x for 40 views / 5000 tracks with the XYZ parametrization (3-5x with inverse depth); with 8 threads about 1.2-2.3x. On large problems the sparse linear solve dominates and the gain tends to 1.1x. Set `analytic_jacobians = False` to fall back to autodiff everywhere, e.g. to compare results or when you add a camera model without an analytic implementation (models without one use autodiff automatically).
+
+```python
+opts = pt.sfm.BundleAdjustmentOptions()
+opts.analytic_jacobians = False   # default True
+```
+
+!!! note "SuiteSparse is intentionally not used"
+    pyTheia does not use SuiteSparse / CHOLMOD (GPL) anywhere in its own code, and the wheels do not link it. The sparse linear solves use Eigen (`EIGEN_SPARSE`) or, in a local build, CUDA backends. The analytic Jacobians are one of the measures that make the BA cheaper without a GPL dependency. `SUITE_SPARSE` in `sparse_linear_algebra_library_type` is only available if you build against a Ceres that was compiled with SuiteSparse yourself.
+
 ### Camera constants, trajectory mode, orthographic {#ba-camera-flags}
 
 | Field | Default | Meaning |
@@ -176,6 +194,8 @@ When you run **incremental / global** reconstruction, the pipeline sets these fr
 | `use_depth_priors` | `false` | Depth priors (uses **`robust_loss_width_depth_prior`** when robust). |
 | `use_gravity_priors` | `false` | Gravity-aligned orientation priors. |
 | `gravity_prior_error_type` | `DIRECTION_CROSS` | `VECTOR_DIFF` (legacy 3-vector) or `DIRECTION_CROSS` (cross product, 2-DOF). |
+| `use_point_priors` | `false` | Add 3D point (track position) prior residuals. See [3D point priors](#ba-point-priors). |
+| `robust_loss_width_point_prior` | `0.0` | Width of the robust loss on point prior residuals; `0` means no robust loss. |
 
 #### Feature uncertainty (covariance and accuracy)
 
@@ -218,6 +238,45 @@ summary = pt.sfm.BundleAdjustReconstruction(opts, reconstruction)
 
 `GetPositionPrior`, `GetPositionPriorSqrtInformation`, `GetOrientationPrior`, `GetOrientationPriorSqrtInformation`, and `HasPositionPrior` / `HasOrientationPrior` are also exposed. Position priors compare against `Camera::GetPosition()`; orientation priors compare against the world→camera angle-axis in `Camera::GetOrientation()`.
 
+#### 3D point priors (ground control points, known points) {#ba-point-priors}
+
+A `Track` can carry a prior on its 3D position, for example a surveyed ground control point or a LiDAR point. With `use_point_priors = True`, every optimized track that has a prior adds the residual `S (X - prior)`, where `X` is the Euclidean point (`xyz / w` of the homogeneous parameter) and `S` is the sqrt information. Tracks held constant (for example in `BundleAdjustReconstructionWithConstantTracks`) get no prior residual.
+
+```python
+import numpy as np
+import pytheia as pt
+
+track = reconstruction.MutableTrack(track_id)
+
+# Units: the prior position is in the reconstruction's units (usually meters).
+# Covariance in m^2; the sqrt information is computed as S with S^T S = Sigma^-1.
+ok = track.SetPositionPriorCovariance(
+    np.array([12.40, -3.10, 55.02]),          # prior position X_gcp
+    np.diag([0.01**2, 0.01**2, 0.03**2]),     # 1 cm in x/y, 3 cm in z (1-sigma)
+)
+assert ok  # False if the covariance is not symmetric positive definite
+
+# Or set the sqrt information directly (larger = stronger pull, units 1/m):
+# track.SetPositionPrior(X_gcp, np.diag([100.0, 100.0, 33.3]))
+
+print(track.HasPositionPrior(), track.PositionPrior(), track.PositionPriorSqrtInformation())
+
+opts = pt.sfm.BundleAdjustmentOptions()
+opts.use_point_priors = True
+opts.robust_loss_width_point_prior = 0.0   # 0 (default): plain quadratic residual
+summary = pt.sfm.BundleAdjustReconstruction(opts, reconstruction)
+
+track.RemovePositionPrior()                 # back to no prior
+```
+
+Notes:
+
+- The residual is whitened by the sqrt information `S` (a 3x3 upper-triangular factor from the Cholesky decomposition of the information matrix when built from a covariance). Use `SetPositionPriorCovariance` if you have covariances; `SetPositionPrior` takes the sqrt information directly, like the view priors do.
+- Tracks with a prior are only constrained when they are optimized (`BundleAdjustReconstruction`, `BundleAdjustTracks`, and the other entry points that add the track). A track that is held constant gets no prior residual.
+- Point priors are only supported with the homogeneous point parametrization (`use_homogeneous_point_parametrization = True`, the default). With `use_inverse_depth_parametrization = True` they are **not supported**: the priors are ignored and a warning is logged once.
+- The point prior is part of the Ceres problem, so the covariance returned by `GetCovarianceForTrack` / `GetCovarianceForTracks` includes it.
+- The priors are stored in the track and written with `WriteReconstruction` (archive version 2); reconstructions written by older versions load without priors.
+
 ### Iterations, stopping, trust region, refinement {#ba-iterations-stopping}
 
 | Field | Default | Meaning |
@@ -254,6 +313,7 @@ summary = pt.sfm.BundleAdjustReconstruction(opts, reconstruction)
 | `constant_camera_position` | `false` |
 | `use_homogeneous_point_parametrization` | `true` |
 | `use_inverse_depth_parametrization` | `false` |
+| `analytic_jacobians` | `true` |
 | `intrinsics_to_optimize` | `NONE` |
 | `num_threads` | hardware concurrency |
 | `max_num_iterations` | `100` |

@@ -36,6 +36,7 @@
 
 #include <algorithm>
 
+#include <Eigen/Cholesky>
 #include <Eigen/Core>
 #include <unordered_set>
 
@@ -49,10 +50,13 @@ using Eigen::Vector4d;
 Track::Track()
     : is_estimated_(false),
       inverse_depth_(0.0),
-      reference_view_id_(theia::kInvalidViewId) {
+      reference_view_id_(theia::kInvalidViewId),
+      has_position_prior_(false) {
   point_.setZero();
   color_.setZero();
   reference_bearing_.setZero();
+  position_prior_.setZero();
+  position_prior_sqrt_information_.setIdentity();
 }
 
 int Track::NumViews() const { return view_ids_.size(); }
@@ -132,6 +136,45 @@ void Track::SetReferenceDescriptor(const Eigen::VectorXf& descriptor) {
 
 const Eigen::VectorXf& Track::ReferenceDescriptor() const {
   return reference_descriptor_;
+}
+
+void Track::SetPositionPrior(const Vector3d& position,
+                             const Eigen::Matrix3d& sqrt_information) {
+  position_prior_ = position;
+  position_prior_sqrt_information_ = sqrt_information;
+  has_position_prior_ = true;
+}
+
+bool Track::SetPositionPriorCovariance(const Vector3d& position,
+                                       const Eigen::Matrix3d& covariance) {
+  // Check that the covariance is symmetric positive definite before inverting.
+  const Eigen::Matrix3d symmetric_covariance = 0.5 * (covariance + covariance.transpose());
+  Eigen::LLT<Eigen::Matrix3d> cov_llt(symmetric_covariance);
+  if (cov_llt.info() != Eigen::Success) {
+    return false;
+  }
+  const Eigen::Matrix3d information = symmetric_covariance.inverse();
+  // Information = L * L^T, so S = L^T satisfies S^T * S = Information.
+  Eigen::LLT<Eigen::Matrix3d> info_llt(0.5 * (information + information.transpose()));
+  if (info_llt.info() != Eigen::Success) {
+    return false;
+  }
+  SetPositionPrior(position, info_llt.matrixU());
+  return true;
+}
+
+bool Track::HasPositionPrior() const { return has_position_prior_; }
+
+const Vector3d& Track::PositionPrior() const { return position_prior_; }
+
+const Eigen::Matrix3d& Track::PositionPriorSqrtInformation() const {
+  return position_prior_sqrt_information_;
+}
+
+void Track::RemovePositionPrior() {
+  has_position_prior_ = false;
+  position_prior_.setZero();
+  position_prior_sqrt_information_.setIdentity();
 }
 
 }  // namespace theia

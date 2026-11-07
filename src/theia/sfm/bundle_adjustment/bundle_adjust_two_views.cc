@@ -33,6 +33,7 @@
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
 #include "theia/sfm/bundle_adjustment/bundle_adjust_two_views.h"
+#include "theia/sfm/bundle_adjustment/analytic_reprojection_error.h"
 
 #include <Eigen/Core>
 #include <ceres/ceres.h>
@@ -146,16 +147,25 @@ BundleAdjustmentSummary BundleAdjustTwoViews(
   parameter_ordering->AddElementToGroup(camera2->mutable_extrinsics(), 2);
   parameter_ordering->AddElementToGroup(camera2->mutable_intrinsics(), 1);
 
+  const bool analytic = options.ba_options.analytic_jacobians;
+  auto MakeCost = [analytic](const CameraIntrinsicsModelType& type,
+                             const Feature& feature) {
+    ceres::CostFunction* cf =
+        analytic ? CreateAnalyticReprojectionErrorCostFunction(type, feature)
+                 : nullptr;
+    return cf != nullptr ? cf : CreateReprojectionErrorCostFunction(type, feature);
+  };
+
   // Add triangulated points to the problem.
   for (int i = 0; i < points3d->size(); i++) {
-    problem.AddResidualBlock(CreateReprojectionErrorCostFunction(
+    problem.AddResidualBlock(MakeCost(
                                  camera1->GetCameraIntrinsicsModelType(),
                                  correspondences[i].feature1),
                              NULL,
                              camera1->mutable_extrinsics(),
                              camera1->mutable_intrinsics(),
                              points3d->at(i).data());
-    problem.AddResidualBlock(CreateReprojectionErrorCostFunction(
+    problem.AddResidualBlock(MakeCost(
                                  camera2->GetCameraIntrinsicsModelType(),
                                  correspondences[i].feature2),
                              NULL,

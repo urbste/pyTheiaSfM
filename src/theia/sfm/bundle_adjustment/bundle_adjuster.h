@@ -199,6 +199,11 @@ class BundleAdjuster {
                                           Camera* camera,
                                           Track* track);
 
+  // Add a 3D point prior residual (e.g. ground control point) for an optimized
+  // track that has a position prior. Only called for homogeneous point
+  // parametrization; see BundleAdjustmentOptions::use_point_priors.
+  virtual void AddPointPriorErrorResidual(Track* track);
+
 
   const BundleAdjustmentOptions options_;
   Reconstruction* reconstruction_;
@@ -215,6 +220,14 @@ class BundleAdjuster {
   // The potentially robust loss function to use for reprojection error
   // minimization.
   std::unique_ptr<ceres::LossFunction> depth_prior_loss_function_;
+
+  // Loss for point (track position) priors. Null (plain quadratic) when
+  // robust_loss_width_point_prior is 0.
+  std::unique_ptr<ceres::LossFunction> point_prior_loss_function_;
+
+  // Set once the warning about unsupported point priors with inverse depth has
+  // been logged.
+  bool warned_point_prior_inverse_depth_ = false;
 
   // The parameter group ordering for bundle adjustment.
   ceres::ParameterBlockOrdering* parameter_ordering_;
