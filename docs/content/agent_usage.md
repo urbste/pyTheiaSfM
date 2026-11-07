@@ -62,7 +62,7 @@ Images (your code)
 | `pt.sfm.Reconstruction()` | `theia::Reconstruction` | Header: `theia/sfm/reconstruction.h` |
 | `pt.sfm.ViewGraph()` | `theia::ViewGraph` | `theia/sfm/view_graph/view_graph.h` |
 | `pt.sfm.TrackBuilder(min_track_length, max_track_length)` | `theia::TrackBuilder` | `theia/sfm/track_builder.h` |
-| `pt.sfm.Feature(xy)` | `theia::Feature` | 2D observation |
+| `pt.sfm.Feature(point, covariance=...)` | `theia::Feature` | 2D observation; optional 2x2 covariance in px^2. Arguments can be passed by keyword (names follow the C++ parameters). |
 | `pt.matching.FeatureCorrespondence(f1, f2)` | `theia::FeatureCorrespondence` | Pair for verification / tracks |
 | `pt.sfm.CameraIntrinsicsPrior()` | `theia::CameraIntrinsicsPrior` | Focal, PP, model type string, size |
 | `pt.sfm.EstimateTwoViewInfo(opts, prior1, prior2, corrs)` | `theia::EstimateTwoViewInfo(...)` | Returns success, `TwoViewInfo`, inliers (Python wrapper packs returns) |

@@ -500,13 +500,13 @@ The reprojection error to use for determining a valid triangulation. If the repr
 
 - LossFunctionType ReconstructionEstimatorOptions::bundle_adjustment_loss_function_type
 
-DEFAULT: `LossFunctionType::TRIVIAL`
+DEFAULT: `LossFunctionType::HUBER` (was `TRIVIAL` before 1.3.2)
 
 A [robust cost function](http://ceres-solver.org/nnls_modeling.html#instances) may be used during bundle adjustment to increase robustness to noise and outliers during optimization.
 
 - double ReconstructionEstimatorOptions::bundle_adjustment_robust_loss_width
 
-DEFAULT: `10.0`
+DEFAULT: `1.0` (pixels; was `10.0`)
 
 If a robust cost function is used, this is the value of the reprojection error at which robustness begins.
 
@@ -806,13 +806,13 @@ We perform bundle adjustment using [Ceres Solver](https://ceres-solver.org/) for
 
 - LossFunctionType BundleAdjustmentOptions::loss_function_type
 
-DEFAULT: `TRIVIAL`
+DEFAULT: `HUBER` (was `TRIVIAL` before 1.3.2)
 
 A [robust cost function](http://ceres-solver.org/nnls_modeling.html#instances) may be used during bundle adjustment to increase robustness to noise and outliers during optimization.
 
 - double BundleAdjustmentOptions::robust_loss_width
 
-DEFAULT: `10.0`
+DEFAULT: `1.0`
 
 If a robust cost function is used, this is the value of the reprojection error at which robustness begins.
 

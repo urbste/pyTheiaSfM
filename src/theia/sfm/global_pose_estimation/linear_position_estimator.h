@@ -91,8 +91,11 @@ class LinearPositionEstimator : public PositionEstimator {
   // baseline is estimated from the depths of triangulated 3D points. The
   // relative positions of the triplets are then scaled to account for the
   // baseline ratios.
+  // `success` is set to false if the ratios could not be computed (e.g. too few
+  // well-conditioned common tracks); the triplet must then be discarded.
   void ComputeBaselineRatioForTriplet(const ViewIdTriplet& triplet,
-                                      Eigen::Vector3d* baseline);
+                                      Eigen::Vector3d* baseline,
+                                      char* success);
 
   // Store the triplet.
   void AddTripletConstraint(const ViewIdTriplet& view_triplet);

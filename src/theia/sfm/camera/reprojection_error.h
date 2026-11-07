@@ -93,14 +93,12 @@ struct ReprojectionError {
     // if (res) {
     // TODO FULL COVARIANCE WEIGHTING? -> Although most of the time the off
     // diagonal of image point covs are zero
-    const T sqrt_information_x =
-        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-    const T sqrt_information_y =
-        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
-    reprojection_error[0] =
-        sqrt_information_x * (reprojection[0] - feature_.point_.x());
-    reprojection_error[1] =
-        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+    // Whiten with the full 2x2 feature covariance.
+    const Eigen::Matrix2d sqrt_information = feature_.SqrtInformation();
+    const T dx = reprojection[0] - T(feature_.point_.x());
+    const T dy = reprojection[1] - T(feature_.point_.y());
+    reprojection_error[0] = T(sqrt_information(0, 0)) * dx + T(sqrt_information(0, 1)) * dy;
+    reprojection_error[1] = T(sqrt_information(1, 0)) * dx + T(sqrt_information(1, 1)) * dy;
     //    }
     //    else {
     //       reprojection_error[0] = T(1e4);
@@ -149,14 +147,12 @@ struct OrthoReprojectionError {
     if (res) {
       // TODO FULL COVARIANCE WEIGHTING? -> Although most of the time the off
       // diagonal of image point covs are zero
-      const T sqrt_information_x =
-            T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-      const T sqrt_information_y =
-            T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
-      reprojection_error[0] =
-            sqrt_information_x * (reprojection[0] - feature_.point_.x());
-      reprojection_error[1] =
-            sqrt_information_y * (reprojection[1] - feature_.point_.y());
+      // Whiten with the full 2x2 feature covariance.
+      const Eigen::Matrix2d sqrt_information = feature_.SqrtInformation();
+      const T dx = reprojection[0] - T(feature_.point_.x());
+      const T dy = reprojection[1] - T(feature_.point_.y());
+      reprojection_error[0] = T(sqrt_information(0, 0)) * dx + T(sqrt_information(0, 1)) * dy;
+      reprojection_error[1] = T(sqrt_information(1, 0)) * dx + T(sqrt_information(1, 1)) * dy;
     }
     else {
        reprojection_error[0] = T(1e4);
@@ -211,14 +207,12 @@ struct InvReprojectionError {
     const bool res = CameraModel::CameraToPixelCoordinates(
         intrinsic_parameters_other, point_other.data(), reprojection);
 
-    const T sqrt_information_x =
-        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-    const T sqrt_information_y =
-        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
-    reprojection_error[0] =
-        sqrt_information_x * (reprojection[0] - feature_.point_.x());
-    reprojection_error[1] =
-        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+    // Whiten with the full 2x2 feature covariance.
+    const Eigen::Matrix2d sqrt_information = feature_.SqrtInformation();
+    const T dx = reprojection[0] - T(feature_.point_.x());
+    const T dy = reprojection[1] - T(feature_.point_.y());
+    reprojection_error[0] = T(sqrt_information(0, 0)) * dx + T(sqrt_information(0, 1)) * dy;
+    reprojection_error[1] = T(sqrt_information(1, 0)) * dx + T(sqrt_information(1, 1)) * dy;
 
     return res;
   }
@@ -264,14 +258,12 @@ struct InvReprojectionPoseError {
     const bool res = CameraModel::CameraToPixelCoordinates(
         intrinsic_parameters_ref, point.data(), reprojection);
 
-    const T sqrt_information_x =
-        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-    const T sqrt_information_y =
-        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
-    reprojection_error[0] =
-        sqrt_information_x * (reprojection[0] - feature_.point_.x());
-    reprojection_error[1] =
-        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+    // Whiten with the full 2x2 feature covariance.
+    const Eigen::Matrix2d sqrt_information = feature_.SqrtInformation();
+    const T dx = reprojection[0] - T(feature_.point_.x());
+    const T dy = reprojection[1] - T(feature_.point_.y());
+    reprojection_error[0] = T(sqrt_information(0, 0)) * dx + T(sqrt_information(0, 1)) * dy;
+    reprojection_error[1] = T(sqrt_information(1, 0)) * dx + T(sqrt_information(1, 1)) * dy;
 
     return res;
   }
@@ -319,14 +311,12 @@ struct Sim3InvReprojectionError {
     const bool res = CameraModel::CameraToPixelCoordinates(
         intrinsic_parameters_other, point_other.data(), reprojection);
 
-    const T sqrt_information_x =
-        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-    const T sqrt_information_y =
-        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
-    reprojection_error[0] =
-        sqrt_information_x * (reprojection[0] - feature_.point_.x());
-    reprojection_error[1] =
-        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+    // Whiten with the full 2x2 feature covariance.
+    const Eigen::Matrix2d sqrt_information = feature_.SqrtInformation();
+    const T dx = reprojection[0] - T(feature_.point_.x());
+    const T dy = reprojection[1] - T(feature_.point_.y());
+    reprojection_error[0] = T(sqrt_information(0, 0)) * dx + T(sqrt_information(0, 1)) * dy;
+    reprojection_error[1] = T(sqrt_information(1, 0)) * dx + T(sqrt_information(1, 1)) * dy;
 
     return res;
   }
@@ -370,14 +360,12 @@ struct Sim3InvReprojectionPoseError {
     const bool res = CameraModel::CameraToPixelCoordinates(
         intrinsic_parameters_other, point_other.data(), reprojection);
 
-    const T sqrt_information_x =
-        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-    const T sqrt_information_y =
-        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
-    reprojection_error[0] =
-        sqrt_information_x * (reprojection[0] - feature_.point_.x());
-    reprojection_error[1] =
-        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+    // Whiten with the full 2x2 feature covariance.
+    const Eigen::Matrix2d sqrt_information = feature_.SqrtInformation();
+    const T dx = reprojection[0] - T(feature_.point_.x());
+    const T dy = reprojection[1] - T(feature_.point_.y());
+    reprojection_error[0] = T(sqrt_information(0, 0)) * dx + T(sqrt_information(0, 1)) * dy;
+    reprojection_error[1] = T(sqrt_information(1, 0)) * dx + T(sqrt_information(1, 1)) * dy;
 
     return res;
   }
@@ -431,14 +419,12 @@ struct Sim3ReprojectionError {
         intrinsic_parameters, point_camera.data(), reprojection);
 
     // Compute the reprojection error with covariance weighting
-    const T sqrt_information_x =
-        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-    const T sqrt_information_y =
-        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
-    reprojection_error[0] =
-        sqrt_information_x * (reprojection[0] - feature_.point_.x());
-    reprojection_error[1] =
-        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+    // Whiten with the full 2x2 feature covariance.
+    const Eigen::Matrix2d sqrt_information = feature_.SqrtInformation();
+    const T dx = reprojection[0] - T(feature_.point_.x());
+    const T dy = reprojection[1] - T(feature_.point_.y());
+    reprojection_error[0] = T(sqrt_information(0, 0)) * dx + T(sqrt_information(0, 1)) * dy;
+    reprojection_error[1] = T(sqrt_information(1, 0)) * dx + T(sqrt_information(1, 1)) * dy;
         
     return res;
   }
@@ -494,20 +480,17 @@ struct Sim3RelativeReprojectionError {
     }
 
     // Compute the reprojection errors with covariance weighting
-    const T sqrt_information_x =
-        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-    const T sqrt_information_y =
-        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
+    const Eigen::Matrix2d W = feature_.SqrtInformation();
+    const T dx1 = reprojection1[0] - T(feature_.point_.x());
+    const T dy1 = reprojection1[1] - T(feature_.point_.y());
+    const T dx2 = reprojection2[0] - T(feature_.point_.x());
+    const T dy2 = reprojection2[1] - T(feature_.point_.y());
 
     // Return errors for both cameras (4-dimensional error)
-    reprojection_error[0] =
-        sqrt_information_x * (reprojection1[0] - feature_.point_.x());
-    reprojection_error[1] =
-        sqrt_information_y * (reprojection1[1] - feature_.point_.y());
-    reprojection_error[2] =
-        sqrt_information_x * (reprojection2[0] - feature_.point_.x());
-    reprojection_error[3] =
-        sqrt_information_y * (reprojection2[1] - feature_.point_.y());
+    reprojection_error[0] = T(W(0, 0)) * dx1 + T(W(0, 1)) * dy1;
+    reprojection_error[1] = T(W(1, 0)) * dx1 + T(W(1, 1)) * dy1;
+    reprojection_error[2] = T(W(0, 0)) * dx2 + T(W(0, 1)) * dy2;
+    reprojection_error[3] = T(W(1, 0)) * dx2 + T(W(1, 1)) * dy2;
 
     return true;
   }
@@ -555,14 +538,12 @@ struct Sim3PoseOnlyReprojectionError {
     }
 
     // Compute the reprojection error with covariance weighting
-    const T sqrt_information_x =
-        T(1. / ceres::sqrt(feature_.covariance_(0, 0)));
-    const T sqrt_information_y =
-        T(1. / ceres::sqrt(feature_.covariance_(1, 1)));
-    reprojection_error[0] =
-        sqrt_information_x * (reprojection[0] - feature_.point_.x());
-    reprojection_error[1] =
-        sqrt_information_y * (reprojection[1] - feature_.point_.y());
+    // Whiten with the full 2x2 feature covariance.
+    const Eigen::Matrix2d sqrt_information = feature_.SqrtInformation();
+    const T dx = reprojection[0] - T(feature_.point_.x());
+    const T dy = reprojection[1] - T(feature_.point_.y());
+    reprojection_error[0] = T(sqrt_information(0, 0)) * dx + T(sqrt_information(0, 1)) * dy;
+    reprojection_error[1] = T(sqrt_information(1, 0)) * dx + T(sqrt_information(1, 1)) * dy;
 
     return true;
   }

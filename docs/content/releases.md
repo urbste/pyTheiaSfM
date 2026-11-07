@@ -4,7 +4,31 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
-## 1.3.1 (current) {#release-1-3-1}
+## 1.3.2 {#release-1-3-2}
+
+Robustness: a robust default bundle-adjustment loss, and fixes for the `LINEAR_TRIPLET` and `LIGT` global position estimators.
+
+### Defaults
+
+- **BA loss is now `HUBER` with a 1 px width** (was `TRIVIAL` / pure L2 with a 10 px width) in both `ReconstructionEstimatorOptions` and `BundleAdjustmentOptions`. A plain L2 loss is dominated by the few wrong correspondences that survive geometric verification. On ETH3D (12 scenes, SIFT, calibrated, global SfM) the median camera-center error drops from 4.5 to 3.5 mm and the mean error from 37 to 18 mm. A Huber width of 10 px is practically identical to `TRIVIAL`, so the width matters as much as the loss. Set `LossFunctionType.TRIVIAL` to get the old behavior.
+
+### Features
+
+- **Keyword arguments everywhere.** All pybind11 bindings (`sfm`, `solvers`, `math`, `io`, `matching`, `mvs`) now name their arguments after the C++ parameters, so `pt.sfm.Feature(point=..., covariance=...)` works. Positional calls are unchanged. Stubs show the names.
+- **Feature uncertainty in bundle adjustment.** The reprojection residual is whitened with the full 2x2 `Feature.covariance` (it used only the diagonal before). New `Feature.set_isotropic_sigma(sigma)` and `Feature.sqrt_information()`. The comment on `covariance_` said "standard deviation"; it is a covariance in px^2.
+
+### Fixes
+
+- **`LINEAR_TRIPLET`**: triplets whose baseline ratios could not be computed (too few well-conditioned common tracks) were kept with baseline `(0, 0, 0)`, which turns the ratios into `NaN`, poisons the constraint matrix and made the eigensolver throw (`TridiagEigen: eigen decomposition failed`). Such triplets are now discarded. Registered views on ETH3D rise from 16 % to 64 % (scenes that work: 2/13 to 9/13).
+- **`LIGT`**: the smallest eigenvector of the constraint matrix only fixes `||x|| = 1`, so a weakly constrained view can take almost all of the norm and the rest collapse (registered 0 of 45 views on ETH3D `electro`, 0 of 76 on `facade`). The scale is now fixed with a ShapeFit-style constraint that sums the two-view translation directions (`LiGTPositionEstimatorOptions.use_scale_constraint`, default `True`; one sparse solve, falls back to the eigenvector). The system is restricted to the largest connected set of views, with the best constrained view fixed at the origin. Constraints are also row-normalized and re-weighted with Huber IRLS (`normalize_constraints`, `num_irls_iterations`, `irls_scale_multiplier`). On 13 ETH3D scenes with SIFT matches, every scene now registers at least 44 of 45 views (previously 4 scenes failed); median errors are 1-12 mm except `meadow` (56 mm). Also removed a stray debug `std::cout` print.
+
+### Known limitations
+
+- With deep matchers (SuperPoint/ALIKED + LightGlue) on repetitive scenes up to half of the view-graph edges can be wrong in a mutually consistent way, so triplet-loop, rotation and translation-direction filters cannot remove them; pyTheia registers fewer views there than COLMAP/GLOMAP.
+
+---
+
+## 1.3.1 {#release-1-3-1}
 
 Opt-in reproducible RNG seeding and a bundle-adjuster fix.
 

@@ -1219,6 +1219,16 @@ class Feature:
     def get_depth_prior_variance(*args, **kwargs):
         ...
     @staticmethod
+    def set_isotropic_sigma(*args, **kwargs):
+        """
+        Sets covariance = sigma^2 * I (sigma in pixels). Used to weight the feature in bundle adjustment.
+        """
+    @staticmethod
+    def sqrt_information(*args, **kwargs):
+        """
+        W with W^T W = covariance^-1.
+        """
+    @staticmethod
     def x(*args, **kwargs):
         ...
     @staticmethod
@@ -4063,6 +4073,18 @@ class LiGTPositionEstimatorOptions:
     def eigensolver_threshold(*args, **kwargs):
         ...
     @property
+    def irls_convergence_threshold(*args, **kwargs):
+        ...
+    @irls_convergence_threshold.setter
+    def irls_convergence_threshold(*args, **kwargs):
+        ...
+    @property
+    def irls_scale_multiplier(*args, **kwargs):
+        ...
+    @irls_scale_multiplier.setter
+    def irls_scale_multiplier(*args, **kwargs):
+        ...
+    @property
     def max_num_views_svd(*args, **kwargs):
         ...
     @max_num_views_svd.setter
@@ -4075,10 +4097,28 @@ class LiGTPositionEstimatorOptions:
     def max_power_iterations(*args, **kwargs):
         ...
     @property
+    def normalize_constraints(*args, **kwargs):
+        ...
+    @normalize_constraints.setter
+    def normalize_constraints(*args, **kwargs):
+        ...
+    @property
+    def num_irls_iterations(*args, **kwargs):
+        ...
+    @num_irls_iterations.setter
+    def num_irls_iterations(*args, **kwargs):
+        ...
+    @property
     def num_threads(*args, **kwargs):
         ...
     @num_threads.setter
     def num_threads(*args, **kwargs):
+        ...
+    @property
+    def use_scale_constraint(*args, **kwargs):
+        ...
+    @use_scale_constraint.setter
+    def use_scale_constraint(*args, **kwargs):
         ...
 class LiGTPositionEstimator(PositionEstimator):
     @staticmethod

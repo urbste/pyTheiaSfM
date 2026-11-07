@@ -74,7 +74,8 @@ void pytheia_io_classes(py::module& m) {
       .def_readwrite("view_list", &theia::BundlerPoint::view_list);
 
   py::class_<theia::BundlerFileReader>(m, "BundlerFileReader")
-      .def(py::init<std::string, std::string>())
+      .def(py::init<std::string, std::string>(), py::arg("lists_filepath"),
+           py::arg("bundler_filepath"))
       .def("cameras", &theia::BundlerFileReader::cameras)
       .def("points", &theia::BundlerFileReader::points)
       .def("img_entries", &theia::BundlerFileReader::img_entries)
@@ -95,14 +96,19 @@ void pytheia_io_classes(py::module& m) {
       .def_readwrite("second_entry", &theia::ListImgEntry::second_entry)
       .def_readwrite("focal_length", &theia::ListImgEntry::focal_length);
 
-  m.def("ImportNVMFile", theia::ImportNVMFileWrapper);
+  m.def("ImportNVMFile", theia::ImportNVMFileWrapper,
+        py::arg("nvm_filepath"));
   m.def("PopulateImageSizesAndPrincipalPoints",
-        theia::PopulateImageSizesAndPrincipalPointsWrapper);
-  m.def("Read1DSFM", theia::Read1DSFMWrapper);
-  m.def("ReadBundlerFiles", theia::ReadBundlerFilesWrapper);
+        theia::PopulateImageSizesAndPrincipalPointsWrapper,
+        py::arg("image_directory"));
+  m.def("Read1DSFM", theia::Read1DSFMWrapper, py::arg("dataset_directory"));
+  m.def("ReadBundlerFiles", theia::ReadBundlerFilesWrapper,
+        py::arg("lists_file"), py::arg("bundle_file"));
 
-  m.def("ReadStrechaDataset", theia::ReadStrechaDatasetWrapper);
-  m.def("ReadReconstruction", theia::ReadReconstructionWrapper);
+  m.def("ReadStrechaDataset", theia::ReadStrechaDatasetWrapper,
+        py::arg("dataset_directory"));
+  m.def("ReadReconstruction", theia::ReadReconstructionWrapper,
+        py::arg("input_file"));
   m.def(
       "WriteReconstruction",
       [](const theia::Reconstruction& reconstruction,
@@ -115,11 +121,18 @@ void pytheia_io_classes(py::module& m) {
       "Write reconstruction to binary file. By default writes only estimated "
       "views and multi-view tracks (smaller file). Pass "
       "write_full_reconstruction=True to save the complete model.");
-  m.def("WriteReconstructionJson", theia::WriteReconstructionJson);
-  m.def("WriteBundlerFiles", theia::WriteBundlerFiles);
-  m.def("WriteColmapFiles", theia::WriteColmapFiles);
-  m.def("WriteNVMFile", theia::WriteNVMFile);
-  m.def("WritePlyFile", theia::WritePlyFile);
+  m.def("WriteReconstructionJson", theia::WriteReconstructionJson,
+        py::arg("reconstruction"), py::arg("output_json_file"));
+  m.def("WriteBundlerFiles", theia::WriteBundlerFiles,
+        py::arg("reconstruction"), py::arg("lists_file"),
+        py::arg("bundle_file"));
+  m.def("WriteColmapFiles", theia::WriteColmapFiles,
+        py::arg("reconstruction"), py::arg("output_directory"));
+  m.def("WriteNVMFile", theia::WriteNVMFile, py::arg("nvm_filepath"),
+        py::arg("reconstruction"));
+  m.def("WritePlyFile", theia::WritePlyFile, py::arg("ply_file"),
+        py::arg("reconstruction"), py::arg("camera_color"),
+        py::arg("min_num_observations_per_point"));
   m.def(
       "WriteRigPlyFile",
       [](const std::string& ply_file,
@@ -149,8 +162,12 @@ void pytheia_io_classes(py::module& m) {
       py::arg("edge_samples") = 24,
       "Write a PLY with tracks, capture centers, sensor centers, and sampled "
       "polylines for the rig trajectory and intra-capture baselines.");
-  m.def("WriteNerfStudio", theia::WriteNerfStudio);
-  m.def("WriteSdfStudio", theia::WriteSdfStudio);
+  m.def("WriteNerfStudio", theia::WriteNerfStudio,
+        py::arg("path_to_images"), py::arg("reconstruction"),
+        py::arg("aabb_scale"), py::arg("out_json_nerfstudio_file"));
+  m.def("WriteSdfStudio", theia::WriteSdfStudio,
+        py::arg("path_to_images"), py::arg("reconstruction"),
+        py::arg("nearfar"), py::arg("radius"));
 }
 
 void pytheia_io(py::module& m) {

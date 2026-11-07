@@ -43,6 +43,8 @@
 #include <functional>
 #include <utility>
 
+#include <cmath>
+
 #include "theia/io/eigen_serializable.h"
 #include "theia/util/hash.h"
 
@@ -53,7 +55,7 @@ class Feature {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   //! 2D point
   Eigen::Vector2d point_ = Eigen::Vector2d::Zero();
-  //! 2D standard deviation
+  //! 2x2 covariance of the point in px^2 (sigma^2 * I for isotropic noise)
   Eigen::Matrix2d covariance_ = Eigen::Matrix2d::Identity();
 
   //! depth cue, some features might have a depth cue from an RGB-D image
@@ -71,17 +73,52 @@ class Feature {
   Feature(const Eigen::Vector2d& point) : point_(point) {}
   Feature(const Eigen::Vector2d& point, double depth_prior)
       : point_(point), depth_prior_(depth_prior) {}
-  Feature(const Eigen::Vector2d& point, const Eigen::Matrix2d& covariance_)
+  Feature(const Eigen::Vector2d& point, const Eigen::Matrix2d& covariance)
 
-      : point_(point), covariance_(covariance_) {}
+      : point_(point), covariance_(covariance) {}
   Feature(const Eigen::Vector2d& point,
-          const Eigen::Matrix2d& covariance_,
+          const Eigen::Matrix2d& covariance,
           const double depth_prior,
           const double depth_prior_variance)
       : point_(point),
-        covariance_(covariance_),
+        covariance_(covariance),
         depth_prior_(depth_prior),
         depth_prior_variance_(depth_prior_variance) {}
+
+  // Sets an isotropic detection uncertainty: covariance = sigma^2 * I, with
+  // sigma in pixels. Use it to tell the optimizers how accurately a feature was
+  // located (e.g. proportional to the scale of a SIFT keypoint).
+  void SetIsotropicSigma(const double sigma) {
+    covariance_ = (sigma * sigma) * Eigen::Matrix2d::Identity();
+  }
+
+  // Returns W with W^T W = covariance^-1 (W is the inverse of the lower
+  // Cholesky factor), so that |W * e|^2 is the squared Mahalanobis distance of
+  // a pixel residual e. Falls back to the identity if the covariance is not
+  // positive definite.
+  Eigen::Matrix2d SqrtInformation() const {
+    const double a = covariance_(0, 0);
+    const double b = 0.5 * (covariance_(0, 1) + covariance_(1, 0));
+    const double c = covariance_(1, 1);
+    Eigen::Matrix2d W = Eigen::Matrix2d::Identity();
+    if (!(a > 0.0)) return W;
+    const double l00 = std::sqrt(a);
+    if (b == 0.0) {
+      if (!(c > 0.0)) return W;
+      W(0, 0) = 1.0 / l00;
+      W(1, 1) = 1.0 / std::sqrt(c);
+      return W;
+    }
+    const double l10 = b / l00;
+    const double d = c - l10 * l10;
+    if (!(d > 0.0)) return W;
+    const double l11 = std::sqrt(d);
+    W(0, 0) = 1.0 / l00;
+    W(1, 0) = -l10 / (l00 * l11);
+    W(1, 1) = 1.0 / l11;
+    W(0, 1) = 0.0;
+    return W;
+  }
 
   double x() const { return point_[0]; }
   double y() const { return point_[1]; }

@@ -57,7 +57,9 @@ namespace pytheia {
 namespace matching {
 
 void pytheia_matching_classes(py::module& m) {
-  m.def("GraphMatch", &theia::GraphMatch);
+  m.def("GraphMatch", &theia::GraphMatch,
+        py::arg("image_names"), py::arg("global_descriptors"),
+        py::arg("num_nearest_neighbors_for_global_descriptor_matching"));
 
   py::class_<theia::ImagePairMatch>(m, "ImagePairMatch")
       .def(py::init<>())
@@ -85,14 +87,16 @@ void pytheia_matching_classes(py::module& m) {
 
   py::class_<theia::IndexedFeatureMatch>(m, "IndexedFeatureMatch")
       .def(py::init<>())
-      .def(py::init<int, int, float>())
+      .def(py::init<int, int, float>(), py::arg("feature1_ind"),
+           py::arg("feature2_ind"), py::arg("distance"))
       .def_readwrite("feature1_ind", &theia::IndexedFeatureMatch::feature1_ind)
       .def_readwrite("feature2_ind", &theia::IndexedFeatureMatch::feature2_ind)
       .def_readwrite("distance", &theia::IndexedFeatureMatch::distance);
 
   py::class_<theia::FeatureCorrespondence>(m, "FeatureCorrespondence")
       .def(py::init<>())
-      .def(py::init<theia::Feature, theia::Feature>())
+      .def(py::init<theia::Feature, theia::Feature>(), py::arg("feature1"),
+           py::arg("feature2"))
       .def_readwrite("feature1", &theia::FeatureCorrespondence::feature1)
       .def_readwrite("feature2", &theia::FeatureCorrespondence::feature2);
 

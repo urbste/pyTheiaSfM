@@ -65,6 +65,7 @@ namespace solvers {
 
 void pytheia_solvers_classes(py::module& m) {
   m.def("SetDefaultRandomSeed", &theia::SetDefaultRandomSeed,
+        py::arg("seed"),
         "Seed default-constructed RNGs (RANSAC samplers, global estimators) "
         "with a fixed value instead of the clock.");
   m.def("ClearDefaultRandomSeed", &theia::ClearDefaultRandomSeed);
@@ -75,12 +76,16 @@ void pytheia_solvers_classes(py::module& m) {
              std::shared_ptr<theia::RandomNumberGenerator>>(
       m, "RandomNumberGenerator")
       .def(py::init<>())
-      .def(py::init<int>())
-      .def("Seed", &theia::RandomNumberGenerator::Seed)
-      .def("RandDouble", &theia::RandomNumberGenerator::RandDouble)
-      .def("RandFloat", &theia::RandomNumberGenerator::RandFloat)
-      .def("RandInt", &theia::RandomNumberGenerator::RandInt)
-      .def("RandGaussian", &theia::RandomNumberGenerator::RandGaussian)
+      .def(py::init<int>(), py::arg("seed"))
+      .def("Seed", &theia::RandomNumberGenerator::Seed, py::arg("seed"))
+      .def("RandDouble", &theia::RandomNumberGenerator::RandDouble,
+           py::arg("lower"), py::arg("upper"))
+      .def("RandFloat", &theia::RandomNumberGenerator::RandFloat,
+           py::arg("lower"), py::arg("upper"))
+      .def("RandInt", &theia::RandomNumberGenerator::RandInt,
+           py::arg("lower"), py::arg("upper"))
+      .def("RandGaussian", &theia::RandomNumberGenerator::RandGaussian,
+           py::arg("mean"), py::arg("std_dev"))
 
       ;
 

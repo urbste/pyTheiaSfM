@@ -177,15 +177,46 @@ bool LinearPositionEstimator::EstimatePositions(
   // Baselines where (x, y, z) corresponds to the baseline of the first,
   // second, and third view pair in the triplet.
   std::unique_ptr<ThreadPool> pool(new ThreadPool(options_.num_threads));
-  baselines_.resize(triplets_.size());
+  baselines_.assign(triplets_.size(), Eigen::Vector3d::Zero());
+  // char instead of bool: std::vector<bool> is not safe to write concurrently.
+  std::vector<char> baseline_ok(triplets_.size(), 0);
   for (size_t i = 0; i < triplets_.size(); i++) {
-    AddTripletConstraint(triplets_[i]);
     pool->Add(&LinearPositionEstimator::ComputeBaselineRatioForTriplet,
               this,
               triplets_[i],
-              &baselines_[i]);
+              &baselines_[i],
+              &baseline_ok[i]);
   }
   pool.reset(nullptr);
+
+  // Discard triplets whose baseline ratios could not be computed. Their
+  // baselines stay (0, 0, 0), which turns the ratios s = b_i / b_j into NaN and
+  // poisons the whole constraint matrix (and makes the eigensolver throw).
+  num_triplets_for_view_.clear();
+  linear_system_index_.clear();
+  std::vector<ViewIdTriplet> valid_triplets;
+  std::vector<Eigen::Vector3d> valid_baselines;
+  for (size_t i = 0; i < triplets_.size(); i++) {
+    const Eigen::Vector3d& b = baselines_[i];
+    if (!baseline_ok[i] || !b.allFinite() || (b.array() <= 0.0).any()) {
+      continue;
+    }
+    valid_triplets.push_back(triplets_[i]);
+    valid_baselines.push_back(b);
+  }
+  VLOG(1) << "Linear position estimator: " << valid_triplets.size() << " of "
+          << triplets_.size()
+          << " triplets have valid baseline ratios and are used.";
+  if (valid_triplets.empty()) {
+    LOG(WARNING) << "Linear position estimation failed: no view triplet has a "
+                    "computable baseline ratio.";
+    return false;
+  }
+  triplets_ = valid_triplets;
+  baselines_ = valid_baselines;
+  for (const ViewIdTriplet& triplet : triplets_) {
+    AddTripletConstraint(triplet);
+  }
 
   VLOG(2) << "Building the constraint matrix...";
   // Create the linear system based on triplet constraints.
@@ -250,8 +281,9 @@ void LinearPositionEstimator::AddTripletConstraint(
 }
 
 void LinearPositionEstimator::ComputeBaselineRatioForTriplet(
-    const ViewIdTriplet& triplet, Vector3d* baseline) {
+    const ViewIdTriplet& triplet, Vector3d* baseline, char* success) {
   baseline->setZero();
+  *success = 0;
 
   const View& view1 = *reconstruction_.View(std::get<0>(triplet));
   const View& view2 = *reconstruction_.View(std::get<1>(triplet));
@@ -289,8 +321,10 @@ void LinearPositionEstimator::ComputeBaselineRatioForTriplet(
       *view_pairs_,
       ViewIdPair(view_triplet.view_ids[1], view_triplet.view_ids[2]));
 
-  ComputeTripletBaselineRatios(
-      view_triplet, feature1, feature2, feature3, baseline);
+  *success = ComputeTripletBaselineRatios(
+                 view_triplet, feature1, feature2, feature3, baseline)
+                 ? 1
+                 : 0;
 }
 
 // Sets up the linear system with the constraints that each triplet adds.

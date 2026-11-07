@@ -106,8 +106,8 @@ If CUDA was not enabled in Ceres, these settings either do not exist in the Pyth
 
 | Value | Effect |
 |-------|--------|
-| `TRIVIAL` | Pure \(L_2\) on reprojection residuals (**default** in `BundleAdjustmentOptions`). |
-| `HUBER` | Huber; transitions at **`robust_loss_width`**. |
+| `TRIVIAL` | Pure \(L_2\) on reprojection residuals (sensitive to outlier observations; was the default before 1.3.2). |
+| `HUBER` | Huber; transitions at **`robust_loss_width`** (**default** since 1.3.2, width `1.0` px). |
 | `SOFTLONE` | `SoftLOneLoss` with scale **`robust_loss_width`**. |
 | `CAUCHY` | Cauchy robust loss. |
 | `ARCTAN` | Arctan robust loss. |
@@ -168,6 +168,24 @@ When you run **incremental / global** reconstruction, the pipeline sets these fr
 | `use_gravity_priors` | `false` | Gravity-aligned orientation priors. |
 | `gravity_prior_error_type` | `DIRECTION_CROSS` | `VECTOR_DIFF` (legacy 3-vector) or `DIRECTION_CROSS` (cross product, 2-DOF). |
 
+#### Feature uncertainty (covariance and accuracy)
+
+Every `Feature` carries a 2x2 covariance in px^2. The reprojection residual is whitened with it, so the optimizer minimizes the Mahalanobis distance of the observation (correlated noise is handled by the off-diagonal term). The default is the identity, which gives plain pixel residuals. A feature that is located less accurately gets a larger covariance and pulls less on the solution.
+
+```python
+import numpy as np
+import pytheia as pt
+
+# keyword arguments work on all constructors and methods
+f = pt.sfm.Feature(point=np.array([410.5, 233.2]), covariance=np.diag([1.0, 4.0]))
+
+g = pt.sfm.Feature(np.array([100.0, 50.0]))
+g.set_isotropic_sigma(2.5)        # covariance = 2.5^2 * I (sigma in px)
+W = g.sqrt_information()          # W^T W = covariance^-1
+```
+
+A natural choice for SIFT is a sigma proportional to the keypoint scale. The covariance is used in the bundle adjustment residuals only; two-view RANSAC, triangulation and PnP ignore it.
+
 #### Setting priors on `View` (Python)
 
 Priors are stored per view and only take effect when the matching `use_*_priors` flag is enabled on `BundleAdjustmentOptions`:
@@ -211,8 +229,8 @@ summary = pt.sfm.BundleAdjustReconstruction(opts, reconstruction)
 
 | Field | Default (C++ `BundleAdjustmentOptions`) |
 |-------|----------------------------------------|
-| `loss_function_type` | `TRIVIAL` |
-| `robust_loss_width` | `2.0` |
+| `loss_function_type` | `HUBER` |
+| `robust_loss_width` | `1.0` |
 | `robust_loss_width_depth_prior` | `0.01` |
 | `linear_solver_type` | `SPARSE_SCHUR` |
 | `preconditioner_type` | `SCHUR_JACOBI` |

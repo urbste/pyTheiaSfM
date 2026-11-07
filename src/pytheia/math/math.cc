@@ -64,28 +64,36 @@ namespace pytheia {
 namespace math {
 
 void pytheia_math_classes(py::module& m) {
-  m.def("FindQuadraticPolynomialRoots", &theia::FindQuadraticPolynomialRoots);
+  m.def("FindQuadraticPolynomialRoots", &theia::FindQuadraticPolynomialRoots,
+        py::arg("polynomial"), py::arg("real"), py::arg("imaginary"));
 
   // rotation.h
   m.def("AlignRotations",
         &theia::AlignRotations,
+        py::arg("gt_rotations"), py::arg("rotation"),
         "Solves a nonlinear least squares problem so that: rotations * R = "
         "gt_rotations.");
   m.def("AlignOrientations",
         &theia::AlignOrientationsWrapper,
+        py::arg("gt_rotations"), py::arg("rotations"),
         "This functions takes as input a dictionary of view_ids to global "
         "orientations that should be aligned. Then it calls AlignRotations "
         "internally.");
-  m.def("MultiplyRotations", &theia::MultiplyRotations, "return R = R1 * R2");
+  m.def("MultiplyRotations", &theia::MultiplyRotations,
+        py::arg("rotation1"), py::arg("rotation2"),
+        "return R = R1 * R2");
   m.def("RelativeRotationFromTwoRotations",
         py::overload_cast<const Eigen::Vector3d&, const Eigen::Vector3d&>(
             &theia::RelativeRotationFromTwoRotations),
+        py::arg("rotation1"), py::arg("rotation2"),
         "returns R12 = R2 * R1^T");
   m.def("ApplyRelativeRotation",
         &theia::ApplyRelativeRotation,
+        py::arg("rotation1"), py::arg("relative_rotation"),
         "returns R2 = R12 * R1");
   m.def("RelativeTranslationFromTwoPositions",
         &theia::RelativeTranslationFromTwoPositions,
+        py::arg("position1"), py::arg("position2"), py::arg("rotation1"),
         "returns t12 = R1*(p2-p1)");
 
   // Sophus SE3d bindings
@@ -122,11 +130,11 @@ void pytheia_math_classes(py::module& m) {
       .def("set_rotation_matrix", &Sophus::SE3d::setRotationMatrix, py::arg("R"),
            "Set rotation matrix")
       .def("__mul__", [](const Sophus::SE3d& a, const Sophus::SE3d& b) { return a * b; },
-           py::is_operator())
+           py::is_operator(), py::arg("other"))
       .def("__mul__", [](const Sophus::SE3d& se3, const Eigen::Vector3d& point) { return se3 * point; },
-           py::is_operator())
+           py::is_operator(), py::arg("point"))
       .def("__mul__", [](const Sophus::SE3d& se3, const Eigen::Vector4d& hpoint) { return se3 * hpoint; },
-           py::is_operator())
+           py::is_operator(), py::arg("hpoint"))
       .def("__repr__", [](const Sophus::SE3d& se3) {
           std::ostringstream oss;
           oss << "SE3d(rotation=" << se3.rotationMatrix() << ", translation=" << se3.translation() << ")";
@@ -186,11 +194,11 @@ void pytheia_math_classes(py::module& m) {
       .def("set_scale", &Sophus::Sim3d::setScale, py::arg("scale"),
            "Set scale factor")
       .def("__mul__", [](const Sophus::Sim3d& a, const Sophus::Sim3d& b) { return a * b; },
-           py::is_operator())
+           py::is_operator(), py::arg("other"))
       .def("__mul__", [](const Sophus::Sim3d& sim3, const Eigen::Vector3d& point) { return sim3 * point; },
-           py::is_operator())
+           py::is_operator(), py::arg("point"))
       .def("__mul__", [](const Sophus::Sim3d& sim3, const Eigen::Vector4d& hpoint) { return sim3 * hpoint; },
-           py::is_operator())
+           py::is_operator(), py::arg("hpoint"))
       .def("__repr__", [](const Sophus::Sim3d& sim3) {
           std::ostringstream oss;
           oss << "Sim3d(rotation=" << sim3.rotationMatrix() << ", translation=" << sim3.translation() 

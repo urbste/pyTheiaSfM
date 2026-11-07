@@ -41,7 +41,9 @@ namespace py = pybind11;
 namespace pytheia {
 namespace mvs {
 void pytheia_mvs_classes(py::module& m) {
-  m.def("ViewSelectionMVSNet", &theia::ViewSelectionMVSNet);
+  m.def("ViewSelectionMVSNet", &theia::ViewSelectionMVSNet,
+        py::arg("reconstruction"), py::arg("num_neighbors"),
+        py::arg("theta0"), py::arg("sigma1"), py::arg("sigma2"));
 }
 
 void pytheia_mvs(py::module& m) {

@@ -93,10 +93,11 @@ enum class GravityPriorErrorType {
 };
 
 struct BundleAdjustmentOptions {
-  // The type of loss function used for BA. By default, we use a standard L2
-  // loss function, but robust cost functions could be used.
-  LossFunctionType loss_function_type = LossFunctionType::TRIVIAL;
-  double robust_loss_width = 2.0;
+  // The type of loss function used for BA. By default, we use a Huber loss
+  // (robust to the few outlier observations that survive verification); set
+  // LossFunctionType::TRIVIAL for a standard L2 loss.
+  LossFunctionType loss_function_type = LossFunctionType::HUBER;
+  double robust_loss_width = 1.0;
 
   // e.g. 1cm for downweighting depth priors as outliers
   double robust_loss_width_depth_prior = 0.01;

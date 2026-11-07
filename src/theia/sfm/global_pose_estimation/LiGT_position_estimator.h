@@ -79,6 +79,47 @@ class LiGTPositionEstimator : public PositionEstimator {
 
     // threshold for using sparse solver instead of SVD
     int max_num_views_svd = 500;
+
+    // LiGT is a *linear* least-squares problem, so a handful of contaminated
+    // tracks (wrong matches that survive verification, e.g. on repetitive
+    // facades) can ruin the solution completely. Two measures make it more
+    // robust:
+    //  1. Every constraint is divided by the size of its coefficient blocks, so
+    //     constraints with a large norm (e.g. from badly conditioned tracks)
+    //     cannot dominate the system.
+    //  2. After the first linear solve the constraints are re-weighted with a
+    //     Huber-type IRLS scheme and the system is solved again.
+    // (Prototyping on ETH3D showed Cauchy/Tukey IRLS to be unreliable here:
+    // they need a good initialization, Huber does not.)
+    bool normalize_constraints = true;
+
+    // Number of IRLS iterations. 0 together with normalize_constraints = false
+    // gives the original, non-robust LiGT.
+    int num_irls_iterations = 10;
+
+    // The Huber scale is irls_scale_multiplier * 1.4826 * median of the
+    // normalized constraint residuals (a MAD-style robust sigma). Smaller
+    // values reject more aggressively.
+    double irls_scale_multiplier = 2.0;
+
+    // IRLS stops early when the (sign-aligned) change of the unit-norm
+    // solution drops below this value.
+    double irls_convergence_threshold = 1e-6;
+
+    // How the scale of the homogeneous system M x = 0 is fixed.
+    //
+    // false: the original LiGT solution, the smallest eigenvector of M. This
+    // only asks for ||x|| = 1, so a weakly constrained view can take almost all
+    // of the norm and the other views collapse together. If the graph has such
+    // a view, the smallest eigenvalue is numerically zero and the eigenvector
+    // says nothing about the real geometry.
+    //
+    // true: minimize x^T M x subject to g^T x = 1, where g sums the two-view
+    // translation directions over all edges (the scale constraint of ShapeFit,
+    // Hand et al. 2015). The solution is x ~ M^-1 g, a single sparse solve. The
+    // constraint involves every view, so it cannot be met by one view alone.
+    // Falls back to the eigenvector if the factorization fails.
+    bool use_scale_constraint = true;
   };
 
   LiGTPositionEstimator(const Options& options,
@@ -117,9 +158,34 @@ class LiGTPositionEstimator : public PositionEstimator {
       const ViewId view_id2,
       const ViewId view_id3,
       const std::tuple<Matrix3d, Matrix3d, Matrix3d> &BCD,
+      const double weight,
       std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries);
 
   void FindTripletsForTracks();
+
+  // Keeps only the constraints of the largest connected set of views and
+  // assigns the linear system indices. The view with the most constraints is
+  // the one fixed at the origin. The result does not depend on thread order.
+  void BuildLinearSystemIndex();
+
+  // Sums the two-view translation directions per view (see
+  // Options::use_scale_constraint).
+  void ComputeScaleConstraint();
+
+  // Solves the system with the scale constraint if requested. Otherwise, or if
+  // that fails, returns the smallest eigenvector of the constraint matrix
+  // (dense SVD for small problems, sparse shift-invert eigensolver otherwise).
+  Eigen::VectorXd SolveLinearSystem(
+      const Eigen::SparseMatrix<double>& constraint_matrix) const;
+
+  // Computes the unit-norm x ~ M^-1 g. Returns false if that is not possible.
+  bool SolveWithScaleConstraint(
+      const Eigen::SparseMatrix<double>& constraint_matrix,
+      Eigen::VectorXd* solution) const;
+
+  // Sets the IRLS weight of every track constraint from the residuals of the
+  // current solution. Returns the robust scale that was used.
+  double UpdateConstraintWeights(const Eigen::VectorXd& solution);
 
   Eigen::Vector3d GetNormalizedHomFeature(
     const ViewId& view_id, const TrackId& track_id) const;
@@ -140,6 +206,8 @@ class LiGTPositionEstimator : public PositionEstimator {
   std::unordered_map<TrackId, std::vector<ViewIdTriplet>> triplets_for_tracks_;
   std::unordered_map<TrackId,
                      std::vector<std::tuple<Matrix3d, Matrix3d, Matrix3d>>> BCDs_;
+  // IRLS weight for each constraint in BCDs_ (same layout). Missing = 1.
+  std::unordered_map<TrackId, std::vector<double>> constraint_weights_;
 
   // We keep one of the positions as constant to remove the ambiguity of the
   // origin of the linear system.
@@ -147,6 +215,8 @@ class LiGTPositionEstimator : public PositionEstimator {
 
   std::unordered_map<ViewId, int> num_triplets_for_view_;
   std::unordered_map<ViewId, int> linear_system_index_;
+  // The vector g of Options::use_scale_constraint.
+  Eigen::VectorXd scale_constraint_;
 
   DISALLOW_COPY_AND_ASSIGN(LiGTPositionEstimator);
 };
