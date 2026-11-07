@@ -165,13 +165,28 @@ struct OrthoReprojectionError {
   const Feature feature_;
 };
 
+// Inverse depth reprojection errors.
+//
+// A track is anchored in a reference view: its 3D point is
+//   X = c_ref + R_ref^T * (bearing / inverse_depth)
+// with a unit bearing vector in the reference camera and inverse_depth = 1 /
+// range (the distance between the reference camera center and the point). The
+// residuals below never divide by the inverse depth. A central camera model
+// only depends on the direction of the point in the camera frame, so we
+// project the scaled vector
+//   inverse_depth * R_other * (X - c_other)
+//     = R_other * R_ref^T * bearing + inverse_depth * R_other * (c_ref - c_other)
+// which is well defined for inverse_depth = 0 (points at infinity) and well
+// conditioned for small inverse depths. The residual is identical to the one of
+// ReprojectionError evaluated at X.
+
 template <class CameraModel>
 struct InvReprojectionError {
  public:
   explicit InvReprojectionError(
     const Feature& feature,
     const Eigen::Vector3d& bearing_vector_ref) : 
-    feature_(feature), bearing_vector_ref_(bearing_vector_ref)  {}
+    feature_(feature), bearing_vector_ref_(bearing_vector_ref.normalized())  {}
 
   template <typename T>
   bool operator()(const T* extrinsic_parameters_ref,
@@ -183,26 +198,19 @@ struct InvReprojectionError {
     typedef Eigen::Matrix<T, 3, 1> Vector3T;
     typedef Eigen::Map<const Vector3T> ConstMap3T;
 
-    // first scale the bearing vector 
-    Vector3T point_ref = bearing_vector_ref_.cast<T>() / *inverse_depth;
-
-    // construct transformation matrices
-    Sophus::SO3<T> R_ref_world = Sophus::SO3<T>::exp(
+    const Sophus::SO3<T> R_ref = Sophus::SO3<T>::exp(
       ConstMap3T(extrinsic_parameters_ref + Camera::ORIENTATION));
-    Sophus::SO3<T> R_other_world = Sophus::SO3<T>::exp(
+    const Sophus::SO3<T> R_other = Sophus::SO3<T>::exp(
       ConstMap3T(extrinsic_parameters_other + Camera::ORIENTATION));
 
-    Vector3T p_world_ref = ConstMap3T(extrinsic_parameters_ref + Camera::POSITION);
-    Vector3T p_world_other = ConstMap3T(extrinsic_parameters_other + Camera::POSITION);
+    const Vector3T c_ref = ConstMap3T(extrinsic_parameters_ref + Camera::POSITION);
+    const Vector3T c_other = ConstMap3T(extrinsic_parameters_other + Camera::POSITION);
 
-    Sophus::SE3<T> T_world_ref(R_ref_world.inverse(), p_world_ref);
-    Sophus::SE3<T> T_world_other(R_other_world.inverse(), p_world_other);
+    // Direction of the point in the other camera, scaled by the inverse depth.
+    const Vector3T point_other =
+        R_other * (R_ref.inverse() * bearing_vector_ref_.cast<T>() +
+                   (*inverse_depth) * (c_ref - c_other));
 
-    Vector3T point_world = T_world_ref * point_ref;
-    // transform the vector to the other camera
-    Vector3T point_other = T_world_other.inverse() * point_world;
-
-    // Apply the camera intrinsics to get the reprojected pixel.
     T reprojection[2];
     const bool res = CameraModel::CameraToPixelCoordinates(
         intrinsic_parameters_other, point_other.data(), reprojection);
@@ -222,38 +230,26 @@ struct InvReprojectionError {
   const Eigen::Vector3d bearing_vector_ref_;
 };
 
+// Residual of the reference observation itself. The point lies on the
+// reference ray, so the projection is the (unscaled) bearing vector and neither
+// the pose nor the inverse depth enter; only the intrinsics do.
 template <class CameraModel>
 struct InvReprojectionPoseError {
  public:
   explicit InvReprojectionPoseError(
     const Feature& feature,
     const Eigen::Vector3d& bearing_vector_ref) : 
-    feature_(feature), bearing_vector_ref_(bearing_vector_ref)  {}
+    feature_(feature), bearing_vector_ref_(bearing_vector_ref.normalized())  {}
 
   template <typename T>
   bool operator()(const T* extrinsic_parameters_ref,
                   const T* intrinsic_parameters_ref,
                   const T* inverse_depth,
                   T* reprojection_error) const {
-
     typedef Eigen::Matrix<T, 3, 1> Vector3T;
-    typedef Eigen::Map<const Vector3T> ConstMap3T;
 
-    // first scale the bearing vector 
-    Vector3T point_ref = bearing_vector_ref_.cast<T>() / *inverse_depth;
+    const Vector3T point = bearing_vector_ref_.cast<T>();
 
-    // construct transformation matrices
-    Sophus::SO3<T> R_ref_world = Sophus::SO3<T>::exp(
-      ConstMap3T(extrinsic_parameters_ref + Camera::ORIENTATION));
-
-    Vector3T p_world_ref = ConstMap3T(extrinsic_parameters_ref + Camera::POSITION);
-
-    Sophus::SE3<T> T_world_ref(R_ref_world.inverse(), p_world_ref);
-
-    // transform the vector to the other camera
-    Vector3T point = T_world_ref.inverse() * T_world_ref * point_ref;
-
-    // Apply the camera intrinsics to get the reprojected pixel.
     T reprojection[2];
     const bool res = CameraModel::CameraToPixelCoordinates(
         intrinsic_parameters_ref, point.data(), reprojection);
@@ -279,7 +275,7 @@ struct Sim3InvReprojectionError {
   explicit Sim3InvReprojectionError(
     const Feature& feature,
     const Eigen::Vector3d& bearing_vector_ref) : 
-    feature_(feature), bearing_vector_ref_(bearing_vector_ref)  {}
+    feature_(feature), bearing_vector_ref_(bearing_vector_ref.normalized())  {}
 
   template <typename T>
   bool operator()(const T* extrinsic_parameters_ref,
@@ -289,24 +285,21 @@ struct Sim3InvReprojectionError {
                   T* reprojection_error) const {
 
     typedef Eigen::Matrix<T, 3, 1> Vector3T;
-    typedef Eigen::Map<const Vector3T> ConstMap3T;
     typedef Sophus::Sim3<T> Sim3T;
 
-    // get sim3 poses of ref and anchor cam
+    // Sim3 poses (world -> camera) of the reference and the other camera.
     Eigen::Map<const Eigen::Matrix<T, 7, 1>> lie_ref(extrinsic_parameters_ref);
     Eigen::Map<const Eigen::Matrix<T, 7, 1>> lie_other(extrinsic_parameters_other);
 
-    Sim3T S_ref_world = Sim3T::exp(lie_ref);
-    Sim3T S_other_world = Sim3T::exp(lie_other);
+    const Sim3T S_ref_world = Sim3T::exp(lie_ref);
+    const Sim3T S_other_world = Sim3T::exp(lie_other);
 
-    // first scale the bearing vector 
-    Vector3T point_ref = bearing_vector_ref_.cast<T>() / *inverse_depth;
+    // S_other_ref (x) = A x + t is affine; the point is x = bearing / inverse_depth.
+    const Sim3T S_other_ref = S_other_world * S_ref_world.inverse();
+    const Vector3T point_other =
+        S_other_ref.rxso3().matrix() * bearing_vector_ref_.cast<T>() +
+        (*inverse_depth) * S_other_ref.translation();
 
-    Vector3T point_world = S_ref_world.inverse() * point_ref;
-    // transform the vector to the other camera
-    Vector3T point_other = S_other_world * point_world;
-
-    // Apply the camera intrinsics to get the reprojected pixel.
     T reprojection[2];
     const bool res = CameraModel::CameraToPixelCoordinates(
         intrinsic_parameters_other, point_other.data(), reprojection);
@@ -332,7 +325,7 @@ struct Sim3InvReprojectionPoseError {
   explicit Sim3InvReprojectionPoseError(
     const Feature& feature,
     const Eigen::Vector3d& bearing_vector_ref) : 
-    feature_(feature), bearing_vector_ref_(bearing_vector_ref)  {}
+    feature_(feature), bearing_vector_ref_(bearing_vector_ref.normalized())  {}
 
   template <typename T>
   bool operator()(const T* extrinsic_parameters_ref,
@@ -341,24 +334,12 @@ struct Sim3InvReprojectionPoseError {
                   T* reprojection_error) const {
 
     typedef Eigen::Matrix<T, 3, 1> Vector3T;
-    typedef Eigen::Map<const Vector3T> ConstMap3T;
-    typedef Sophus::Sim3<T> Sim3T;
 
-    // get sim3 poses of ref and anchor cam
-    Eigen::Map<const Eigen::Matrix<T, 7, 1>> lie_ref(extrinsic_parameters_ref);
+    const Vector3T point = bearing_vector_ref_.cast<T>();
 
-    Sim3T S_ref_world = Sim3T::exp(lie_ref);
-
-    // first scale the bearing vector 
-    Vector3T point_ref = bearing_vector_ref_.cast<T>() / *inverse_depth;
-
-    // transform the vector to the other camera
-    Vector3T point_other = S_ref_world * S_ref_world.inverse() * point_ref;
-
-    // Apply the camera intrinsics to get the reprojected pixel.
     T reprojection[2];
     const bool res = CameraModel::CameraToPixelCoordinates(
-        intrinsic_parameters_other, point_other.data(), reprojection);
+        intrinsic_parameters_other, point.data(), reprojection);
 
     // Whiten with the full 2x2 feature covariance.
     const Eigen::Matrix2d sqrt_information = feature_.SqrtInformation();

@@ -37,6 +37,8 @@
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <optional>
+#include <unordered_set>
 
 #include <Eigen/Dense>
 #include <algorithm>
@@ -1895,6 +1897,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def("Color", &theia::Track::Color)
       .def("SetColor", &theia::Track::SetColor, py::arg("color"))
       .def("ReferenceViewId", &theia::Track::ReferenceViewId)
+      .def("SetReferenceViewId",
+           &theia::Track::SetReferenceViewId,
+           py::arg("view_id"))
       .def("InverseDepth", &theia::Track::InverseDepth)
       .def("SetInverseDepth", &theia::Track::SetInverseDepth, py::arg("inverse_depth"))
       .def("SetReferenceBearingVector",
@@ -1973,6 +1978,9 @@ void pytheia_sfm_classes(py::module& m) {
                      &theia::BundleAdjustmentOptions::use_depth_priors)
       .def_readwrite("orthographic_camera",
                      &theia::BundleAdjustmentOptions::orthographic_camera)
+      .def_readwrite("experimental_analytic_division_jacobian",
+                     &theia::BundleAdjustmentOptions::
+                         experimental_analytic_division_jacobian)
       .def_readwrite("use_homogeneous_point_parametrization",
                      &theia::BundleAdjustmentOptions::
                          use_homogeneous_point_parametrization)
@@ -2469,6 +2477,9 @@ void pytheia_sfm_classes(py::module& m) {
            py::arg("group_id"))
       .def("InitializeInverseDepth",
            &theia::Reconstruction::InitializeInverseDepth)
+      .def("InitializeTrackInverseDepth",
+           &theia::Reconstruction::InitializeTrackInverseDepth,
+           py::arg("track_id"))
       .def("AddCameraRig",
            &theia::Reconstruction::AddCameraRig,
            py::arg("camera_rig"))
@@ -2933,6 +2944,21 @@ void pytheia_sfm_classes(py::module& m) {
       //.def(py::init<theia::BundleAdjustmentOptions, theia::Reconstruction>())
       .def("AddView", &theia::BundleAdjuster::AddView, py::arg("view_id"))
       .def("AddTrack", &theia::BundleAdjuster::AddTrack, py::arg("track_id"))
+      .def(
+          "AddInvTrack",
+          [](theia::BundleAdjuster& self,
+             const theia::TrackId track_id,
+             const bool views_constant,
+             const std::optional<std::unordered_set<theia::ViewId>>&
+                 variable_views) {
+            return self.AddInvTrack(
+                track_id,
+                views_constant,
+                variable_views ? &*variable_views : nullptr);
+          },
+          py::arg("track_id"),
+          py::arg("views_constant") = false,
+          py::arg("variable_views") = py::none())
       .def("Optimize", &theia::BundleAdjuster::Optimize)
       //.def("SetCameraExtrinsicsParameterization",
       //&theia::BundleAdjuster::SetCameraExtrinsicsParameterization)

@@ -74,9 +74,30 @@ class BundleAdjuster {
   // for each estimated view that observes the track.
   void AddTrack(const TrackId track_id);
   
-  // Add a inverse depth parametrization track to be optimized with bundle adjustment. 
-  // A residual is created for each estimated view that observes the track.
-  void AddInvTrack(const TrackId track_id, const bool views_constant);
+  // Add a track with inverse depth parametrization to be optimized with bundle
+  // adjustment. A residual is created for each estimated view that observes the
+  // track. The reference view, reference bearing vector and inverse depth of
+  // the track are (re-)initialized from the current 3D point of the track, so
+  // they never go stale when poses changed since the last call to
+  // Reconstruction::InitializeInverseDepth().
+  //
+  // views_constant: all observing views (including the reference view) are held
+  // constant. variable_views: if not null, only the listed views are optimized
+  // and all other observing views are held constant (like AddTrack() does for
+  // views that were not added with AddView()).
+  //
+  // Returns false (and adds nothing) if the track can not be represented with
+  // an inverse depth: not estimated, no estimated reference view, point behind
+  // the reference ray, orthographic camera, or no observation besides the
+  // reference view.
+  bool AddInvTrack(const TrackId track_id,
+                   const bool views_constant,
+                   const std::unordered_set<ViewId>* variable_views = nullptr);
+
+  // Tracks that were actually added to the problem.
+  const std::unordered_set<TrackId>& OptimizedTrackIds() const {
+    return optimized_tracks_;
+  }
 
   void AddViewPriors();
 

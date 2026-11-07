@@ -176,8 +176,19 @@ class Reconstruction {
   void GetSubReconstruction(const std::unordered_set<ViewId>& views_in_subset,
                             Reconstruction* subreconstruction) const;
                             
-  // Initialize inverse depth for all tracks
+  // Initializes the inverse depth parametrization (reference view, unit
+  // reference bearing vector and inverse depth = w / range) of all estimated
+  // tracks from their 3D points. The inverse depth block is measured along the
+  // bearing ray, so it is valid for central cameras with a field of view above
+  // 180 degrees as well. Returns nothing; tracks that can not be represented
+  // (no estimated observing view, point behind the reference ray, orthographic
+  // reference camera) keep their previous state.
   void InitializeInverseDepth();
+
+  // Same as InitializeInverseDepth() for a single track (estimated or not).
+  // If the stored reference view is not an estimated observer a new one is
+  // selected. Returns false if the track can not be represented.
+  bool InitializeTrackInverseDepth(const TrackId track_id);
 
   // ---------------------------- Camera rigs ---------------------------- //
   // Adds a camera rig definition (abstract body + sensor extrinsics). The

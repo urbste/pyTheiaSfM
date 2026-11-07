@@ -35,6 +35,8 @@
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 
 #include <glog/logging.h>
+#include <cmath>
+#include <vector>
 #include <unordered_set>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjuster.h"
@@ -44,68 +46,86 @@
 namespace theia {
 
 
+namespace {
+
+// Writes the 3D points of the given tracks from their inverse depth
+// parametrization: X = c_ref + R_ref^T * bearing / inverse_depth. Only used for
+// tracks that were part of the optimization, so stale inverse depths never
+// overwrite a valid point.
 void UpdateHomogeneousPoint(
   const std::vector<theia::TrackId>& track_ids,
   theia::Reconstruction& recon) {
   for (const auto& track_id : track_ids) {
     theia::Track* mutable_track = recon.MutableTrack(track_id);
-    if (!mutable_track->IsEstimated()) {
+    if (mutable_track == nullptr || !mutable_track->IsEstimated()) {
       continue;
     }
 
     const theia::View* ref_view = recon.View(mutable_track->ReferenceViewId());
-    const theia::Camera ref_cam = ref_view->Camera();
-    if (mutable_track->InverseDepth() > 0.0) {
-      Eigen::Vector3d bearing = 
-        mutable_track->ReferenceBearingVector() / mutable_track->InverseDepth();
+    if (ref_view == nullptr) {
+      continue;
+    }
+    const theia::Camera& ref_cam = ref_view->Camera();
+    const double inverse_depth = mutable_track->InverseDepth();
+    if (!std::isfinite(inverse_depth) || inverse_depth < 0.0 ||
+        !mutable_track->ReferenceBearingVector().allFinite()) {
+      continue;
+    }
 
-      Eigen::Matrix3d R_c_w = ref_cam.GetOrientationAsRotationMatrix();
-      Eigen::Vector3d p_world = R_c_w.transpose() * bearing + ref_cam.GetPosition();
+    const Eigen::Matrix3d R_c_w = ref_cam.GetOrientationAsRotationMatrix();
+    const Eigen::Vector3d bearing = mutable_track->ReferenceBearingVector();
+    if (inverse_depth > 1e-12) {
+      const Eigen::Vector3d p_world =
+          R_c_w.transpose() * (bearing / inverse_depth) + ref_cam.GetPosition();
       *mutable_track->MutablePoint() = p_world.homogeneous();
+    } else {
+      // Point at infinity.
+      *mutable_track->MutablePoint() << R_c_w.transpose() * bearing, 0.0;
     }
   }
 }
 
+// Refreshes the reference bearing vector and the inverse depth from the 3D
+// points. Tracks that can not be represented keep their previous values.
 void UpdateInverseDepth(
   const std::vector<theia::TrackId>& track_ids,
   theia::Reconstruction& recon) {
   for (const auto& track_id : track_ids) {
-    theia::Track* mutable_track = CHECK_NOTNULL(recon.MutableTrack(track_id));
-    if (!mutable_track->IsEstimated()) {
+    const theia::Track* track = recon.Track(track_id);
+    if (track == nullptr || !track->IsEstimated()) {
       continue;
     }
-
-    const theia::View* ref_view = CHECK_NOTNULL(recon.View(mutable_track->ReferenceViewId()));
-    const theia::Camera ref_cam = ref_view->Camera();
-    const double depth = ref_cam.ProjectPoint(mutable_track->Point(), nullptr);
-    mutable_track->SetInverseDepth(1/depth);
+    recon.InitializeTrackInverseDepth(track_id);
   }
 }
 
-
+// Same as UpdateInverseDepth for all tracks whose reference view is one of the
+// given views.
 void UpdateInverseDepthViews(
   const std::vector<ViewId>& view_ids,
   theia::Reconstruction& recon) {
+  std::vector<TrackId> track_ids;
   for (const auto& view_id : view_ids) {
-    const theia::View* view = CHECK_NOTNULL(recon.View(view_id));
-    const auto& track_ids = view->TrackIds();
-
-    for (const auto& track_id : track_ids) {
-      theia::Track* mutable_track = CHECK_NOTNULL(recon.MutableTrack(track_id));
-      if (!mutable_track->IsEstimated()) {
-        continue;
+    const theia::View* view = recon.View(view_id);
+    if (view == nullptr) {
+      continue;
+    }
+    for (const auto& track_id : view->TrackIds()) {
+      const theia::Track* track = recon.Track(track_id);
+      if (track != nullptr && track->ReferenceViewId() == view_id) {
+        track_ids.push_back(track_id);
       }
-
-      if (mutable_track->ReferenceViewId() != view_id) {
-        continue;
-      }
-
-      const theia::Camera camera = view->Camera();
-      const double depth = camera.ProjectPoint(mutable_track->Point(), nullptr);
-      mutable_track->SetInverseDepth(1/depth);
     }
   }
+  UpdateInverseDepth(track_ids, recon);
 }
+
+std::vector<TrackId> OptimizedTrackIdVector(const BundleAdjuster& adjuster) {
+  const auto& ids = adjuster.OptimizedTrackIds();
+  return std::vector<TrackId>(ids.begin(), ids.end());
+}
+
+}  // namespace
 
 // Bundle adjust the specified views and tracks.
 BundleAdjustmentSummary BundleAdjustPartialReconstruction(
@@ -117,9 +137,11 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
 
   BundleAdjuster bundle_adjuster(options, reconstruction);
   if (options.use_inverse_depth_parametrization) {
+    // Only the requested views are optimized; all other observing views stay
+    // constant (same semantics as the XYZ parametrization).
     for (const TrackId track_id : track_ids) {
-      bundle_adjuster.AddInvTrack(track_id, false);
-    } 
+      bundle_adjuster.AddInvTrack(track_id, false, &view_ids);
+    }
     bundle_adjuster.AddViewPriors();
   } else {
     for (const ViewId view_id : view_ids) {
@@ -133,7 +155,8 @@ BundleAdjustmentSummary BundleAdjustPartialReconstruction(
 
   const std::vector<TrackId> tracks(track_ids.begin(), track_ids.end());
   if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint(tracks, *reconstruction);
+    UpdateHomogeneousPoint(OptimizedTrackIdVector(bundle_adjuster),
+                           *reconstruction);
   } else {
     UpdateInverseDepth(tracks, *reconstruction);
   }
@@ -168,7 +191,8 @@ BundleAdjustPartialViewsConstant(const BundleAdjustmentOptions &options,
   summary = bundle_adjuster.Optimize();
 
   if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint(reconstruction->TrackIds(), *reconstruction);
+    UpdateHomogeneousPoint(OptimizedTrackIdVector(bundle_adjuster),
+                           *reconstruction);
   } else {
     UpdateInverseDepth(reconstruction->TrackIds(), *reconstruction);
   }
@@ -191,7 +215,13 @@ BundleAdjustmentSummary BundleAdjustReconstructionWithConstantTracks(
   const auto& view_ids = reconstruction->ViewIds();
   const auto& track_ids = reconstruction->TrackIds();
 
-  BundleAdjuster bundle_adjuster(options, reconstruction);
+  // The constant tracks act as fixed control points. With the inverse depth
+  // parametrization a point is anchored to its reference camera and would move
+  // with it, so this entry point always optimizes XYZ points.
+  BundleAdjustmentOptions ba_options = options;
+  ba_options.use_inverse_depth_parametrization = false;
+
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
   for (const ViewId view_id : view_ids) {
     const View* view = reconstruction->View(view_id);
     if (view != nullptr && view->IsEstimated()) {
@@ -212,11 +242,7 @@ BundleAdjustmentSummary BundleAdjustReconstructionWithConstantTracks(
 
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
 
-  if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint(track_ids, *reconstruction);
-  } else {
-    UpdateInverseDepth(track_ids, *reconstruction);
-  }
+  UpdateInverseDepth(track_ids, *reconstruction);
 
   return summary;
 }
@@ -265,10 +291,14 @@ void SetupPartialViewsConstantBundleAdjuster(
   CHECK_NOTNULL(reconstruction);
   CHECK_NOTNULL(bundle_adjuster);
   if (options.use_inverse_depth_parametrization) {
+    // Views that are neither variable nor constant observe the tracks as
+    // constant views, like in the XYZ parametrization.
+    const std::unordered_set<ViewId> variable_views(var_view_ids.begin(),
+                                                    var_view_ids.end());
     for (const TrackId track_id : reconstruction->TrackIds()) {
       const Track* track = reconstruction->Track(track_id);
       if (track != nullptr && track->IsEstimated()) {
-        bundle_adjuster->AddInvTrack(track_id, false);
+        bundle_adjuster->AddInvTrack(track_id, false, &variable_views);
       }
     }
     for (const ViewId view_id : const_view_ids) {
@@ -297,7 +327,8 @@ BundleAdjustmentSummary FinalizeBundleAdjustment(
     BundleAdjuster* bundle_adjuster) {
   BundleAdjustmentSummary summary = bundle_adjuster->Optimize();
   if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint(track_ids, *reconstruction);
+    UpdateHomogeneousPoint(OptimizedTrackIdVector(*bundle_adjuster),
+                           *reconstruction);
   } else {
     UpdateInverseDepth(track_ids, *reconstruction);
   }
@@ -408,7 +439,8 @@ BundleAdjustmentSummary BundleAdjustReconstruction(
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
   
   if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint(track_ids, *reconstruction);
+    UpdateHomogeneousPoint(OptimizedTrackIdVector(bundle_adjuster),
+                           *reconstruction);
   } else {
     UpdateInverseDepth(reconstruction->TrackIds(), *reconstruction);
   }
@@ -476,7 +508,8 @@ BundleAdjustmentSummary BundleAdjustTrack(
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
   
   if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint({track_id}, *reconstruction);
+    UpdateHomogeneousPoint(OptimizedTrackIdVector(bundle_adjuster),
+                           *reconstruction);
   } else {
     UpdateInverseDepth({track_id}, *reconstruction);
   }
@@ -517,11 +550,9 @@ BundleAdjustmentSummary BundleAdjustTrack(
     }
   }
 
-  if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint({track_id}, *reconstruction);
-  } else {
-    UpdateInverseDepth({track_id}, *reconstruction);
-  }
+  // This overload always optimizes XYZ points (the covariance is defined on the
+  // homogeneous point), so only the inverse depths need to be refreshed.
+  UpdateInverseDepth({track_id}, *reconstruction);
 
   return summary;
 }
@@ -576,11 +607,9 @@ BundleAdjustmentSummary BundleAdjustTracks(
     }
   }
 
-  if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint(tracks_to_optimize, *reconstruction);
-  } else {
-    UpdateInverseDepth(tracks_to_optimize, *reconstruction);
-  }
+  // This overload always optimizes XYZ points (the covariance is defined on the
+  // homogeneous point), so only the inverse depths need to be refreshed.
+  UpdateInverseDepth(tracks_to_optimize, *reconstruction);
 
   return summary;
 }
@@ -609,7 +638,8 @@ BundleAdjustmentSummary BundleAdjustTracks(
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
 
   if (options.use_inverse_depth_parametrization) {
-    UpdateHomogeneousPoint(tracks_to_optimize, *reconstruction);
+    UpdateHomogeneousPoint(OptimizedTrackIdVector(bundle_adjuster),
+                           *reconstruction);
   } else {
     UpdateInverseDepth(tracks_to_optimize, *reconstruction);
   }

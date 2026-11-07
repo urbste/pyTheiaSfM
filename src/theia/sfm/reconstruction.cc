@@ -39,6 +39,7 @@
 #include <glog/logging.h>
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -616,21 +617,89 @@ void Reconstruction::GetSubReconstruction(
   }
 }
 
+bool Reconstruction::InitializeTrackInverseDepth(const TrackId track_id) {
+  class Track* track = MutableTrack(track_id);
+  if (track == nullptr || track->NumViews() == 0) {
+    return false;
+  }
+
+  // The reference view must be an estimated view that observes the track.
+  // Otherwise fall back to the estimated observer with the smallest view id.
+  const auto is_valid_reference = [&](const ViewId view_id) {
+    const class View* view = View(view_id);
+    return view != nullptr && view->IsEstimated() &&
+           view->GetFeature(track_id) != nullptr;
+  };
+  ViewId ref_view_id = track->ReferenceViewId();
+  if (ref_view_id == kInvalidViewId || !track->ViewIds().count(ref_view_id) ||
+      !is_valid_reference(ref_view_id)) {
+    ref_view_id = kInvalidViewId;
+    for (const ViewId view_id : track->ViewIds()) {
+      if (is_valid_reference(view_id) &&
+          (ref_view_id == kInvalidViewId || view_id < ref_view_id)) {
+        ref_view_id = view_id;
+      }
+    }
+    if (ref_view_id == kInvalidViewId) {
+      return false;
+    }
+    track->SetReferenceViewId(ref_view_id);
+  }
+
+  const class View* ref_view = View(ref_view_id);
+  const Camera& ref_cam = ref_view->Camera();
+  // An orthographic camera has no viewing ray through the camera center.
+  if (ref_cam.GetCameraIntrinsicsModelType() ==
+      CameraIntrinsicsModelType::ORTHOGRAPHIC) {
+    return false;
+  }
+
+  // Unit bearing vector of the reference observation.
+  Eigen::Vector3d bearing =
+      ref_cam.PixelToNormalizedCoordinates(ref_view->GetFeature(track_id)->point_);
+  if (!bearing.allFinite() || bearing.norm() < 1e-12) {
+    return false;
+  }
+  bearing.normalize();
+
+  // The inverse depth is w / ||R (X - w c)||, i.e. the inverse of the distance
+  // between the camera center and the point along the bearing ray. For finite
+  // points (w = 1) this is 1 / range; points at infinity have w = 0.
+  Eigen::Vector4d point = track->Point();
+  if (!point.allFinite()) {
+    return false;
+  }
+  if (point[3] < 0.0) {
+    point = -point;
+  }
+  const Eigen::Vector3d p_cam =
+      ref_cam.GetOrientationAsRotationMatrix() *
+      (point.head<3>() - point[3] * ref_cam.GetPosition());
+  const double range = p_cam.norm();
+  if (!std::isfinite(range) || range < 1e-12) {
+    return false;
+  }
+  // The point has to lie in front of the reference ray (it can not be
+  // represented as a positive depth along the bearing otherwise).
+  if (p_cam.dot(bearing) <= 0.0) {
+    return false;
+  }
+
+  track->SetReferenceBearingVector(bearing);
+  track->SetInverseDepth(point[3] / range);
+  return true;
+}
+
 void Reconstruction::InitializeInverseDepth() {
   for (const auto& track_id : TrackIds()) {
-    class Track* track = MutableTrack(track_id);
-    if (!track->IsEstimated()) {
+    const class Track* track = this->Track(track_id);
+    if (track == nullptr || !track->IsEstimated()) {
       continue;
     }
-
-    const ViewId ref_view_id = track->ReferenceViewId();
-    const class View* ref_view = CHECK_NOTNULL(View(ref_view_id));
-    const Camera& ref_cam = ref_view->Camera();
-    const Feature* reference_obs = ref_view->GetFeature(track_id);
-    const double depth = ref_cam.ProjectPoint(track->Point(), nullptr);
-    track->SetReferenceBearingVector(
-      ref_cam.PixelToNormalizedCoordinates(reference_obs->point_)); 
-    track->SetInverseDepth(1/depth);
+    if (!InitializeTrackInverseDepth(track_id)) {
+      LOG(WARNING) << "Could not initialize the inverse depth of track "
+                   << track_id << ".";
+    }
   }
 }
 

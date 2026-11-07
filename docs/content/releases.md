@@ -4,6 +4,14 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
+## 1.4.1 (unreleased) {#release-1-4-1}
+
+### Fixes
+
+- **Inverse-depth bundle adjustment** (`use_inverse_depth_parametrization = True`): it produced NaN residuals when the inverse depths had not been initialized, and several entry points optimized stale anchors or the wrong state. The reference view, the unit bearing and the inverse depth are now derived from the current 3D point of each track right before the track is added (`Reconstruction.InitializeTrackInverseDepth`, also bound for single tracks), so `Reconstruction.InitializeInverseDepth()` is optional and poses that moved cannot leave stale anchors. The inverse depth is `w / range` along a unit bearing (it was `1 / z` with a bearing that was not unit for the fisheye and sphere models), so wide-angle models work. The residual is evaluated without dividing by the inverse depth and matches the XYZ residual at the same point for all central camera models; the inverse depth is bounded below by 0. The reference-view residual no longer carries the pose, tracks that cannot be represented are skipped instead of corrupting the solve (and their points are no longer overwritten from stale inverse depths), `BundleAdjustPartialReconstruction` and `BundleAdjustPartialViewsConstant` now keep views outside the requested set constant, `BundleAdjustTrack` and `BundleAdjustTracks` no longer optimize the intrinsics, the covariance overloads no longer overwrite the optimized point with a stale inverse depth, `BundleAdjustReconstructionWithConstantTracks` no longer crashes when the option is set, and `Track::RemoveView` keeps the reference view when the removed view is not the reference. New: `Track.SetReferenceViewId`, `BundleAdjuster.AddInvTrack`. See [Bundle adjustment](bundle_adjustment.md#ba-inverse-depth).
+
+---
+
 ## 1.4.0 (unreleased) {#release-1-4-0}
 
 Tooling around the library: command line, browser viewer and exporters for Gaussian splatting.

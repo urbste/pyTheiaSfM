@@ -54,6 +54,7 @@
 #include "theia/sfm/bundle_adjustment/relative_pose_error.h"
 #include "theia/sfm/bundle_adjustment/scaled_relative_pose_error.h"
 
+#include "theia/sfm/bundle_adjustment/analytic_division_reprojection_error.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/types.h"
@@ -223,81 +224,96 @@ void BundleAdjuster::AddTrack(const TrackId track_id) {
 
 }
 
-void BundleAdjuster::AddInvTrack(const TrackId track_id, const bool views_constant) {
+bool BundleAdjuster::AddInvTrack(
+    const TrackId track_id,
+    const bool views_constant,
+    const std::unordered_set<ViewId>* variable_views) {
   Track* track = CHECK_NOTNULL(reconstruction_->MutableTrack(track_id));
   // Only optimize estimated tracks.
   if (!track->IsEstimated() || ContainsKey(optimized_tracks_, track_id)) {
-    return;
+    return false;
+  }
+
+  // Derive the reference view, the unit bearing vector and the inverse depth
+  // from the current 3D point so that the anchor is consistent with the poses.
+  if (!reconstruction_->InitializeTrackInverseDepth(track_id)) {
+    VLOG(1) << "Track " << track_id
+            << " can not be parametrized with an inverse depth. Skipping it.";
+    return false;
+  }
+  const ViewId reference_view_id = track->ReferenceViewId();
+
+  // Collect the observations that can enter the problem.
+  struct Observation {
+    ViewId view_id;
+    const Feature* feature;
+  };
+  std::vector<Observation> observations;
+  int num_non_reference_observations = 0;
+  for (const ViewId view_id : track->ViewIds()) {
+    View* view = CHECK_NOTNULL(reconstruction_->MutableView(view_id));
+    if (!view->IsEstimated()) {
+      continue;
+    }
+    const Feature* feature = view->GetFeature(track_id);
+    if (feature == nullptr) {
+      continue;
+    }
+    // The inverse depth cost functions exist for central cameras only.
+    if (view->Camera().GetCameraIntrinsicsModelType() ==
+        CameraIntrinsicsModelType::ORTHOGRAPHIC) {
+      return false;
+    }
+    observations.push_back({view_id, feature});
+    if (view_id != reference_view_id) {
+      ++num_non_reference_observations;
+    }
+  }
+  // The inverse depth is only constrained by observations in other views.
+  if (num_non_reference_observations == 0) {
+    return false;
   }
 
   // Mark the track as optimized.
   optimized_tracks_.emplace(track_id);
 
-  // Add all observations of the track to the problem.
-  const auto& reference_view_id = track->ReferenceViewId();
-  if (reference_view_id == kInvalidViewId) {
-    LOG(ERROR) << "Track " << track_id << " has no reference view.";
-    return;
-  }
-  View* ref_view = CHECK_NOTNULL(reconstruction_->MutableView(reference_view_id));
-  if (ref_view == nullptr) {
-    LOG(ERROR) << "View " << reference_view_id << " does not exist.";
-    return;
-  }
-
-  const auto& observed_view_ids = track->ViewIds();
-  for (const ViewId view_id : observed_view_ids) {
-    View* view = CHECK_NOTNULL(reconstruction_->MutableView(view_id));
-
-    // Check if view is estimated and can now be optimized
-    if (!view->IsEstimated()) {
-      continue;
-    }
-
-    const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
+  View* ref_view = reconstruction_->MutableView(reference_view_id);
+  for (const Observation& observation : observations) {
+    const ViewId view_id = observation.view_id;
+    View* view = reconstruction_->MutableView(view_id);
     Camera* camera = view->MutableCamera();
 
-    // Add the reprojection error to the optimization.
-    AddInvReprojectionErrorResidual(*feature, track->ReferenceBearingVector(),
-        ref_view->MutableCamera(), camera, track);
+    AddInvReprojectionErrorResidual(*observation.feature,
+                                    track->ReferenceBearingVector(),
+                                    ref_view->MutableCamera(),
+                                    camera,
+                                    track);
 
-    // Mark the camera intrinsics as "potentially constant." We only set the
-    // parameter block to constant if the shared intrinsics are not shared
-    // with cameras that are being optimized.
     const CameraIntrinsicsGroupId intrinsics_group_id =
         reconstruction_->CameraIntrinsicsGroupIdFromViewId(view_id);
-    potentially_constant_camera_intrinsics_groups_.emplace(intrinsics_group_id);
-    optimized_camera_intrinsics_groups_.emplace(intrinsics_group_id);
-
-    SetCameraSchurGroups(view_id);
-    if (views_constant) {
+    const bool view_is_variable =
+        !views_constant &&
+        (variable_views == nullptr || ContainsKey(*variable_views, view_id));
+    if (view_is_variable) {
+      optimized_camera_intrinsics_groups_.emplace(intrinsics_group_id);
+      SetCameraSchurGroups(view_id);
+      optimized_views_.emplace(view_id);
+    } else {
+      // Mark the camera intrinsics as "potentially constant." We only set the
+      // parameter block to constant if the shared intrinsics are not shared
+      // with cameras that are being optimized.
+      potentially_constant_camera_intrinsics_groups_.emplace(
+          intrinsics_group_id);
       SetCameraExtrinsicsConstant(view_id);
     }
-
-    // check if view_id is in optimized_views_ if not add it
-    if (!ContainsKey(optimized_views_, view_id)) {
-      optimized_views_.emplace(view_id);
-    }
-    if (!ContainsKey(optimized_views_, reference_view_id)) {
-      optimized_views_.emplace(reference_view_id);
-    }
-  }
-
-  {
-    const CameraIntrinsicsGroupId ref_intrinsics_group_id =
-        reconstruction_->CameraIntrinsicsGroupIdFromViewId(reference_view_id);
-    potentially_constant_camera_intrinsics_groups_.emplace(
-        ref_intrinsics_group_id);
-    optimized_camera_intrinsics_groups_.emplace(ref_intrinsics_group_id);
-  }
-
-  SetCameraSchurGroups(reference_view_id);
-  if (views_constant) {
-    SetCameraExtrinsicsConstant(reference_view_id);
   }
 
   SetTrackVariable(track_id);
-  SetTrackSchurGroup(track_id);  
+  SetTrackSchurGroup(track_id);
+  // The inverse depth has to stay non-negative: a negative value would place
+  // the point behind the reference camera. Zero is a point at infinity.
+  problem_->SetParameterLowerBound(track->MutableInverseDepth(), 0, 0.0);
+  return true;
 }
 
 void BundleAdjuster::AddViewPriors() {
@@ -693,9 +709,18 @@ void BundleAdjuster::AddReprojectionErrorResidual(const Feature& feature,
   // Add the residual for the track to the problem. The shared intrinsics
   // parameter block will be set to constant after the loop if no optimized
   // cameras share the same camera intrinsics.
+  ceres::CostFunction* cost_function = nullptr;
+  if (options_.experimental_analytic_division_jacobian &&
+      !options_.orthographic_camera &&
+      camera->GetCameraIntrinsicsModelType() ==
+          CameraIntrinsicsModelType::DIVISION_UNDISTORTION) {
+    cost_function = new AnalyticDivisionReprojectionError(feature);
+  } else {
+    cost_function = CreateReprojectionErrorCostFunction(
+        camera->GetCameraIntrinsicsModelType(), feature);
+  }
   problem_->AddResidualBlock(
-      CreateReprojectionErrorCostFunction(
-          camera->GetCameraIntrinsicsModelType(), feature),
+      cost_function,
       loss_function_.get(),
       camera->mutable_extrinsics(),
       camera->mutable_intrinsics(),

@@ -76,6 +76,10 @@ class Track {
   const std::unordered_set<ViewId>& ViewIds() const;
 
   ViewId ReferenceViewId() const;
+  // Sets the view that anchors the inverse depth parametrization. The view
+  // should observe the track; the reference bearing vector and inverse depth
+  // must be re-initialized afterwards (Reconstruction::InitializeTrackInverseDepth).
+  void SetReferenceViewId(const ViewId view_id);
 
   const double& InverseDepth() const;
   double* MutableInverseDepth();

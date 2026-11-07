@@ -34,6 +34,8 @@
 
 #include "theia/sfm/track.h"
 
+#include <algorithm>
+
 #include <Eigen/Core>
 #include <unordered_set>
 
@@ -83,18 +85,30 @@ void Track::AddView(const ViewId view_id) {
 }
 
 bool Track::RemoveView(const ViewId view_id) {
-  bool successfull_removed = view_ids_.erase(view_id) > 0;
-  if (successfull_removed && view_ids_.size() >= 1) {
-    reference_view_id_ = *view_ids_.begin();
-  } else {
-    reference_view_id_ = theia::kInvalidViewId;
+  const bool successfull_removed = view_ids_.erase(view_id) > 0;
+  if (!successfull_removed) {
+    // Removing a view that does not observe the track must not touch the
+    // reference view.
+    return false;
   }
-  return successfull_removed;
+  if (view_ids_.empty()) {
+    reference_view_id_ = theia::kInvalidViewId;
+  } else if (reference_view_id_ == view_id ||
+             view_ids_.count(reference_view_id_) == 0) {
+    // Only re-select the reference view if the removed view was the reference.
+    // Use the smallest id so the choice is deterministic.
+    reference_view_id_ = *std::min_element(view_ids_.begin(), view_ids_.end());
+  }
+  return true;
 }
 
 const std::unordered_set<ViewId>& Track::ViewIds() const { return view_ids_; }
 
 ViewId Track::ReferenceViewId() const { return reference_view_id_; }
+
+void Track::SetReferenceViewId(const ViewId view_id) {
+  reference_view_id_ = view_id;
+}
 
 const double& Track::InverseDepth() const { return inverse_depth_; }
 

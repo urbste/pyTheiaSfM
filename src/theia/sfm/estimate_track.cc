@@ -262,24 +262,13 @@ bool TrackEstimator::EstimateTrack(const TrackId track_id) {
     }
   }
 
-  // Set the inverse depth of the track
+  // Set the reference view, the reference bearing vector and the inverse depth
+  // of the track from the triangulated point.
   if (options_.ba_options.use_inverse_depth_parametrization) {
-    const ViewId ref_view_id = track->ReferenceViewId();
-    if (ref_view_id == kInvalidViewId) {
+    if (!reconstruction_->InitializeTrackInverseDepth(track_id)) {
       track->SetEstimated(false);
       return false;
     }
-    const View* ref_view = reconstruction_->View(ref_view_id);
-    if (ref_view == nullptr || !ref_view->IsEstimated()) {
-      track->SetEstimated(false);
-      return false;
-    }
-    const Camera ref_cam = ref_view->Camera();
-    Eigen::Vector2d point_i;
-    const double depth = ref_cam.ProjectPoint(track->Point(), &point_i);
-    track->SetInverseDepth(1. / depth);
-    track->SetReferenceBearingVector(ref_cam.PixelToNormalizedCoordinates(
-        ref_view->GetFeature(track_id)->point_));
   }
 
   // Bundle adjust the track.
