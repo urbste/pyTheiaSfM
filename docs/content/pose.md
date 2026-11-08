@@ -424,7 +424,7 @@ bool FourPointsPoseFocalLengthRadialDistortion(
 
 Solves for pose, focal length, and radial distortion from **four** correspondences, with focal length and distortion bounded by the min/max parameters (Python wraps these in `RadialDistUncalibratedAbsolutePoseMetaData`).
 
-**pyTheia (minimal solver):** `success, rotations, translations, radial_distortions, focal_lengths = pytheia.sfm.FourPointsPoseFocalLengthRadialDistortion(features, world_points, meta)` where `meta` is `pytheia.sfm.RadialDistUncalibratedAbsolutePoseMetaData` (`min_focal_length`, `max_focal_length`, `min_radial_distortion`, `max_radial_distortion`).
+**pyTheia (minimal solver):** `success, rotations, translations, radial_distortions, focal_lengths = pytheia.sfm.FourPointsPoseFocalLengthRadialDistortion(features, world_points, meta)` where `meta` is `pytheia.sfm.RadialDistUncalibratedAbsolutePoseMetaData` (`min_focal_length`, `max_focal_length`, `min_radial_distortion`, `max_radial_distortion`). Barrel distortion only: both distortion bounds must be `<= 0` and `max_radial_distortion` is the **lower** bound (invalid bounds raise `ValueError`).
 
 **pyTheia (RANSAC wrapper):** for **many** normalized `FeatureCorrespondence2D3D` and the same `meta`, use **`pytheia.sfm.EstimateRadialDistUncalibratedAbsolutePose(ransac_params, ransac_type, correspondences, meta)`** — returns `(success, RadialDistUncalibratedAbsolutePose, RansacSummary)` with a single best model (`rotation`, `translation`, `focal_length`, `radial_distortion`). See [Geometric estimators — `EstimateRadialDistUncalibratedAbsolutePose`](estimators.md#estimate-radial-dist-uncalibrated-absolute-pose).
 
@@ -437,8 +437,10 @@ Solves for pose, focal length, and radial distortion from **four** correspondenc
     meta = pt.sfm.RadialDistUncalibratedAbsolutePoseMetaData()
     meta.min_focal_length = 200.0
     meta.max_focal_length = 800.0
-    meta.min_radial_distortion = -0.5
-    meta.max_radial_distortion = 0.5
+    # Barrel distortion only: both bounds must be <= 0, and max_radial_distortion
+    # is the LOWER (more negative) bound. Invalid bounds raise ValueError.
+    meta.max_radial_distortion = -0.5
+    meta.min_radial_distortion = -1e-9
 
     f = 400.0
     R = np.eye(3)
@@ -808,7 +810,7 @@ The recovered `scale` is the relative scale between the two (possibly independen
     import pytheia as pt
 
     params = pt.solvers.RansacParameters()
-    params.error_thresh = 1e-4  # squared Sampson error, normalized units
+    params.error_thresh = (2.0 / focal_px) ** 2  # squared Sampson error in normalized (inv(K)) coords: (px / f)^2
 
     # correspondences: list[pt.matching.FeatureCorrespondence], each Feature
     # constructed with a depth_prior, e.g. pt.sfm.Feature(point, depth_prior)

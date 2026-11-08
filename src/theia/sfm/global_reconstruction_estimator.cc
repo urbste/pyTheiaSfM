@@ -43,6 +43,7 @@
 #include "theia/sfm/estimate_track.h"
 #include "theia/sfm/extract_maximally_parallel_rigid_subgraph.h"
 #include "theia/sfm/filter_view_graph_cycles_by_rotation.h"
+#include "theia/sfm/filter_view_graph_by_relative_inliers.h"
 #include "theia/sfm/filter_view_pairs_from_orientation.h"
 #include "theia/sfm/filter_view_pairs_from_relative_translation.h"
 #include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
@@ -312,6 +313,10 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
 }
 
 bool GlobalReconstructionEstimator::FilterInitialViewGraph() {
+  FilterViewGraphForEstimation(
+      options_.view_graph_min_relative_inliers,
+      options_.view_graph_max_cycle_rotation_error_degrees, view_graph_,
+      reconstruction_);
   // Remove any view pairs that do not have a sufficient number of inliers.
   std::unordered_set<ViewIdPair> view_pairs_to_remove;
   const auto& view_pairs = view_graph_->GetAllEdges();

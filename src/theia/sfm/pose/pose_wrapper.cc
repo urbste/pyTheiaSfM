@@ -1,4 +1,5 @@
 // header files
+#include <stdexcept>
 #include "theia/sfm/pose/pose_wrapper.h"
 
 #include "theia/sfm/pose/eight_point_fundamental_matrix.h"
@@ -200,6 +201,24 @@ FourPointsPoseFocalLengthRadialDistortionWrapper(
   std::vector<double> radial_distortions;
   std::vector<double> focal_lengths;
 
+  // The solver aborts the process (glog CHECK) on invalid bounds; raise a
+  // catchable Python exception instead.
+  if (settings.min_focal_length < 0.0 ||
+      settings.max_focal_length < settings.min_focal_length) {
+    throw std::invalid_argument(
+        "Focal length bounds must satisfy 0 <= min_focal_length <= "
+        "max_focal_length.");
+  }
+  // Only barrel distortion is supported: both bounds must be <= 0, and
+  // max_radial_distortion is the LOWER (more negative) bound.
+  if (settings.max_radial_distortion > 0.0 ||
+      settings.min_radial_distortion > 0.0 ||
+      settings.max_radial_distortion > settings.min_radial_distortion) {
+    throw std::invalid_argument(
+        "Radial distortion bounds must satisfy max_radial_distortion <= "
+        "min_radial_distortion <= 0 (barrel distortion only; "
+        "max_radial_distortion is the lower bound).");
+  }
   const bool success = FourPointsPoseFocalLengthRadialDistortion(
      feature_vectors, world_points,
      settings.max_focal_length, settings.min_focal_length,

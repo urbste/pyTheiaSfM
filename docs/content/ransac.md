@@ -22,7 +22,7 @@ Aligned with [`RansacParameters`](https://github.com/urbste/pyTheiaSfM/blob/mast
 | Field | Notes |
 |-------|--------|
 | **`rng`** | Optional `pytheia.solvers.RandomNumberGenerator`. **Set this to a seeded generator for reproducible/deterministic RANSAC runs** (e.g. in tests); if left unset, a time-seeded generator is created internally and results will vary run to run unless a process-wide default seed is set (see [Reproducible runs](#reproducible-runs)). |
-| **`error_thresh`** | Inlier threshold for the estimator’s residuals (often squared error). **You should set this** for meaningful results. |
+| **`error_thresh`** | Inlier threshold for the estimator’s residuals. For the pose estimators this is the **squared** error in **normalized image coordinates** (points after `inv(K)`), so a pixel threshold `t_px` at focal length `f` is `error_thresh = (t_px / f) ** 2` (e.g. 2 px at f = 3400 → `3.5e-7`). Passing `t_px / f` without squaring is ~1000× too permissive. **You should set this** for meaningful results. |
 | **`failure_probability`** | Target failure probability (default `0.01`). |
 | **`min_inlier_ratio`** | Lower bound on inlier fraction used to cap iteration count (default `0`). |
 | **`min_iterations`** / **`max_iterations`** | Iteration bounds. |

@@ -56,7 +56,9 @@ class RansacParameters:
         ...
     @property
     def error_thresh(*args, **kwargs):
-        ...
+        """
+        Inlier threshold on the estimator's SQUARED error in NORMALIZED image coordinates (after inv(K)). For a pixel threshold t_px and focal length f use (t_px / f) ** 2.
+        """
     @error_thresh.setter
     def error_thresh(*args, **kwargs):
         ...

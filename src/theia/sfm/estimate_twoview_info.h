@@ -59,18 +59,26 @@ struct EstimateTwoViewInfoOptions {
 
   // Maximum sampson error in pixels for correspondences to be inliers.
   //
-  // NOTE: This threshold is with respect to an image that is 1024 pixels
-  // wide. If the image dimensions are larger or smaller than this value then
-  // the threshold will be appropriately scaled. This allows us to use a single
-  // threshold for images of varying resolutions.
-  double max_sampson_error_pixels = 6.0;
+  // The defaults of the RANSAC settings below follow COLMAP's two-view
+  // geometry estimation (max_error 4 px, confidence 0.999, 100-10000 trials,
+  // min_inlier_ratio 0.25, local optimization always on).
+  //
+  // NOTE: By default this threshold is in the pixels of the given image and is
+  // NOT rescaled. Set scale_threshold_with_resolution = true to reproduce the
+  // legacy Theia behavior, where the threshold is defined for a 1024 pixel
+  // wide image and scaled by max(width, height) / 1024.
+  double max_sampson_error_pixels = 4.0;
+  bool scale_threshold_with_resolution = false;
 
   // Ransac parameters.
-  double expected_ransac_confidence = 0.9999;
-  int min_ransac_iterations = 10;
-  int max_ransac_iterations = 1000;
+  double expected_ransac_confidence = 0.999;
+  int min_ransac_iterations = 100;
+  int max_ransac_iterations = 10000;
+  // RANSAC assumes at least this fraction of inliers when it bounds the number
+  // of iterations (0 disables the bound).
+  double min_inlier_ratio = 0.25;
   bool use_mle = true;
-  bool use_lo = false;
+  bool use_lo = true;
   int lo_start_iterations = 10;
 
   // Use the Sturm-sequence-based 5-point solver (ported from PoseLib) instead

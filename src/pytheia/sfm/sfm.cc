@@ -146,6 +146,7 @@
 #include "theia/sfm/extract_maximally_parallel_rigid_subgraph.h"
 #include "theia/sfm/feature_extractor.h"
 #include "theia/sfm/feature_extractor_and_matcher.h"
+#include "theia/sfm/filter_view_graph_by_relative_inliers.h"
 #include "theia/sfm/filter_view_graph_cycles_by_rotation.h"
 #include "theia/sfm/filter_view_pairs_from_orientation.h"
 #include "theia/sfm/filter_view_pairs_from_relative_translation.h"
@@ -1382,7 +1383,8 @@ void pytheia_sfm_classes(py::module& m) {
   // Do not export MLPnP at module scope: it would shadow the MLPnP() solver.
   m.attr("KNEIP") = theia::PnPType::KNEIP;
   m.attr("DLS") = theia::PnPType::DLS;
-  m.attr("SQPnP") = theia::PnPType::SQPnP;
+  // Do not export SQPnP at module scope either: it would shadow the SQPnP()
+  // solver. Use PnPType.SQPnP.
 
   m.def("EstimateAbsolutePoseWithKnownOrientation",
         theia::EstimateAbsolutePoseWithKnownOrientationWrapper,
@@ -1492,6 +1494,11 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite(
           "expected_ransac_confidence",
           &theia::EstimateTwoViewInfoOptions::expected_ransac_confidence)
+      .def_readwrite("scale_threshold_with_resolution",
+                     &theia::EstimateTwoViewInfoOptions::
+                         scale_threshold_with_resolution)
+      .def_readwrite("min_inlier_ratio",
+                     &theia::EstimateTwoViewInfoOptions::min_inlier_ratio)
       .def_readwrite("min_ransac_iterations",
                      &theia::EstimateTwoViewInfoOptions::min_ransac_iterations)
       .def_readwrite("max_ransac_iterations",
@@ -1707,8 +1714,16 @@ void pytheia_sfm_classes(py::module& m) {
       py::arg("num_threads") = 0,
       py::arg("depth_i") = py::none(),
       py::arg("depth_j") = py::none());
+  // The C++ implementation was a stub (image loading was removed from Theia and
+  // the body never assigned colors), so it silently left all tracks black.
+  // Fail loudly instead; set colors with Track.SetColor from your own image
+  // loader (see pyexamples/eth3d for a pixel sampling example).
   m.def("ColorizeReconstruction",
-        theia::ColorizeReconstruction,
+        [](const std::string&, const int, theia::Reconstruction*) {
+          throw py::value_error(
+              "ColorizeReconstruction is not implemented (Theia has no image "
+              "I/O). Sample pixel colors in Python and call Track.SetColor.");
+        },
         py::arg("image_directory"),
         py::arg("num_threads"),
         py::arg("reconstruction"));
@@ -1720,6 +1735,20 @@ void pytheia_sfm_classes(py::module& m) {
         theia::FilterViewGraphCyclesByRotation,
         py::arg("max_loop_error_degrees"),
         py::arg("view_pairs"));
+  m.def("FilterViewGraphByRelativeInliers",
+        theia::FilterViewGraphByRelativeInliers,
+        py::arg("min_relative_inliers"),
+        py::arg("view_graph"),
+        "Remove edges with fewer verified matches than min_relative_inliers "
+        "times the strongest edge of either endpoint view. Returns the number "
+        "of removed edges. 0 disables.");
+  m.def("PruneTracksToViewGraph",
+        theia::PruneTracksToViewGraph,
+        py::arg("view_graph"),
+        py::arg("reconstruction"),
+        "Remove track observations whose view has no remaining view graph "
+        "edge to another view of the track; removes tracks with < 2 views. "
+        "Returns the number of removed observations.");
   m.def("FilterViewPairsFromOrientation",
         theia::FilterViewPairsFromOrientation,
         py::arg("orientations"),
@@ -1855,7 +1884,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def("SetPositionPrior",
            &theia::View::SetPositionPrior,
            py::arg("position_prior"),
-           py::arg("position_prior_information"))
+           py::arg("position_prior_information"),
+           "Set the position prior. NOTE: despite its name, the matrix argument is "
+           "the SQUARE ROOT of the information matrix (e.g. np.eye(3) / sigma), "
+           "which bundle adjustment uses directly as the residual weight.")
       .def("HasPositionPrior", &theia::View::HasPositionPrior)
       .def("GetGravityPrior", &theia::View::GetGravityPrior)
       .def("GetGravityPriorSqrtInformation",
@@ -1863,7 +1895,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def("SetGravityPrior",
            &theia::View::SetGravityPrior,
            py::arg("gravity_prior"),
-           py::arg("gravity_prior_information"))
+           py::arg("gravity_prior_information"),
+           "Set the gravity prior. NOTE: despite its name, the matrix argument is "
+           "the SQUARE ROOT of the information matrix (e.g. np.eye(3) / sigma), "
+           "which bundle adjustment uses directly as the residual weight.")
       .def("HasGravityPrior", &theia::View::HasGravityPrior)
       .def("GetOrientationPrior", &theia::View::GetOrientationPrior)
       .def("GetOrientationPriorSqrtInformation",
@@ -1871,7 +1906,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def("SetOrientationPrior",
            &theia::View::SetOrientationPrior,
            py::arg("orientation_prior"),
-           py::arg("orientation_prior_information"))
+           py::arg("orientation_prior_information"),
+           "Set the orientation prior. NOTE: despite its name, the matrix argument is "
+           "the SQUARE ROOT of the information matrix (e.g. np.eye(3) / sigma), "
+           "which bundle adjustment uses directly as the residual weight.")
       .def("HasOrientationPrior", &theia::View::HasOrientationPrior);
 
   // Visibility pyramid
@@ -2299,6 +2337,12 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("translation_filtering_num_iterations",
                      &theia::ReconstructionEstimatorOptions::
                          translation_filtering_num_iterations)
+      .def_readwrite("view_graph_min_relative_inliers",
+                     &theia::ReconstructionEstimatorOptions::
+                         view_graph_min_relative_inliers)
+      .def_readwrite("view_graph_max_cycle_rotation_error_degrees",
+                     &theia::ReconstructionEstimatorOptions::
+                         view_graph_max_cycle_rotation_error_degrees)
       .def_readwrite("translation_filtering_projection_tolerance",
                      &theia::ReconstructionEstimatorOptions::
                          translation_filtering_projection_tolerance)

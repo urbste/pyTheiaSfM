@@ -129,8 +129,8 @@ struct ReconstructionEstimatorOptions {
 
   // --------------- RANSAC Options --------------- //
   double ransac_confidence = 0.9999;
-  int ransac_min_iterations = 50;
-  int ransac_max_iterations = 1000;
+  int ransac_min_iterations = 100;
+  int ransac_max_iterations = 10000;
   bool ransac_use_mle = true;
   bool ransac_use_lo = true;
   int ransac_lo_start_iterations = 50;
@@ -170,6 +170,23 @@ struct ReconstructionEstimatorOptions {
   // theia/sfm/filter_view_pairs_from_relative_translation.h
   int translation_filtering_num_iterations = 48;
   double translation_filtering_projection_tolerance = 0.1;
+
+  // Optional view graph consistency filters, applied by the global, hybrid and
+  // incremental estimators before any estimation. Both are disabled (0) by
+  // default so that existing behavior is unchanged. They are most useful for
+  // dense / learned-feature matches, where a few wrong two-view geometries with
+  // many (consistent but wrong) inliers can wreck the result.
+  //
+  // Remove view pairs with fewer verified matches than this fraction of the
+  // strongest pair of either endpoint view (e.g. 0.2). Adapts to match density
+  // where the absolute min_num_two_view_inliers cannot. Can remove valid weak
+  // pairs for sparse-feature pipelines (SIFT), so enable with care.
+  double view_graph_min_relative_inliers = 0.0;
+
+  // Remove view pairs on triplets whose rotation loop closure error exceeds this
+  // many degrees (see filter_view_graph_cycles_by_rotation.h). A value around 5
+  // was neutral on SIFT and helpful on learned features in our benchmark.
+  double view_graph_max_cycle_rotation_error_degrees = 0.0;
 
   // --------------- Global Rotation Estimation Options --------------- //
 

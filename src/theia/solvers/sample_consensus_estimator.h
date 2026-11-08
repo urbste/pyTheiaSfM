@@ -72,8 +72,14 @@ struct RansacParameters {
   // RANSAC. This may be controlled by the caller for debugging purposes.
   std::shared_ptr<RandomNumberGenerator> rng;
 
-  // Error threshold to determin inliers for RANSAC (e.g., squared reprojection
-  // error). This is what will be used by the estimator to determine inliers.
+  // Error threshold to determine inliers for RANSAC. It is compared against the
+  // estimator's Error(), which for the pose estimators in theia/sfm/estimators
+  // is the SQUARED error in NORMALIZED image coordinates, i.e. after applying
+  // inv(K) to the pixel coordinates (x_n = K^-1 [u, v, 1]^T). To use a pixel
+  // threshold `t_px` with focal length `f` (pixels), set
+  //   error_thresh = (t_px / f)^2.
+  // Passing t_px / f (not squared) makes the threshold far too permissive
+  // (e.g. 2 px at f = 3400 gives 6e-4 instead of 3.5e-7).
   double error_thresh;
 
   // The failure probability of RANSAC. Set to 0.01 means that RANSAC has a 1%

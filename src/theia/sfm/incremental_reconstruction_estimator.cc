@@ -32,6 +32,7 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include "theia/sfm/filter_view_graph_by_relative_inliers.h"
 #include "theia/sfm/incremental_reconstruction_estimator.h"
 
 #include <ceres/rotation.h>
@@ -162,6 +163,10 @@ ReconstructionEstimatorSummary IncrementalReconstructionEstimator::Estimate(
     ViewGraph* view_graph, Reconstruction* reconstruction) {
   reconstruction_ = reconstruction;
   view_graph_ = view_graph;
+  FilterViewGraphForEstimation(
+      options_.view_graph_min_relative_inliers,
+      options_.view_graph_max_cycle_rotation_error_degrees, view_graph_,
+      reconstruction_);
 
   // Initialize the unlocalized_views_ variable.
   const auto& view_ids = view_graph_->ViewIds();

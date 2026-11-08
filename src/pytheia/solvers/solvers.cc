@@ -102,7 +102,10 @@ void pytheia_solvers_classes(py::module& m) {
   py::class_<theia::RansacParameters>(m, "RansacParameters")
       .def(py::init<>())
       .def_readwrite("rng", &theia::RansacParameters::rng)
-      .def_readwrite("error_thresh", &theia::RansacParameters::error_thresh)
+      .def_readwrite("error_thresh", &theia::RansacParameters::error_thresh,
+                     "Inlier threshold on the estimator's SQUARED error in "
+                     "NORMALIZED image coordinates (after inv(K)). For a pixel "
+                     "threshold t_px and focal length f use (t_px / f) ** 2.")
       .def_readwrite("failure_probability",
                      &theia::RansacParameters::failure_probability)
       .def_readwrite("min_inlier_ratio",

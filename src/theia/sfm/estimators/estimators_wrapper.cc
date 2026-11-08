@@ -261,8 +261,14 @@ std::tuple<bool, Eigen::Vector4d, RansacSummary> EstimateTriangulationWrapper(
   for (auto i = 0; i < features.size(); ++i) {
     features_[i].point_ = features[i];
   }
-  const bool success = EstimateTriangulation(
-      ransac_params, cameras, features_, &triangulated_point, &summary);
+  triangulated_point.setZero();
+  // A RANSAC run that found no model may still report success; require at
+  // least one inlier so the (otherwise uninitialized) point is never returned
+  // as valid.
+  const bool success =
+      EstimateTriangulation(
+          ransac_params, cameras, features_, &triangulated_point, &summary) &&
+      !summary.inliers.empty();
   return std::make_tuple(success, triangulated_point, summary);
 }
 

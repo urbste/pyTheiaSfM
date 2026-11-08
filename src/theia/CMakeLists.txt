@@ -123,6 +123,7 @@ set(THEIA_SRC
   sfm/extract_maximally_parallel_rigid_subgraph.cc
   sfm/feature_extractor_and_matcher.cc
   sfm/feature_extractor.cc
+  sfm/filter_view_graph_by_relative_inliers.cc
   sfm/filter_view_graph_cycles_by_rotation.cc
   sfm/filter_view_pairs_from_orientation.cc
   sfm/filter_view_pairs_from_relative_translation.cc
