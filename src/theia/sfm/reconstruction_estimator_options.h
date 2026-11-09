@@ -45,6 +45,7 @@
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/linear_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/nonlinear_position_estimator.h"
+#include "theia/sfm/init_free/init_free_options.h"
 #include "theia/util/random.h"
 #include "theia/sfm/estimators/estimate_calibrated_absolute_pose.h"
 #include "theia/solvers/sample_consensus_estimator.h"
@@ -52,11 +53,14 @@
 namespace theia {
 
 // Global SfM methods are considered to be more scalable while incremental SfM
-// is less scalable but often more robust.
+// is less scalable but often more robust. INIT_FREE (experimental) estimates
+// cameras and points jointly from random starts with an object space error
+// objective; see theia/sfm/init_free/init_free_options.h.
 enum class ReconstructionEstimatorType {
   GLOBAL = 0,
   INCREMENTAL = 1,
-  HYBRID = 2
+  HYBRID = 2,
+  INIT_FREE = 3
 };
 
 // The recommended type of rotations solver is the Robust L1-L2 method. This
@@ -369,6 +373,11 @@ struct ReconstructionEstimatorOptions {
   // track subsampling. If the view does not observe this many tracks, then all
   // tracks in the view are optimized.
   int min_num_optimized_tracks_per_view = 200;
+
+  // --------------- Initialization-free SfM Options --------------- //
+
+  // Used when reconstruction_estimator_type is INIT_FREE (experimental).
+  InitFreeOptions init_free_options;
 
   // --------------- Reconstruction Localization Options --------------- //
 

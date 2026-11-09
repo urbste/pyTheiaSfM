@@ -153,6 +153,13 @@ set(THEIA_SRC
   sfm/hybrid_reconstruction_estimator.cc
   sfm/incremental_reconstruction_estimator.cc
   sfm/incremental_rig_reconstructor.cc
+  sfm/init_free/camera_sampler.cc
+  sfm/init_free/init_free_reconstruction_estimator.cc
+  sfm/init_free/metric_upgrade.cc
+  sfm/init_free/ose_formulation.cc
+  sfm/init_free/ose_problem.cc
+  sfm/init_free/reduced_camera_solver.cc
+  sfm/init_free/varpro_solver.cc
   sfm/localize_view_to_reconstruction.cc
   sfm/pose/build_upnp_action_matrix.cc
   sfm/pose/build_upnp_action_matrix_using_symmetry.cc
@@ -269,6 +276,22 @@ else (PYTHON_BUILD)
       ${THEIA_HDRS})
 endif (PYTHON_BUILD)
 
+# Optional CUDA backend for the init-free (OSE / VarPro) reduced camera solver.
+# Uses only the CUDA host libraries (cudart, cuBLAS, cuSOLVER), so no CUDA
+# compiler is needed. Off by default to keep the wheels portable.
+option(THEIA_WITH_CUDA_SOLVERS
+  "Build cuSOLVER backends for the init-free reconstruction estimator" OFF)
+if (THEIA_WITH_CUDA_SOLVERS)
+  find_package(CUDAToolkit REQUIRED)
+  list(APPEND THEIA_LIBRARY_SOURCE sfm/init_free/cuda_dense_cholesky_solver.cc)
+  list(APPEND THEIA_LIBRARY_DEPENDENCIES
+    CUDA::cudart CUDA::cublas CUDA::cusolver)
+  message("-- Init-free CUDA solvers: ON (CUDA ${CUDAToolkit_VERSION})")
+  set(THEIA_WITH_CUDA_SOLVERS_VALUE 1)
+else ()
+  set(THEIA_WITH_CUDA_SOLVERS_VALUE 0)
+endif ()
+
 add_library(${CMAKE_PROJECT_NAME} ${THEIA_LIBRARY_SOURCE})
 # Build-tree includes only ($<BUILD_INTERFACE:...>); not exported via
 # TheiaExport (avoid linking a separate INTERFACE target into the export set).
@@ -292,7 +315,8 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
   THEIA_CERES_HAS_CUDA_DENSE=${THEIA_CERES_HAS_CUDA_DENSE_VALUE}
-  THEIA_CERES_HAS_CUDA_SPARSE=${THEIA_CERES_HAS_CUDA_SPARSE_VALUE})
+  THEIA_CERES_HAS_CUDA_SPARSE=${THEIA_CERES_HAS_CUDA_SPARSE_VALUE}
+  THEIA_WITH_CUDA_SOLVERS=${THEIA_WITH_CUDA_SOLVERS_VALUE})
 
 install(TARGETS ${CMAKE_PROJECT_NAME}
   EXPORT TheiaExport
