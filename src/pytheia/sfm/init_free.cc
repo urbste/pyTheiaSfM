@@ -467,6 +467,7 @@ void pytheia_init_free(py::module& m) {
       .def(py::init<>())
       .def_readwrite("nonlinear_refinement", &MUO::nonlinear_refinement)
       .def_readwrite("shared_focal_length", &MUO::shared_focal_length)
+      .def_readwrite("radial_cameras", &MUO::radial_cameras)
       .def_readwrite("max_num_iterations", &MUO::max_num_iterations);
 
   m.def(

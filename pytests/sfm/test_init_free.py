@@ -220,20 +220,11 @@ def test_unsupported_choices_fail_cleanly():
     with pytest.raises(ValueError):
         pt.sfm.ProjectiveRmsError(problem, init, np.zeros((2, 5)))
 
-    # RPOSE cameras are radial (2x4): no projective refinement, no upgrade.
+    # RPOSE cameras are radial (2x4): no projective refinement.
     opts = init_free_options(pt.sfm.OseFormulationType.RPOSE)
     opts.projective_refinement.max_num_iterations = 10
     ok, _, _, err = pt.sfm.RunProjectiveStages(problem, opts)
     assert not ok and "radial" in err
-
-    est_opts = pt.sfm.ReconstructionEstimatorOptions()
-    est_opts.reconstruction_estimator_type = (
-        pt.sfm.ReconstructionEstimatorType.INIT_FREE)
-    est_opts.init_free_options = opts
-    est_opts.min_num_two_view_inliers = 10
-    summary = pt.sfm.InitFreeReconstructionEstimator(est_opts).Estimate(
-        view_graph, recon)
-    assert not summary.success and "radial" in summary.message
 
 
 @pytest.mark.parametrize("solver", [
@@ -708,3 +699,132 @@ def test_calibrated_nonlinear_upgrade():
     assert ok, err
     assert linear.mean_orthogonality_error == pytest.approx(
         refined.linear_mean_orthogonality_error)
+
+
+def radial_options(normalization=pt.sfm.OseObservationNormalization.CALIBRATED_RAYS,
+                   alpha=0.05):
+    opts = init_free_options(pt.sfm.OseFormulationType.RPOSE)
+    opts.alpha = alpha
+    opts.observation_normalization = normalization
+    return opts
+
+
+def pairwise_rotation_errors(R, vids, gt):
+    """Relative rotation errors (deg) of all camera pairs against ground truth."""
+    errs = []
+    for a in range(len(vids)):
+        for b in range(a + 1, len(vids)):
+            rel_est = R[b] @ R[a].T
+            rel_gt = gt[vids[b]][0] @ gt[vids[a]][0].T
+            errs.append(rotation_angle_deg(rel_est @ rel_gt.T))
+    return np.array(errs)
+
+
+def test_radial_upgrade_stage_wise():
+    recon, view_graph, gt = make_scene(n_views=15, pixel_noise=0.0, seed=2)
+    opts = radial_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok, sol = pt.sfm.SolveOse(problem, opts, init)
+    assert ok, sol.message
+
+    upgrade_opts = pt.sfm.MetricUpgradeOptions()
+    upgrade_opts.radial_cameras = True
+    ok, linear, err = pt.sfm.UpgradeToMetric(problem, sol.cameras, sol.points,
+                                             upgrade_opts)
+    assert ok, err
+    assert not linear.nonlinear_refinement_run
+    assert linear.fraction_in_front > 0.99
+    # The RPOSE affine term (alpha = 0.05) biases the OSE solution; the linear
+    # upgrade measures 13 deg worst case here, the refinement 1.3 deg.
+    linear_err = pairwise_rotation_errors(np.array(linear.rotations),
+                                          problem.view_ids, gt)
+    assert linear_err.max() < 20.0, linear_err.max()
+
+    upgrade_opts.nonlinear_refinement = True
+    ok, refined, err = pt.sfm.UpgradeToMetric(problem, sol.cameras, sol.points,
+                                              upgrade_opts)
+    assert ok, err
+    assert refined.nonlinear_refinement_run
+    assert refined.fraction_in_front > 0.99
+    assert refined.mean_orthogonality_error < (
+        0.5 * refined.linear_mean_orthogonality_error)
+    refined_err = pairwise_rotation_errors(np.array(refined.rotations),
+                                           problem.view_ids, gt)
+    assert refined_err.max() < 3.0, refined_err.max()
+
+
+def test_radial_upgrade_needs_five_cameras():
+    recon, view_graph, _ = make_scene(n_views=4, pixel_noise=0.0, seed=2)
+    opts = radial_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok, sol = pt.sfm.SolveOse(problem, opts, init)
+    assert ok, sol.message
+    upgrade_opts = pt.sfm.MetricUpgradeOptions()
+    upgrade_opts.radial_cameras = True
+    ok, _, err = pt.sfm.UpgradeToMetric(problem, sol.cameras, sol.points,
+                                        upgrade_opts)
+    assert not ok and "5 cameras" in err
+
+
+@pytest.mark.parametrize("alpha, focal_tol", [(0.05, 0.3), (0.001, 0.02)])
+def test_radial_upgrade_recovers_focal_lengths(alpha, focal_tol):
+    focals = np.random.default_rng(0).uniform(650.0, 1000.0, 15)
+    recon, view_graph, gt = make_scene(n_views=15, n_points=200,
+                                       pixel_noise=0.0, seed=3,
+                                       focal_lengths=focals)
+    opts = radial_options(pt.sfm.OseObservationNormalization.PIXEL_ISOTROPIC,
+                          alpha)
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok, sol = pt.sfm.SolveOse(problem, opts, init)
+    assert ok, sol.message
+
+    upgrade_opts = pt.sfm.MetricUpgradeOptions()
+    upgrade_opts.radial_cameras = True
+    upgrade_opts.nonlinear_refinement = True
+    ok, refined, err = pt.sfm.UpgradeToMetric(problem, sol.cameras, sol.points,
+                                              upgrade_opts)
+    assert ok, err
+    assert refined.fraction_in_front > 0.99
+    scale = np.array([np.asarray(T)[0, 0] for T in problem.normalizations])
+    true_f = focals[problem.view_ids]
+    f_err = np.abs(np.array(refined.focal_lengths) / scale / true_f - 1)
+    # Measured max error: 16 % at alpha 0.05, 0.9 % at alpha 0.001; the error
+    # is the alpha bias and vanishes as alpha -> 0.
+    assert f_err.max() < focal_tol, f_err.max()
+
+
+def test_estimator_rpose_end_to_end_on_noisy_scene():
+    recon, view_graph, gt = make_scene(n_views=15, pixel_noise=1.0, seed=5)
+    opts = pt.sfm.ReconstructionEstimatorOptions()
+    opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+    opts.init_free_options = init_free_options(pt.sfm.OseFormulationType.RPOSE)
+    opts.init_free_options.num_random_restarts = 2
+    # Ignored for RPOSE (no projective refinement), kept to check that it is.
+    opts.init_free_options.projective_refinement.max_num_iterations = 30
+    # The linear upgrade alone is biased for RPOSE (see the stage-wise test).
+    opts.init_free_options.metric_upgrade = (
+        pt.sfm.MetricUpgradeType.LINEAR_AND_NONLINEAR)
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
+    opts.min_num_two_view_inliers = 10
+
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert summary.success, summary.message
+    diag = estimator.Diagnostics()
+    assert diag.metric_upgrade_success
+    assert diag.fraction_in_front > 0.99
+    best = diag.restarts[diag.best_restart]
+    assert best.refined_rms_error < 0.0
+
+    vids = sorted(gt)
+    est_R = {v: np.asarray(recon.View(v).Camera().GetOrientationAsRotationMatrix())
+             for v in vids}
+    worst = pairwise_rotation_errors([est_R[v] for v in vids], vids, gt).max()
+    # Measured 0.25 deg after the metric bundle adjustment.
+    assert worst < 0.5, worst

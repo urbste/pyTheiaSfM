@@ -11,7 +11,7 @@
 The module is a testing ground. Every stage is exposed to Python on its own, so that new formulations, solvers and upgrades can be compared with the same data and diagnostics.
 
 !!! warning "Experimental"
-    The interface can still change. The calibrated pipeline (`POSE`, `POSE_ROT`, `ROSE` or `EXPOSE` with `CALIBRATED_RAYS` and the linear upgrade) works end to end. `RPOSE` runs in the stage-wise API only. Options marked *not implemented* below fail with a clear message instead of silently falling back.
+    The interface can still change. The calibrated pipeline (`POSE`, `POSE_ROT`, `ROSE` or `EXPOSE` with `CALIBRATED_RAYS` and the linear upgrade) works end to end, and so does `RPOSE` (radial metric upgrade, no projective refinement). Options marked *not implemented* below fail with a clear message instead of silently falling back.
 
 ## Usage
 
@@ -51,7 +51,7 @@ ok, metric, err = pt.sfm.UpgradeToMetric(problem, ref.cameras, ref.points, uo)
 | Option | Values | Status |
 |---|---|---|
 | `formulation` | `POSE`, `POSE_ROT`, `ROSE`, `EXPOSE` | implemented |
-| | `RPOSE` | OSE stage only (radial 2×4 cameras; no refinement or upgrade) |
+| | `RPOSE` | implemented end to end (radial 2×4 cameras; radial metric upgrade, no projective refinement) |
 | `observation_normalization` | `CALIBRATED_RAYS` | implemented (needed by `POSE_ROT` and the upgrade) |
 | | `PIXEL_ISOTROPIC` | implemented (not with `POSE_ROT`); the upgrade estimates the focal lengths |
 | `camera_init` | `NORMAL`, `UNIFORM`, `UNIT_CIRCLE` | implemented |
@@ -77,7 +77,7 @@ With `m` the normalized observation, `P` the 3 × 4 camera, `X̃` the homogeneou
 - **`POSE_ROT`**: `POSE` plus the relative rotation terms `‖A_a A_bᵀ − R_ab‖²` of the view graph (Olsson & Nilsson).
 - **`ROSE`**: the OSE term plus `α (p₃ᵀX̃ − 1)²`, a depth regularizer. The OSE minimum is strongly biased (about 11 px RMS on the 1 px test scene), so use it together with projective refinement.
 - **`EXPOSE`**: the third residual is `√α · √(exp(−s₀)/2) · (s − 1 − s₀)`, with `s = m̃ᵀPX̃ / |m̃|` and `m̃ = [m; 1]`. The state `s₀` starts at `|m̃|` and, after `expose_warmup_iterations`, follows the current depth, as in InitFreeBA. Cameras with `det(A) < 0` are flipped first. This gives the smallest OSE bias of the formulations here (1.29 px against 1.40 px for `POSE` on the 1 px test scene).
-- **`RPOSE`**: the radial version, `(1−α)(m⊥ᵀP₁₂X̃)²/|m|² + α‖P₁₂X̃ − m‖²` with `m⊥ = (−m₂, m₁)`. Only the first two camera rows are determined. The estimator rejects it, because no radial metric upgrade exists yet; this is the main open item. The restart diagnostics report `ose_rms_error = −1`.
+- **`RPOSE`**: the radial version, `(1−α)(m⊥ᵀP₁₂X̃)²/|m|² + α‖P₁₂X̃ − m‖²` with `m⊥ = (−m₂, m₁)`. Only the first two camera rows are determined. The estimator runs the radial metric upgrade (`radial_cameras`, see *Metric upgrade*) and skips projective refinement, which is not defined for radial cameras; the metric bundle adjustment then refines the full cameras. The restart diagnostics report `ose_rms_error = −1`.
 
 With `robust_loss_type = CAUCHY`, every VarPro iteration recomputes the IRLS weights `w = 1/(1 + ‖r‖²/c²)` of the observation residuals (`c = robust_loss_scale`), and the cost is `Σ ½c² log(1 + ‖r‖²/c²)`. The rotation terms are not robustified. With 10 % of the observations displaced by up to 150 px, the inlier median error after the OSE stage falls from 12.3 px to 1.1 px (`c` = 5 px). For robust or state-dependent formulations, the cost history is not monotone, because the weights change between iterations.
 
@@ -109,6 +109,8 @@ The two-view weights stay better than the best scalar weight for `rotation_weigh
 - **`PIXEL_ISOTROPIC`**: `K_i = diag(f_i, f_i, 1)` in the normalized pixel frame. This assumes zero skew, unit aspect ratio and the principal point at the image center. The linear step uses the weighted equations of Pollefeys et al. (2004). They contain soft priors on the aspect ratio, skew and principal point, plus a weak prior `f_i ≈ 1`, and are reweighted by `1/(P₃ΩP₃ᵀ)`. Needs at least 3 cameras.
 
 The linear `Ω` is truncated to rank 3. With `nonlinear_refinement` (`LINEAR_AND_NONLINEAR` in the estimator), `Ω = BBᵀ` with `B` a 4 × 3 matrix, which keeps `Ω` positive semidefinite with rank 3. `B` and the focal lengths are refined with Ceres to minimize `Σ_i ‖3E_i / tr(E_i) − I‖²_F`, with `E_i = K_i⁻¹P_iBBᵀP_iᵀK_i⁻ᵀ`. The refinement drops the priors, and with them their bias. With `shared_focal_length`, one focal length is used for all cameras.
+
+**Radial cameras** (`radial_cameras = True`, used by `RPOSE`) keep only rows 0 and 1 of each camera, and the metric camera has the form `P₁₂H = s[R₁₂ | t₁₂]` with orthonormal rows in `R₁₂`. The linear step uses two equations per camera (equal diagonal and zero off-diagonal entry of `P₁₂ΩP₁₂ᵀ`), so at least five cameras are needed. The optional refinement fits `Ω = BBᵀ` to the same constraint, without priors. Two candidates, `H` and `H·diag(1, 1, −1, 1)`, are built: per camera, the sign of the first two rows is chosen so that the 2D directions agree with the observations, and the forward translation `t₃` (and, for `PIXEL_ISOTROPIC`, the focal length) is fit by least squares to `m(r₃ᵀX + t₃) = f(R₁₂X + t₁₂)`. The candidate with more points in front is kept. Measured with the default `α = 0.05`: on a noise-free 15-view scene, the linear radial upgrade is off by up to 13° (the RPOSE affine term biases the OSE solution) and the refinement by up to 1.3°, with all observations in front; end to end with 1 px noise and `LINEAR_AND_NONLINEAR`, the worst relative rotation error after bundle adjustment is 0.25°. For `PIXEL_ISOTROPIC`, the focal error on noise-free data is 16 % at `α = 0.05` and 0.9 % at `α = 0.001`, because the same bias shrinks as `α` does.
 
 `result.focal_lengths` are in observation units. The estimator writes them to the cameras in pixels (`f / s` for the normalization scale `s`), sets the principal point to the image center, and reports them in `Diagnostics().focal_lengths`. Results on a 15-view scene with focal lengths from 650 to 1000 px:
 

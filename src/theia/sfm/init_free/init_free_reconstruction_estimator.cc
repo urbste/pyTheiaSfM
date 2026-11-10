@@ -175,18 +175,20 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
       static_cast<int>(problem.rotation_terms.size());
   diagnostics_.problem_build_time = timer.ElapsedTimeInSeconds();
 
-  if (opts.formulation == OseFormulationType::RPOSE &&
-      opts.metric_upgrade != MetricUpgradeType::NONE) {
-    summary.message =
-        "Init-free: RPOSE estimates radial (2x4) cameras; the metric upgrade "
-        "for radial cameras is not implemented. Use the stage-wise API.";
-    return summary;
+  // 3. + 4. OSE stage and projective refinement for every random start. RPOSE
+  // cameras are radial (two rows), so projective refinement is skipped; the
+  // metric bundle adjustment refines the full cameras instead.
+  const bool radial = opts.formulation == OseFormulationType::RPOSE;
+  InitFreeOptions stage_opts = opts;
+  if (radial && stage_opts.projective_refinement.max_num_iterations > 0) {
+    LOG(INFO) << "Init-free: projective refinement is skipped for RPOSE "
+                 "(radial cameras).";
+    stage_opts.projective_refinement.max_num_iterations = 0;
   }
-
-  // 3. + 4. OSE stage and projective refinement for every random start.
   timer.Reset();
   ProjectiveReconstruction projective;
-  if (!RunProjectiveStages(problem, opts, &projective, &diagnostics_, &error)) {
+  if (!RunProjectiveStages(problem, stage_opts, &projective, &diagnostics_,
+                           &error)) {
     summary.message = "Init-free: " + error;
     return summary;
   }
@@ -205,6 +207,7 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
   upgrade_options.nonlinear_refinement =
       opts.metric_upgrade == MetricUpgradeType::LINEAR_AND_NONLINEAR;
   upgrade_options.shared_focal_length = opts.shared_focal_length;
+  upgrade_options.radial_cameras = radial;
   MetricUpgradeResult metric;
   if (!UpgradeToMetric(problem,
                        projective.cameras,
@@ -299,8 +302,10 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
           << " cameras, " << problem.NumPoints() << " points, "
           << diagnostics_.restarts.size() << " restart(s), best OSE cost "
           << best.final_cost << " after " << best.num_iterations
-          << " iterations (" << best.message << "), projective RMS "
-          << best.ose_rms_error;
+          << " iterations (" << best.message << ")";
+  if (best.ose_rms_error >= 0.0) {
+    message << ", projective RMS " << best.ose_rms_error;
+  }
   if (best.refined_rms_error >= 0.0) {
     message << " -> " << best.refined_rms_error << " after refinement";
   }

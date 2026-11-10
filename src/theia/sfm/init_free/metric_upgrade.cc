@@ -363,6 +363,361 @@ bool ApplyUpgrade(const OseProblem& problem,
   return true;
 }
 
+// Radial cameras (RPOSE): only rows 0 and 1 of P are used.
+
+// Rows 0 and 1 of P, normalized to unit norm, with a zero third row (so that
+// QuadricRow applies).
+OseCamera RadialCamera(const OseCamera& P) {
+  OseCamera normalized = OseCamera::Zero();
+  normalized.topRows<2>() = P.topRows<2>() / P.topRows<2>().norm();
+  return normalized;
+}
+
+// P_12 Omega P_12^T ~ I_2: equal diagonal entries and zero off-diagonal entry,
+// two equations per camera.
+bool LinearQuadricRadial(const OseCameraVector& cameras,
+                         Eigen::Matrix4d* Omega) {
+  const int n = static_cast<int>(cameras.size());
+  Eigen::MatrixXd A(2 * n, 10);
+  for (int i = 0; i < n; ++i) {
+    const OseCamera P = RadialCamera(cameras[i]);
+    A.row(2 * i + 0) = QuadricRow(P, 0, 1);
+    A.row(2 * i + 1) = QuadricRow(P, 0, 0) - QuadricRow(P, 1, 1);
+  }
+  *Omega = QuadricFromVector(SmallestRightSingularVector(A));
+  // Sign: the trace of P_12 Omega P_12^T is positive for most cameras.
+  double sum = 0.0;
+  for (int i = 0; i < n; ++i) {
+    const OseCamera P = RadialCamera(cameras[i]);
+    sum += (P.row(0) * *Omega * P.row(0).transpose()).value() +
+           (P.row(1) * *Omega * P.row(1).transpose()).value();
+  }
+  if (sum < 0.0) {
+    *Omega = -*Omega;
+  }
+  return true;
+}
+
+// With Q = P_12 B (B is 4x3, column-major) and E = Q Q^T, the residuals are
+// 2 E / trace(E) - I_2 (the off-diagonal entry is scaled by sqrt(2)). The
+// residuals depend on Omega = B B^T only, so no focal length is estimated.
+struct RadialQuadricResidual {
+  explicit RadialQuadricResidual(const OseCamera& P) : P_(P) {}
+
+  template <typename T>
+  bool operator()(const T* B, T* residual) const {
+    T Q[2][3];
+    for (int r = 0; r < 2; ++r) {
+      for (int c = 0; c < 3; ++c) {
+        T sum = T(0.0);
+        for (int k = 0; k < 4; ++k) {
+          sum += P_(r, k) * B[k + 4 * c];
+        }
+        Q[r][c] = sum;
+      }
+    }
+    const T E00 = Q[0][0] * Q[0][0] + Q[0][1] * Q[0][1] + Q[0][2] * Q[0][2];
+    const T E11 = Q[1][0] * Q[1][0] + Q[1][1] * Q[1][1] + Q[1][2] * Q[1][2];
+    const T E01 = Q[0][0] * Q[1][0] + Q[0][1] * Q[1][1] + Q[0][2] * Q[1][2];
+    const T s = T(2.0) / (E00 + E11);
+    residual[0] = s * E00 - T(1.0);
+    residual[1] = s * E11 - T(1.0);
+    residual[2] = T(std::sqrt(2.0)) * s * E01;
+    return true;
+  }
+
+  static ceres::CostFunction* Create(const OseCamera& P) {
+    return new ceres::AutoDiffCostFunction<RadialQuadricResidual, 3, 12>(
+        new RadialQuadricResidual(P));
+  }
+
+  const OseCamera P_;
+};
+
+// Same structure as RefineQuadric, with the radial residuals.
+bool RefineRadialQuadric(const OseCameraVector& cameras,
+                         const MetricUpgradeOptions& options,
+                         Eigen::Matrix4d* H,
+                         std::string* error) {
+  Eigen::Matrix<double, 4, 3> B = H->leftCols<3>();
+  B /= B.norm();
+  ceres::Problem problem;
+  for (const OseCamera& P : cameras) {
+    problem.AddResidualBlock(RadialQuadricResidual::Create(RadialCamera(P)),
+                             nullptr,
+                             B.data());
+  }
+  ceres::Solver::Options solver_options;
+  solver_options.linear_solver_type = ceres::DENSE_QR;
+  solver_options.max_num_iterations = options.max_num_iterations;
+  solver_options.function_tolerance = 1e-14;
+  solver_options.parameter_tolerance = 1e-12;
+  solver_options.logging_type = ceres::SILENT;
+  ceres::Solver::Summary summary;
+  ceres::Solve(solver_options, &problem, &summary);
+  if (!summary.IsSolutionUsable() || !B.allFinite()) {
+    *error = "Nonlinear radial metric refinement failed: " + summary.message;
+    return false;
+  }
+  Eigen::JacobiSVD<Eigen::Matrix<double, 3, 4>> svd(B.transpose(),
+                                                    Eigen::ComputeFullV);
+  H->leftCols<3>() = B;
+  H->col(3) = svd.matrixV().col(3);
+  if (std::abs(H->determinant()) < 1e-14) {
+    *error = "Nonlinear radial metric refinement gave a rank-deficient quadric.";
+    return false;
+  }
+  return true;
+}
+
+// Radial analogue of MeanOrthogonalityError: the rows of M = P_12 H (left 2x3
+// block), scaled to unit average norm, should be orthonormal.
+double RadialMeanOrthogonalityError(const OseCameraVector& cameras,
+                                    const Eigen::Matrix4d& H) {
+  double sum = 0.0;
+  for (const OseCamera& P : cameras) {
+    const Eigen::Matrix<double, 2, 4> Q = P.topRows<2>() * H;
+    const Eigen::Matrix<double, 2, 3> M = Q.leftCols<3>();
+    const double s2 = 0.5 * (M.row(0).squaredNorm() + M.row(1).squaredNorm());
+    sum += (M * M.transpose() / s2 - Eigen::Matrix2d::Identity()).norm();
+  }
+  return sum / cameras.size();
+}
+
+// Metric radial reconstruction for the upgrade H. Returns false (and sets
+// `error`) if the candidate is degenerate. `residual` is the sum of squared
+// residuals |m_k (r3 . X_k + t3) - f a_k|^2 over the valid observations.
+bool BuildRadialCandidate(const OseProblem& problem,
+                          const OseCameraVector& cameras,
+                          const Eigen::Matrix4Xd& points,
+                          const Eigen::Matrix4d& H,
+                          const bool calibrated,
+                          MetricUpgradeResult* result,
+                          double* residual,
+                          std::string* error) {
+  const int n = static_cast<int>(cameras.size());
+  *result = MetricUpgradeResult();
+  result->H = H;
+  result->rotations.assign(n, Eigen::Matrix3d::Identity());
+  result->translations.assign(n, Eigen::Vector3d::Zero());
+  result->focal_lengths.assign(n, 1.0);
+  for (int i = 0; i < n; ++i) {
+    const Eigen::Matrix<double, 2, 4> Q = cameras[i].topRows<2>() * H;
+    const Eigen::Matrix<double, 2, 3> M = Q.leftCols<3>();
+    const double s =
+        std::sqrt(0.5 * (M.row(0).squaredNorm() + M.row(1).squaredNorm()));
+    if (!(s > 0.0) || !std::isfinite(s)) {
+      *error = "Upgraded camera " + std::to_string(i) + " is degenerate.";
+      return false;
+    }
+    // Nearest matrix with orthonormal rows.
+    Eigen::JacobiSVD<Eigen::Matrix<double, 2, 3>> svd(
+        M / s, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    const Eigen::Matrix<double, 2, 3> R12 =
+        svd.matrixU() * svd.matrixV().leftCols<2>().transpose();
+    Eigen::Matrix3d R = Eigen::Matrix3d::Identity();
+    R.topRows<2>() = R12;
+    const Eigen::Vector3d r1 = R12.row(0).transpose();
+    const Eigen::Vector3d r2 = R12.row(1).transpose();
+    R.row(2) = r1.cross(r2).transpose();
+    result->rotations[i] = R;
+    result->translations[i] = Eigen::Vector3d(Q(0, 3) / s, Q(1, 3) / s, 0.0);
+  }
+
+  const Eigen::Matrix4d H_inv = H.inverse();
+  result->points.resize(3, points.cols());
+  result->point_valid.assign(points.cols(), 0);
+  for (int j = 0; j < points.cols(); ++j) {
+    const Eigen::Vector4d X = H_inv * points.col(j);
+    if (std::abs(X[3]) > 1e-12 * X.head<3>().norm()) {
+      result->points.col(j) = X.head<3>() / X[3];
+      result->point_valid[j] = result->points.col(j).allFinite();
+    } else {
+      result->points.col(j).setZero();
+    }
+  }
+
+  // Per camera: 2D directions R12 X + t12 must agree with the observations
+  // (a 180 degree rotation about the optical axis flips them). Fewer than half
+  // positive: flip the first two rows, which keeps r3 and the depths.
+  std::vector<int> positive(n, 0);
+  std::vector<int> total(n, 0);
+  for (int k = 0; k < problem.NumObservations(); ++k) {
+    const int j = problem.observation_point[k];
+    if (!result->point_valid[j]) continue;
+    const int c = problem.observation_camera[k];
+    const Eigen::Vector2d a =
+        result->rotations[c].topRows<2>() * result->points.col(j) +
+        result->translations[c].head<2>();
+    ++total[c];
+    positive[c] += problem.observations.col(k).dot(a) > 0.0;
+  }
+  for (int c = 0; c < n; ++c) {
+    if (2 * positive[c] < total[c]) {
+      result->rotations[c].topRows<2>() *= -1.0;
+      result->translations[c].head<2>() *= -1.0;
+    }
+  }
+
+  // Forward translation t3 and focal length f from m (r3 . X + t3) = f a.
+  // Calibrated: f = 1 and m t3 = a - m c, least squares over the
+  // observations. PIXEL_ISOTROPIC: unknowns (t3, f); each observation gives
+  // two rows [m_p, -a_p] (t3, f)^T = -m_p c for p = 0, 1.
+  std::vector<double> num(n, 0.0);
+  std::vector<double> den(n, 0.0);
+  std::vector<Eigen::Matrix2d> normal(n, Eigen::Matrix2d::Zero());
+  std::vector<Eigen::Vector2d> rhs(n, Eigen::Vector2d::Zero());
+  for (int k = 0; k < problem.NumObservations(); ++k) {
+    const int j = problem.observation_point[k];
+    if (!result->point_valid[j]) continue;
+    const int c = problem.observation_camera[k];
+    const Eigen::Vector3d X = result->points.col(j);
+    const Eigen::Vector3d r3 = result->rotations[c].row(2).transpose();
+    const Eigen::Vector2d a =
+        result->rotations[c].topRows<2>() * X + result->translations[c].head<2>();
+    const Eigen::Vector2d m = problem.observations.col(k);
+    const double c_k = r3.dot(X);
+    if (calibrated) {
+      num[c] += m.dot(a - m * c_k);
+      den[c] += m.squaredNorm();
+    } else {
+      for (int p = 0; p < 2; ++p) {
+        const Eigen::Vector2d row(m[p], -a[p]);
+        normal[c] += row * row.transpose();
+        rhs[c] += row * (-m[p] * c_k);
+      }
+    }
+  }
+  for (int c = 0; c < n; ++c) {
+    double t3 = 0.0;
+    double f = 1.0;
+    if (calibrated) {
+      if (!(den[c] > 0.0)) {
+        *error = "Radial metric upgrade: camera " + std::to_string(c) +
+                 " has no valid observations.";
+        return false;
+      }
+      t3 = num[c] / den[c];
+    } else {
+      const Eigen::Matrix2d& A = normal[c];
+      const double det = A(0, 0) * A(1, 1) - A(0, 1) * A(0, 1);
+      if (!(det > 1e-12 * A.trace() * A.trace())) {
+        *error = "Radial metric upgrade: singular focal length fit for camera " +
+                 std::to_string(c) + ".";
+        return false;
+      }
+      const Eigen::Vector2d u = A.ldlt().solve(rhs[c]);
+      t3 = u[0];
+      f = u[1];
+      if (!(f > 0.0) || !std::isfinite(f)) {
+        *error = "Radial metric upgrade: non-positive focal length for camera " +
+                 std::to_string(c) + ".";
+        return false;
+      }
+    }
+    result->translations[c][2] = t3;
+    result->focal_lengths[c] = f;
+  }
+
+  double sum = 0.0;
+  for (int k = 0; k < problem.NumObservations(); ++k) {
+    const int j = problem.observation_point[k];
+    if (!result->point_valid[j]) continue;
+    const int c = problem.observation_camera[k];
+    const Eigen::Vector3d X = result->points.col(j);
+    const Eigen::Vector3d r3 = result->rotations[c].row(2).transpose();
+    const Eigen::Vector2d a =
+        result->rotations[c].topRows<2>() * X + result->translations[c].head<2>();
+    const Eigen::Vector2d m = problem.observations.col(k);
+    const double depth = r3.dot(X) + result->translations[c][2];
+    sum += (m * depth - result->focal_lengths[c] * a).squaredNorm();
+  }
+  *residual = sum;
+  result->fraction_in_front = FractionInFront(problem, *result);
+  return true;
+}
+
+// Radial metric upgrade (UpgradeToMetric with options.radial_cameras).
+bool UpgradeToMetricRadial(const OseProblem& problem,
+                           const OseCameraVector& cameras,
+                           const Eigen::Matrix4Xd& points,
+                           const MetricUpgradeOptions& options,
+                           MetricUpgradeResult* result,
+                           std::string* error) {
+  CHECK_NOTNULL(result);
+  CHECK_NOTNULL(error);
+  *result = MetricUpgradeResult();
+  const int n = static_cast<int>(cameras.size());
+  if (n < 5) {
+    *error = "Radial metric upgrade needs at least 5 cameras (two equations "
+             "each for 9 degrees of freedom), got " +
+             std::to_string(n) + ".";
+    return false;
+  }
+  if (points.cols() != problem.NumPoints() || n != problem.NumCameras()) {
+    *error = "Cameras or points do not match the problem.";
+    return false;
+  }
+  const bool calibrated =
+      problem.normalization == OseObservationNormalization::CALIBRATED_RAYS;
+
+  Eigen::Matrix4d Omega;
+  LinearQuadricRadial(cameras, &Omega);
+  Eigen::Matrix4d H;
+  if (!UpgradeFromQuadric(Omega, &H, error)) {
+    return false;
+  }
+  const double linear_error = RadialMeanOrthogonalityError(cameras, H);
+  bool nonlinear_run = false;
+  if (options.nonlinear_refinement) {
+    if (!RefineRadialQuadric(cameras, options, &H, error)) {
+      return false;
+    }
+    nonlinear_run = true;
+  }
+  const double final_error = RadialMeanOrthogonalityError(cameras, H);
+
+  // H diag(1, 1, -1, 1) gives the same 2D directions with all depths flipped.
+  // Keep the candidate with more points in front, ties by the fit residual.
+  Eigen::Matrix4d mirror = Eigen::Matrix4d::Identity();
+  mirror(2, 2) = -1.0;
+  const Eigen::Matrix4d candidate_H[2] = {H, H * mirror};
+  MetricUpgradeResult candidates[2];
+  double residuals[2] = {0.0, 0.0};
+  bool valid[2] = {false, false};
+  std::string errors[2];
+  for (int c = 0; c < 2; ++c) {
+    valid[c] = BuildRadialCandidate(problem,
+                                    cameras,
+                                    points,
+                                    candidate_H[c],
+                                    calibrated,
+                                    &candidates[c],
+                                    &residuals[c],
+                                    &errors[c]);
+  }
+  int best = -1;
+  for (int c = 0; c < 2; ++c) {
+    if (!valid[c]) continue;
+    if (best < 0 ||
+        candidates[c].fraction_in_front > candidates[best].fraction_in_front ||
+        (candidates[c].fraction_in_front ==
+             candidates[best].fraction_in_front &&
+         residuals[c] < residuals[best])) {
+      best = c;
+    }
+  }
+  if (best < 0) {
+    *error = errors[0];
+    return false;
+  }
+  *result = std::move(candidates[best]);
+  result->mean_orthogonality_error = final_error;
+  result->linear_mean_orthogonality_error = linear_error;
+  result->nonlinear_refinement_run = nonlinear_run;
+  return true;
+}
+
 bool UpgradeToMetricImpl(const OseProblem& problem,
                          const OseCameraVector& cameras,
                          const Eigen::Matrix4Xd& points,
@@ -431,6 +786,9 @@ bool UpgradeToMetric(const OseProblem& problem,
                      const MetricUpgradeOptions& options,
                      MetricUpgradeResult* result,
                      std::string* error) {
+  if (options.radial_cameras) {
+    return UpgradeToMetricRadial(problem, cameras, points, options, result, error);
+  }
   return UpgradeToMetricImpl(
       problem,
       cameras,

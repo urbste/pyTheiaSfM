@@ -49,7 +49,8 @@ namespace theia {
 //   RPOSE (radial):   sqrt(1 - alpha) * m_perp^T p_{1:2}^T X_h / |m|
 //                     + sqrt(alpha) * (p_{1:2}^T X_h - m); only the first two
 //                     rows of P are estimated (the third row keeps its initial
-//                     value), so no projective refinement or metric upgrade.
+//                     value), so no projective refinement; the metric upgrade
+//                     is the radial one (MetricUpgradeOptions::radial_cameras).
 enum class OseFormulationType {
   POSE = 0,      // Pseudo object space error (affine regularizer).
   ROSE = 1,      // OSE with a depth regularizer (p_3^T X_h ~ 1).
