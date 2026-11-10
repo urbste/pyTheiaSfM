@@ -242,6 +242,22 @@ struct InitFreeOptions {
   InitFreeRestartSelection restart_selection =
       InitFreeRestartSelection::REPROJECTION_ERROR;
 
+  // Validity checks of the metric upgrade of each restart. The restarts are
+  // ranked by restart_selection and upgraded in that order; the first restart
+  // whose upgrade succeeds and passes both checks is used. If none does, the
+  // estimator fails and writes no reconstruction. Ranking does not depend on
+  // these checks.
+  // Minimum fraction of the observations in front of the metric cameras.
+  // Measured on ETH3D: correct restarts 0.998 to 1.0, wrong ones 0.58 to 0.98.
+  double min_fraction_in_front = 0.9;
+  // Maximum MetricUpgradeResult::mean_orthogonality_error (zero for an exactly
+  // metric result). Compared with "!(error <= max)", so NaN fails.
+  // Measured: correct restarts (after bundle adjustment, rotation error below
+  // 0.3 deg) are at most 0.17 (ETH3D at 0.5 px noise, 20% outliers; 0.011 on
+  // the 1 px synthetic scene); wrong restarts (rotation error above 25 deg)
+  // are at least 0.63. The threshold sits between them.
+  double max_mean_orthogonality_error = 0.3;
+
   // Threads for VarPro (unless varpro.num_threads > 0) and projective
   // refinement. <= 0 uses ReconstructionEstimatorOptions::num_threads inside
   // the estimator, else 1.

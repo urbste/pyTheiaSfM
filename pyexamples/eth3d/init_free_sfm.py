@@ -17,6 +17,7 @@ Usage (from this directory, or give the full path):
   python init_free_sfm.py --scene courtyard --views $(seq 10 29) --outlier_ratio 0.2
   python init_free_sfm.py --methods init_free --formulation POSE --restarts 5
   python init_free_sfm.py --methods init_free --no_cauchy  # ablation: no robust loss
+  python init_free_sfm.py --methods init_free --refine_huber_px 0  # plain LS refinement
   python init_free_sfm.py --methods init_free --rotation_weighting scalar
   python init_free_sfm.py --json out.json                  # machine-readable results
 
@@ -147,7 +148,15 @@ def init_free_options(a, inp):
     ifo.observation_normalization = pt.sfm.OseObservationNormalization.CALIBRATED_RAYS
     ifo.camera_init = pt.sfm.InitFreeCameraInitType.UNIT_CIRCLE
     ifo.num_random_restarts = a.restarts
+    ifo.seed = a.seed
     ifo.projective_refinement.max_num_iterations = 50
+    if a.refine_huber_px > 0:
+        # Normalized observations m = K^-1 p, so a pixel width becomes px / f.
+        ifo.projective_refinement.robust_loss_width = a.refine_huber_px / inp.focal_px
+    if a.min_fraction_in_front is not None:
+        ifo.min_fraction_in_front = a.min_fraction_in_front
+    if a.max_mean_orthogonality_error is not None:
+        ifo.max_mean_orthogonality_error = a.max_mean_orthogonality_error
     if a.rotation_weighting == "two_view":
         ifo.rotation_weighting = pt.sfm.RotationWeightingType.TWO_VIEW_INFORMATION
     else:
@@ -180,8 +189,13 @@ def init_free_diagnostics(diag, focal_px):
             "converged": bool(r.converged), "iterations": int(r.num_iterations),
             "ose_rms_px": float(r.ose_rms_error * focal_px),
             "refined_rms_px": float(r.refined_rms_error * focal_px),
+            "upgrade_attempted": bool(r.upgrade_attempted),
+            "upgrade_success": bool(r.upgrade_success),
+            "upgrade_fraction_in_front": float(r.upgrade_fraction_in_front),
+            "upgrade_mean_orthogonality_error": float(r.upgrade_mean_orthogonality_error),
+            "upgrade_message": str(r.upgrade_message),
             "message": str(r.message)})
-    if len(diag.restarts):
+    if 0 <= diag.best_restart < len(diag.restarts):
         best = diag.restarts[diag.best_restart]
         out["best"] = out["restarts"][diag.best_restart]
         out["best_ose_cost"] = float(best.final_cost)
@@ -221,7 +235,10 @@ def print_result(name, res):
               f"{d['mean_orthogonality_error']:.4g}")
         for k, r in enumerate(d["restarts"]):
             print(f"      restart {k}: cost {r['final_cost']:.4g} ose {r['ose_rms_px']:.3f} px "
-                  f"refined {r['refined_rms_px']:.3f} px converged {r['converged']}")
+                  f"refined {r['refined_rms_px']:.3f} px converged {r['converged']}; "
+                  f"upgrade {'ok' if r['upgrade_success'] else 'no'}"
+                  f" (frac in front {r['upgrade_fraction_in_front']:.3f}, ortho "
+                  f"{r['upgrade_mean_orthogonality_error']:.4g}): {r['upgrade_message']}")
     elif d and "error" in d:
         print(f"    diagnostics unavailable: {d['error']}")
 
@@ -238,11 +255,21 @@ def main():
                     default=["global", "init_free"])
     ap.add_argument("--formulation", choices=list(FORMULATIONS), default="POSE_ROT")
     ap.add_argument("--restarts", type=int, default=3, help="random restarts")
+    ap.add_argument("--seed", type=int, default=42,
+                    help="first restart seed; restart k uses seed + k")
     ap.add_argument("--no_cauchy", action="store_true",
                     help="disable the Cauchy robust loss in VarPro")
     ap.add_argument("--rotation_weighting", choices=["two_view", "scalar"],
                     default="two_view", help="POSE_ROT relative rotation weights")
     ap.add_argument("--rotation_weight", type=float, default=3.0)
+    ap.add_argument("--refine_huber_px", type=float, default=3.0,
+                    help="Huber width (px) of the projective refinement; 0 = plain LS "
+                         "(the library default). Helps on facade 20-31 with 20%% outliers, "
+                         "see docs/content/init_free.md")
+    ap.add_argument("--min_fraction_in_front", type=float, default=None,
+                    help="validity check of the metric upgrade (library default if unset)")
+    ap.add_argument("--max_mean_orthogonality_error", type=float, default=None,
+                    help="validity check of the metric upgrade (library default if unset)")
     ap.add_argument("--json", help="write the results to this JSON file")
     a = ap.parse_args()
 
@@ -266,9 +293,13 @@ def main():
         config = {"scene": a.scene, "views": a.views, "n_matches": a.n_matches,
                   "sigma_px": a.sigma, "outlier_ratio": a.outlier_ratio,
                   "formulation": a.formulation, "restarts": a.restarts,
+                  "seed": a.seed,
                   "robust_loss": "NONE" if a.no_cauchy else "CAUCHY",
                   "rotation_weighting": a.rotation_weighting,
-                  "rotation_weight": a.rotation_weight}
+                  "rotation_weight": a.rotation_weight,
+                  "refine_huber_px": a.refine_huber_px,
+                  "min_fraction_in_front": a.min_fraction_in_front,
+                  "max_mean_orthogonality_error": a.max_mean_orthogonality_error}
         with open(a.json, "w") as f:
             json.dump({"config": config, "results": results}, f, indent=2)
 

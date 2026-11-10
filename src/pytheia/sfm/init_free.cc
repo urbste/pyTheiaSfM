@@ -160,6 +160,9 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("varpro", &IO::varpro)
       .def_readwrite("projective_refinement", &IO::projective_refinement)
       .def_readwrite("restart_selection", &IO::restart_selection)
+      .def_readwrite("min_fraction_in_front", &IO::min_fraction_in_front)
+      .def_readwrite("max_mean_orthogonality_error",
+                     &IO::max_mean_orthogonality_error)
       .def_readwrite("num_threads", &IO::num_threads)
       .def_readwrite("metric_upgrade", &IO::metric_upgrade)
       .def_readwrite("shared_focal_length", &IO::shared_focal_length)
@@ -335,7 +338,14 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("refined_rms_error", &RD::refined_rms_error)
       .def_readonly("refinement_iterations", &RD::refinement_iterations)
       .def_readonly("refinement_time_seconds",
-                    &RD::refinement_time_seconds);
+                    &RD::refinement_time_seconds)
+      .def_readonly("upgrade_attempted", &RD::upgrade_attempted)
+      .def_readonly("upgrade_success", &RD::upgrade_success)
+      .def_readonly("upgrade_fraction_in_front",
+                    &RD::upgrade_fraction_in_front)
+      .def_readonly("upgrade_mean_orthogonality_error",
+                    &RD::upgrade_mean_orthogonality_error)
+      .def_readonly("upgrade_message", &RD::upgrade_message);
 
   using ID = theia::InitFreeDiagnostics;
   py::class_<ID>(m, "InitFreeDiagnostics")

@@ -33,6 +33,17 @@ struct InitFreeRestartDiagnostics {
   double refined_rms_error = -1.0;
   int refinement_iterations = 0;
   double refinement_time_seconds = 0.0;
+
+  // Metric upgrade of this restart. Restarts are upgraded in ranked order until
+  // one passes, so restarts after the used one may have been attempted too.
+  bool upgrade_attempted = false;
+  // The upgrade succeeded and passed the validity checks of InitFreeOptions.
+  bool upgrade_success = false;
+  // Valid only if the upgrade succeeded (otherwise 0).
+  double upgrade_fraction_in_front = 0.0;
+  double upgrade_mean_orthogonality_error = 0.0;
+  // The upgrade error, or the failed check ("rejected: ..."), or "ok".
+  std::string upgrade_message;
 };
 
 // Per-run diagnostics. The study in arXiv:2608.18028 shows that a low OSE cost
@@ -67,9 +78,25 @@ struct ProjectiveReconstruction {
   Eigen::Matrix4Xd points;  // homogeneous
 };
 
+// The projective reconstruction of one restart.
+struct RankedProjectiveReconstruction {
+  int restart = -1;  // index into InitFreeDiagnostics::restarts
+  ProjectiveReconstruction reconstruction;
+};
+
 // Runs the projective stages for options.num_random_restarts random starts:
-// OSE with VarPro, then (if enabled) projective refinement. Returns the best
-// restart according to options.restart_selection.
+// OSE with VarPro, then (if enabled) projective refinement. The reconstructions
+// of all restarts that produced a finite score are returned in ranked order
+// (best first) according to options.restart_selection; ties keep the restart
+// order. diagnostics->best_restart is the first ranked restart.
+bool RunProjectiveStagesRanked(
+    const OseProblem& problem,
+    const InitFreeOptions& options,
+    std::vector<RankedProjectiveReconstruction>* ranked,
+    InitFreeDiagnostics* diagnostics,
+    std::string* error);
+
+// Like RunProjectiveStagesRanked, but returns only the best restart.
 bool RunProjectiveStages(const OseProblem& problem,
                          const InitFreeOptions& options,
                          ProjectiveReconstruction* best,

@@ -116,6 +116,9 @@ def test_enum_and_options_are_exposed():
     opts.init_free_options.varpro.max_num_iterations = 7
     assert opts.init_free_options.alpha == pytest.approx(0.2)
     assert opts.init_free_options.varpro.max_num_iterations == 7
+    assert opts.init_free_options.min_fraction_in_front == pytest.approx(0.9)
+    assert opts.init_free_options.max_mean_orthogonality_error == (
+        pytest.approx(0.3))
     # The new enums must not clobber existing module-level names.
     assert pt.sfm.LINEAR == pt.sfm.GlobalRotationEstimatorType.LINEAR
 
@@ -828,3 +831,93 @@ def test_estimator_rpose_end_to_end_on_noisy_scene():
     worst = pairwise_rotation_errors([est_R[v] for v in vids], vids, gt).max()
     # Measured 0.25 deg after the metric bundle adjustment.
     assert worst < 0.5, worst
+
+
+def test_estimator_records_upgrade_of_used_restart():
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=5)
+    opts = pt.sfm.ReconstructionEstimatorOptions()
+    opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+    opts.init_free_options = init_free_options()
+    opts.init_free_options.num_random_restarts = 3
+    opts.init_free_options.projective_refinement.max_num_iterations = 30
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
+    opts.min_num_two_view_inliers = 10
+
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert summary.success, summary.message
+    diag = estimator.Diagnostics()
+    assert len(diag.restarts) == 3
+    used = diag.restarts[diag.best_restart]
+    assert used.upgrade_attempted and used.upgrade_success
+    assert used.upgrade_message == "ok"
+    assert used.upgrade_fraction_in_front == pytest.approx(diag.fraction_in_front)
+    assert used.upgrade_mean_orthogonality_error == pytest.approx(
+        diag.mean_orthogonality_error)
+    assert used.upgrade_fraction_in_front >= opts.init_free_options.min_fraction_in_front
+    assert (used.upgrade_mean_orthogonality_error <=
+            opts.init_free_options.max_mean_orthogonality_error)
+    assert "restart %d used" % diag.best_restart in summary.message
+
+
+def test_estimator_fails_when_no_restart_passes_checks():
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=5)
+    opts = pt.sfm.ReconstructionEstimatorOptions()
+    opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+    opts.init_free_options = init_free_options()
+    opts.init_free_options.num_random_restarts = 3
+    opts.init_free_options.projective_refinement.max_num_iterations = 30
+    # The orthogonality error of this noisy scene is about 0.011: no restart
+    # can pass.
+    opts.init_free_options.max_mean_orthogonality_error = 1e-6
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
+    opts.min_num_two_view_inliers = 10
+
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert not summary.success
+    assert "no restart passed the metric upgrade checks" in summary.message
+    assert "max_mean_orthogonality_error 1e-06" in summary.message
+    diag = estimator.Diagnostics()
+    assert diag.best_restart == -1
+    assert not diag.metric_upgrade_success
+    # Every restart was upgraded and rejected, and nothing was written.
+    assert len(diag.restarts) == 3
+    assert all(r.upgrade_attempted and not r.upgrade_success
+               for r in diag.restarts)
+    assert all("mean orthogonality error" in r.upgrade_message
+               for r in diag.restarts)
+    assert all(r.upgrade_fraction_in_front == pytest.approx(1.0)
+               for r in diag.restarts)
+    assert all(r.upgrade_mean_orthogonality_error > 1e-6 for r in diag.restarts)
+    assert not any(recon.View(v).IsEstimated() for v in recon.ViewIds())
+
+
+def test_estimator_rpose_linear_upgrade_is_nonlinear_and_correct():
+    recon, view_graph, gt = make_scene(n_views=15, pixel_noise=1.0, seed=5)
+    opts = pt.sfm.ReconstructionEstimatorOptions()
+    opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+    opts.init_free_options = init_free_options(pt.sfm.OseFormulationType.RPOSE)
+    opts.init_free_options.num_random_restarts = 2
+    # Requested as LINEAR: the radial estimator always runs the nonlinear
+    # refinement, because the linear radial estimate is biased.
+    opts.init_free_options.metric_upgrade = pt.sfm.MetricUpgradeType.LINEAR
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
+    opts.min_num_two_view_inliers = 10
+
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert summary.success, summary.message
+    diag = estimator.Diagnostics()
+    assert diag.metric_upgrade_success
+    assert diag.restarts[diag.best_restart].upgrade_success
+    assert diag.fraction_in_front > 0.99
+    assert diag.mean_orthogonality_error < (
+        0.5 * diag.linear_mean_orthogonality_error)
+
+    vids = sorted(gt)
+    est_R = [np.asarray(recon.View(v).Camera().GetOrientationAsRotationMatrix())
+             for v in vids]
+    worst = pairwise_rotation_errors(est_R, vids, gt).max()
+    assert worst < 0.5, worst
+

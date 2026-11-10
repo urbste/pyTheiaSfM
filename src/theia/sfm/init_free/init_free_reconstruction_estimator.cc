@@ -5,8 +5,10 @@
 
 #include <glog/logging.h>
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
+#include <numeric>
 #include <sstream>
 #include <unordered_set>
 
@@ -25,11 +27,42 @@
 
 namespace theia {
 
-bool RunProjectiveStages(const OseProblem& problem,
-                         const InitFreeOptions& options,
-                         ProjectiveReconstruction* best,
-                         InitFreeDiagnostics* diagnostics,
-                         std::string* error) {
+namespace {
+
+// Empty if the metric upgrade passes the validity checks of the options.
+// The comparisons are negated so that NaN fails.
+std::string MetricCheckFailure(const MetricUpgradeResult& metric,
+                               const InitFreeOptions& options) {
+  std::string failure;
+  if (!(metric.fraction_in_front >= options.min_fraction_in_front)) {
+    std::ostringstream out;
+    out << "fraction in front " << metric.fraction_in_front << " < "
+        << options.min_fraction_in_front;
+    failure += out.str();
+  }
+  if (!(metric.mean_orthogonality_error <=
+        options.max_mean_orthogonality_error)) {
+    std::ostringstream out;
+    if (!failure.empty()) failure += "; ";
+    out << "mean orthogonality error " << metric.mean_orthogonality_error
+        << " > " << options.max_mean_orthogonality_error;
+    failure += out.str();
+  }
+  return failure;
+}
+
+}  // namespace
+
+bool RunProjectiveStagesRanked(
+    const OseProblem& problem,
+    const InitFreeOptions& options,
+    std::vector<RankedProjectiveReconstruction>* ranked,
+    InitFreeDiagnostics* diagnostics,
+    std::string* error) {
+  CHECK_NOTNULL(ranked);
+  CHECK_NOTNULL(diagnostics);
+  CHECK_NOTNULL(error);
+  ranked->clear();
   std::unique_ptr<OseFormulation> formulation =
       CreateOseFormulation(options, error);
   if (formulation == nullptr) {
@@ -49,9 +82,11 @@ bool RunProjectiveStages(const OseProblem& problem,
   const VarProOptions varpro = ResolvedVarProOptions(options);
   const int num_threads = std::max(1, options.num_threads);
   const int num_restarts = std::max(1, options.num_random_restarts);
-  double best_score = std::numeric_limits<double>::infinity();
   diagnostics->restarts.clear();
   diagnostics->best_restart = -1;
+  // Per restart: the reconstruction and its score (+inf if not finite).
+  std::vector<ProjectiveReconstruction> candidates;
+  std::vector<double> scores;
   for (int k = 0; k < num_restarts; ++k) {
     const unsigned int seed = options.seed + k;
     const OseCameraVector initial = SampleInitialCameras(
@@ -111,16 +146,44 @@ bool RunProjectiveStages(const OseProblem& problem,
                 formulation->IsRadial()
             ? restart.final_cost
             : rms;
-    if (std::isfinite(score) && score < best_score) {
-      best_score = score;
-      diagnostics->best_restart = k;
-      *best = std::move(candidate);
-    }
+    candidates.push_back(std::move(candidate));
+    scores.push_back(std::isfinite(score)
+                         ? score
+                         : std::numeric_limits<double>::infinity());
   }
-  if (diagnostics->best_restart < 0) {
+
+  // Stable sort: ties keep the restart order.
+  std::vector<int> order(num_restarts);
+  std::iota(order.begin(), order.end(), 0);
+  std::stable_sort(order.begin(), order.end(), [&scores](int a, int b) {
+    return scores[a] < scores[b];
+  });
+  for (const int k : order) {
+    if (!std::isfinite(scores[k])) break;
+    RankedProjectiveReconstruction entry;
+    entry.restart = k;
+    entry.reconstruction = std::move(candidates[k]);
+    ranked->push_back(std::move(entry));
+  }
+  if (ranked->empty()) {
     *error = "No restart produced a finite result.";
     return false;
   }
+  diagnostics->best_restart = ranked->front().restart;
+  return true;
+}
+
+bool RunProjectiveStages(const OseProblem& problem,
+                         const InitFreeOptions& options,
+                         ProjectiveReconstruction* best,
+                         InitFreeDiagnostics* diagnostics,
+                         std::string* error) {
+  std::vector<RankedProjectiveReconstruction> ranked;
+  if (!RunProjectiveStagesRanked(problem, options, &ranked, diagnostics,
+                                 error)) {
+    return false;
+  }
+  *best = std::move(ranked.front().reconstruction);
   return true;
 }
 
@@ -175,9 +238,18 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
       static_cast<int>(problem.rotation_terms.size());
   diagnostics_.problem_build_time = timer.ElapsedTimeInSeconds();
 
-  // 3. + 4. OSE stage and projective refinement for every random start. RPOSE
-  // cameras are radial (two rows), so projective refinement is skipped; the
-  // metric bundle adjustment refines the full cameras instead.
+  if (opts.metric_upgrade == MetricUpgradeType::NONE) {
+    summary.message =
+        "Init-free: metric_upgrade is NONE, so no metric reconstruction can "
+        "be written. Use the stage-wise API (BuildOseProblem, SolveOse) for "
+        "projective results.";
+    return summary;
+  }
+
+  // 3. + 4. OSE stage and projective refinement for every random start, ranked
+  // by restart_selection. RPOSE cameras are radial (two rows), so projective
+  // refinement is skipped; the metric bundle adjustment refines the full
+  // cameras instead.
   const bool radial = opts.formulation == OseFormulationType::RPOSE;
   InitFreeOptions stage_opts = opts;
   if (radial && stage_opts.projective_refinement.max_num_iterations > 0) {
@@ -186,38 +258,79 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
     stage_opts.projective_refinement.max_num_iterations = 0;
   }
   timer.Reset();
-  ProjectiveReconstruction projective;
-  if (!RunProjectiveStages(problem, stage_opts, &projective, &diagnostics_,
-                           &error)) {
+  std::vector<RankedProjectiveReconstruction> ranked;
+  if (!RunProjectiveStagesRanked(problem, stage_opts, &ranked, &diagnostics_,
+                                 &error)) {
     summary.message = "Init-free: " + error;
     return summary;
   }
   diagnostics_.ose_time = timer.ElapsedTimeInSeconds();
 
-  // 5. Metric upgrade.
+  // 5. Metric upgrade. The restarts are upgraded in ranked order, and the first
+  // one that succeeds and passes the validity checks is used.
   timer.Reset();
-  if (opts.metric_upgrade == MetricUpgradeType::NONE) {
-    summary.message =
-        "Init-free: metric_upgrade is NONE, so no metric reconstruction can "
-        "be written. Use the stage-wise API (BuildOseProblem, SolveOse) for "
-        "projective results.";
-    return summary;
-  }
   MetricUpgradeOptions upgrade_options;
+  // The linear radial estimate is unreliable (the RPOSE affine term biases the
+  // OSE solution), so the nonlinear refinement always runs for radial cameras.
   upgrade_options.nonlinear_refinement =
-      opts.metric_upgrade == MetricUpgradeType::LINEAR_AND_NONLINEAR;
+      opts.metric_upgrade == MetricUpgradeType::LINEAR_AND_NONLINEAR || radial;
+  if (radial && opts.metric_upgrade == MetricUpgradeType::LINEAR) {
+    LOG(INFO) << "Init-free: RPOSE always runs the nonlinear metric upgrade "
+                 "(metric_upgrade LINEAR is overridden).";
+  }
   upgrade_options.shared_focal_length = opts.shared_focal_length;
   upgrade_options.radial_cameras = radial;
+  int used = -1;  // position in ranked
   MetricUpgradeResult metric;
-  if (!UpgradeToMetric(problem,
-                       projective.cameras,
-                       projective.points,
-                       upgrade_options,
-                       &metric,
-                       &error)) {
-    summary.message = "Init-free: " + error;
+  for (int r = 0; r < static_cast<int>(ranked.size()); ++r) {
+    const int k = ranked[r].restart;
+    InitFreeRestartDiagnostics& restart = diagnostics_.restarts[k];
+    restart.upgrade_attempted = true;
+    MetricUpgradeResult candidate;
+    std::string upgrade_error;
+    if (!UpgradeToMetric(problem,
+                         ranked[r].reconstruction.cameras,
+                         ranked[r].reconstruction.points,
+                         upgrade_options,
+                         &candidate,
+                         &upgrade_error)) {
+      restart.upgrade_message = upgrade_error;
+      VLOG(1) << "Init-free: metric upgrade of restart " << k
+              << " failed: " << upgrade_error;
+      continue;
+    }
+    restart.upgrade_fraction_in_front = candidate.fraction_in_front;
+    restart.upgrade_mean_orthogonality_error =
+        candidate.mean_orthogonality_error;
+    const std::string failure = MetricCheckFailure(candidate, opts);
+    if (!failure.empty()) {
+      restart.upgrade_message = "rejected: " + failure;
+      VLOG(1) << "Init-free: restart " << k << " rejected: " << failure;
+      continue;
+    }
+    restart.upgrade_success = true;
+    restart.upgrade_message = "ok";
+    used = r;
+    metric = std::move(candidate);
+    break;
+  }
+  if (used < 0) {
+    diagnostics_.best_restart = -1;  // no restart was used
+    std::ostringstream message;
+    message << "Init-free: no restart passed the metric upgrade checks "
+               "(min_fraction_in_front "
+            << opts.min_fraction_in_front << ", max_mean_orthogonality_error "
+            << opts.max_mean_orthogonality_error << "). Restarts in ranked order:";
+    for (const RankedProjectiveReconstruction& entry : ranked) {
+      const InitFreeRestartDiagnostics& restart =
+          diagnostics_.restarts[entry.restart];
+      message << " restart " << entry.restart << " (seed " << restart.seed
+              << "): " << restart.upgrade_message << ";";
+    }
+    summary.message = message.str();
     return summary;
   }
+  diagnostics_.best_restart = ranked[used].restart;
   diagnostics_.metric_upgrade_success = true;
   diagnostics_.fraction_in_front = metric.fraction_in_front;
   diagnostics_.mean_orthogonality_error = metric.mean_orthogonality_error;
@@ -300,7 +413,9 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
   std::ostringstream message;
   message << "Init-free reconstruction: " << problem.NumCameras()
           << " cameras, " << problem.NumPoints() << " points, "
-          << diagnostics_.restarts.size() << " restart(s), best OSE cost "
+          << diagnostics_.restarts.size() << " restart(s), restart "
+          << diagnostics_.best_restart << " used (" << used + 1 << " of "
+          << ranked.size() << " ranked restart(s) tried), OSE cost "
           << best.final_cost << " after " << best.num_iterations
           << " iterations (" << best.message << ")";
   if (best.ose_rms_error >= 0.0) {
