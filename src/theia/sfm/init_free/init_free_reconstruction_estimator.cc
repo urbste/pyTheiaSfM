@@ -5,6 +5,7 @@
 
 #include <glog/logging.h>
 
+#include <cmath>
 #include <limits>
 #include <sstream>
 #include <unordered_set>
@@ -14,6 +15,7 @@
 #include "theia/sfm/init_free/camera_sampler.h"
 #include "theia/sfm/init_free/metric_upgrade.h"
 #include "theia/sfm/init_free/ose_formulation.h"
+#include "theia/sfm/init_free/projective_refinement.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
@@ -23,11 +25,11 @@
 
 namespace theia {
 
-bool RunOseRestarts(const OseProblem& problem,
-                    const InitFreeOptions& options,
-                    OseSolution* best,
-                    InitFreeDiagnostics* diagnostics,
-                    std::string* error) {
+bool RunProjectiveStages(const OseProblem& problem,
+                         const InitFreeOptions& options,
+                         ProjectiveReconstruction* best,
+                         InitFreeDiagnostics* diagnostics,
+                         std::string* error) {
   std::unique_ptr<OseFormulation> formulation =
       CreateOseFormulation(options, error);
   if (formulation == nullptr) {
@@ -37,8 +39,10 @@ bool RunOseRestarts(const OseProblem& problem,
     *error = "The formulation needs rotation terms but the problem has none.";
     return false;
   }
+  const bool refine = options.projective_refinement.max_num_iterations > 0;
+  const int num_threads = std::max(1, options.num_threads);
   const int num_restarts = std::max(1, options.num_random_restarts);
-  double best_cost = std::numeric_limits<double>::infinity();
+  double best_score = std::numeric_limits<double>::infinity();
   diagnostics->restarts.clear();
   diagnostics->best_restart = -1;
   for (int k = 0; k < num_restarts; ++k) {
@@ -51,6 +55,10 @@ bool RunOseRestarts(const OseProblem& problem,
       *error = solution.message;
       return false;
     }
+    ProjectiveReconstruction candidate;
+    candidate.cameras = std::move(solution.cameras);
+    candidate.points = solution.points.colwise().homogeneous();
+
     InitFreeRestartDiagnostics restart;
     restart.seed = seed;
     restart.initial_cost = solution.initial_cost;
@@ -59,18 +67,50 @@ bool RunOseRestarts(const OseProblem& problem,
     restart.converged = solution.converged;
     restart.solve_time_seconds = solution.solve_time_seconds;
     restart.message = solution.message;
+    restart.ose_rms_error =
+        ProjectiveRmsError(problem, candidate.cameras, candidate.points);
+    double rms = restart.ose_rms_error;
+
+    if (refine) {
+      ProjectiveRefinementResult refined;
+      if (RefineProjectiveReconstruction(problem,
+                                         candidate.cameras,
+                                         candidate.points,
+                                         options.projective_refinement,
+                                         num_threads,
+                                         &refined)) {
+        candidate.cameras = std::move(refined.cameras);
+        candidate.points = std::move(refined.points);
+        restart.refined_rms_error = refined.final_rms_error;
+        rms = refined.final_rms_error;
+      } else {
+        LOG(WARNING) << "Projective refinement of restart " << k
+                     << " failed: " << refined.message;
+      }
+      restart.refinement_iterations = refined.num_iterations;
+      restart.refinement_time_seconds = refined.solve_time_seconds;
+    }
     diagnostics->restarts.push_back(restart);
-    VLOG(1) << "OSE restart " << k << " (seed " << seed
-            << "): cost " << solution.initial_cost << " -> "
-            << solution.final_cost << " in " << solution.num_iterations
-            << " iterations. " << solution.message;
-    if (solution.final_cost < best_cost) {
-      best_cost = solution.final_cost;
+    VLOG(1) << "Restart " << k << " (seed " << seed << "): OSE cost "
+            << restart.initial_cost << " -> " << restart.final_cost << " in "
+            << restart.num_iterations << " iterations, RMS "
+            << restart.ose_rms_error << " -> " << rms;
+
+    const double score =
+        options.restart_selection == InitFreeRestartSelection::OSE_COST
+            ? restart.final_cost
+            : rms;
+    if (std::isfinite(score) && score < best_score) {
+      best_score = score;
       diagnostics->best_restart = k;
-      *best = std::move(solution);
+      *best = std::move(candidate);
     }
   }
-  return diagnostics->best_restart >= 0;
+  if (diagnostics->best_restart < 0) {
+    *error = "No restart produced a finite result.";
+    return false;
+  }
+  return true;
 }
 
 InitFreeReconstructionEstimator::InitFreeReconstructionEstimator(
@@ -81,7 +121,10 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
     ViewGraph* view_graph, Reconstruction* reconstruction) {
   CHECK_NOTNULL(view_graph);
   CHECK_NOTNULL(reconstruction);
-  const InitFreeOptions& opts = options_.init_free_options;
+  InitFreeOptions opts = options_.init_free_options;
+  if (opts.num_threads <= 0) {
+    opts.num_threads = options_.num_threads;
+  }
   diagnostics_ = InitFreeDiagnostics();
   ReconstructionEstimatorSummary summary;
   Timer total_timer;
@@ -121,20 +164,14 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
       static_cast<int>(problem.rotation_terms.size());
   diagnostics_.problem_build_time = timer.ElapsedTimeInSeconds();
 
-  // 3. OSE stage from random starts.
+  // 3. + 4. OSE stage and projective refinement for every random start.
   timer.Reset();
-  OseSolution solution;
-  if (!RunOseRestarts(problem, opts, &solution, &diagnostics_, &error)) {
+  ProjectiveReconstruction projective;
+  if (!RunProjectiveStages(problem, opts, &projective, &diagnostics_, &error)) {
     summary.message = "Init-free: " + error;
     return summary;
   }
   diagnostics_.ose_time = timer.ElapsedTimeInSeconds();
-
-  // 4. Projective refinement (stage 2 of the study).
-  if (opts.projective_refinement_max_iterations > 0) {
-    LOG(WARNING) << "Init-free: projective refinement is not implemented yet "
-                    "and is skipped.";
-  }
 
   // 5. Metric upgrade.
   timer.Reset();
@@ -157,7 +194,7 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
   }
   MetricUpgradeResult metric;
   if (!UpgradeToMetricCalibrated(
-          problem, solution.cameras, solution.points, &metric, &error)) {
+          problem, projective.cameras, projective.points, &metric, &error)) {
     summary.message = "Init-free: " + error;
     return summary;
   }
@@ -227,9 +264,14 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
   std::ostringstream message;
   message << "Init-free reconstruction: " << problem.NumCameras()
           << " cameras, " << problem.NumPoints() << " points, "
-          << diagnostics_.restarts.size() << " restart(s), best cost "
+          << diagnostics_.restarts.size() << " restart(s), best OSE cost "
           << best.final_cost << " after " << best.num_iterations
-          << " iterations (" << best.message << "), "
+          << " iterations (" << best.message << "), projective RMS "
+          << best.ose_rms_error;
+  if (best.refined_rms_error >= 0.0) {
+    message << " -> " << best.refined_rms_error << " after refinement";
+  }
+  message << ", "
           << 100.0 * diagnostics_.fraction_in_front
           << "% observations in front, OSE time " << diagnostics_.ose_time
           << " s.";

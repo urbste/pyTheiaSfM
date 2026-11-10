@@ -67,8 +67,18 @@ enum class ReducedCameraSolverType {
   CUDA_DENSE_CHOLESKY = 1,  // cuSOLVER potrf/potrs. Needs a build with
                             // -DTHEIA_WITH_CUDA_SOLVERS=ON.
   SPARSE_CHOLESKY = 2,      // Not implemented yet.
-  POWER_SERIES = 3,         // Matrix-free power series (PoVar). Not
-                            // implemented yet.
+  POWER_SERIES = 3,         // Matrix-free truncated power series of the
+                            // Schur complement inverse (PoBA / PoVar).
+};
+
+// How the best of several random restarts is chosen.
+enum class InitFreeRestartSelection {
+  // Lowest final OSE cost.
+  OSE_COST = 0,
+  // Lowest RMS reprojection error of the projective reconstruction (after
+  // projective refinement if it is enabled). The study in arXiv:2608.18028
+  // found this a better predictor of a correct metric result.
+  REPROJECTION_ERROR = 1,
 };
 
 enum class VarProRobustLossType {
@@ -108,8 +118,10 @@ struct VarProOptions {
   ReducedCameraSolverType linear_solver_type =
       ReducedCameraSolverType::DENSE_CHOLESKY;
 
-  // Number of terms for the POWER_SERIES solver.
+  // POWER_SERIES: maximum number of series terms, and the relative size of a
+  // term below which the series is truncated.
   int power_series_max_iterations = 20;
+  double power_series_tolerance = 1e-6;
 
   VarProRobustLossType robust_loss_type = VarProRobustLossType::NONE;
   double robust_loss_scale = 1.0;
@@ -117,6 +129,17 @@ struct VarProOptions {
   // Ridge added to each 3x3 point normal matrix before inversion.
   double point_ridge = 1e-12;
 
+  bool verbose = false;
+};
+
+struct ProjectiveRefinementOptions {
+  // 0 disables the stage.
+  int max_num_iterations = 0;
+  double function_tolerance = 1e-10;
+  // Huber width in the units of the observations (normalized image
+  // coordinates for CALIBRATED_RAYS, so ~ pixels / focal length). <= 0 means
+  // plain least squares.
+  double robust_loss_width = 0.0;
   bool verbose = false;
 };
 
@@ -154,9 +177,15 @@ struct InitFreeOptions {
 
   VarProOptions varpro;
 
-  // Stage-2 projective reprojection refinement. 0 disables it (not
-  // implemented yet).
-  int projective_refinement_max_iterations = 0;
+  // Stage 2: projective bundle adjustment of every restart's OSE solution.
+  ProjectiveRefinementOptions projective_refinement;
+
+  InitFreeRestartSelection restart_selection =
+      InitFreeRestartSelection::REPROJECTION_ERROR;
+
+  // Threads for projective refinement. <= 0 uses
+  // ReconstructionEstimatorOptions::num_threads inside the estimator, else 1.
+  int num_threads = 0;
 
   MetricUpgradeType metric_upgrade = MetricUpgradeType::LINEAR;
 

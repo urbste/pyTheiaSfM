@@ -158,6 +158,7 @@ set(THEIA_SRC
   sfm/init_free/metric_upgrade.cc
   sfm/init_free/ose_formulation.cc
   sfm/init_free/ose_problem.cc
+  sfm/init_free/projective_refinement.cc
   sfm/init_free/reduced_camera_solver.cc
   sfm/init_free/varpro_solver.cc
   sfm/localize_view_to_reconstruction.cc

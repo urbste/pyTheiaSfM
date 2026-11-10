@@ -6,7 +6,10 @@
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
 
+#include <Eigen/Geometry>
+
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 #include "theia/sfm/init_free/camera_sampler.h"
@@ -15,6 +18,7 @@
 #include "theia/sfm/init_free/metric_upgrade.h"
 #include "theia/sfm/init_free/ose_formulation.h"
 #include "theia/sfm/init_free/ose_problem.h"
+#include "theia/sfm/init_free/projective_refinement.h"
 #include "theia/sfm/init_free/reduced_camera_solver.h"
 #include "theia/sfm/init_free/varpro_solver.h"
 #include "theia/sfm/reconstruction.h"
@@ -35,6 +39,17 @@ std::vector<Eigen::Matrix<double, 3, 4>> ToList(
 theia::OseCameraVector FromList(
     const std::vector<Eigen::Matrix<double, 3, 4>>& cameras) {
   return {cameras.begin(), cameras.end()};
+}
+
+// Accepts 3 x N Cartesian or 4 x N homogeneous points.
+Eigen::Matrix4Xd ToHomogeneous(const Eigen::MatrixXd& points) {
+  if (points.rows() == 4) {
+    return points;
+  }
+  if (points.rows() == 3) {
+    return points.colwise().homogeneous();
+  }
+  throw std::invalid_argument("points must be 3 x N or 4 x N.");
 }
 
 }  // namespace
@@ -68,6 +83,11 @@ void pytheia_init_free(py::module& m) {
       .value("SPARSE_CHOLESKY", theia::ReducedCameraSolverType::SPARSE_CHOLESKY)
       .value("POWER_SERIES", theia::ReducedCameraSolverType::POWER_SERIES);
 
+  py::enum_<theia::InitFreeRestartSelection>(m, "InitFreeRestartSelection")
+      .value("OSE_COST", theia::InitFreeRestartSelection::OSE_COST)
+      .value("REPROJECTION_ERROR",
+             theia::InitFreeRestartSelection::REPROJECTION_ERROR);
+
   py::enum_<theia::VarProRobustLossType>(m, "VarProRobustLossType")
       .value("NONE", theia::VarProRobustLossType::NONE)
       .value("CAUCHY", theia::VarProRobustLossType::CAUCHY);
@@ -92,10 +112,19 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("linear_solver_type", &VO::linear_solver_type)
       .def_readwrite("power_series_max_iterations",
                      &VO::power_series_max_iterations)
+      .def_readwrite("power_series_tolerance", &VO::power_series_tolerance)
       .def_readwrite("robust_loss_type", &VO::robust_loss_type)
       .def_readwrite("robust_loss_scale", &VO::robust_loss_scale)
       .def_readwrite("point_ridge", &VO::point_ridge)
       .def_readwrite("verbose", &VO::verbose);
+
+  using PRO = theia::ProjectiveRefinementOptions;
+  py::class_<PRO>(m, "ProjectiveRefinementOptions")
+      .def(py::init<>())
+      .def_readwrite("max_num_iterations", &PRO::max_num_iterations)
+      .def_readwrite("function_tolerance", &PRO::function_tolerance)
+      .def_readwrite("robust_loss_width", &PRO::robust_loss_width)
+      .def_readwrite("verbose", &PRO::verbose);
 
   using IO = theia::InitFreeOptions;
   py::class_<IO>(m, "InitFreeOptions")
@@ -114,8 +143,9 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("num_random_restarts", &IO::num_random_restarts)
       .def_readwrite("seed", &IO::seed)
       .def_readwrite("varpro", &IO::varpro)
-      .def_readwrite("projective_refinement_max_iterations",
-                     &IO::projective_refinement_max_iterations)
+      .def_readwrite("projective_refinement", &IO::projective_refinement)
+      .def_readwrite("restart_selection", &IO::restart_selection)
+      .def_readwrite("num_threads", &IO::num_threads)
       .def_readwrite("metric_upgrade", &IO::metric_upgrade)
       .def_readwrite("run_metric_bundle_adjustment",
                      &IO::run_metric_bundle_adjustment);
@@ -242,7 +272,12 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("num_iterations", &RD::num_iterations)
       .def_readonly("converged", &RD::converged)
       .def_readonly("solve_time_seconds", &RD::solve_time_seconds)
-      .def_readonly("message", &RD::message);
+      .def_readonly("message", &RD::message)
+      .def_readonly("ose_rms_error", &RD::ose_rms_error)
+      .def_readonly("refined_rms_error", &RD::refined_rms_error)
+      .def_readonly("refinement_iterations", &RD::refinement_iterations)
+      .def_readonly("refinement_time_seconds",
+                    &RD::refinement_time_seconds);
 
   using ID = theia::InitFreeDiagnostics;
   py::class_<ID>(m, "InitFreeDiagnostics")
@@ -261,25 +296,88 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("metric_upgrade_time", &ID::metric_upgrade_time)
       .def_readonly("bundle_adjustment_time", &ID::bundle_adjustment_time);
 
+  py::class_<theia::ProjectiveReconstruction>(m, "ProjectiveReconstruction")
+      .def(py::init<>())
+      .def_property_readonly("cameras",
+                             [](const theia::ProjectiveReconstruction& r) {
+                               return ToList(r.cameras);
+                             })
+      .def_readonly("points", &theia::ProjectiveReconstruction::points);
+
   m.def(
-      "RunOseRestarts",
+      "RunProjectiveStages",
       [](const theia::OseProblem& problem,
          const theia::InitFreeOptions& options) {
-        theia::OseSolution best;
+        theia::ProjectiveReconstruction best;
         theia::InitFreeDiagnostics diagnostics;
         std::string error;
         bool ok;
         {
           py::gil_scoped_release release;
-          ok = theia::RunOseRestarts(
+          ok = theia::RunProjectiveStages(
               problem, options, &best, &diagnostics, &error);
         }
         return std::make_tuple(ok, best, diagnostics, error);
       },
       py::arg("problem"),
       py::arg("options"),
-      "Runs options.num_random_restarts VarPro solves from sampled cameras. "
-      "Returns (success, best_solution, diagnostics, error).");
+      "Runs options.num_random_restarts random starts of the OSE stage and "
+      "(if enabled) projective refinement. Returns (success, best, "
+      "diagnostics, error); best.points are homogeneous (4 x N).");
+
+  using PRR = theia::ProjectiveRefinementResult;
+  py::class_<PRR>(m, "ProjectiveRefinementResult")
+      .def(py::init<>())
+      .def_property_readonly("cameras",
+                             [](const PRR& r) { return ToList(r.cameras); })
+      .def_readonly("points", &PRR::points)
+      .def_readonly("initial_rms_error", &PRR::initial_rms_error)
+      .def_readonly("final_rms_error", &PRR::final_rms_error)
+      .def_readonly("num_iterations", &PRR::num_iterations)
+      .def_readonly("converged", &PRR::converged)
+      .def_readonly("solve_time_seconds", &PRR::solve_time_seconds)
+      .def_readonly("message", &PRR::message);
+
+  m.def(
+      "RefineProjectiveReconstruction",
+      [](const theia::OseProblem& problem,
+         const std::vector<Eigen::Matrix<double, 3, 4>>& cameras,
+         const Eigen::MatrixXd& points,
+         const theia::ProjectiveRefinementOptions& options,
+         int num_threads) {
+        const Eigen::Matrix4Xd homogeneous = ToHomogeneous(points);
+        theia::ProjectiveRefinementResult result;
+        bool ok;
+        {
+          py::gil_scoped_release release;
+          ok = theia::RefineProjectiveReconstruction(problem,
+                                                     FromList(cameras),
+                                                     homogeneous,
+                                                     options,
+                                                     num_threads,
+                                                     &result);
+        }
+        return std::make_tuple(ok, result);
+      },
+      py::arg("problem"),
+      py::arg("cameras"),
+      py::arg("points"),
+      py::arg("options"),
+      py::arg("num_threads") = 1,
+      "Projective bundle adjustment. points: 3 x N (Cartesian) or 4 x N "
+      "(homogeneous). Returns (success, result).");
+
+  m.def(
+      "ProjectiveRmsError",
+      [](const theia::OseProblem& problem,
+         const std::vector<Eigen::Matrix<double, 3, 4>>& cameras,
+         const Eigen::MatrixXd& points) {
+        return theia::ProjectiveRmsError(
+            problem, FromList(cameras), ToHomogeneous(points));
+      },
+      py::arg("problem"),
+      py::arg("cameras"),
+      py::arg("points"));
 
   using MU = theia::MetricUpgradeResult;
   py::class_<MU>(m, "MetricUpgradeResult")
@@ -302,17 +400,18 @@ void pytheia_init_free(py::module& m) {
       "UpgradeToMetricCalibrated",
       [](const theia::OseProblem& problem,
          const std::vector<Eigen::Matrix<double, 3, 4>>& cameras,
-         const Eigen::Matrix3Xd& points) {
+         const Eigen::MatrixXd& points) {
         theia::MetricUpgradeResult result;
         std::string error;
         const bool ok = theia::UpgradeToMetricCalibrated(
-            problem, FromList(cameras), points, &result, &error);
+            problem, FromList(cameras), ToHomogeneous(points), &result, &error);
         return std::make_tuple(ok, result, error);
       },
       py::arg("problem"),
       py::arg("cameras"),
       py::arg("points"),
       "Linear metric upgrade for normalized (calibrated) observations. "
+      "points: 3 x N (Cartesian) or 4 x N (homogeneous). "
       "Returns (success, result, error).");
 
   m.def("CudaReducedCameraSolverAvailable",

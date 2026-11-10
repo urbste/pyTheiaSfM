@@ -67,7 +67,7 @@ double FractionInFront(const OseProblem& problem,
 
 bool UpgradeToMetricCalibrated(const OseProblem& problem,
                                const OseCameraVector& cameras,
-                               const Eigen::Matrix3Xd& points,
+                               const Eigen::Matrix4Xd& points,
                                MetricUpgradeResult* result,
                                std::string* error) {
   CHECK_NOTNULL(result);
@@ -140,7 +140,7 @@ bool UpgradeToMetricCalibrated(const OseProblem& problem,
   result->points.resize(3, points.cols());
   result->point_valid.assign(points.cols(), 0);
   for (int j = 0; j < points.cols(); ++j) {
-    const Eigen::Vector4d X = H_inv * points.col(j).homogeneous();
+    const Eigen::Vector4d X = H_inv * points.col(j);
     if (std::abs(X[3]) > 1e-12 * X.head<3>().norm()) {
       result->points.col(j) = X.head<3>() / X[3];
       result->point_valid[j] = result->points.col(j).allFinite();

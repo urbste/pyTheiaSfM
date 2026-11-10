@@ -17,12 +17,21 @@ namespace theia {
 
 struct InitFreeRestartDiagnostics {
   unsigned int seed = 0;
+
+  // OSE stage.
   double initial_cost = 0.0;
   double final_cost = 0.0;
   int num_iterations = 0;
   bool converged = false;
   double solve_time_seconds = 0.0;
   std::string message;
+  // RMS reprojection error of the OSE solution (observation units).
+  double ose_rms_error = 0.0;
+
+  // Projective refinement (-1 / 0 when the stage is disabled).
+  double refined_rms_error = -1.0;
+  int refinement_iterations = 0;
+  double refinement_time_seconds = 0.0;
 };
 
 // Per-run diagnostics. The study in arXiv:2608.18028 shows that a low OSE cost
@@ -41,18 +50,25 @@ struct InitFreeDiagnostics {
   double mean_orthogonality_error = 0.0;
 
   double problem_build_time = 0.0;
-  double ose_time = 0.0;
+  double ose_time = 0.0;  // OSE and projective refinement of all restarts
   double metric_upgrade_time = 0.0;
   double bundle_adjustment_time = 0.0;
 };
 
-// Runs all random restarts of the OSE stage and returns the restart with the
-// lowest final cost in `best`.
-bool RunOseRestarts(const OseProblem& problem,
-                    const InitFreeOptions& options,
-                    OseSolution* best,
-                    InitFreeDiagnostics* diagnostics,
-                    std::string* error);
+// A projective reconstruction in the numbering of an OseProblem.
+struct ProjectiveReconstruction {
+  OseCameraVector cameras;
+  Eigen::Matrix4Xd points;  // homogeneous
+};
+
+// Runs the projective stages for options.num_random_restarts random starts:
+// OSE with VarPro, then (if enabled) projective refinement. Returns the best
+// restart according to options.restart_selection.
+bool RunProjectiveStages(const OseProblem& problem,
+                         const InitFreeOptions& options,
+                         ProjectiveReconstruction* best,
+                         InitFreeDiagnostics* diagnostics,
+                         std::string* error);
 
 // Initialization-free SfM (experimental). Uses no rotation averaging, position
 // estimation or incremental registration: the cameras and points come from an

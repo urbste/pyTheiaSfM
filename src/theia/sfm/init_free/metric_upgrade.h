@@ -40,9 +40,12 @@ struct MetricUpgradeResult {
 //
 // The uncalibrated version (unknown focal lengths, Pollefeys et al. 1999) and
 // the nonlinear refinement are not implemented yet.
+//
+// `points` are homogeneous (4 x N); Cartesian OSE points can be passed as
+// points.colwise().homogeneous().
 bool UpgradeToMetricCalibrated(const OseProblem& problem,
                                const OseCameraVector& cameras,
-                               const Eigen::Matrix3Xd& points,
+                               const Eigen::Matrix4Xd& points,
                                MetricUpgradeResult* result,
                                std::string* error);
 

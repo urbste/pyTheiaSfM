@@ -220,9 +220,158 @@ def test_unimplemented_choices_fail_cleanly():
     assert not ok and "not implemented" in sol.message
 
     opts = init_free_options()
-    opts.varpro.linear_solver_type = pt.sfm.ReducedCameraSolverType.POWER_SERIES
+    opts.varpro.linear_solver_type = (
+        pt.sfm.ReducedCameraSolverType.SPARSE_CHOLESKY)
     ok, sol = pt.sfm.SolveOse(problem, opts, init)
     assert not ok and "not implemented" in sol.message
+
+    with pytest.raises(ValueError):
+        pt.sfm.ProjectiveRmsError(problem, init, np.zeros((2, 5)))
+
+
+@pytest.mark.parametrize("pixel_noise", [0.0, 1.0])
+def test_power_series_matches_dense(pixel_noise):
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=pixel_noise,
+                                      seed=2)
+    opts = init_free_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok, dense = pt.sfm.SolveOse(problem, opts, init)
+    assert ok and dense.converged, dense.message
+
+    opts.varpro.linear_solver_type = pt.sfm.ReducedCameraSolverType.POWER_SERIES
+    opts.varpro.power_series_max_iterations = 20
+    ok, ps = pt.sfm.SolveOse(problem, opts, init)
+    assert ok and ps.converged, ps.message
+    assert np.all(np.diff(ps.cost_history) <= 0.0)
+    assert ps.final_cost == pytest.approx(dense.final_cost, rel=1e-8)
+
+    opts.varpro.power_series_max_iterations = 0
+    ok, ps = pt.sfm.SolveOse(problem, opts, init)
+    assert not ok and "at least 1" in ps.message
+
+
+@pytest.mark.parametrize("pixel_noise", [0.0, 1.0])
+def test_projective_refinement_removes_ose_bias(pixel_noise):
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=pixel_noise,
+                                      seed=2)
+    opts = init_free_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok, sol = pt.sfm.SolveOse(problem, opts, init)
+    assert ok, sol.message
+    ose_rms = pt.sfm.ProjectiveRmsError(problem, sol.cameras, sol.points)
+
+    refine_opts = pt.sfm.ProjectiveRefinementOptions()
+    refine_opts.max_num_iterations = 50
+    # 3 x N and 4 x N points give the same result.
+    ok, res = pt.sfm.RefineProjectiveReconstruction(
+        problem, sol.cameras, sol.points, refine_opts)
+    assert ok, res.message
+    homogeneous = np.vstack([sol.points, np.ones((1, sol.points.shape[1]))])
+    ok, res4 = pt.sfm.RefineProjectiveReconstruction(
+        problem, sol.cameras, homogeneous, refine_opts)
+    assert ok, res4.message
+    assert res4.final_rms_error == pytest.approx(res.final_rms_error,
+                                                 rel=1e-6, abs=1e-12)
+
+    assert res.initial_rms_error == pytest.approx(ose_rms, rel=1e-9)
+    assert res.final_rms_error < res.initial_rms_error
+    assert res.points.shape == (4, problem.NumPoints())
+    assert pt.sfm.ProjectiveRmsError(problem, res.cameras, res.points) == (
+        pytest.approx(res.final_rms_error, rel=1e-9))
+    if pixel_noise == 0.0:
+        assert res.final_rms_error * FOCAL < 1e-4
+    else:
+        # The 2D RMS of 1 px isotropic noise is about sqrt(2) px.
+        assert res.final_rms_error * FOCAL < 1.5 * pixel_noise
+
+
+def test_run_projective_stages_selects_restart():
+    recon, view_graph, _ = make_scene(n_views=12, pixel_noise=0.5, seed=4)
+    opts = init_free_options()
+    opts.num_random_restarts = 3
+    opts.projective_refinement.max_num_iterations = 30
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+
+    for selection in [pt.sfm.InitFreeRestartSelection.REPROJECTION_ERROR,
+                      pt.sfm.InitFreeRestartSelection.OSE_COST]:
+        opts.restart_selection = selection
+        ok, best, diag, err = pt.sfm.RunProjectiveStages(problem, opts)
+        assert ok, err
+        assert len(diag.restarts) == 3
+        assert [r.seed for r in diag.restarts] == [opts.seed + k
+                                                   for k in range(3)]
+        assert all(r.refined_rms_error >= 0.0 for r in diag.restarts)
+        if selection == pt.sfm.InitFreeRestartSelection.OSE_COST:
+            scores = [r.final_cost for r in diag.restarts]
+        else:
+            scores = [r.refined_rms_error for r in diag.restarts]
+        assert diag.best_restart == int(np.argmin(scores))
+        assert best.points.shape == (4, problem.NumPoints())
+        assert pt.sfm.ProjectiveRmsError(problem, best.cameras, best.points) == (
+            pytest.approx(diag.restarts[diag.best_restart].refined_rms_error,
+                          rel=1e-9))
+
+    # Without refinement the refined RMS is reported as -1.
+    opts.projective_refinement.max_num_iterations = 0
+    ok, best, diag, err = pt.sfm.RunProjectiveStages(problem, opts)
+    assert ok, err
+    assert all(r.refined_rms_error == -1.0 for r in diag.restarts)
+
+
+def test_metric_upgrade_accepts_cartesian_and_homogeneous_points():
+    recon, view_graph, _ = make_scene()
+    opts = init_free_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok, sol = pt.sfm.SolveOse(problem, opts, init)
+    assert ok, sol.message
+    ok3, up3, err3 = pt.sfm.UpgradeToMetricCalibrated(problem, sol.cameras,
+                                                       sol.points)
+    # Scaling a homogeneous column must not change the result.
+    homogeneous = np.vstack([sol.points, np.ones((1, sol.points.shape[1]))])
+    homogeneous *= np.linspace(0.5, 2.0, homogeneous.shape[1])
+    ok4, up4, err4 = pt.sfm.UpgradeToMetricCalibrated(problem, sol.cameras,
+                                                       homogeneous)
+    assert ok3 and ok4, (err3, err4)
+    assert up4.fraction_in_front == pytest.approx(up3.fraction_in_front)
+    assert np.allclose(up4.points, up3.points, atol=1e-8)
+
+
+def test_estimator_with_projective_refinement_on_noisy_scene():
+    recon, view_graph, gt = make_scene(n_views=15, pixel_noise=1.0, seed=5)
+    opts = pt.sfm.ReconstructionEstimatorOptions()
+    opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+    opts.init_free_options = init_free_options()
+    opts.init_free_options.num_random_restarts = 2
+    opts.init_free_options.projective_refinement.max_num_iterations = 30
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
+    opts.min_num_two_view_inliers = 10
+
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert summary.success, summary.message
+    assert "after refinement" in summary.message
+    diag = estimator.Diagnostics()
+    assert len(diag.restarts) == 2
+    best = diag.restarts[diag.best_restart]
+    assert 0.0 <= best.refined_rms_error < best.ose_rms_error
+    assert diag.fraction_in_front > 0.99
+
+    vids = sorted(gt)
+    est_R = {v: np.asarray(recon.View(v).Camera().GetOrientationAsRotationMatrix())
+             for v in vids}
+    worst = 0.0
+    for a, i in enumerate(vids):
+        for j in vids[a + 1:]:
+            rel_err = (est_R[j] @ est_R[i].T) @ (gt[j][0] @ gt[i][0].T).T
+            worst = max(worst, rotation_angle_deg(rel_err))
+    assert worst < 0.5, worst
 
 
 @pytest.mark.skipif(not pt.sfm.CudaReducedCameraSolverAvailable(),
