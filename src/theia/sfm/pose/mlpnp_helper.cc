@@ -110,9 +110,11 @@ void MLPnPTangentRefiner::AccumulatePointResiduals(NormalAccumulator& acc,
       const Eigen::Matrix3d normalization_jacobian =
           (Eigen::Matrix3d::Identity() - prediction * prediction.transpose()) /
           norm;
+      // Derivatives for the update of Step(): R <- R * Exp(w), t <- t + R * dt.
       Eigen::Matrix<double, 3, 6> point_jacobian;
-      point_jacobian.leftCols<3>() = -CrossProductMatrix(rotated_point);
-      point_jacobian.rightCols<3>() = Eigen::Matrix3d::Identity();
+      point_jacobian.leftCols<3>() =
+          -rotation * CrossProductMatrix(world_points_[i]);
+      point_jacobian.rightCols<3>() = rotation;
       const Eigen::Matrix<double, 2, 6> jacobian =
           sqrt_information_[i] * bases_[i].transpose() * normalization_jacobian *
           point_jacobian;

@@ -33,13 +33,13 @@ bool MLPnP(const std::vector<Eigen::Vector2d>& norm_feature_points,
            bool run_refinement = true);
 ```
 
-After the linear SVD initialization, **MLPnP** optionally runs a Levenberg–Marquardt refinement on whitened tangent-plane residuals (`run_refinement=true` by default). Set `run_refinement=false` to return the linear solution only.
+After the linear initialization (smallest eigenvector of the weighted normal equations), **MLPnP** optionally runs a Levenberg–Marquardt refinement on whitened tangent-plane residuals (`run_refinement=true` by default), which converges to the maximum-likelihood pose of the given correspondences. Set `run_refinement=false` to return the linear solution only.
 
 **Inputs**
 
 - **`norm_feature_points`:** `Vector2d` per correspondence — **normalized** coordinates (focal length 1, origin at principal point), i.e. \((x/z,\, y/z)\) in the pinhole camera frame.
 - **`world_points`:** `Vector3d` world points; **same length** as `norm_feature_points`.
-- **`feature_covariances`:** either **empty** for uniform weighting, or one **`3×3`** matrix per point (symmetric covariance of the homogeneous image / bearing error). When provided, each covariance is mapped to the 2D null space of the corresponding ray inside the solver (see the paper).
+- **`feature_covariances`:** either **empty** for uniform weighting, or one **`3×3`** matrix per point (symmetric covariance of the homogeneous image / bearing error). When provided, each covariance is mapped to the 2D null space of the corresponding ray inside the solver (see the paper). For an isotropic pixel standard deviation \(\sigma\) (e.g. derived from the scale of a SIFT keypoint) and focal length \(f\), use \(\Sigma_v = J\,\mathrm{diag}(\sigma^2/f^2, \sigma^2/f^2, 0)\,J^\top\) with \(p = (x, y, 1)^\top\), \(v = p / \lVert p \rVert\) and \(J = (I - v v^\top) / \lVert p \rVert\). `EstimateCalibratedAbsolutePose` with `PnPType.MLPnP` does not pass covariances.
 
 **Requires at least six correspondences.** MLPnP’s pose-disambiguation step needs six points; fewer inputs return `false` from the solver (`kMLPnPMinimumPoints` in `mlpnp.h`). Planar 3D configurations are detected and handled in a separate code path.
 
