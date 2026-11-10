@@ -162,6 +162,7 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("restart_selection", &IO::restart_selection)
       .def_readwrite("num_threads", &IO::num_threads)
       .def_readwrite("metric_upgrade", &IO::metric_upgrade)
+      .def_readwrite("shared_focal_length", &IO::shared_focal_length)
       .def_readwrite("run_metric_bundle_adjustment",
                      &IO::run_metric_bundle_adjustment);
 
@@ -348,6 +349,9 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("metric_upgrade_success", &ID::metric_upgrade_success)
       .def_readonly("fraction_in_front", &ID::fraction_in_front)
       .def_readonly("mean_orthogonality_error", &ID::mean_orthogonality_error)
+      .def_readonly("linear_mean_orthogonality_error",
+                    &ID::linear_mean_orthogonality_error)
+      .def_readonly("focal_lengths", &ID::focal_lengths)
       .def_readonly("problem_build_time", &ID::problem_build_time)
       .def_readonly("ose_time", &ID::ose_time)
       .def_readonly("metric_upgrade_time", &ID::metric_upgrade_time)
@@ -451,7 +455,43 @@ void pytheia_init_free(py::module& m) {
           })
       .def_readonly("fraction_in_front", &MU::fraction_in_front)
       .def_readonly("mean_orthogonality_error",
-                    &MU::mean_orthogonality_error);
+                    &MU::mean_orthogonality_error)
+      .def_readonly("linear_mean_orthogonality_error",
+                    &MU::linear_mean_orthogonality_error)
+      .def_readonly("focal_lengths", &MU::focal_lengths)
+      .def_readonly("nonlinear_refinement_run",
+                    &MU::nonlinear_refinement_run);
+
+  using MUO = theia::MetricUpgradeOptions;
+  py::class_<MUO>(m, "MetricUpgradeOptions")
+      .def(py::init<>())
+      .def_readwrite("nonlinear_refinement", &MUO::nonlinear_refinement)
+      .def_readwrite("shared_focal_length", &MUO::shared_focal_length)
+      .def_readwrite("max_num_iterations", &MUO::max_num_iterations);
+
+  m.def(
+      "UpgradeToMetric",
+      [](const theia::OseProblem& problem,
+         const std::vector<Eigen::Matrix<double, 3, 4>>& cameras,
+         const Eigen::MatrixXd& points,
+         const theia::MetricUpgradeOptions& options) {
+        theia::MetricUpgradeResult result;
+        std::string error;
+        const bool ok = theia::UpgradeToMetric(problem,
+                                               FromList(cameras),
+                                               ToHomogeneous(points),
+                                               options,
+                                               &result,
+                                               &error);
+        return std::make_tuple(ok, result, error);
+      },
+      py::arg("problem"),
+      py::arg("cameras"),
+      py::arg("points"),
+      py::arg("options") = theia::MetricUpgradeOptions(),
+      "Metric upgrade by self-calibration: K = I for CALIBRATED_RAYS, one "
+      "focal length per camera (in observation units) for PIXEL_ISOTROPIC. "
+      "points: 3 x N or 4 x N. Returns (success, result, error).");
 
   m.def(
       "UpgradeToMetricCalibrated",

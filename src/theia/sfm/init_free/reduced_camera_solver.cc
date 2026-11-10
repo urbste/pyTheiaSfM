@@ -4,6 +4,9 @@
 #include "theia/sfm/init_free/reduced_camera_solver.h"
 
 #include <Eigen/Cholesky>
+#include <Eigen/OrderingMethods>
+#include <Eigen/SparseCholesky>
+#include <Eigen/SparseCore>
 #include <glog/logging.h>
 
 #include <algorithm>
@@ -110,6 +113,170 @@ class DenseCholeskySolver : public ReducedCameraSolver {
  private:
   Eigen::MatrixXd S_;
   int cached_revision_ = -1;
+};
+
+// Sparse Cholesky of the Schur complement. Camera blocks a and b are coupled
+// only if the cameras share a point or a pairwise rotation term, so S is
+// block sparse for sequences and large scenes. The lower triangle is stored
+// in compressed column form, one 12-column block per camera (diagonal block
+// first, then the neighbor blocks in ascending camera order), and factorized
+// with Eigen's simplicial LLT and AMD ordering. Every task writes only its
+// own column blocks, so the assembly is deterministic for any thread count.
+// The symbolic analysis is reused while the sparsity pattern stays the same.
+class SparseCholeskySolver : public ReducedCameraSolver {
+ public:
+  bool Solve(const ReducedCameraSystem& system,
+             const double lambda,
+             const Eigen::VectorXd& rhs,
+             Eigen::VectorXd* x,
+             std::string* error) override {
+    if (cached_revision_ != system.revision || S_.rows() != rhs.size()) {
+      const bool pattern_changed = BuildPattern(system);
+      FillValues(system);
+      if (pattern_changed || !analyzed_) {
+        damped_ = S_;
+        llt_.analyzePattern(damped_);
+        analyzed_ = true;
+      }
+      cached_revision_ = system.revision;
+    }
+    damped_ = S_;
+    double* values = damped_.valuePtr();
+    const int* outer = damped_.outerIndexPtr();
+    for (int col = 0; col < damped_.cols(); ++col) {
+      values[outer[col]] += lambda;  // first entry of a column: the diagonal
+    }
+    llt_.factorize(damped_);
+    if (llt_.info() != Eigen::Success) {
+      *error = "Sparse Cholesky failed (system not positive definite).";
+      return false;
+    }
+    *x = llt_.solve(rhs);
+    return x->allFinite();
+  }
+
+ private:
+  // Neighbor lists (cameras b > c coupled to c) and the CSC index arrays.
+  // Returns true if the pattern differs from the previous one.
+  bool BuildPattern(const ReducedCameraSystem& system) {
+    const int n = system.num_cameras;
+    std::vector<std::vector<int>> neighbors(n);
+    ParallelFor(
+        system.num_threads, n, 1, [&](const int begin, const int end, int) {
+          for (int c = begin; c < end; ++c) {
+            std::vector<int>& list = neighbors[c];
+            for (int idx = system.camera_offsets[c];
+                 idx < system.camera_offsets[c + 1];
+                 ++idx) {
+              const int j = system.W_point[system.camera_W_index[idx]];
+              for (int l = system.point_offsets[j];
+                   l < system.point_offsets[j + 1];
+                   ++l) {
+                if (system.W_camera[l] > c) list.push_back(system.W_camera[l]);
+              }
+            }
+            for (int p = system.off_diagonal_offsets[c];
+                 p < system.off_diagonal_offsets[c + 1];
+                 ++p) {
+              if (system.U_off_diagonal[p].camera_b > c) {
+                list.push_back(system.U_off_diagonal[p].camera_b);
+              }
+            }
+            std::sort(list.begin(), list.end());
+            list.erase(std::unique(list.begin(), list.end()), list.end());
+          }
+        });
+    if (neighbors == neighbors_ && S_.rows() == kB * n) {
+      return false;
+    }
+    neighbors_ = std::move(neighbors);
+    block_offsets_.assign(n + 1, 0);  // first nonzero of each column block
+    for (int c = 0; c < n; ++c) {
+      // Diagonal block: 12 + 11 + ... + 1 = 78 entries; neighbors 144 each.
+      block_offsets_[c + 1] = block_offsets_[c] + 78 +
+                              kB * kB * static_cast<int>(neighbors_[c].size());
+    }
+    S_ = Eigen::SparseMatrix<double>(kB * n, kB * n);
+    S_.resizeNonZeros(block_offsets_[n]);
+    int* outer = S_.outerIndexPtr();
+    int* inner = S_.innerIndexPtr();
+    for (int c = 0; c < n; ++c) {
+      int pos = block_offsets_[c];
+      for (int i = 0; i < kB; ++i) {
+        outer[kB * c + i] = pos;
+        for (int r = i; r < kB; ++r) inner[pos++] = kB * c + r;
+        for (const int b : neighbors_[c]) {
+          for (int r = 0; r < kB; ++r) inner[pos++] = kB * b + r;
+        }
+      }
+    }
+    outer[kB * n] = block_offsets_[n];
+    return true;
+  }
+
+  void FillValues(const ReducedCameraSystem& system) {
+    const int n = system.num_cameras;
+    double* values = S_.valuePtr();
+    ParallelFor(
+        system.num_threads, n, 1, [&](const int begin, const int end, int) {
+          // slot[b]: position of camera b in the block column (0 = diagonal).
+          std::vector<int> slot(n, -1);
+          std::vector<Matrix12d, Eigen::aligned_allocator<Matrix12d>> blocks;
+          for (int c = begin; c < end; ++c) {
+            const std::vector<int>& list = neighbors_[c];
+            blocks.assign(list.size() + 1, Matrix12d::Zero());
+            slot[c] = 0;
+            for (size_t q = 0; q < list.size(); ++q) slot[list[q]] = q + 1;
+            // blocks[q] = S_{b c} (rows of camera b, columns of camera c).
+            blocks[0] = system.U_diagonal[c];
+            for (int p = system.off_diagonal_offsets[c];
+                 p < system.off_diagonal_offsets[c + 1];
+                 ++p) {
+              const auto& pair = system.U_off_diagonal[p];
+              if (pair.camera_b > c) {
+                blocks[slot[pair.camera_b]] += pair.block.transpose();
+              }
+            }
+            for (int idx = system.camera_offsets[c];
+                 idx < system.camera_offsets[c + 1];
+                 ++idx) {
+              const int k = system.camera_W_index[idx];
+              const int j = system.W_point[k];
+              const Matrix3x12d VinvWk = system.V_inverse[j] * system.W_blocks[k];
+              for (int l = system.point_offsets[j];
+                   l < system.point_offsets[j + 1];
+                   ++l) {
+                const int b = system.W_camera[l];
+                if (b < c) continue;
+                blocks[slot[b]].noalias() -=
+                    system.W_blocks[l].transpose() * VinvWk;
+              }
+            }
+            int pos = block_offsets_[c];
+            for (int i = 0; i < kB; ++i) {
+              for (int r = i; r < kB; ++r) values[pos++] = blocks[0](r, i);
+              for (size_t q = 0; q < list.size(); ++q) {
+                for (int r = 0; r < kB; ++r) {
+                  values[pos++] = blocks[q + 1](r, i);
+                }
+              }
+            }
+            slot[c] = -1;
+            for (const int b : list) slot[b] = -1;
+          }
+        });
+  }
+
+  Eigen::SparseMatrix<double> S_;
+  Eigen::SparseMatrix<double> damped_;
+  Eigen::SimplicialLLT<Eigen::SparseMatrix<double>,
+                       Eigen::Lower,
+                       Eigen::AMDOrdering<int>>
+      llt_;
+  std::vector<std::vector<int>> neighbors_;
+  std::vector<int> block_offsets_;
+  int cached_revision_ = -1;
+  bool analyzed_ = false;
 };
 
 // Truncated power series of the Schur complement inverse (PoBA, Weber et al.
@@ -272,8 +439,7 @@ std::unique_ptr<ReducedCameraSolver> CreateReducedCameraSolver(
       return nullptr;
 #endif
     case ReducedCameraSolverType::SPARSE_CHOLESKY:
-      *error = "SPARSE_CHOLESKY is not implemented yet.";
-      return nullptr;
+      return std::make_unique<SparseCholeskySolver>();
     case ReducedCameraSolverType::POWER_SERIES:
       return std::make_unique<PowerSeriesSolver>(
           options.power_series_max_iterations,

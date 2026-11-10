@@ -9,12 +9,12 @@ WIDTH, HEIGHT = 1200, 900
 FOCAL = 800.0
 
 
-def make_camera():
+def make_camera(focal=FOCAL):
     cam = pt.sfm.Camera()
     cam.SetCameraIntrinsicsModelType(pt.sfm.CameraIntrinsicsModelType.PINHOLE)
     cam.SetImageSize(WIDTH, HEIGHT)
     intr = cam.CameraIntrinsics()
-    intr.SetFocalLength(FOCAL)
+    intr.SetFocalLength(focal)
     intr.SetPrincipalPoint(WIDTH / 2.0, HEIGHT / 2.0)
     return cam
 
@@ -32,11 +32,12 @@ def rotation_angle_deg(R):
 
 
 def make_scene(n_views=10, n_points=150, keep_prob=0.8, pixel_noise=0.0,
-               seed=0):
+               seed=0, focal_lengths=None):
     """Cameras on a ring looking at points around the origin.
 
     Returns the reconstruction (poses set to ground truth), a view graph with
     ground-truth relative rotations, and a dict of ground-truth poses.
+    focal_lengths: optional per-view focal lengths in pixels.
     """
     rng = np.random.default_rng(seed)
     recon = pt.sfm.Reconstruction()
@@ -49,7 +50,8 @@ def make_scene(n_views=10, n_points=150, keep_prob=0.8, pixel_noise=0.0,
         center = np.array([radius * np.sin(theta), rng.uniform(-0.5, 0.5),
                            -radius * np.cos(theta)])
         cam = recon.MutableView(vid).MutableCamera()
-        cam.DeepCopy(base)
+        cam.DeepCopy(base if focal_lengths is None
+                     else make_camera(focal_lengths[i]))
         cam.SetPosition(center)
         cam.SetOrientationFromAngleAxis(
             np.array([0.0, theta, 0.0]) + rng.normal(scale=0.02, size=3))
@@ -208,17 +210,12 @@ def test_estimator_recovers_noise_free_scene():
     assert residual.max() < 1e-3 * np.linalg.norm(gt0, axis=1).mean()
 
 
-def test_unimplemented_choices_fail_cleanly():
+def test_unsupported_choices_fail_cleanly():
     recon, view_graph, _ = make_scene()
     opts = init_free_options()
     ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
     assert ok, err
     init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
-
-    opts.varpro.linear_solver_type = (
-        pt.sfm.ReducedCameraSolverType.SPARSE_CHOLESKY)
-    ok, sol = pt.sfm.SolveOse(problem, opts, init)
-    assert not ok and "not implemented" in sol.message
 
     with pytest.raises(ValueError):
         pt.sfm.ProjectiveRmsError(problem, init, np.zeros((2, 5)))
@@ -241,6 +238,7 @@ def test_unimplemented_choices_fail_cleanly():
 
 @pytest.mark.parametrize("solver", [
     pt.sfm.ReducedCameraSolverType.DENSE_CHOLESKY,
+    pt.sfm.ReducedCameraSolverType.SPARSE_CHOLESKY,
     pt.sfm.ReducedCameraSolverType.POWER_SERIES])
 def test_results_do_not_depend_on_thread_count(solver):
     recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=2)
@@ -420,6 +418,24 @@ def test_power_series_matches_dense(pixel_noise):
     assert not ok and "at least 1" in ps.message
 
 
+@pytest.mark.parametrize("formulation", [pt.sfm.OseFormulationType.POSE,
+                                         pt.sfm.OseFormulationType.POSE_ROT])
+def test_sparse_cholesky_matches_dense(formulation):
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=2)
+    opts = init_free_options(formulation)
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok, dense = pt.sfm.SolveOse(problem, opts, init)
+    assert ok and dense.converged, dense.message
+    opts.varpro.linear_solver_type = (
+        pt.sfm.ReducedCameraSolverType.SPARSE_CHOLESKY)
+    ok, sparse = pt.sfm.SolveOse(problem, opts, init)
+    assert ok and sparse.converged, sparse.message
+    assert len(sparse.cost_history) == len(dense.cost_history)
+    assert sparse.final_cost == pytest.approx(dense.final_cost, rel=1e-10)
+
+
 @pytest.mark.parametrize("pixel_noise", [0.0, 1.0])
 def test_projective_refinement_removes_ose_bias(pixel_noise):
     recon, view_graph, _ = make_scene(n_views=15, pixel_noise=pixel_noise,
@@ -575,3 +591,120 @@ def test_cuda_power_series_matches_cpu():
     assert ok_cpu and ok_gpu, gpu.message
     assert gpu.converged
     assert gpu.final_cost == pytest.approx(cpu.final_cost, rel=1e-8)
+
+
+def uncalibrated_options():
+    opts = init_free_options(pt.sfm.OseFormulationType.POSE)
+    opts.observation_normalization = (
+        pt.sfm.OseObservationNormalization.PIXEL_ISOTROPIC)
+    opts.projective_refinement.max_num_iterations = 50
+    return opts
+
+
+@pytest.mark.parametrize("pixel_noise", [0.0, 0.5])
+def test_uncalibrated_upgrade_recovers_focal_lengths(pixel_noise):
+    focals = np.random.default_rng(0).uniform(650.0, 1000.0, 15)
+    recon, view_graph, gt = make_scene(n_views=15, n_points=200,
+                                       pixel_noise=pixel_noise, seed=3,
+                                       focal_lengths=focals)
+    opts = uncalibrated_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    ok, best, _, err = pt.sfm.RunProjectiveStages(problem, opts)
+    assert ok, err
+    scale = np.array([np.asarray(T)[0, 0] for T in problem.normalizations])
+    true_f = focals[problem.view_ids]
+
+    def rotation_errors(result):
+        R, vids = result.rotations, problem.view_ids
+        return np.array([
+            rotation_angle_deg((R[b] @ R[a].T) @
+                               (gt[vids[b]][0] @ gt[vids[a]][0].T).T)
+            for a in range(len(vids)) for b in range(a + 1, len(vids))])
+
+    upgrade_opts = pt.sfm.MetricUpgradeOptions()
+    ok, linear, err = pt.sfm.UpgradeToMetric(problem, best.cameras,
+                                             best.points, upgrade_opts)
+    assert ok, err
+    assert not linear.nonlinear_refinement_run
+    linear_f_err = np.abs(np.array(linear.focal_lengths) / scale / true_f - 1)
+    # The priors of the linear equations bias the focal lengths (~1 %).
+    assert linear_f_err.max() < 0.03
+
+    upgrade_opts.nonlinear_refinement = True
+    ok, refined, err = pt.sfm.UpgradeToMetric(problem, best.cameras,
+                                              best.points, upgrade_opts)
+    assert ok, err
+    assert refined.nonlinear_refinement_run
+    assert refined.fraction_in_front > 0.99
+    f_err = np.abs(np.array(refined.focal_lengths) / scale / true_f - 1)
+    assert (refined.mean_orthogonality_error <
+            0.5 * refined.linear_mean_orthogonality_error)
+    if pixel_noise == 0.0:
+        assert f_err.max() < 1e-5
+        assert rotation_errors(refined).max() < 1e-3
+    else:
+        assert f_err.max() < 0.01
+        assert (rotation_errors(refined).mean() <
+                rotation_errors(linear).mean())
+
+
+@pytest.mark.parametrize("shared", [False, True])
+def test_estimator_self_calibrates(shared):
+    rng = np.random.default_rng(0)
+    focals = (np.full(15, 900.0) if shared
+              else rng.uniform(650.0, 1000.0, 15))
+    recon, view_graph, gt = make_scene(n_views=15, n_points=200,
+                                       pixel_noise=0.5, seed=3,
+                                       focal_lengths=focals)
+    for vid in recon.ViewIds():  # wrong initial focal lengths
+        recon.MutableView(vid).MutableCamera().SetFocalLength(500.0)
+    opts = pt.sfm.ReconstructionEstimatorOptions()
+    opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+    opts.init_free_options = uncalibrated_options()
+    opts.init_free_options.metric_upgrade = (
+        pt.sfm.MetricUpgradeType.LINEAR_AND_NONLINEAR)
+    opts.init_free_options.shared_focal_length = shared
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.FOCAL_LENGTH
+    opts.min_num_two_view_inliers = 10
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert summary.success, summary.message
+
+    vids = sorted(gt)
+    diag = estimator.Diagnostics()
+    upgrade_f = np.array(diag.focal_lengths)
+    assert np.abs(upgrade_f / focals[vids] - 1).max() < 0.01
+    if shared:
+        assert np.ptp(upgrade_f) == 0.0
+    final_f = np.array([recon.View(v).Camera().FocalLength() for v in vids])
+    assert np.abs(final_f / focals[vids] - 1).max() < 0.01
+    assert recon.View(vids[0]).Camera().PrincipalPointX() == WIDTH / 2.0
+    est_R = {v: np.asarray(recon.View(v).Camera().GetOrientationAsRotationMatrix())
+             for v in vids}
+    worst = max(rotation_angle_deg((est_R[j] @ est_R[i].T) @
+                                   (gt[j][0] @ gt[i][0].T).T)
+                for a, i in enumerate(vids) for j in vids[a + 1:])
+    assert worst < 0.3, worst
+
+
+def test_calibrated_nonlinear_upgrade():
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=5)
+    opts = init_free_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    ok, best, _, err = pt.sfm.RunProjectiveStages(problem, opts)
+    assert ok, err
+    upgrade_opts = pt.sfm.MetricUpgradeOptions()
+    upgrade_opts.nonlinear_refinement = True
+    ok, refined, err = pt.sfm.UpgradeToMetric(problem, best.cameras,
+                                              best.points, upgrade_opts)
+    assert ok, err
+    assert refined.focal_lengths == [1.0] * problem.NumCameras()
+    assert (refined.mean_orthogonality_error <=
+            refined.linear_mean_orthogonality_error)
+    ok, linear, err = pt.sfm.UpgradeToMetricCalibrated(problem, best.cameras,
+                                                        best.points)
+    assert ok, err
+    assert linear.mean_orthogonality_error == pytest.approx(
+        refined.linear_mean_orthogonality_error)

@@ -201,25 +201,31 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
         "projective results.";
     return summary;
   }
-  if (problem.normalization != OseObservationNormalization::CALIBRATED_RAYS) {
-    summary.message =
-        "Init-free: the uncalibrated metric upgrade is not implemented yet; "
-        "use CALIBRATED_RAYS.";
-    return summary;
-  }
-  if (opts.metric_upgrade == MetricUpgradeType::LINEAR_AND_NONLINEAR) {
-    LOG(WARNING) << "Init-free: nonlinear metric refinement is not "
-                    "implemented yet; using the linear upgrade only.";
-  }
+  MetricUpgradeOptions upgrade_options;
+  upgrade_options.nonlinear_refinement =
+      opts.metric_upgrade == MetricUpgradeType::LINEAR_AND_NONLINEAR;
+  upgrade_options.shared_focal_length = opts.shared_focal_length;
   MetricUpgradeResult metric;
-  if (!UpgradeToMetricCalibrated(
-          problem, projective.cameras, projective.points, &metric, &error)) {
+  if (!UpgradeToMetric(problem,
+                       projective.cameras,
+                       projective.points,
+                       upgrade_options,
+                       &metric,
+                       &error)) {
     summary.message = "Init-free: " + error;
     return summary;
   }
   diagnostics_.metric_upgrade_success = true;
   diagnostics_.fraction_in_front = metric.fraction_in_front;
   diagnostics_.mean_orthogonality_error = metric.mean_orthogonality_error;
+  diagnostics_.linear_mean_orthogonality_error =
+      metric.linear_mean_orthogonality_error;
+  if (problem.normalization == OseObservationNormalization::PIXEL_ISOTROPIC) {
+    for (int i = 0; i < problem.NumCameras(); ++i) {
+      diagnostics_.focal_lengths.push_back(metric.focal_lengths[i] /
+                                           problem.normalizations[i](0, 0));
+    }
+  }
   diagnostics_.metric_upgrade_time = timer.ElapsedTimeInSeconds();
 
   // 6. Write the metric result into the reconstruction.
@@ -232,6 +238,14 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
   for (int i = 0; i < problem.NumCameras(); ++i) {
     View* view = reconstruction->MutableView(problem.view_ids[i]);
     Camera* camera = view->MutableCamera();
+    if (problem.normalization ==
+        OseObservationNormalization::PIXEL_ISOTROPIC) {
+      // Observations were m = T x with T = [s 0 -s cx; 0 s -s cy; 0 0 1], so
+      // K_pixel = T^-1 diag(f, f, 1): focal f / s, principal point (cx, cy).
+      const Eigen::Matrix3d& T = problem.normalizations[i];
+      camera->SetFocalLength(metric.focal_lengths[i] / T(0, 0));
+      camera->SetPrincipalPoint(-T(0, 2) / T(0, 0), -T(1, 2) / T(1, 1));
+    }
     const Eigen::Matrix3d& R = metric.rotations[i];
     camera->SetOrientationFromRotationMatrix(R);
     camera->SetPosition(-R.transpose() * metric.translations[i]);

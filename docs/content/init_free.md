@@ -5,7 +5,7 @@
 1. **Problem.** Tracks (and, for `POSE_ROT`, the relative rotations of the view graph) become an `OseProblem`.
 2. **OSE stage.** Random cameras are sampled, and an OSE objective is minimized with variable projection (VarPro). The result is a projective reconstruction.
 3. **Projective refinement** *(optional)*. Projective bundle adjustment with Ceres (cameras and homogeneous points on unit spheres) removes the bias that the α-weighted affine term of pOSE leaves in the OSE minimum. With several restarts, the winner is chosen by the reprojection RMS after refinement (`restart_selection = REPROJECTION_ERROR`, the default) or by the OSE cost.
-4. **Metric upgrade.** A linear absolute-dual-quadric estimate for known intrinsics.
+4. **Metric upgrade.** Self-calibration with the absolute dual quadric: known intrinsics for `CALIBRATED_RAYS`, one focal length per camera for `PIXEL_ISOTROPIC`. A linear estimate, optionally refined nonlinearly.
 5. **Metric bundle adjustment.** The standard pyTheia BA, configured by `ReconstructionEstimatorOptions`.
 
 The module is a testing ground. Every stage is exposed to Python on its own, so that new formulations, solvers and upgrades can be compared with the same data and diagnostics.
@@ -39,7 +39,9 @@ cams0 = pt.sfm.SampleInitialCameras(problem.NumCameras(), ifo.camera_init, seed=
 ok, sol = pt.sfm.SolveOse(problem, ifo, cams0)         # projective cameras + points (3 x N)
 ok, ref = pt.sfm.RefineProjectiveReconstruction(
     problem, sol.cameras, sol.points, ifo.projective_refinement)   # points 4 x N
-ok, metric, err = pt.sfm.UpgradeToMetricCalibrated(problem, ref.cameras, ref.points)
+uo = pt.sfm.MetricUpgradeOptions()
+uo.nonlinear_refinement = True
+ok, metric, err = pt.sfm.UpgradeToMetric(problem, ref.cameras, ref.points, uo)
 ```
 
 `RunProjectiveStages(problem, ifo)` runs all restarts of the OSE stage and the refinement and returns `(ok, best, diagnostics, err)`. `ProjectiveRmsError(problem, cameras, points)` gives the RMS reprojection error in observation units (normalized image coordinates for `CALIBRATED_RAYS`). Functions that take points accept 3 × N Cartesian or 4 × N homogeneous arrays.
@@ -51,21 +53,21 @@ ok, metric, err = pt.sfm.UpgradeToMetricCalibrated(problem, ref.cameras, ref.poi
 | `formulation` | `POSE`, `POSE_ROT`, `ROSE`, `EXPOSE` | implemented |
 | | `RPOSE` | OSE stage only (radial 2×4 cameras; no refinement or upgrade) |
 | `observation_normalization` | `CALIBRATED_RAYS` | implemented (needed by `POSE_ROT` and the upgrade) |
-| | `PIXEL_ISOTROPIC` | problem building only; no uncalibrated upgrade yet |
+| | `PIXEL_ISOTROPIC` | implemented (not with `POSE_ROT`); the upgrade estimates the focal lengths |
 | `camera_init` | `NORMAL`, `UNIFORM`, `UNIT_CIRCLE` | implemented |
 | `varpro.linear_solver_type` | `DENSE_CHOLESKY` | implemented (CPU, Eigen) |
 | | `CUDA_DENSE_CHOLESKY` | implemented, needs `-DTHEIA_WITH_CUDA_SOLVERS=ON` |
 | | `POWER_SERIES` | implemented (CPU, matrix-free; `power_series_max_iterations`, `power_series_tolerance`) |
 | | `CUDA_POWER_SERIES` | implemented, needs `-DTHEIA_WITH_CUDA_SOLVERS=ON` |
-| | `SPARSE_CHOLESKY` | not implemented |
+| | `SPARSE_CHOLESKY` | implemented (CPU, Eigen simplicial LLT; for sequences and sparse view graphs) |
 | `varpro.robust_loss_type` | `NONE` | implemented |
 | | `CAUCHY` | implemented (IRLS, `robust_loss_scale` in observation units) |
 | `projective_refinement.max_num_iterations` | `0` skips, `> 0` runs | implemented (`function_tolerance`, optional Huber `robust_loss_width`) |
 | `varpro.num_threads` | `0` uses `num_threads` of `InitFreeOptions` | implemented; results do not depend on the thread count |
 | `rotation_weighting` | `SCALAR`, `TWO_VIEW_INFORMATION` | implemented (`POSE_ROT` only) |
 | `restart_selection` | `REPROJECTION_ERROR`, `OSE_COST` | implemented |
-| `metric_upgrade` | `LINEAR` | implemented for calibrated rays |
-| | `LINEAR_AND_NONLINEAR` | nonlinear part not implemented (warning) |
+| `metric_upgrade` | `LINEAR`, `LINEAR_AND_NONLINEAR` | implemented for both normalizations |
+| `shared_focal_length` | `False`, `True` | implemented (`PIXEL_ISOTROPIC` only) |
 
 ### Formulations
 
@@ -75,7 +77,7 @@ With `m` the normalized observation, `P` the 3 × 4 camera, `X̃` the homogeneou
 - **`POSE_ROT`**: `POSE` plus the relative rotation terms `‖A_a A_bᵀ − R_ab‖²` of the view graph (Olsson & Nilsson).
 - **`ROSE`**: the OSE term plus `α (p₃ᵀX̃ − 1)²`, a depth regularizer. The OSE minimum is strongly biased (about 11 px RMS on the 1 px test scene), so use it together with projective refinement.
 - **`EXPOSE`**: the third residual is `√α · √(exp(−s₀)/2) · (s − 1 − s₀)`, with `s = m̃ᵀPX̃ / |m̃|` and `m̃ = [m; 1]`. The state `s₀` starts at `|m̃|` and, after `expose_warmup_iterations`, follows the current depth, as in InitFreeBA. Cameras with `det(A) < 0` are flipped first. This gives the smallest OSE bias of the formulations here (1.29 px against 1.40 px for `POSE` on the 1 px test scene).
-- **`RPOSE`**: the radial version, `(1−α)(m⊥ᵀP₁₂X̃)²/|m|² + α‖P₁₂X̃ − m‖²` with `m⊥ = (−m₂, m₁)`. Only the first two camera rows are determined. The estimator rejects it, because no radial metric upgrade exists yet. The restart diagnostics report `ose_rms_error = −1`.
+- **`RPOSE`**: the radial version, `(1−α)(m⊥ᵀP₁₂X̃)²/|m|² + α‖P₁₂X̃ − m‖²` with `m⊥ = (−m₂, m₁)`. Only the first two camera rows are determined. The estimator rejects it, because no radial metric upgrade exists yet; this is the main open item. The restart diagnostics report `ose_rms_error = −1`.
 
 With `robust_loss_type = CAUCHY`, every VarPro iteration recomputes the IRLS weights `w = 1/(1 + ‖r‖²/c²)` of the observation residuals (`c = robust_loss_scale`), and the cost is `Σ ½c² log(1 + ‖r‖²/c²)`. The rotation terms are not robustified. With 10 % of the observations displaced by up to 150 px, the inlier median error after the OSE stage falls from 12.3 px to 1.1 px (`c` = 5 px). For robust or state-dependent formulations, the cost history is not monotone, because the weights change between iterations.
 
@@ -90,7 +92,34 @@ With `robust_loss_type = CAUCHY`, every VarPro iteration recomputes the IRLS wei
 
 Pairs with fewer than `min_rotation_information_points` usable points keep the scalar weight. `pt.sfm.ComputeTwoViewRotationWeight(m_a, m_b, R_ab, t_ab)` exposes the computation.
 
-Compared with the InitFreeBA reference code, `H` here is in observation units (not pixels) and has no extra 1/3 factor. The Jacobian assembly of the reference code also leaves some Jacobian buffers unfilled, so its weights cannot be reproduced exactly. On the synthetic test scenes (exact view-graph rotations, projective refinement enabled), the final rotation accuracy is the same as with scalar weights. The weighting matters most when the relative rotations are noisy and differ in quality, which those scenes do not test.
+Compared with the InitFreeBA reference code, `H` here is in observation units (not pixels) and has no extra 1/3 factor. The Jacobian assembly of the reference code also leaves some Jacobian buffers unfilled, so its weights cannot be reproduced exactly. The weighting helps when the relative rotations are estimated and their quality varies. Benchmark: 15 views, 250 points, 45 % visibility, 1 px noise, relative rotations from `EstimateTwoViewInfo` (mean edge error 0.53°, max 3.1°). Relative-rotation error after the OSE stage and the linear upgrade (no refinement), averaged over 4 scenes, best of a `rotation_weight` sweep:
+
+| Weighting | `rotation_weight` | Mean error | Max error |
+|---|---|---|---|
+| `SCALAR` | 0.1 (best of 0.01 to 1) | 0.26° | 0.72° |
+| `TWO_VIEW_INFORMATION` | 3 (best of 0.01 to 30) | 0.19° | 0.42° |
+
+The two-view weights stay better than the best scalar weight for `rotation_weight` from 1 to 30, so 1 to 3 is a good starting range. With exact view-graph rotations, as in the unit tests, and with projective refinement, both give the same final accuracy.
+
+### Metric upgrade
+
+`UpgradeToMetric(problem, cameras, points, options)` estimates the absolute dual quadric `Ω`, with `P_i Ω P_iᵀ ~ K_i K_iᵀ`:
+
+- **`CALIBRATED_RAYS`**: `K_i = I`, five linear equations per camera.
+- **`PIXEL_ISOTROPIC`**: `K_i = diag(f_i, f_i, 1)` in the normalized pixel frame. This assumes zero skew, unit aspect ratio and the principal point at the image center. The linear step uses the weighted equations of Pollefeys et al. (2004). They contain soft priors on the aspect ratio, skew and principal point, plus a weak prior `f_i ≈ 1`, and are reweighted by `1/(P₃ΩP₃ᵀ)`. Needs at least 3 cameras.
+
+The linear `Ω` is truncated to rank 3. With `nonlinear_refinement` (`LINEAR_AND_NONLINEAR` in the estimator), `Ω = BBᵀ` with `B` a 4 × 3 matrix, which keeps `Ω` positive semidefinite with rank 3. `B` and the focal lengths are refined with Ceres to minimize `Σ_i ‖3E_i / tr(E_i) − I‖²_F`, with `E_i = K_i⁻¹P_iBBᵀP_iᵀK_i⁻ᵀ`. The refinement drops the priors, and with them their bias. With `shared_focal_length`, one focal length is used for all cameras.
+
+`result.focal_lengths` are in observation units. The estimator writes them to the cameras in pixels (`f / s` for the normalization scale `s`), sets the principal point to the image center, and reports them in `Diagnostics().focal_lengths`. Results on a 15-view scene with focal lengths from 650 to 1000 px:
+
+| Noise | Upgrade | Max focal error | Mean rel. rotation error |
+|---|---|---|---|
+| 0 px | linear | 1.3 % | 0.38° |
+| 0 px | + nonlinear | < 1e-5 | 0.000° |
+| 0.5 px | linear | 1.7 % | 0.62° |
+| 0.5 px | + nonlinear | 0.35 % | 0.09° |
+
+For calibrated rays, the linear estimate is already close, and the refinement changes little. Planar or otherwise critical camera motions are not detected; the result then has no unique focal lengths.
 
 ## CUDA backend
 
@@ -109,6 +138,19 @@ python -c "import pytheia as pt; print(pt.sfm.CudaReducedCameraSolverAvailable()
 The option is off by default so that the published wheels stay portable.
 
 ## Performance
+
+### Sparse Schur complement
+
+`SPARSE_CHOLESKY` stores only the camera blocks that share a point or a rotation term: the lower triangle, one block column per camera. It factorizes with Eigen's simplicial LLT and AMD ordering. The assembly is parallel and deterministic, the symbolic analysis is reused while the pattern stays the same, and the result equals `DENSE_CHOLESKY` to rounding. Synthetic forward-moving sequence, `POSE_ROT`, 20 threads, 30 VarPro iterations:
+
+| Cameras / observations | `DENSE_CHOLESKY` | `SPARSE_CHOLESKY` | `POWER_SERIES` |
+|---|---|---|---|
+| 150 / 213k | 4.7 s | 1.5 s | 1.6 s (cost not converged) |
+| 400 / 591k | 109 s | 6.7 s | 4.9 s (cost not converged) |
+
+For scenes where most cameras see the same points (the ring scenes below), S is dense and `DENSE_CHOLESKY` is the better choice. Long sequences also converge slowly from random starts, whatever the solver; 30 iterations do not reach the minimum here.
+
+### Threads and GPU
 
 The VarPro assembly (point elimination, then the camera blocks through a camera-major index) and the power series are multithreaded. The chunks are combined in a fixed order, so the results are bit-identical for any thread count.
 

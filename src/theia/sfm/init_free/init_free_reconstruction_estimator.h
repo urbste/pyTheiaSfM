@@ -49,6 +49,11 @@ struct InitFreeDiagnostics {
   bool metric_upgrade_success = false;
   double fraction_in_front = 0.0;
   double mean_orthogonality_error = 0.0;
+  // Before the nonlinear refinement (equal to the above without it).
+  double linear_mean_orthogonality_error = 0.0;
+  // Estimated focal lengths in pixels (PIXEL_ISOTROPIC only), in the order of
+  // the OSE problem cameras.
+  std::vector<double> focal_lengths;
 
   double problem_build_time = 0.0;
   double ose_time = 0.0;  // OSE and projective refinement of all restarts

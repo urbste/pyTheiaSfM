@@ -3,12 +3,14 @@
 
 #include "theia/sfm/init_free/metric_upgrade.h"
 
+#include <ceres/ceres.h>
 #include <Eigen/Eigenvalues>
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <Eigen/Geometry>
 #include <glog/logging.h>
 
+#include <algorithm>
 #include <cmath>
 
 namespace theia {
@@ -34,6 +36,22 @@ Eigen::Matrix<double, 1, 10> QuadricRow(const OseCamera& P, int r, int s) {
   return row;
 }
 
+Eigen::Matrix4d QuadricFromVector(const Eigen::Matrix<double, 10, 1>& omega) {
+  Eigen::Matrix4d Omega;
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      Omega(i, j) = omega[SymmetricIndex(i, j)];
+    }
+  }
+  return Omega;
+}
+
+Eigen::Matrix<double, 10, 1> SmallestRightSingularVector(
+    const Eigen::MatrixXd& A) {
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullV);
+  return svd.matrixV().col(9);
+}
+
 Eigen::Matrix3d ProjectToRotation(const Eigen::Matrix3d& M) {
   Eigen::JacobiSVD<Eigen::Matrix3d> svd(
       M, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -44,6 +62,235 @@ Eigen::Matrix3d ProjectToRotation(const Eigen::Matrix3d& M) {
     R = svd.matrixU() * D * svd.matrixV().transpose();
   }
   return R;
+}
+
+// Rank-3 truncation: Omega ~ H diag(1, 1, 1, 0) H^T.
+bool UpgradeFromQuadric(const Eigen::Matrix4d& Omega,
+                        Eigen::Matrix4d* H,
+                        std::string* error) {
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d> eig(
+      0.5 * (Omega + Omega.transpose()));
+  const Eigen::Vector4d values = eig.eigenvalues();  // ascending
+  const Eigen::Matrix4d vectors = eig.eigenvectors();
+  if (!(values[1] > 1e-12 * values[3])) {
+    *error =
+        "Estimated dual quadric is not rank-3 positive semidefinite; the "
+        "projective reconstruction is likely degenerate.";
+    return false;
+  }
+  H->col(0) = vectors.col(3) * std::sqrt(values[3]);
+  H->col(1) = vectors.col(2) * std::sqrt(values[2]);
+  H->col(2) = vectors.col(1) * std::sqrt(values[1]);
+  H->col(3) = vectors.col(0);
+  return true;
+}
+
+// Focal lengths implied by Omega_3 = H diag(1,1,1,0) H^T for K = diag(f,f,1).
+bool FocalLengthsFromUpgrade(const OseCameraVector& cameras,
+                             const Eigen::Matrix4d& H,
+                             const bool shared,
+                             std::vector<double>* focal_lengths,
+                             std::string* error) {
+  const int n = static_cast<int>(cameras.size());
+  focal_lengths->resize(n);
+  for (int i = 0; i < n; ++i) {
+    const Eigen::Matrix3d M = cameras[i] * H.leftCols<3>();
+    const Eigen::Matrix3d w = M * M.transpose();
+    const double f2 = 0.5 * (w(0, 0) + w(1, 1)) / w(2, 2);
+    if (!(f2 > 0.0) || !std::isfinite(f2)) {
+      *error = "Self-calibration gave no valid focal length for camera " +
+               std::to_string(i) + ".";
+      return false;
+    }
+    (*focal_lengths)[i] = std::sqrt(f2);
+  }
+  if (shared) {
+    std::vector<double> sorted = *focal_lengths;
+    std::nth_element(sorted.begin(), sorted.begin() + n / 2, sorted.end());
+    std::fill(focal_lengths->begin(), focal_lengths->end(), sorted[n / 2]);
+  }
+  return true;
+}
+
+bool LinearQuadricCalibrated(const OseCameraVector& cameras,
+                             Eigen::Matrix4d* Omega) {
+  const int n = static_cast<int>(cameras.size());
+  // Five equations per camera: off-diagonals zero, equal diagonal.
+  Eigen::MatrixXd A(5 * n, 10);
+  for (int i = 0; i < n; ++i) {
+    const OseCamera P = cameras[i] / cameras[i].norm();
+    const auto m00 = QuadricRow(P, 0, 0);
+    A.row(5 * i + 0) = QuadricRow(P, 0, 1);
+    A.row(5 * i + 1) = QuadricRow(P, 0, 2);
+    A.row(5 * i + 2) = QuadricRow(P, 1, 2);
+    A.row(5 * i + 3) = m00 - QuadricRow(P, 1, 1);
+    A.row(5 * i + 4) = m00 - QuadricRow(P, 2, 2);
+  }
+  *Omega = QuadricFromVector(SmallestRightSingularVector(A));
+  if (Omega->trace() < 0.0) {
+    *Omega = -*Omega;
+  }
+  return true;
+}
+
+// Pollefeys et al., "Visual modeling with a hand-held camera", IJCV 2004:
+// omega = P Omega P^T ~ diag(f^2, f^2, 1), with the equations weighted by the
+// expected uncertainty of each constraint and by 1 / omega_22.
+bool LinearQuadricUncalibrated(const OseCameraVector& cameras,
+                               Eigen::Matrix4d* Omega) {
+  const int n = static_cast<int>(cameras.size());
+  std::vector<OseCamera, Eigen::aligned_allocator<OseCamera>> P(n);
+  for (int i = 0; i < n; ++i) {
+    P[i] = cameras[i] / cameras[i].norm();
+  }
+  std::vector<double> nu(n, 1.0);
+  Eigen::MatrixXd A(6 * n, 10);
+  for (int iteration = 0; iteration < 3; ++iteration) {
+    for (int i = 0; i < n; ++i) {
+      const auto w00 = QuadricRow(P[i], 0, 0);
+      const auto w11 = QuadricRow(P[i], 1, 1);
+      const auto w22 = QuadricRow(P[i], 2, 2);
+      const double s = 1.0 / nu[i];
+      A.row(6 * i + 0) = s / 9.0 * (w00 - w22);  // f ~ 1 (weak)
+      A.row(6 * i + 1) = s / 9.0 * (w11 - w22);
+      A.row(6 * i + 2) = s / 0.2 * (w00 - w11);  // unit aspect ratio
+      A.row(6 * i + 3) = s / 0.01 * QuadricRow(P[i], 0, 1);  // zero skew
+      A.row(6 * i + 4) = s / 0.1 * QuadricRow(P[i], 0, 2);   // principal
+      A.row(6 * i + 5) = s / 0.1 * QuadricRow(P[i], 1, 2);   // point at 0
+    }
+    *Omega = QuadricFromVector(SmallestRightSingularVector(A));
+    // Sign: P_3 Omega P_3^T = omega_22 > 0 for most cameras.
+    int positive = 0;
+    for (int i = 0; i < n; ++i) {
+      positive += P[i].row(2) * *Omega * P[i].row(2).transpose() > 0.0;
+    }
+    if (2 * positive < n) {
+      *Omega = -*Omega;
+    }
+    double mean_nu = 0.0;
+    for (int i = 0; i < n; ++i) {
+      nu[i] = std::abs(P[i].row(2) * *Omega * P[i].row(2).transpose());
+      mean_nu += nu[i] / n;
+    }
+    if (!(mean_nu > 0.0)) {
+      return false;
+    }
+    for (double& v : nu) {
+      v = std::max(v, 1e-3 * mean_nu);
+    }
+  }
+  return true;
+}
+
+// 3 E / trace(E) - I for E = K^-1 P B B^T P^T K^-T, K = diag(f, f, 1).
+// Off-diagonal entries are scaled by sqrt(2), so the squared norm of the
+// residual is the squared Frobenius norm of the 3x3 matrix.
+struct DualQuadricResidual {
+  explicit DualQuadricResidual(const OseCamera& P) : P_(P) {}
+
+  template <typename T>
+  bool operator()(const T* B, const T* f, T* residual) const {
+    T Q[3][3];
+    const T inv_f = T(1.0) / f[0];
+    for (int r = 0; r < 3; ++r) {
+      for (int c = 0; c < 3; ++c) {
+        T sum = T(0.0);
+        for (int k = 0; k < 4; ++k) {
+          sum += P_(r, k) * B[k + 4 * c];  // B is 4x3, column-major
+        }
+        Q[r][c] = r < 2 ? sum * inv_f : sum;
+      }
+    }
+    T E[3][3];
+    for (int a = 0; a < 3; ++a) {
+      for (int b = a; b < 3; ++b) {
+        E[a][b] = Q[a][0] * Q[b][0] + Q[a][1] * Q[b][1] + Q[a][2] * Q[b][2];
+      }
+    }
+    const T s = T(3.0) / (E[0][0] + E[1][1] + E[2][2]);
+    const T sqrt2 = T(std::sqrt(2.0));
+    residual[0] = s * E[0][0] - T(1.0);
+    residual[1] = s * E[1][1] - T(1.0);
+    residual[2] = s * E[2][2] - T(1.0);
+    residual[3] = sqrt2 * s * E[0][1];
+    residual[4] = sqrt2 * s * E[0][2];
+    residual[5] = sqrt2 * s * E[1][2];
+    return true;
+  }
+
+  static ceres::CostFunction* Create(const OseCamera& P) {
+    return new ceres::AutoDiffCostFunction<DualQuadricResidual, 6, 12, 1>(
+        new DualQuadricResidual(P));
+  }
+
+  const OseCamera P_;
+};
+
+bool RefineQuadric(const OseCameraVector& cameras,
+                   const bool estimate_focal_lengths,
+                   const MetricUpgradeOptions& options,
+                   Eigen::Matrix4d* H,
+                   std::vector<double>* focal_lengths,
+                   std::string* error) {
+  const int n = static_cast<int>(cameras.size());
+  Eigen::Matrix<double, 4, 3> B = H->leftCols<3>();
+  B /= B.norm();
+  ceres::Problem problem;
+  const bool shared = estimate_focal_lengths && options.shared_focal_length;
+  for (int i = 0; i < n; ++i) {
+    double* f = shared ? &(*focal_lengths)[0] : &(*focal_lengths)[i];
+    problem.AddResidualBlock(
+        DualQuadricResidual::Create(cameras[i] / cameras[i].norm()),
+        nullptr,
+        B.data(),
+        f);
+    if (!estimate_focal_lengths) {
+      problem.SetParameterBlockConstant(f);
+    } else {
+      problem.SetParameterLowerBound(f, 0, 1e-6);
+    }
+  }
+  ceres::Solver::Options solver_options;
+  solver_options.linear_solver_type =
+      estimate_focal_lengths && !shared ? ceres::DENSE_SCHUR : ceres::DENSE_QR;
+  solver_options.max_num_iterations = options.max_num_iterations;
+  solver_options.function_tolerance = 1e-14;
+  solver_options.parameter_tolerance = 1e-12;
+  solver_options.logging_type = ceres::SILENT;
+  ceres::Solver::Summary summary;
+  ceres::Solve(solver_options, &problem, &summary);
+  if (!summary.IsSolutionUsable() || !B.allFinite()) {
+    *error = "Nonlinear metric refinement failed: " + summary.message;
+    return false;
+  }
+  if (shared) {
+    std::fill(focal_lengths->begin(), focal_lengths->end(),
+              (*focal_lengths)[0]);
+  }
+  // Fourth column: the null vector of B^T (Omega's null space, the plane at
+  // infinity). Any vector outside span(B) only changes the similarity gauge.
+  Eigen::JacobiSVD<Eigen::Matrix<double, 3, 4>> svd(B.transpose(),
+                                                    Eigen::ComputeFullV);
+  H->leftCols<3>() = B;
+  H->col(3) = svd.matrixV().col(3);
+  if (std::abs(H->determinant()) < 1e-14) {
+    *error = "Nonlinear metric refinement gave a rank-deficient quadric.";
+    return false;
+  }
+  return true;
+}
+
+double MeanOrthogonalityError(const OseCameraVector& cameras,
+                              const Eigen::Matrix4d& H,
+                              const std::vector<double>& focal_lengths) {
+  double sum = 0.0;
+  for (size_t i = 0; i < cameras.size(); ++i) {
+    Eigen::Matrix3d M = cameras[i] * H.leftCols<3>();
+    M.topRows<2>() /= focal_lengths[i];
+    const double s2 = std::pow(std::abs(M.determinant()), 2.0 / 3.0);
+    sum += (M * M.transpose() / s2 - Eigen::Matrix3d::Identity()).norm();
+  }
+  return sum / cameras.size();
 }
 
 double FractionInFront(const OseProblem& problem,
@@ -63,79 +310,32 @@ double FractionInFront(const OseProblem& problem,
   return total > 0 ? static_cast<double>(in_front) / total : 0.0;
 }
 
-}  // namespace
-
-bool UpgradeToMetricCalibrated(const OseProblem& problem,
-                               const OseCameraVector& cameras,
-                               const Eigen::Matrix4Xd& points,
-                               MetricUpgradeResult* result,
-                               std::string* error) {
-  CHECK_NOTNULL(result);
-  CHECK_NOTNULL(error);
+// Metric cameras and points from H and the focal lengths.
+bool ApplyUpgrade(const OseProblem& problem,
+                  const OseCameraVector& cameras,
+                  const Eigen::Matrix4Xd& points,
+                  const Eigen::Matrix4d& H,
+                  MetricUpgradeResult* result,
+                  std::string* error) {
   const int n = static_cast<int>(cameras.size());
-  if (n < 2) {
-    *error = "Metric upgrade needs at least two cameras.";
-    return false;
-  }
-
-  // Five equations per camera: off-diagonals zero, equal diagonal.
-  Eigen::MatrixXd A(5 * n, 10);
-  for (int i = 0; i < n; ++i) {
-    const OseCamera P = cameras[i] / cameras[i].norm();
-    const auto m00 = QuadricRow(P, 0, 0);
-    A.row(5 * i + 0) = QuadricRow(P, 0, 1);
-    A.row(5 * i + 1) = QuadricRow(P, 0, 2);
-    A.row(5 * i + 2) = QuadricRow(P, 1, 2);
-    A.row(5 * i + 3) = m00 - QuadricRow(P, 1, 1);
-    A.row(5 * i + 4) = m00 - QuadricRow(P, 2, 2);
-  }
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullV);
-  const Eigen::Matrix<double, 10, 1> omega = svd.matrixV().col(9);
-  Eigen::Matrix4d Omega;
-  for (int i = 0; i < 4; ++i) {
-    for (int j = 0; j < 4; ++j) {
-      Omega(i, j) = omega[SymmetricIndex(i, j)];
-    }
-  }
-  if (Omega.trace() < 0.0) {
-    Omega = -Omega;
-  }
-
-  // Omega should be positive semidefinite with rank 3.
-  Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d> eig(Omega);
-  const Eigen::Vector4d values = eig.eigenvalues();  // ascending
-  const Eigen::Matrix4d vectors = eig.eigenvectors();
-  if (values[1] <= 1e-12 * values[3]) {
-    *error =
-        "Estimated dual quadric is not rank-3 positive semidefinite; the "
-        "projective reconstruction is likely degenerate.";
-    return false;
-  }
-  Eigen::Matrix4d H;
-  H.col(0) = vectors.col(3) * std::sqrt(values[3]);
-  H.col(1) = vectors.col(2) * std::sqrt(values[2]);
-  H.col(2) = vectors.col(1) * std::sqrt(values[1]);
-  H.col(3) = vectors.col(0);
   const Eigen::Matrix4d H_inv = H.inverse();
-
   result->H = H;
   result->rotations.resize(n);
   result->translations.resize(n);
-  double orthogonality_error = 0.0;
   for (int i = 0; i < n; ++i) {
-    const OseCamera Q = cameras[i] * H;
+    OseCamera Q = cameras[i] * H;
+    Q.topRows<2>() /= result->focal_lengths[i];
     const Eigen::Matrix3d M = Q.leftCols<3>();
     const double s = std::cbrt(M.determinant());
     if (!std::isfinite(s) || std::abs(s) < 1e-15) {
       *error = "Upgraded camera " + std::to_string(i) + " is degenerate.";
       return false;
     }
-    orthogonality_error +=
-        (M * M.transpose() / (s * s) - Eigen::Matrix3d::Identity()).norm();
     result->rotations[i] = ProjectToRotation(M / s);
     result->translations[i] = Q.col(3) / s;
   }
-  result->mean_orthogonality_error = orthogonality_error / n;
+  result->mean_orthogonality_error =
+      MeanOrthogonalityError(cameras, H, result->focal_lengths);
 
   result->points.resize(3, points.cols());
   result->point_valid.assign(points.cols(), 0);
@@ -161,6 +361,98 @@ bool UpgradeToMetricCalibrated(const OseProblem& problem,
     result->fraction_in_front = FractionInFront(problem, *result);
   }
   return true;
+}
+
+bool UpgradeToMetricImpl(const OseProblem& problem,
+                         const OseCameraVector& cameras,
+                         const Eigen::Matrix4Xd& points,
+                         const MetricUpgradeOptions& options,
+                         const bool calibrated,
+                         MetricUpgradeResult* result,
+                         std::string* error) {
+  CHECK_NOTNULL(result);
+  CHECK_NOTNULL(error);
+  *result = MetricUpgradeResult();
+  const int n = static_cast<int>(cameras.size());
+  const int min_cameras = calibrated ? 2 : 3;
+  if (n < min_cameras) {
+    *error = "Metric upgrade needs at least " + std::to_string(min_cameras) +
+             " cameras.";
+    return false;
+  }
+  if (points.cols() != problem.NumPoints() ||
+      n != problem.NumCameras()) {
+    *error = "Cameras or points do not match the problem.";
+    return false;
+  }
+
+  Eigen::Matrix4d Omega;
+  if (calibrated) {
+    LinearQuadricCalibrated(cameras, &Omega);
+  } else if (!LinearQuadricUncalibrated(cameras, &Omega)) {
+    *error = "Linear self-calibration failed (degenerate quadric).";
+    return false;
+  }
+  Eigen::Matrix4d H;
+  if (!UpgradeFromQuadric(Omega, &H, error)) {
+    return false;
+  }
+  if (calibrated) {
+    result->focal_lengths.assign(n, 1.0);
+  } else if (!FocalLengthsFromUpgrade(cameras,
+                                      H,
+                                      options.shared_focal_length,
+                                      &result->focal_lengths,
+                                      error)) {
+    return false;
+  }
+  result->linear_mean_orthogonality_error =
+      MeanOrthogonalityError(cameras, H, result->focal_lengths);
+
+  if (options.nonlinear_refinement) {
+    if (!RefineQuadric(cameras,
+                       !calibrated,
+                       options,
+                       &H,
+                       &result->focal_lengths,
+                       error)) {
+      return false;
+    }
+    result->nonlinear_refinement_run = true;
+  }
+  return ApplyUpgrade(problem, cameras, points, H, result, error);
+}
+
+}  // namespace
+
+bool UpgradeToMetric(const OseProblem& problem,
+                     const OseCameraVector& cameras,
+                     const Eigen::Matrix4Xd& points,
+                     const MetricUpgradeOptions& options,
+                     MetricUpgradeResult* result,
+                     std::string* error) {
+  return UpgradeToMetricImpl(
+      problem,
+      cameras,
+      points,
+      options,
+      problem.normalization == OseObservationNormalization::CALIBRATED_RAYS,
+      result,
+      error);
+}
+
+bool UpgradeToMetricCalibrated(const OseProblem& problem,
+                               const OseCameraVector& cameras,
+                               const Eigen::Matrix4Xd& points,
+                               MetricUpgradeResult* result,
+                               std::string* error) {
+  return UpgradeToMetricImpl(problem,
+                             cameras,
+                             points,
+                             MetricUpgradeOptions(),
+                             /*calibrated=*/true,
+                             result,
+                             error);
 }
 
 }  // namespace theia

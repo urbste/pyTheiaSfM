@@ -12,6 +12,18 @@
 
 namespace theia {
 
+struct MetricUpgradeOptions {
+  // Refine the linear estimate by nonlinear least squares on the absolute dual
+  // quadric (see UpgradeToMetric).
+  bool nonlinear_refinement = false;
+
+  // Uncalibrated observations only: one focal length for all cameras.
+  bool shared_focal_length = false;
+
+  // Iterations of the nonlinear refinement.
+  int max_num_iterations = 100;
+};
+
 struct MetricUpgradeResult {
   // Upgrade H with P_metric ~ P H and X_metric ~ H^{-1} X.
   Eigen::Matrix4d H = Eigen::Matrix4d::Identity();
@@ -19,6 +31,13 @@ struct MetricUpgradeResult {
   // Metric cameras x_cam = R X + t, in the numbering of the OseProblem.
   std::vector<Eigen::Matrix3d> rotations;
   std::vector<Eigen::Vector3d> translations;
+
+  // Focal length of every camera in observation units: 1 for CALIBRATED_RAYS;
+  // for PIXEL_ISOTROPIC, the focal length in pixels times the scale of the
+  // isotropic normalization (problem.normalizations[i](0, 0)). The principal
+  // point is the origin of the observations (the image center for
+  // PIXEL_ISOTROPIC) and the skew is zero.
+  std::vector<double> focal_lengths;
 
   Eigen::Matrix3Xd points;
   // Points mapped to (or near) infinity by H are invalid.
@@ -28,21 +47,44 @@ struct MetricUpgradeResult {
   double fraction_in_front = 0.0;
 
   // Mean over cameras of ||M M^T / s^2 - I||_F for the left 3x3 block M of
-  // P H. Zero for an exactly metric result.
+  // K^-1 P H. Zero for an exactly metric result.
   double mean_orthogonality_error = 0.0;
+
+  // The same error for the linear estimate, before the nonlinear refinement.
+  double linear_mean_orthogonality_error = 0.0;
+
+  bool nonlinear_refinement_run = false;
 };
 
-// Linear self-calibration for known intrinsics (observations in normalized
-// image coordinates, K = I). Estimates the absolute dual quadric Omega from
-// P_i Omega P_i^T ~ I (5 linear equations per camera), enforces rank 3 and
-// decomposes Omega = H diag(1,1,1,0) H^T. The overall reflection is chosen so
-// that most points lie in front of the cameras.
+// Metric upgrade of a projective reconstruction by self-calibration with the
+// absolute dual quadric Omega (rank 3, P_i Omega P_i^T ~ K_i K_i^T).
 //
-// The uncalibrated version (unknown focal lengths, Pollefeys et al. 1999) and
-// the nonlinear refinement are not implemented yet.
+// CALIBRATED_RAYS (K_i = I): five linear equations per camera.
 //
-// `points` are homogeneous (4 x N); Cartesian OSE points can be passed as
-// points.colwise().homogeneous().
+// PIXEL_ISOTROPIC (K_i = diag(f_i, f_i, 1) in the normalized pixel frame:
+// zero skew, unit aspect ratio, principal point at the image center): the
+// weighted linear equations of Pollefeys et al. (IJCV 2004), with soft priors
+// on the aspect ratio, skew, principal point and a weak prior f_i ~ 1,
+// reweighted three times by 1 / (P_3 Omega P_3^T).
+//
+// The linear estimate is truncated to rank 3. With nonlinear_refinement,
+// Omega = B B^T (B 4x3, so Omega stays positive semidefinite with rank 3) and
+// the focal lengths are refined to minimize, per camera,
+// || 3 E_i / trace(E_i) - I ||_F^2 with E_i = K_i^-1 P_i B B^T P_i^T K_i^-T.
+// This drops the priors, so it removes their bias on exact data.
+//
+// The overall reflection is chosen so that most points lie in front of the
+// cameras. `points` are homogeneous (4 x N); Cartesian OSE points can be
+// passed as points.colwise().homogeneous().
+bool UpgradeToMetric(const OseProblem& problem,
+                     const OseCameraVector& cameras,
+                     const Eigen::Matrix4Xd& points,
+                     const MetricUpgradeOptions& options,
+                     MetricUpgradeResult* result,
+                     std::string* error);
+
+// Linear upgrade for CALIBRATED_RAYS observations (UpgradeToMetric with
+// default options).
 bool UpgradeToMetricCalibrated(const OseProblem& problem,
                                const OseCameraVector& cameras,
                                const Eigen::Matrix4Xd& points,

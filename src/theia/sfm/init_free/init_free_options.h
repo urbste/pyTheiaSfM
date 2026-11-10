@@ -93,7 +93,9 @@ enum class ReducedCameraSolverType {
   DENSE_CHOLESKY = 0,       // Eigen LLT on the dense Schur complement (CPU).
   CUDA_DENSE_CHOLESKY = 1,  // cuSOLVER potrf/potrs. Needs a build with
                             // -DTHEIA_WITH_CUDA_SOLVERS=ON.
-  SPARSE_CHOLESKY = 2,      // Not implemented yet.
+  SPARSE_CHOLESKY = 2,      // Eigen simplicial LLT (AMD) on the block-sparse
+                            // Schur complement (CPU). For sequences and
+                            // scenes where most camera pairs share no point.
   POWER_SERIES = 3,         // Matrix-free truncated power series of the
                             // Schur complement inverse (PoBA / PoVar).
   CUDA_POWER_SERIES = 4,    // POWER_SERIES with cuSPARSE on the GPU. Needs
@@ -126,10 +128,12 @@ enum class MetricUpgradeType {
   // this mode; use the stage-wise Python API to inspect projective results.
   NONE = 0,
   // Linear absolute-dual-quadric estimate. With CALIBRATED_RAYS the intrinsics
-  // are known (K = I); the uncalibrated variant is not implemented yet.
+  // are known (K = I); with PIXEL_ISOTROPIC one focal length per camera is
+  // estimated (zero skew, unit aspect ratio, principal point at the image
+  // center; Pollefeys et al. 2004).
   LINEAR = 1,
-  // Linear estimate followed by nonlinear refinement (refinement not
-  // implemented yet; behaves like LINEAR with a warning).
+  // Linear estimate followed by nonlinear refinement of the rank-3 quadric
+  // (and the focal lengths). See metric_upgrade.h.
   LINEAR_AND_NONLINEAR = 2,
 };
 
@@ -243,6 +247,10 @@ struct InitFreeOptions {
   int num_threads = 0;
 
   MetricUpgradeType metric_upgrade = MetricUpgradeType::LINEAR;
+
+  // PIXEL_ISOTROPIC only: estimate one focal length for all cameras in the
+  // metric upgrade (all images from the same camera at the same zoom).
+  bool shared_focal_length = false;
 
   // Run the standard metric bundle adjustment (configured by the
   // ReconstructionEstimatorOptions) after the metric upgrade.
