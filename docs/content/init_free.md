@@ -223,7 +223,18 @@ What this shows:
 | 150 / 213k | 4.7 s | 1.5 s | 1.6 s (cost not converged) |
 | 400 / 591k | 109 s | 6.7 s | 4.9 s (cost not converged) |
 
-For scenes where most cameras see the same points (the ring scenes below), S is dense and `DENSE_CHOLESKY` is the better choice. Long sequences also converge slowly from random starts, whatever the solver; 30 iterations do not reach the minimum here.
+For scenes where most cameras see the same points (the ring scenes below), S is dense and `DENSE_CHOLESKY` is the better choice. The 30-iteration budget of this timing run is too small for the 400-camera sequence (see below).
+
+### Convergence on sequences
+
+A study on synthetic forward-moving sequences (100 to 400 cameras, about 90 tracks per camera, 1 px noise, 3 random starts each) found:
+
+- **Iterations:** with `POSE_ROT`, VarPro converges from random starts in 19 (100 cameras), 25 (200) and 55 (400) iterations to the correct solution. The relative-rotation error is about 0.02° between neighbors. The cost decreases steadily rather than stalling, so the default budget of 200 iterations is enough.
+- **Initialization matters:** `UNIT_CIRCLE` converged in 6 of 6 runs. `NORMAL` and `UNIFORM` converged in 1 of 6 and 2 of 6, the others ending in wrong basins with cameras flipped by up to 180°. Keep the default `UNIT_CIRCLE`.
+- **Rotation terms matter:** `POSE` and `EXPOSE` (no rotation terms) mostly did not converge within 300 iterations on sequences. With `POSE_ROT`, `rotation_weight` 10 gave about 10× lower rotation error than 1 (0.002° vs 0.02°) at the same cost.
+- **`alpha`** (0.01 to 0.3) does not change the rotation accuracy. Smaller `alpha` lowers the projective RMS (4.5 px at 0.01, 8 px at 0.3, before refinement).
+- **Damping:** `lambda_decrease_factor = lambda_increase_factor = 2` cut the iterations on sequences by about 30%. On the ring scenes it made no difference, or added two iterations for `POSE`, so the default stays at 10.
+- **`POWER_SERIES`** reaches the same cost, but needs 2 to 10× more iterations than `SPARSE_CHOLESKY` on sequences, at similar or higher wall time.
 
 ### Threads and GPU
 
