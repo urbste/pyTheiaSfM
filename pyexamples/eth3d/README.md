@@ -45,6 +45,7 @@ the GT, not as a physical gravity test.
 | `triangulation.py` | `Triangulate`, `TriangulateDLT`, `TriangulateMidpoint`, `TriangulateNView(SVD)`, `EstimateTriangulation` | 3D point error (m) |
 | `global_sfm.py` | `EstimateTwoViewInfo` -> `ViewGraph` + `TrackBuilder` -> `GlobalReconstructionEstimator` | camera centre and rotation after Sim(3) alignment |
 | `bundle_adjustment_priors.py` | `BundleAdjustReconstruction` with position, orientation, gravity, depth and 3D point priors | camera centre, rotation, point error after Sim(3) alignment |
+| `init_free_sfm.py` | `INIT_FREE` (experimental, random-start OSE + VarPro, projective refinement, metric upgrade) vs `GlobalReconstructionEstimator` on identical matches | camera centre and rotation after Sim(3) alignment, per-restart diagnostics |
 
 Every script accepts `--help`. Defaults are small, single-threaded, and finish
 in seconds (`bundle_adjustment_priors.py` in about 5 s).
