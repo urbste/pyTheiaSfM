@@ -32,12 +32,15 @@ def rotation_angle_deg(R):
 
 
 def make_scene(n_views=10, n_points=150, keep_prob=0.8, pixel_noise=0.0,
-               seed=0, focal_lengths=None):
+               seed=0, focal_lengths=None, translation=False):
     """Cameras on a ring looking at points around the origin.
 
     Returns the reconstruction (poses set to ground truth), a view graph with
     ground-truth relative rotations, and a dict of ground-truth poses.
     focal_lengths: optional per-view focal lengths in pixels.
+    translation: pure translation instead. All cameras have the same
+    orientation (no rotation) and their centres are spread over the plane
+    z ~ -6. Varying focal lengths are then not determined by the views.
     """
     rng = np.random.default_rng(seed)
     recon = pt.sfm.Reconstruction()
@@ -47,14 +50,20 @@ def make_scene(n_views=10, n_points=150, keep_prob=0.8, pixel_noise=0.0,
         vid = recon.AddView(str(i), i, float(i))
         theta = 1.2 * np.pi * i / n_views  # partial ring
         radius = 6.0 + rng.uniform(-0.5, 0.5)
-        center = np.array([radius * np.sin(theta), rng.uniform(-0.5, 0.5),
-                           -radius * np.cos(theta)])
         cam = recon.MutableView(vid).MutableCamera()
         cam.DeepCopy(base if focal_lengths is None
                      else make_camera(focal_lengths[i]))
-        cam.SetPosition(center)
-        cam.SetOrientationFromAngleAxis(
-            np.array([0.0, theta, 0.0]) + rng.normal(scale=0.02, size=3))
+        if translation:
+            center = np.array([rng.uniform(-3.0, 3.0), rng.uniform(-1.0, 1.0),
+                               -6.0 + rng.uniform(-0.5, 0.5)])
+            cam.SetPosition(center)
+            cam.SetOrientationFromAngleAxis(np.zeros(3))
+        else:
+            center = np.array([radius * np.sin(theta), rng.uniform(-0.5, 0.5),
+                               -radius * np.cos(theta)])
+            cam.SetPosition(center)
+            cam.SetOrientationFromAngleAxis(
+                np.array([0.0, theta, 0.0]) + rng.normal(scale=0.02, size=3))
         gt[vid] = (np.asarray(cam.GetOrientationAsRotationMatrix()),
                    np.asarray(cam.GetPosition()))
 
@@ -119,6 +128,7 @@ def test_enum_and_options_are_exposed():
     assert opts.init_free_options.min_fraction_in_front == pytest.approx(0.9)
     assert opts.init_free_options.max_mean_orthogonality_error == (
         pytest.approx(0.3))
+    assert opts.init_free_options.min_upgrade_conditioning == pytest.approx(3e-3)
     # The new enums must not clobber existing module-level names.
     assert pt.sfm.LINEAR == pt.sfm.GlobalRotationEstimatorType.LINEAR
 
@@ -854,6 +864,8 @@ def test_estimator_records_upgrade_of_used_restart():
     assert used.upgrade_fraction_in_front == pytest.approx(diag.fraction_in_front)
     assert used.upgrade_mean_orthogonality_error == pytest.approx(
         diag.mean_orthogonality_error)
+    assert used.upgrade_conditioning >= (
+        opts.init_free_options.min_upgrade_conditioning)
     assert used.upgrade_fraction_in_front >= opts.init_free_options.min_fraction_in_front
     assert (used.upgrade_mean_orthogonality_error <=
             opts.init_free_options.max_mean_orthogonality_error)
@@ -920,4 +932,125 @@ def test_estimator_rpose_linear_upgrade_is_nonlinear_and_correct():
              for v in vids]
     worst = pairwise_rotation_errors(est_R, vids, gt).max()
     assert worst < 0.5, worst
+
+
+def upgrade_scene(recon, view_graph, opts, nonlinear=True, radial=False,
+                  shared=False):
+    """Stage-wise OSE and metric upgrade of a scene (MetricUpgradeResult)."""
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    if radial:
+        init = pt.sfm.SampleInitialCameras(problem.NumCameras(),
+                                           opts.camera_init, 0)
+        ok, sol = pt.sfm.SolveOse(problem, opts, init)
+        assert ok, sol.message
+        cameras, points = sol.cameras, sol.points
+    else:
+        ok, best, _, err = pt.sfm.RunProjectiveStages(problem, opts)
+        assert ok, err
+        cameras, points = best.cameras, best.points
+    upgrade_opts = pt.sfm.MetricUpgradeOptions()
+    upgrade_opts.nonlinear_refinement = nonlinear
+    upgrade_opts.shared_focal_length = shared
+    upgrade_opts.radial_cameras = radial
+    ok, result, err = pt.sfm.UpgradeToMetric(problem, cameras, points,
+                                             upgrade_opts)
+    assert ok, err
+    return problem, result
+
+
+def focal_errors(problem, result, focals):
+    """Relative errors of the upgraded focal lengths (pixels)."""
+    scale = np.array([np.asarray(T)[0, 0] for T in problem.normalizations])
+    return np.abs(np.array(result.focal_lengths) / scale /
+                  focals[problem.view_ids] - 1)
+
+
+def test_conditioning_is_well_posed_on_existing_scenes():
+    # Measured: calibrated 0.56, varying focal 0.044, shared focal 0.16,
+    # radial 0.018 to 0.037 (smallest 0.018 at 1 px).
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=5)
+    _, result = upgrade_scene(recon, view_graph, init_free_options())
+    assert result.conditioning > 0.01, result.conditioning
+
+    focals = np.random.default_rng(0).uniform(650.0, 1000.0, 15)
+    for noise in (0.0, 0.5):
+        recon, view_graph, _ = make_scene(n_views=15, n_points=200,
+                                          pixel_noise=noise, seed=3,
+                                          focal_lengths=focals)
+        _, result = upgrade_scene(recon, view_graph, uncalibrated_options())
+        assert result.conditioning > 0.01, result.conditioning
+
+    shared = np.full(15, 900.0)
+    recon, view_graph, _ = make_scene(n_views=15, n_points=200,
+                                      pixel_noise=0.5, seed=3,
+                                      focal_lengths=shared)
+    _, result = upgrade_scene(recon, view_graph, uncalibrated_options(),
+                              shared=True)
+    assert result.conditioning > 0.01, result.conditioning
+
+    recon, view_graph, _ = make_scene(n_views=15, n_points=200,
+                                      pixel_noise=0.0, seed=3,
+                                      focal_lengths=focals)
+    opts = radial_options(pt.sfm.OseObservationNormalization.PIXEL_ISOTROPIC,
+                          0.001)
+    _, result = upgrade_scene(recon, view_graph, opts, radial=True)
+    assert result.conditioning > 0.01, result.conditioning
+
+
+@pytest.mark.parametrize("pixel_noise", [0.0, 0.5])
+def test_pure_translation_is_flagged_as_ill_conditioned(pixel_noise):
+    # Measured: conditioning 1e-8 (noise free) to 6e-4 (2 px), focal lengths
+    # off by 20 to 60 %, while the orthogonality error stays below 0.01.
+    focals = np.random.default_rng(0).uniform(650.0, 1000.0, 15)
+    recon, view_graph, _ = make_scene(n_views=15, n_points=200,
+                                      pixel_noise=pixel_noise, seed=3,
+                                      focal_lengths=focals, translation=True)
+    problem, result = upgrade_scene(recon, view_graph, uncalibrated_options())
+    assert result.nonlinear_refinement_run
+    assert result.conditioning < 1e-3, result.conditioning
+    assert focal_errors(problem, result, focals).max() > 0.1
+    assert result.mean_orthogonality_error < 0.3
+
+
+def test_estimator_rejects_ill_conditioned_upgrade():
+    focals = np.random.default_rng(0).uniform(650.0, 1000.0, 15)
+
+    def estimate(min_conditioning):
+        recon, view_graph, gt = make_scene(n_views=15, n_points=200,
+                                           pixel_noise=0.5, seed=3,
+                                           focal_lengths=focals,
+                                           translation=True)
+        opts = pt.sfm.ReconstructionEstimatorOptions()
+        opts.reconstruction_estimator_type = (
+            pt.sfm.ReconstructionEstimatorType.INIT_FREE)
+        opts.init_free_options = uncalibrated_options()
+        opts.init_free_options.metric_upgrade = (
+            pt.sfm.MetricUpgradeType.LINEAR_AND_NONLINEAR)
+        opts.init_free_options.min_upgrade_conditioning = min_conditioning
+        opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.FOCAL_LENGTH
+        opts.min_num_two_view_inliers = 10
+        estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+        summary = estimator.Estimate(view_graph, recon)
+        return recon, summary, estimator.Diagnostics(), sorted(gt)
+
+    # With the default threshold the critical upgrade is rejected cleanly.
+    recon, summary, diag, _ = estimate(3e-3)
+    assert not summary.success
+    assert "ill-conditioned self-calibration" in summary.message
+    assert diag.best_restart == -1 and not diag.metric_upgrade_success
+    restart = diag.restarts[0]
+    assert restart.upgrade_attempted and not restart.upgrade_success
+    assert restart.upgrade_message.startswith(
+        "rejected: ill-conditioned self-calibration")
+    assert restart.upgrade_conditioning < 3e-3
+    assert not any(recon.View(v).IsEstimated() for v in recon.ViewIds())
+
+    # Without the check (0) the same scene is accepted, with wrong focal
+    # lengths: the orthogonality error does not reveal them.
+    recon, summary, diag, vids = estimate(0.0)
+    assert summary.success, summary.message
+    upgrade_f = np.array(diag.focal_lengths)
+    assert np.abs(upgrade_f / focals[vids] - 1).max() > 0.1
+    assert diag.mean_orthogonality_error < 0.3
 

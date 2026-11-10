@@ -48,6 +48,15 @@ std::string MetricCheckFailure(const MetricUpgradeResult& metric,
         << " > " << options.max_mean_orthogonality_error;
     failure += out.str();
   }
+  // 0 disables the check. Otherwise NaN fails.
+  if (options.min_upgrade_conditioning > 0.0 &&
+      !(metric.conditioning >= options.min_upgrade_conditioning)) {
+    std::ostringstream out;
+    if (!failure.empty()) failure += "; ";
+    out << "ill-conditioned self-calibration (critical motion?): conditioning "
+        << metric.conditioning << " < " << options.min_upgrade_conditioning;
+    failure += out.str();
+  }
   return failure;
 }
 
@@ -302,6 +311,7 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
     restart.upgrade_fraction_in_front = candidate.fraction_in_front;
     restart.upgrade_mean_orthogonality_error =
         candidate.mean_orthogonality_error;
+    restart.upgrade_conditioning = candidate.conditioning;
     const std::string failure = MetricCheckFailure(candidate, opts);
     if (!failure.empty()) {
       restart.upgrade_message = "rejected: " + failure;
@@ -320,7 +330,9 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
     message << "Init-free: no restart passed the metric upgrade checks "
                "(min_fraction_in_front "
             << opts.min_fraction_in_front << ", max_mean_orthogonality_error "
-            << opts.max_mean_orthogonality_error << "). Restarts in ranked order:";
+            << opts.max_mean_orthogonality_error << ", min_upgrade_conditioning "
+            << opts.min_upgrade_conditioning
+            << "). Restarts in ranked order:";
     for (const RankedProjectiveReconstruction& entry : ranked) {
       const InitFreeRestartDiagnostics& restart =
           diagnostics_.restarts[entry.restart];

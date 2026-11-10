@@ -67,6 +67,7 @@ ok, metric, err = pt.sfm.UpgradeToMetric(problem, ref.cameras, ref.points, uo)
 | `rotation_weighting` | `SCALAR`, `TWO_VIEW_INFORMATION` | implemented (`POSE_ROT` only) |
 | `restart_selection` | `REPROJECTION_ERROR`, `OSE_COST` | implemented (sets the order in which the restarts are upgraded) |
 | `min_fraction_in_front`, `max_mean_orthogonality_error` | `0.9`, `0.3` | implemented (validity checks of the metric upgrade, see *Restarts and validity checks*) |
+| `min_upgrade_conditioning` | `0.003` (`0` disables) | implemented (rejects critical self-calibrations, see *Metric upgrade*) |
 | `projective_refinement.robust_loss_width` | `0` (plain least squares) | implemented (Huber loss in observation units; see *Real data (ETH3D)*) |
 | `metric_upgrade` | `LINEAR`, `LINEAR_AND_NONLINEAR` | implemented for both normalizations; `RPOSE` always uses the nonlinear refinement |
 | `shared_focal_length` | `False`, `True` | implemented (`PIXEL_ISOTROPIC` only) |
@@ -123,7 +124,9 @@ The linear `Ω` is truncated to rank 3. With `nonlinear_refinement` (`LINEAR_AND
 | 0.5 px | linear | 1.7 % | 0.62° |
 | 0.5 px | + nonlinear | 0.35 % | 0.09° |
 
-For calibrated rays, the linear estimate is already close, and the refinement changes little. Planar or otherwise critical camera motions are not detected; the result then has no unique focal lengths.
+For calibrated rays, the linear estimate is already close, and the refinement changes little.
+
+**Conditioning (critical motions).** Some camera motions do not determine the self-calibration. For varying focal lengths the pure translation is one such motion (all cameras with the same orientation): the upgrade then fits the quadric and the focal lengths, but they are not unique. `MetricUpgradeResult::conditioning` measures this. It is the fifth smallest singular value of the Jacobian of the quadric residuals (with respect to the 12 entries of the normalized `B` and the estimated focal lengths) over the largest one. The four gauge directions of the residuals (`B` times an orthogonal matrix, and the scale of `B`) are excluded. Small values mean an extra ambiguity. Measured on synthetic scenes (noise 0 to 2 px): well-posed scenes 0.018 to 0.56 (calibrated, varying and shared focal lengths, RPOSE). Pure translation with varying focal lengths 1e-8 (noise free) to 6e-4 (2 px), with focal lengths off by 30 to 54 %, while its orthogonality error stays below 0.01, so the orthogonality check does not catch it. Rotation about one axis with the centres in a plane is not critical in this parametrization (conditioning 0.044, focal lengths recovered to 0.4 % at 0.5 px). `min_upgrade_conditioning` (default `0.003`, `0` disables) rejects a restart whose conditioning is below it, with the message `ill-conditioned self-calibration (critical motion?)`. The threshold lies between the two groups: about 5 times above the largest critical value and 6 times below the smallest well-posed one. On real data (ETH3D, calibrated) accepted restarts measured 0.09; the wrong restarts (orthogonality error 0.8 to 2.6) still measured 0.29 to 0.44, so this check flags only the critical ambiguity, not wrong restarts in general.
 
 ## CUDA backend
 
@@ -162,7 +165,7 @@ The checks are:
 
   The threshold 0.3 sits between the largest correct value (0.17) and the smallest wrong one (0.63), about 1.8 times and 2.1 times away. Two cases are not separated by it: one correct restart at 0.61 (courtyard 10–29, 20 % outliers) is rejected, which is the safe direction. One accepted restart is inaccurate (office 4–15, 0 % outliers: 0.08, 1.2° rotation error, 2 of 12 views dropped), which this check cannot exclude.
 
-Both comparisons are written so that a NaN fails. The restart diagnostics record every attempt: `upgrade_attempted`, `upgrade_success` (the upgrade succeeded and passed the checks), `upgrade_fraction_in_front`, `upgrade_mean_orthogonality_error` and `upgrade_message` (the upgrade error, `rejected: ...` with the failed check, or `ok`).
+- `min_upgrade_conditioning` (default `0.003`, `0` disables): `MetricUpgradeResult::conditioning` (see *Metric upgrade*). A restart below it is rejected as an ill-conditioned self-calibration (critical motion). The checks are written so that a NaN fails. The restart diagnostics record every attempt: `upgrade_attempted`, `upgrade_success` (the upgrade succeeded and passed the checks), `upgrade_fraction_in_front`, `upgrade_mean_orthogonality_error`, `upgrade_conditioning` and `upgrade_message` (the upgrade error, `rejected: ...` with the failed check, or `ok`).
 
 ```python
 ifo.min_fraction_in_front = 0.9

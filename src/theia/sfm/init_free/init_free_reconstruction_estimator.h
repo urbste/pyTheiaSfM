@@ -42,6 +42,8 @@ struct InitFreeRestartDiagnostics {
   // Valid only if the upgrade succeeded (otherwise 0).
   double upgrade_fraction_in_front = 0.0;
   double upgrade_mean_orthogonality_error = 0.0;
+  // MetricUpgradeResult::conditioning (valid only if the upgrade succeeded).
+  double upgrade_conditioning = 0.0;
   // The upgrade error, or the failed check ("rejected: ..."), or "ok".
   std::string upgrade_message;
 };

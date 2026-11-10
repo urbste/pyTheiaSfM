@@ -12,6 +12,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
+#include <sstream>
+#include <vector>
 
 namespace theia {
 
@@ -637,6 +640,76 @@ bool BuildRadialCandidate(const OseProblem& problem,
   return true;
 }
 
+// Conditioning of the self-calibration at the upgrade H (see
+// MetricUpgradeResult::conditioning). J is the dense Jacobian of the residuals
+// of the nonlinear refinement at the normalized B = H.leftCols<3>(), with
+// respect to B and to the focal lengths that are estimated (one per camera, or
+// one shared). Returns the fifth smallest singular value of J over the largest
+// one (the four gauge directions are zero), or 0 if that is not computable.
+double SelfCalibrationConditioning(const OseCameraVector& cameras,
+                                   const Eigen::Matrix4d& H,
+                                   const std::vector<double>& focal_lengths,
+                                   const bool radial,
+                                   const bool estimate_focal_lengths,
+                                   const bool shared_focal_length) {
+  const int n = static_cast<int>(cameras.size());
+  Eigen::Matrix<double, 4, 3> B = H.leftCols<3>();
+  B /= B.norm();
+  const int rows_per_camera = radial ? 3 : 6;
+  const int num_focal =
+      estimate_focal_lengths ? (shared_focal_length ? 1 : n) : 0;
+  const int num_cols = 12 + num_focal;
+  if (!(B.norm() > 0.0) || !B.allFinite() || num_cols <= 4) {
+    return 0.0;
+  }
+  Eigen::MatrixXd J = Eigen::MatrixXd::Zero(rows_per_camera * n, num_cols);
+  for (int i = 0; i < n; ++i) {
+    std::unique_ptr<ceres::CostFunction> cost(
+        radial ? RadialQuadricResidual::Create(RadialCamera(cameras[i]))
+               : DualQuadricResidual::Create(cameras[i] / cameras[i].norm()));
+    // Ceres: jacobians are row-major, one matrix per parameter block.
+    Eigen::Matrix<double, Eigen::Dynamic, 12, Eigen::RowMajor> J_B(
+        rows_per_camera, 12);
+    Eigen::VectorXd J_f(rows_per_camera);
+    Eigen::VectorXd residual(rows_per_camera);
+    // Not used by the radial residual (and the calibrated one has f = 1).
+    const double focal =
+        focal_lengths.empty() ? 1.0 : focal_lengths[shared_focal_length ? 0 : i];
+    std::vector<const double*> parameters = {B.data()};
+    std::vector<double*> jacobians = {J_B.data()};
+    if (!radial) {
+      parameters.push_back(&focal);
+      jacobians.push_back(J_f.data());
+    }
+    if (!cost->Evaluate(parameters.data(), residual.data(), jacobians.data())) {
+      return 0.0;
+    }
+    J.block(rows_per_camera * i, 0, rows_per_camera, 12) = J_B;
+    if (num_focal > 0) {
+      J.block(rows_per_camera * i,
+              12 + (shared_focal_length ? 0 : i),
+              rows_per_camera,
+              1) = J_f;
+    }
+  }
+  // Eigenvalues of J^T J, ascending: sigma = sqrt(lambda).
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(J.transpose() * J);
+  const Eigen::VectorXd lambda = eig.eigenvalues();
+  const double sigma_max = std::sqrt(std::max(lambda[num_cols - 1], 0.0));
+  const double sigma_4 = std::sqrt(std::max(lambda[4], 0.0));
+  if (VLOG_IS_ON(2)) {
+    std::ostringstream out;
+    for (int k = 0; k < num_cols; ++k) {
+      out << " " << std::sqrt(std::max(lambda[k], 0.0)) / sigma_max;
+    }
+    VLOG(2) << "Self-calibration singular values / max:" << out.str();
+  }
+  if (!(sigma_max > 0.0) || !std::isfinite(sigma_4 / sigma_max)) {
+    return 0.0;
+  }
+  return sigma_4 / sigma_max;
+}
+
 // Radial metric upgrade (UpgradeToMetric with options.radial_cameras).
 bool UpgradeToMetricRadial(const OseProblem& problem,
                            const OseCameraVector& cameras,
@@ -676,6 +749,9 @@ bool UpgradeToMetricRadial(const OseProblem& problem,
     nonlinear_run = true;
   }
   const double final_error = RadialMeanOrthogonalityError(cameras, H);
+  const double conditioning = SelfCalibrationConditioning(
+      cameras, H, {}, /*radial=*/true, /*estimate_focal_lengths=*/false,
+      /*shared_focal_length=*/false);
 
   // H diag(1, 1, -1, 1) gives the same 2D directions with all depths flipped.
   // Keep the candidate with more points in front, ties by the fit residual.
@@ -714,6 +790,7 @@ bool UpgradeToMetricRadial(const OseProblem& problem,
   *result = std::move(candidates[best]);
   result->mean_orthogonality_error = final_error;
   result->linear_mean_orthogonality_error = linear_error;
+  result->conditioning = conditioning;
   result->nonlinear_refinement_run = nonlinear_run;
   return true;
 }
@@ -775,6 +852,10 @@ bool UpgradeToMetricImpl(const OseProblem& problem,
     }
     result->nonlinear_refinement_run = true;
   }
+  result->conditioning = SelfCalibrationConditioning(
+      cameras, H, result->focal_lengths, /*radial=*/false,
+      /*estimate_focal_lengths=*/!calibrated,
+      options.shared_focal_length);
   return ApplyUpgrade(problem, cameras, points, H, result, error);
 }
 

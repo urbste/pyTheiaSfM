@@ -257,6 +257,18 @@ struct InitFreeOptions {
   // the 1 px synthetic scene); wrong restarts (rotation error above 25 deg)
   // are at least 0.63. The threshold sits between them.
   double max_mean_orthogonality_error = 0.3;
+  // Minimum MetricUpgradeResult::conditioning: the fifth smallest singular
+  // value of the self-calibration Jacobian over the largest (see
+  // metric_upgrade.h). Small values mean an additional ambiguity of the
+  // self-calibration (critical motions, e.g. varying focal lengths with all
+  // cameras rotating about one axis), where the focal lengths are not unique.
+  // 0 disables the check. Compared with "!(conditioning >= min)", so NaN fails.
+  // Measured: well-posed scenes 0.018 to 0.56 (calibrated, PIXEL_ISOTROPIC
+  // with varying and with shared focal length, RPOSE); critical pure
+  // translation 1e-8 (noise free) to 5.7e-4 (2 px), with focal lengths off by
+  // 20 to 60 %. The threshold sits in the gap, about 5 times above the largest
+  // critical value and 6 times below the smallest well-posed one.
+  double min_upgrade_conditioning = 3e-3;
 
   // Threads for VarPro (unless varpro.num_threads > 0) and projective
   // refinement. <= 0 uses ReconstructionEstimatorOptions::num_threads inside

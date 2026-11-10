@@ -58,6 +58,21 @@ struct MetricUpgradeResult {
   // The same error for the linear estimate, before the nonlinear refinement.
   double linear_mean_orthogonality_error = 0.0;
 
+  // Conditioning of the self-calibration at the final upgrade (0 if it cannot
+  // be computed). Let J be the Jacobian of the quadric residuals of the
+  // nonlinear refinement (DualQuadricResidual, or the radial residual for
+  // radial cameras) with respect to B = H.leftCols<3>() (normalized, 12
+  // entries) and, for PIXEL_ISOTROPIC, the estimated focal lengths (one per
+  // camera, or one if shared_focal_length). The residuals do not change under
+  // B -> B Q (Q orthogonal) or a rescaling of B, so the four smallest singular
+  // values of J are zero by construction. conditioning is the fifth smallest
+  // singular value divided by the largest. Close to zero means a further
+  // (near) ambiguity of the self-calibration, e.g. the critical motions of
+  // varying focal lengths, and the focal lengths are then not unique. Measured
+  // on synthetic scenes: well posed 0.018 to 0.56, pure translation 1e-8 to
+  // 6e-4 (see InitFreeOptions::min_upgrade_conditioning).
+  double conditioning = 0.0;
+
   bool nonlinear_refinement_run = false;
 };
 

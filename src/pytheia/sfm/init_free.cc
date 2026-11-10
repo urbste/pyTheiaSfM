@@ -163,6 +163,8 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("min_fraction_in_front", &IO::min_fraction_in_front)
       .def_readwrite("max_mean_orthogonality_error",
                      &IO::max_mean_orthogonality_error)
+      .def_readwrite("min_upgrade_conditioning",
+                     &IO::min_upgrade_conditioning)
       .def_readwrite("num_threads", &IO::num_threads)
       .def_readwrite("metric_upgrade", &IO::metric_upgrade)
       .def_readwrite("shared_focal_length", &IO::shared_focal_length)
@@ -345,6 +347,7 @@ void pytheia_init_free(py::module& m) {
                     &RD::upgrade_fraction_in_front)
       .def_readonly("upgrade_mean_orthogonality_error",
                     &RD::upgrade_mean_orthogonality_error)
+      .def_readonly("upgrade_conditioning", &RD::upgrade_conditioning)
       .def_readonly("upgrade_message", &RD::upgrade_message);
 
   using ID = theia::InitFreeDiagnostics;
@@ -468,6 +471,7 @@ void pytheia_init_free(py::module& m) {
                     &MU::mean_orthogonality_error)
       .def_readonly("linear_mean_orthogonality_error",
                     &MU::linear_mean_orthogonality_error)
+      .def_readonly("conditioning", &MU::conditioning)
       .def_readonly("focal_lengths", &MU::focal_lengths)
       .def_readonly("nonlinear_refinement_run",
                     &MU::nonlinear_refinement_run);
