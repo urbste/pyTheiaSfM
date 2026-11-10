@@ -18,9 +18,11 @@
 // References:
 //   pOSE:      Hong, Zach. "pOSE: Pseudo Object Space Error for
 //              Initialization-Free Bundle Adjustment." CVPR 2018.
-//   rOSE:      Iglesias, Olsson. "Radial distortion invariant factorization for
-//              structure from motion." ICCV 2021.
-//   expOSE:    Iglesias, Nilsson, Olsson. CVPR 2023.
+//   rOSE /     Iglesias, Olsson. "Radial distortion invariant factorization for
+//   RpOSE:     structure from motion." ICCV 2021.
+//   expOSE:    Iglesias, Nilsson, Olsson. "expOSE: Accurate Initialization-Free
+//              Projective Factorization using Exponential Regularization."
+//              CVPR 2023.
 //   pOSE+rot:  Olsson, Nilsson. "Towards Initialization-free Calibrated Bundle
 //              Adjustment." arXiv:2506.23808.
 //   VarPro:    Hong, Zach, Fitzgibbon. "Revisiting the Variable Projection
@@ -35,12 +37,37 @@
 namespace theia {
 
 // The OSE objective minimized in the first stage.
+// Residuals per observation m (X_h = [X; 1], p_k^T the rows of P):
+//   OSE part (all but RPOSE):  sqrt(1 - alpha) * (p_{1:2}^T X_h - m p_3^T X_h)
+//   POSE / POSE_ROT:  + sqrt(alpha) * (p_{1:2}^T X_h - m)         (affine)
+//   ROSE:             + sqrt(alpha) * (p_3^T X_h - 1)             (depth)
+//   EXPOSE:           + exponential depth regularizer
+//                       alpha / 2 * exp(-[m; 1]^T P X_h / |[m; 1]|), minimized
+//                       through its second-order expansion around the current
+//                       depths (re-linearized every iteration after
+//                       expose_warmup_iterations).
+//   RPOSE (radial):   sqrt(1 - alpha) * m_perp^T p_{1:2}^T X_h / |m|
+//                     + sqrt(alpha) * (p_{1:2}^T X_h - m); only the first two
+//                     rows of P are estimated (the third row keeps its initial
+//                     value), so no projective refinement or metric upgrade.
 enum class OseFormulationType {
   POSE = 0,      // Pseudo object space error (affine regularizer).
-  ROSE = 1,      // Radial OSE (not implemented yet).
-  RPOSE = 2,     // Radial pOSE (not implemented yet).
-  EXPOSE = 3,    // Exponential OSE (not implemented yet).
+  ROSE = 1,      // OSE with a depth regularizer (p_3^T X_h ~ 1).
+  RPOSE = 2,     // Radial pOSE (1D radial cameras).
+  EXPOSE = 3,    // Exponential regularization.
   POSE_ROT = 4,  // pOSE + pairwise relative rotation terms (calibrated).
+};
+
+// How the pairwise rotation terms of POSE_ROT are weighted.
+enum class RotationWeightingType {
+  // ||sqrt(rotation_weight) * vec(A_a A_b^T - R_ab)||^2.
+  SCALAR = 0,
+  // The 9x9 weight W_ab of Olsson & Nilsson: on the tangent space of SO(3) at
+  // R_ab it is half the two-view reprojection information of the rotation
+  // (translation and points marginalized, in the units of the observations);
+  // on the 6 normal directions it is rotation_normal_weight. Scaled by
+  // rotation_weight. Self terms keep the scalar weight.
+  TWO_VIEW_INFORMATION = 1,
 };
 
 // How image observations are expressed inside the OSE problem.
@@ -69,6 +96,8 @@ enum class ReducedCameraSolverType {
   SPARSE_CHOLESKY = 2,      // Not implemented yet.
   POWER_SERIES = 3,         // Matrix-free truncated power series of the
                             // Schur complement inverse (PoBA / PoVar).
+  CUDA_POWER_SERIES = 4,    // POWER_SERIES with cuSPARSE on the GPU. Needs
+                            // -DTHEIA_WITH_CUDA_SOLVERS=ON.
 };
 
 // How the best of several random restarts is chosen.
@@ -81,9 +110,15 @@ enum class InitFreeRestartSelection {
   REPROJECTION_ERROR = 1,
 };
 
+// Robust loss on the residual vector r of each observation, applied by
+// iteratively reweighted least squares inside VarPro: the weights
+// 1 / (1 + |r|^2 / c^2) are recomputed from the current cameras and points at
+// the start of every iteration, and steps are accepted on the robust cost
+// sum 0.5 c^2 log(1 + |r|^2 / c^2) (as in InitFreeBA). Rotation terms are not
+// robustified.
 enum class VarProRobustLossType {
   NONE = 0,
-  CAUCHY = 1,  // Not implemented yet.
+  CAUCHY = 1,
 };
 
 enum class MetricUpgradeType {
@@ -124,7 +159,13 @@ struct VarProOptions {
   double power_series_tolerance = 1e-6;
 
   VarProRobustLossType robust_loss_type = VarProRobustLossType::NONE;
-  double robust_loss_scale = 1.0;
+  // Cauchy scale c in residual units (normalized image coordinates for
+  // CALIBRATED_RAYS, so ~ pixels / focal length).
+  double robust_loss_scale = 0.01;
+
+  // Threads for building the reduced system, evaluating the cost and the
+  // CPU power series. <= 0 uses InitFreeOptions::num_threads.
+  int num_threads = 0;
 
   // Ridge added to each 3x3 point normal matrix before inversion.
   double point_ridge = 1e-12;
@@ -153,6 +194,19 @@ struct InitFreeOptions {
   // Weight beta of the relative rotation terms (POSE_ROT only).
   double rotation_weight = 1.0;
 
+  RotationWeightingType rotation_weighting = RotationWeightingType::SCALAR;
+
+  // TWO_VIEW_INFORMATION: weight of the 6 directions normal to SO(3).
+  double rotation_normal_weight = 1.0;
+
+  // TWO_VIEW_INFORMATION: pairs with fewer common tracks in the problem keep
+  // the scalar weight.
+  int min_rotation_information_points = 10;
+
+  // EXPOSE: iterations with the regularizer expanded around unit depths
+  // before it is re-linearized around the current depths (InitFreeBA: 5).
+  int expose_warmup_iterations = 5;
+
   // Add R_i R_i^T = I terms for every camera (POSE_ROT only), as in
   // Olsson & Nilsson.
   bool include_self_rotation_terms = true;
@@ -168,8 +222,8 @@ struct InitFreeOptions {
 
   InitFreeCameraInitType camera_init = InitFreeCameraInitType::UNIT_CIRCLE;
 
-  // Each restart samples new random cameras. The restart with the lowest
-  // final stage-1 cost is kept.
+  // Each restart samples new random cameras; restart_selection picks the
+  // result.
   int num_random_restarts = 1;
 
   // Seed for the camera sampler. Restart k uses seed + k.
@@ -183,8 +237,9 @@ struct InitFreeOptions {
   InitFreeRestartSelection restart_selection =
       InitFreeRestartSelection::REPROJECTION_ERROR;
 
-  // Threads for projective refinement. <= 0 uses
-  // ReconstructionEstimatorOptions::num_threads inside the estimator, else 1.
+  // Threads for VarPro (unless varpro.num_threads > 0) and projective
+  // refinement. <= 0 uses ReconstructionEstimatorOptions::num_threads inside
+  // the estimator, else 1.
   int num_threads = 0;
 
   MetricUpgradeType metric_upgrade = MetricUpgradeType::LINEAR;

@@ -215,11 +215,6 @@ def test_unimplemented_choices_fail_cleanly():
     assert ok, err
     init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
 
-    opts.formulation = pt.sfm.OseFormulationType.EXPOSE
-    ok, sol = pt.sfm.SolveOse(problem, opts, init)
-    assert not ok and "not implemented" in sol.message
-
-    opts = init_free_options()
     opts.varpro.linear_solver_type = (
         pt.sfm.ReducedCameraSolverType.SPARSE_CHOLESKY)
     ok, sol = pt.sfm.SolveOse(problem, opts, init)
@@ -227,6 +222,179 @@ def test_unimplemented_choices_fail_cleanly():
 
     with pytest.raises(ValueError):
         pt.sfm.ProjectiveRmsError(problem, init, np.zeros((2, 5)))
+
+    # RPOSE cameras are radial (2x4): no projective refinement, no upgrade.
+    opts = init_free_options(pt.sfm.OseFormulationType.RPOSE)
+    opts.projective_refinement.max_num_iterations = 10
+    ok, _, _, err = pt.sfm.RunProjectiveStages(problem, opts)
+    assert not ok and "radial" in err
+
+    est_opts = pt.sfm.ReconstructionEstimatorOptions()
+    est_opts.reconstruction_estimator_type = (
+        pt.sfm.ReconstructionEstimatorType.INIT_FREE)
+    est_opts.init_free_options = opts
+    est_opts.min_num_two_view_inliers = 10
+    summary = pt.sfm.InitFreeReconstructionEstimator(est_opts).Estimate(
+        view_graph, recon)
+    assert not summary.success and "radial" in summary.message
+
+
+@pytest.mark.parametrize("solver", [
+    pt.sfm.ReducedCameraSolverType.DENSE_CHOLESKY,
+    pt.sfm.ReducedCameraSolverType.POWER_SERIES])
+def test_results_do_not_depend_on_thread_count(solver):
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=2)
+    opts = init_free_options()
+    opts.varpro.linear_solver_type = solver
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    results = []
+    for num_threads in [1, 8]:
+        opts.varpro.num_threads = num_threads
+        ok, sol = pt.sfm.SolveOse(problem, opts, init)
+        assert ok and sol.converged, sol.message
+        results.append(sol)
+    assert results[0].final_cost == results[1].final_cost
+    assert np.array_equal(np.asarray(results[0].cameras),
+                          np.asarray(results[1].cameras))
+
+
+@pytest.mark.parametrize("formulation", [pt.sfm.OseFormulationType.POSE,
+                                         pt.sfm.OseFormulationType.ROSE,
+                                         pt.sfm.OseFormulationType.EXPOSE,
+                                         pt.sfm.OseFormulationType.RPOSE])
+def test_formulations_converge_on_noisy_scene(formulation):
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=2)
+    opts = init_free_options(formulation)
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok, sol = pt.sfm.SolveOse(problem, opts, init)
+    assert ok and sol.converged, sol.message
+    if formulation == pt.sfm.OseFormulationType.RPOSE:
+        # Radial cameras: the first two rows reproject along the radial
+        # direction of every observation.
+        cams = sol.cameras
+        cos = []
+        for k in range(problem.NumObservations()):
+            P = cams[problem.observation_camera[k]]
+            x = P[:2] @ np.append(sol.points[:, problem.observation_point[k]],
+                                  1.0)
+            m = problem.observations[:, k]
+            cos.append(abs(x @ m) / (np.linalg.norm(x) * np.linalg.norm(m)))
+        assert np.median(cos) > 0.999
+        return
+    rms = np.sqrt(np.mean(projective_reprojection_errors(problem, sol) ** 2))
+    if formulation == pt.sfm.OseFormulationType.ROSE:
+        # rOSE's depth regularizer biases the projective solution strongly.
+        assert rms * FOCAL < 20.0
+    else:
+        # pOSE ~1.4 px, expOSE ~1.3 px for 1 px noise.
+        assert rms * FOCAL < 1.6
+
+
+def test_cauchy_loss_suppresses_outliers():
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=2)
+    rng = np.random.default_rng(7)
+    bad = set()
+    for tid in sorted(recon.TrackIds()):
+        for vid in sorted(recon.Track(tid).ViewIds()):
+            if rng.uniform() < 0.1:
+                p = np.asarray(recon.View(vid).GetFeature(tid).point)
+                p = p + rng.uniform(-150.0, 150.0, 2)
+                recon.MutableView(vid).UpdateFeature(tid, pt.sfm.Feature(p))
+                bad.add((vid, tid))
+    opts = init_free_options(pt.sfm.OseFormulationType.POSE)
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    inlier = np.array([
+        (problem.view_ids[problem.observation_camera[k]],
+         problem.track_ids[problem.observation_point[k]]) not in bad
+        for k in range(problem.NumObservations())])
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+
+    medians = {}
+    for loss in [pt.sfm.VarProRobustLossType.NONE,
+                 pt.sfm.VarProRobustLossType.CAUCHY]:
+        opts.varpro.robust_loss_type = loss
+        opts.varpro.robust_loss_scale = 5.0 / FOCAL
+        ok, sol = pt.sfm.SolveOse(problem, opts, init)
+        assert ok and sol.converged, sol.message
+        errs = projective_reprojection_errors(problem, sol) * FOCAL
+        medians[loss] = np.median(errs[inlier])
+    assert medians[pt.sfm.VarProRobustLossType.NONE] > 5.0
+    assert medians[pt.sfm.VarProRobustLossType.CAUCHY] < 2.0
+
+
+def skew(v):
+    return np.array([[0.0, -v[2], v[1]], [v[2], 0.0, -v[0]],
+                     [-v[1], v[0], 0.0]])
+
+
+@pytest.mark.parametrize("given_translation", [True, False])
+def test_two_view_rotation_weight(given_translation):
+    recon, _, gt = make_scene(n_views=6, pixel_noise=0.5, seed=1)
+    i, j = 0, 1  # camera b = i, camera a = j
+    R = gt[j][0] @ gt[i][0].T
+    t = gt[j][0] @ (gt[i][1] - gt[j][1])
+    common = sorted(set(recon.View(i).TrackIds()) &
+                    set(recon.View(j).TrackIds()))
+
+    def normalized(v, tid):
+        ray = recon.View(v).Camera().PixelToNormalizedCoordinates(
+            np.asarray(recon.View(v).GetFeature(tid).point))
+        return ray[:2] / ray[2]
+
+    m_a = np.array([normalized(j, tid) for tid in common]).T
+    m_b = np.array([normalized(i, tid) for tid in common]).T
+    ok, w = pt.sfm.ComputeTwoViewRotationWeight(
+        m_a, m_b, R, t if given_translation else np.zeros(3), 2.0, 10)
+    assert ok
+    assert w.num_points == len(common)
+    t_err = np.degrees(np.arccos(np.clip(
+        w.translation @ t / np.linalg.norm(t), -1.0, 1.0)))
+    assert t_err < (1e-4 if given_translation else 0.5)
+
+    L = np.asarray(w.sqrt_weight)
+    W = L @ L
+    H = np.asarray(w.rotation_information)
+    assert np.allclose(L, L.T, atol=1e-12)
+    assert np.all(np.linalg.eigvalsh(H) > 0.0)
+    # Tangent directions: the weight reproduces the rotation information.
+    omega = np.array([0.3, -0.2, 0.5])
+    v = (skew(omega) @ R).reshape(-1)
+    assert v @ W @ v == pytest.approx(omega @ H @ omega, rel=1e-9)
+    # Normal directions: scaled by normal_weight.
+    S = np.array([[1.0, 2.0, 0.0], [2.0, 0.0, 1.0], [0.0, 1.0, 3.0]])
+    n = (S @ R).reshape(-1)
+    assert np.allclose(W @ n, 2.0 * n, atol=1e-9)
+
+    ok, _ = pt.sfm.ComputeTwoViewRotationWeight(m_a[:, :5], m_b[:, :5], R, t,
+                                                1.0, 10)
+    assert not ok
+
+
+def test_estimator_with_two_view_rotation_weights():
+    recon, view_graph, gt = make_scene(n_views=15, pixel_noise=1.0, seed=6)
+    opts = pt.sfm.ReconstructionEstimatorOptions()
+    opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+    opts.init_free_options = init_free_options()
+    opts.init_free_options.rotation_weighting = (
+        pt.sfm.RotationWeightingType.TWO_VIEW_INFORMATION)
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
+    opts.min_num_two_view_inliers = 10
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert summary.success, summary.message
+    assert estimator.Diagnostics().fraction_in_front > 0.99
+    vids = sorted(gt)
+    est_R = {v: np.asarray(recon.View(v).Camera().GetOrientationAsRotationMatrix())
+             for v in vids}
+    worst = max(rotation_angle_deg((est_R[j] @ est_R[i].T) @
+                                   (gt[j][0] @ gt[i][0].T).T)
+                for a, i in enumerate(vids) for j in vids[a + 1:])
+    assert worst < 0.5, worst
 
 
 @pytest.mark.parametrize("pixel_noise", [0.0, 1.0])
@@ -388,3 +556,22 @@ def test_cuda_dense_matches_cpu():
     ok_gpu, gpu = pt.sfm.SolveOse(problem, opts, init)
     assert ok_cpu and ok_gpu, gpu.message
     assert gpu.final_cost == pytest.approx(cpu.final_cost, rel=1e-6, abs=1e-12)
+
+
+@pytest.mark.skipif(not pt.sfm.CudaReducedCameraSolverAvailable(),
+                    reason="built without THEIA_WITH_CUDA_SOLVERS or no GPU")
+def test_cuda_power_series_matches_cpu():
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=1.0, seed=2)
+    opts = init_free_options()
+    opts.varpro.linear_solver_type = pt.sfm.ReducedCameraSolverType.POWER_SERIES
+    opts.varpro.power_series_max_iterations = 20
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok_cpu, cpu = pt.sfm.SolveOse(problem, opts, init)
+    opts.varpro.linear_solver_type = (
+        pt.sfm.ReducedCameraSolverType.CUDA_POWER_SERIES)
+    ok_gpu, gpu = pt.sfm.SolveOse(problem, opts, init)
+    assert ok_cpu and ok_gpu, gpu.message
+    assert gpu.converged
+    assert gpu.final_cost == pytest.approx(cpu.final_cost, rel=1e-8)

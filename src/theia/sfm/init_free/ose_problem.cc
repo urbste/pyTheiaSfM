@@ -12,6 +12,8 @@
 #include <unordered_set>
 
 #include "theia/sfm/camera/camera.h"
+#include "theia/sfm/init_free/parallel_for.h"
+#include "theia/sfm/init_free/rotation_weighting.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/track.h"
 #include "theia/sfm/twoview_info.h"
@@ -53,6 +55,66 @@ Eigen::Matrix3d IsotropicNormalization(const Camera& camera) {
   T(0, 2) = -scale * 0.5 * w;
   T(1, 2) = -scale * 0.5 * h;
   return T;
+}
+
+// Replaces the scalar weight of every pairwise rotation term by the 9x9
+// two-view weight of Olsson & Nilsson, computed from the problem's own
+// correspondences of the pair. Pairs with too few usable correspondences keep
+// the scalar weight.
+void SetTwoViewRotationWeights(const InitFreeOptions& options,
+                               const std::vector<Eigen::Vector3d>& translations,
+                               OseProblem* problem) {
+  // Camera-major observation lists, ascending in the point index.
+  const int n = problem->NumCameras();
+  std::vector<std::vector<int>> camera_observations(n);
+  for (int k = 0; k < problem->NumObservations(); ++k) {
+    camera_observations[problem->observation_camera[k]].push_back(k);
+  }
+  const int num_terms = static_cast<int>(translations.size());
+  std::vector<char> weighted(num_terms, 0);
+  ParallelFor(
+      std::max(1, options.num_threads),
+      num_terms,
+      8,
+      [&](const int begin, const int end, int) {
+        std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d>>
+            m_a, m_b;
+        for (int i = begin; i < end; ++i) {
+          OseRotationTerm& term = problem->rotation_terms[i];
+          const std::vector<int>& obs_a = camera_observations[term.camera_a];
+          const std::vector<int>& obs_b = camera_observations[term.camera_b];
+          m_a.clear();
+          m_b.clear();
+          size_t ia = 0, ib = 0;
+          while (ia < obs_a.size() && ib < obs_b.size()) {
+            const int pa = problem->observation_point[obs_a[ia]];
+            const int pb = problem->observation_point[obs_b[ib]];
+            if (pa < pb) {
+              ++ia;
+            } else if (pb < pa) {
+              ++ib;
+            } else {
+              m_a.push_back(problem->observations.col(obs_a[ia++]));
+              m_b.push_back(problem->observations.col(obs_b[ib++]));
+            }
+          }
+          TwoViewRotationWeight weight;
+          if (ComputeTwoViewRotationWeight(m_a,
+                                           m_b,
+                                           term.relative_rotation,
+                                           translations[i],
+                                           options.rotation_normal_weight,
+                                           options.min_rotation_information_points,
+                                           &weight)) {
+            term.sqrt_weight_matrix = weight.sqrt_weight;
+            weighted[i] = 1;
+          }
+        }
+      });
+  const int num_weighted =
+      static_cast<int>(std::count(weighted.begin(), weighted.end(), 1));
+  VLOG(1) << "Two-view rotation weights for " << num_weighted << " of "
+          << num_terms << " pairs.";
 }
 
 }  // namespace
@@ -224,6 +286,7 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
       pairs.push_back(pair);
     }
     std::sort(pairs.begin(), pairs.end());
+    std::vector<Eigen::Vector3d> pair_translations;
     for (const ViewIdPair& pair : pairs) {
       const auto first = camera_index.find(pair.first);
       const auto second = camera_index.find(pair.second);
@@ -237,15 +300,19 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
       ceres::AngleAxisToRotationMatrix(
           info->rotation_2.data(),
           ceres::ColumnMajorAdapter3x3(term.relative_rotation.data()));
-      // TODO(init-free): Olsson & Nilsson weight each term with a 9x9 matrix
-      // W_kl derived from the two-view reprojection Hessian. A scalar weight
-      // is used for now.
       term.weight = options.rotation_weight;
       problem->rotation_terms.push_back(term);
+      // position_2 is the center of the second camera in the frame of the
+      // first, so X_second = R_rel (X_first - position_2).
+      pair_translations.push_back(-term.relative_rotation * info->position_2);
     }
     if (problem->rotation_terms.empty()) {
       *error = "POSE_ROT: no view graph edge connects two problem cameras.";
       return false;
+    }
+    if (options.rotation_weighting ==
+        RotationWeightingType::TWO_VIEW_INFORMATION) {
+      SetTwoViewRotationWeights(options, pair_translations, problem);
     }
     if (options.include_self_rotation_terms) {
       for (int i = 0; i < problem->NumCameras(); ++i) {

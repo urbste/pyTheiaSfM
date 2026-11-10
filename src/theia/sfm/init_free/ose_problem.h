@@ -24,14 +24,18 @@ using OseCamera = Eigen::Matrix<double, 3, 4>;
 using OseCameraVector =
     std::vector<OseCamera, Eigen::aligned_allocator<OseCamera>>;
 
-// A camera-only term ||sqrt(w) * (A_a A_b^T - R_ab)||_F^2, where A_k is the
-// left 3x3 block of camera k. For a == b this is an orthogonality term with
-// R_ab = I.
+// A camera-only term ||sqrt(w) * L * e||^2 with e = vec(A_a A_b^T - R_ab),
+// where A_k is the left 3x3 block of camera k and vec is row-major
+// (e[3 r + c] = E(r, c)). L is a 9x9 square root of the weight matrix
+// (identity for the scalar weighting). For a == b this is an orthogonality
+// term with R_ab = I.
 struct OseRotationTerm {
   int camera_a = -1;
   int camera_b = -1;
   Eigen::Matrix3d relative_rotation = Eigen::Matrix3d::Identity();
   double weight = 1.0;
+  Eigen::Matrix<double, 9, 9> sqrt_weight_matrix =
+      Eigen::Matrix<double, 9, 9>::Identity();
 };
 
 // The data of an OSE problem in flat, index-based arrays. Cameras and points

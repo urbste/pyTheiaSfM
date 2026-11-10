@@ -25,7 +25,8 @@ struct InitFreeRestartDiagnostics {
   bool converged = false;
   double solve_time_seconds = 0.0;
   std::string message;
-  // RMS reprojection error of the OSE solution (observation units).
+  // RMS reprojection error of the OSE solution (observation units); -1 for
+  // radial formulations.
   double ose_rms_error = 0.0;
 
   // Projective refinement (-1 / 0 when the stage is disabled).

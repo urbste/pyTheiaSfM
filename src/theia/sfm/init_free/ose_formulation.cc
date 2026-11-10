@@ -6,11 +6,35 @@
 #include <Eigen/Geometry>
 #include <glog/logging.h>
 
+#include <algorithm>
 #include <cmath>
 
 namespace theia {
 
 namespace {
+
+// Rows 0 and 1 of every projective formulation: the object space error
+//   sqrt(1 - alpha) * (p_r^T X_h - m_r p_3^T X_h),  r = 0, 1.
+void OseRows(const double w,
+             const OseCamera& P,
+             const Eigen::Vector2d& m,
+             OseObservationModel* model) {
+  for (int r = 0; r < 2; ++r) {
+    model->G.row(r) = w * (P.block<1, 3>(r, 0) - m[r] * P.block<1, 3>(2, 0));
+    model->z[r] = -w * (P(r, 3) - m[r] * P(2, 3));
+  }
+}
+
+void OseJacobianRows(const double w,
+                     const Eigen::Vector2d& m,
+                     const Eigen::Vector4d& Xh,
+                     OseCameraJacobian* jacobian) {
+  for (int r = 0; r < 2; ++r) {
+    // Row r of P is camera parameters [4r, 4r + 4); row 3 is [8, 12).
+    jacobian->block<1, 4>(r, 4 * r) = w * Xh.transpose();
+    jacobian->block<1, 4>(r, 8) = -w * m[r] * Xh.transpose();
+  }
+}
 
 // pOSE (Hong & Zach, CVPR 2018) with X_h = [X; 1]:
 //   r_ose = sqrt(1 - alpha) * (P_{1:2} X_h - (p_3^T X_h) m)
@@ -34,13 +58,12 @@ class PoseFormulation : public OseFormulation {
 
   void ObservationModel(const OseCamera& P,
                         const Eigen::Vector2d& m,
+                        double /*state*/,
                         OseObservationModel* model) const override {
     model->G.resize(4, 3);
     model->z.resize(4);
+    OseRows(w_ose_, P, m, model);
     for (int r = 0; r < 2; ++r) {
-      model->G.row(r) =
-          w_ose_ * (P.block<1, 3>(r, 0) - m[r] * P.block<1, 3>(2, 0));
-      model->z[r] = -w_ose_ * (P(r, 3) - m[r] * P(2, 3));
       model->G.row(2 + r) = w_aff_ * P.block<1, 3>(r, 0);
       model->z[2 + r] = w_aff_ * (m[r] - P(r, 3));
     }
@@ -49,13 +72,12 @@ class PoseFormulation : public OseFormulation {
   void CameraJacobian(const OseCamera& P,
                       const Eigen::Vector2d& m,
                       const Eigen::Vector3d& X,
+                      double /*state*/,
                       OseCameraJacobian* jacobian) const override {
     const Eigen::Vector4d Xh = X.homogeneous();
     jacobian->setZero(4, kOseCameraParameters);
+    OseJacobianRows(w_ose_, m, Xh, jacobian);
     for (int r = 0; r < 2; ++r) {
-      // Row r of P is camera parameters [4r, 4r + 4); row 3 is [8, 12).
-      jacobian->block<1, 4>(r, 4 * r) = w_ose_ * Xh.transpose();
-      jacobian->block<1, 4>(r, 8) = -w_ose_ * m[r] * Xh.transpose();
       jacobian->block<1, 4>(2 + r, 4 * r) = w_aff_ * Xh.transpose();
     }
   }
@@ -66,45 +88,235 @@ class PoseFormulation : public OseFormulation {
   const bool use_rotation_terms_;
 };
 
+// OSE with a depth regularizer (rOSE in InitFreeBA):
+//   r_dep = sqrt(alpha) * (p_3^T X_h - 1).
+class RoseFormulation : public OseFormulation {
+ public:
+  explicit RoseFormulation(const double alpha)
+      : w_ose_(std::sqrt(1.0 - alpha)), w_dep_(std::sqrt(alpha)) {}
+
+  OseFormulationType Type() const override { return OseFormulationType::ROSE; }
+
+  int NumResidualsPerObservation() const override { return 3; }
+
+  void ObservationModel(const OseCamera& P,
+                        const Eigen::Vector2d& m,
+                        double /*state*/,
+                        OseObservationModel* model) const override {
+    model->G.resize(3, 3);
+    model->z.resize(3);
+    OseRows(w_ose_, P, m, model);
+    model->G.row(2) = w_dep_ * P.block<1, 3>(2, 0);
+    model->z[2] = w_dep_ * (1.0 - P(2, 3));
+  }
+
+  void CameraJacobian(const OseCamera& P,
+                      const Eigen::Vector2d& m,
+                      const Eigen::Vector3d& X,
+                      double /*state*/,
+                      OseCameraJacobian* jacobian) const override {
+    const Eigen::Vector4d Xh = X.homogeneous();
+    jacobian->setZero(3, kOseCameraParameters);
+    OseJacobianRows(w_ose_, m, Xh, jacobian);
+    jacobian->block<1, 4>(2, 8) = w_dep_ * Xh.transpose();
+  }
+
+ private:
+  const double w_ose_;
+  const double w_dep_;
+};
+
+// expOSE (Iglesias, Nilsson & Olsson, CVPR 2023), in the form of InitFreeBA:
+// with m~ = [m; 1], n = |m~| and the depth s = m~^T P X_h / n, the regularizer
+// alpha / 2 * exp(-s) is replaced by its second-order expansion around s0,
+//
+//   r_exp = sqrt(alpha) * sqrt(exp(-s0) / 2) * (s - 1 - s0),
+//
+// whose value and first two derivatives in s match alpha/2 exp(-s) (up to a
+// constant) at s = s0. s0 is the per-observation state: n (unit depth along
+// the ray) during the warm-up, then the current depth.
+class ExposeFormulation : public OseFormulation {
+ public:
+  ExposeFormulation(const double alpha, const int warmup_iterations)
+      : w_ose_(std::sqrt(1.0 - alpha)),
+        sqrt_alpha_(std::sqrt(alpha)),
+        warmup_iterations_(std::max(0, warmup_iterations)) {}
+
+  OseFormulationType Type() const override {
+    return OseFormulationType::EXPOSE;
+  }
+
+  int NumResidualsPerObservation() const override { return 3; }
+
+  bool HasState() const override { return true; }
+
+  double InitialState(const Eigen::Vector2d& m) const override {
+    return m.homogeneous().norm();
+  }
+
+  double UpdatedState(const OseCamera& P,
+                      const Eigen::Vector2d& m,
+                      const Eigen::Vector3d& X) const override {
+    const Eigen::Vector3d mh = m.homogeneous();
+    return mh.dot(P * X.homogeneous()) / mh.norm();
+  }
+
+  int UpdateStateFromIteration() const override { return warmup_iterations_; }
+
+  void NormalizeInitialCamera(OseCamera* P) const override {
+    if (P->leftCols<3>().determinant() < 0.0) {
+      *P = -*P;
+    }
+  }
+
+  void ObservationModel(const OseCamera& P,
+                        const Eigen::Vector2d& m,
+                        const double state,
+                        OseObservationModel* model) const override {
+    model->G.resize(3, 3);
+    model->z.resize(3);
+    OseRows(w_ose_, P, m, model);
+    const Eigen::Vector3d mh = m.homogeneous();
+    const double n = mh.norm();
+    const double k = Weight(state);
+    model->G.row(2) = (k / n) * (mh.transpose() * P.leftCols<3>());
+    model->z[2] = k * (1.0 + state) - (k / n) * mh.dot(P.col(3));
+  }
+
+  void CameraJacobian(const OseCamera& P,
+                      const Eigen::Vector2d& m,
+                      const Eigen::Vector3d& X,
+                      const double state,
+                      OseCameraJacobian* jacobian) const override {
+    const Eigen::Vector4d Xh = X.homogeneous();
+    jacobian->setZero(3, kOseCameraParameters);
+    OseJacobianRows(w_ose_, m, Xh, jacobian);
+    const Eigen::Vector3d mh = m.homogeneous();
+    const double kn = Weight(state) / mh.norm();
+    for (int r = 0; r < 3; ++r) {
+      jacobian->block<1, 4>(2, 4 * r) = kn * mh[r] * Xh.transpose();
+    }
+  }
+
+ private:
+  // sqrt(alpha) * sqrt(exp(-s0) / 2). The exponent is clamped so that points
+  // far behind a camera (s0 << 0) cannot overflow the weight.
+  double Weight(const double s0) const {
+    return sqrt_alpha_ * std::sqrt(0.5 * std::exp(std::min(-s0, 30.0)));
+  }
+
+  const double w_ose_;
+  const double sqrt_alpha_;
+  const int warmup_iterations_;
+};
+
+// Radial pOSE (RpOSE, Iglesias & Olsson, ICCV 2021) for 1D radial cameras.
+// Only the first two rows of P enter; with m_perp = (-m_2, m_1):
+//   r_rad = sqrt(1 - alpha) * m_perp^T P_{1:2} X_h / |m|
+//   r_aff = sqrt(alpha)     * (P_{1:2} X_h - m)
+// For |m| ~ 0 the radial row has no defined direction and is dropped.
+class RposeFormulation : public OseFormulation {
+ public:
+  explicit RposeFormulation(const double alpha)
+      : w_rad_(std::sqrt(1.0 - alpha)), w_aff_(std::sqrt(alpha)) {}
+
+  OseFormulationType Type() const override {
+    return OseFormulationType::RPOSE;
+  }
+
+  int NumResidualsPerObservation() const override { return 3; }
+
+  bool IsRadial() const override { return true; }
+
+  void ObservationModel(const OseCamera& P,
+                        const Eigen::Vector2d& m,
+                        double /*state*/,
+                        OseObservationModel* model) const override {
+    model->G.resize(3, 3);
+    model->z.resize(3);
+    const Eigen::Vector2d d = RadialNormal(m);
+    model->G.row(0) =
+        d[0] * P.block<1, 3>(0, 0) + d[1] * P.block<1, 3>(1, 0);
+    model->z[0] = -(d[0] * P(0, 3) + d[1] * P(1, 3));
+    for (int r = 0; r < 2; ++r) {
+      model->G.row(1 + r) = w_aff_ * P.block<1, 3>(r, 0);
+      model->z[1 + r] = w_aff_ * (m[r] - P(r, 3));
+    }
+  }
+
+  void CameraJacobian(const OseCamera& P,
+                      const Eigen::Vector2d& m,
+                      const Eigen::Vector3d& X,
+                      double /*state*/,
+                      OseCameraJacobian* jacobian) const override {
+    const Eigen::Vector4d Xh = X.homogeneous();
+    jacobian->setZero(3, kOseCameraParameters);
+    const Eigen::Vector2d d = RadialNormal(m);
+    jacobian->block<1, 4>(0, 0) = d[0] * Xh.transpose();
+    jacobian->block<1, 4>(0, 4) = d[1] * Xh.transpose();
+    for (int r = 0; r < 2; ++r) {
+      jacobian->block<1, 4>(1 + r, 4 * r) = w_aff_ * Xh.transpose();
+    }
+  }
+
+ private:
+  // sqrt(1 - alpha) * m_perp / |m|, or zero for |m| ~ 0.
+  Eigen::Vector2d RadialNormal(const Eigen::Vector2d& m) const {
+    const double norm = m.norm();
+    if (norm < 1e-12) {
+      return Eigen::Vector2d::Zero();
+    }
+    return (w_rad_ / norm) * Eigen::Vector2d(-m[1], m[0]);
+  }
+
+  const double w_rad_;
+  const double w_aff_;
+};
+
 }  // namespace
 
-void OseFormulation::EvaluateRotationTerm(
-    const OseRotationTerm& term,
-    const OseCamera& Pa,
-    const OseCamera& Pb,
-    Eigen::Matrix<double, 9, 1>* residual,
-    Eigen::Matrix<double, 9, kOseCameraParameters, Eigen::RowMajor>*
-        jacobian_a,
-    Eigen::Matrix<double, 9, kOseCameraParameters, Eigen::RowMajor>*
-        jacobian_b) {
-  const double w = std::sqrt(term.weight);
+void OseFormulation::EvaluateRotationTerm(const OseRotationTerm& term,
+                                          const OseCamera& Pa,
+                                          const OseCamera& Pb,
+                                          Eigen::Matrix<double, 9, 1>* residual,
+                                          OseRotationJacobian* jacobian_a,
+                                          OseRotationJacobian* jacobian_b) {
   const Eigen::Matrix3d A = Pa.leftCols<3>();
   const Eigen::Matrix3d B = Pb.leftCols<3>();
   const Eigen::Matrix3d E = A * B.transpose() - term.relative_rotation;
+  Eigen::Matrix<double, 9, 1> e;
   // Residual index e = 3 * r + c for entry (r, c).
   for (int r = 0; r < 3; ++r) {
     for (int c = 0; c < 3; ++c) {
-      (*residual)[3 * r + c] = w * E(r, c);
+      e[3 * r + c] = E(r, c);
     }
   }
-  jacobian_a->setZero();
-  jacobian_b->setZero();
+  OseRotationJacobian Ja = OseRotationJacobian::Zero();
+  OseRotationJacobian Jb = OseRotationJacobian::Zero();
   // (A B^T)_{rc} = sum_k A_{rk} B_{ck}:
   //   d/dA_{rk} = B_{ck},  d/dB_{ck} = A_{rk}.
   // A_{rk} is camera parameter 4r + k (row-major vec of P).
   const bool same = term.camera_a == term.camera_b;
   for (int r = 0; r < 3; ++r) {
     for (int c = 0; c < 3; ++c) {
-      const int e = 3 * r + c;
+      const int i = 3 * r + c;
       for (int k = 0; k < 3; ++k) {
-        (*jacobian_a)(e, 4 * r + k) += w * B(c, k);
+        Ja(i, 4 * r + k) += B(c, k);
         if (same) {
-          (*jacobian_a)(e, 4 * c + k) += w * A(r, k);
+          Ja(i, 4 * c + k) += A(r, k);
         } else {
-          (*jacobian_b)(e, 4 * c + k) += w * A(r, k);
+          Jb(i, 4 * c + k) += A(r, k);
         }
       }
     }
+  }
+  const double w = std::sqrt(term.weight);
+  *residual = w * (term.sqrt_weight_matrix * e);
+  jacobian_a->noalias() = w * (term.sqrt_weight_matrix * Ja);
+  if (same) {
+    jacobian_b->setZero();
+  } else {
+    jacobian_b->noalias() = w * (term.sqrt_weight_matrix * Jb);
   }
 }
 
@@ -120,14 +332,12 @@ std::unique_ptr<OseFormulation> CreateOseFormulation(
     case OseFormulationType::POSE_ROT:
       return std::make_unique<PoseFormulation>(options.alpha, true);
     case OseFormulationType::ROSE:
-      *error = "OSE formulation ROSE is not implemented yet.";
-      return nullptr;
+      return std::make_unique<RoseFormulation>(options.alpha);
     case OseFormulationType::RPOSE:
-      *error = "OSE formulation RPOSE is not implemented yet.";
-      return nullptr;
+      return std::make_unique<RposeFormulation>(options.alpha);
     case OseFormulationType::EXPOSE:
-      *error = "OSE formulation EXPOSE is not implemented yet.";
-      return nullptr;
+      return std::make_unique<ExposeFormulation>(
+          options.alpha, options.expose_warmup_iterations);
   }
   *error = "Unknown OSE formulation.";
   return nullptr;

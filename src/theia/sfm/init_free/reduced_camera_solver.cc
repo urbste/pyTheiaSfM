@@ -6,7 +6,10 @@
 #include <Eigen/Cholesky>
 #include <glog/logging.h>
 
+#include <algorithm>
 #include <cmath>
+
+#include "theia/sfm/init_free/parallel_for.h"
 
 #ifndef THEIA_WITH_CUDA_SOLVERS
 #define THEIA_WITH_CUDA_SOLVERS 0
@@ -15,35 +18,72 @@
 namespace theia {
 
 #if THEIA_WITH_CUDA_SOLVERS
-// Defined in cuda_dense_cholesky_solver.cc.
+// Defined in cuda_dense_cholesky_solver.cc and cuda_power_series_solver.cc.
 std::unique_ptr<ReducedCameraSolver> CreateCudaDenseCholeskySolver(
     std::string* error);
+std::unique_ptr<ReducedCameraSolver> CreateCudaPowerSeriesSolver(
+    int max_iterations, double tolerance, std::string* error);
 bool CudaDeviceAvailable();
 #endif
 
-void ReducedCameraSystem::FormDenseSchurComplement(Eigen::MatrixXd* S) const {
-  constexpr int b = kBlockSize;
-  S->setZero(Dimension(), Dimension());
-  for (int i = 0; i < num_cameras; ++i) {
-    S->block<b, b>(b * i, b * i) = U_diagonal[i];
-  }
-  for (const CameraPairBlock& pair : U_off_diagonal) {
-    S->block<b, b>(b * pair.camera_a, b * pair.camera_b) += pair.block;
-  }
-  for (size_t j = 0; j + 1 < point_offsets.size(); ++j) {
-    const int begin = point_offsets[j];
-    const int end = point_offsets[j + 1];
-    for (int k = begin; k < end; ++k) {
-      const Matrix3x12d VinvWk = V_inverse[j] * W_blocks[k];
-      for (int l = begin; l < end; ++l) {
-        S->block<b, b>(b * W_camera[l], b * W_camera[k]).noalias() -=
-            W_blocks[l].transpose() * VinvWk;
-      }
-    }
-  }
-}
-
 namespace {
+
+constexpr int kB = ReducedCameraSystem::kBlockSize;
+
+// Minimum work per thread, to keep small problems on one thread.
+constexpr int kMinCamerasPerChunk = 4;
+constexpr int kMinPointsPerChunk = 256;
+
+// out = (W^T V^-1 W - O) in, in two parallel passes: per point
+// t_j = V_j^-1 sum_k W_k in_{c(k)}, then per camera
+// out_i = sum_{k in obs(i)} W_k^T t_{p(k)} - sum_b O_ib in_b.
+void ApplyM(const ReducedCameraSystem& system,
+            const Eigen::VectorXd& in,
+            Eigen::Matrix3Xd* point_buffer,
+            Eigen::VectorXd* out) {
+  const int num_points = static_cast<int>(system.V_inverse.size());
+  point_buffer->resize(3, num_points);
+  ParallelFor(system.num_threads,
+              num_points,
+              kMinPointsPerChunk,
+              [&](const int begin, const int end, int) {
+                for (int j = begin; j < end; ++j) {
+                  Eigen::Vector3d s = Eigen::Vector3d::Zero();
+                  for (int k = system.point_offsets[j];
+                       k < system.point_offsets[j + 1];
+                       ++k) {
+                    s.noalias() += system.W_blocks[k] *
+                                   in.segment<kB>(kB * system.W_camera[k]);
+                  }
+                  point_buffer->col(j).noalias() = system.V_inverse[j] * s;
+                }
+              });
+  out->resize(in.size());
+  ParallelFor(
+      system.num_threads,
+      system.num_cameras,
+      kMinCamerasPerChunk,
+      [&](const int begin, const int end, int) {
+        for (int i = begin; i < end; ++i) {
+          Eigen::Matrix<double, kB, 1> acc =
+              Eigen::Matrix<double, kB, 1>::Zero();
+          for (int idx = system.camera_offsets[i];
+               idx < system.camera_offsets[i + 1];
+               ++idx) {
+            const int k = system.camera_W_index[idx];
+            acc.noalias() += system.W_blocks[k].transpose() *
+                             point_buffer->col(system.W_point[k]);
+          }
+          for (int p = system.off_diagonal_offsets[i];
+               p < system.off_diagonal_offsets[i + 1];
+               ++p) {
+            const auto& pair = system.U_off_diagonal[p];
+            acc.noalias() -= pair.block * in.segment<kB>(kB * pair.camera_b);
+          }
+          out->segment<kB>(kB * i) = acc;
+        }
+      });
+}
 
 class DenseCholeskySolver : public ReducedCameraSolver {
  public:
@@ -96,26 +136,32 @@ class PowerSeriesSolver : public ReducedCameraSolver {
              const Eigen::VectorXd& rhs,
              Eigen::VectorXd* x,
              std::string* error) override {
-    constexpr int b = ReducedCameraSystem::kBlockSize;
     const int n = system.num_cameras;
     D_inverse_.resize(n);
-    for (int i = 0; i < n; ++i) {
-      Matrix12d D = system.U_diagonal[i];
-      D.diagonal().array() += lambda;
-      Eigen::LLT<Matrix12d> llt(D);
-      if (llt.info() != Eigen::Success) {
-        *error = "Power series: camera block not positive definite.";
-        return false;
-      }
-      D_inverse_[i] = llt.solve(Matrix12d::Identity());
+    std::vector<char> ok(n, 1);
+    ParallelFor(system.num_threads,
+                n,
+                kMinCamerasPerChunk,
+                [&](const int begin, const int end, int) {
+                  for (int i = begin; i < end; ++i) {
+                    Matrix12d D = system.U_diagonal[i];
+                    D.diagonal().array() += lambda;
+                    Eigen::LLT<Matrix12d> llt(D);
+                    ok[i] = llt.info() == Eigen::Success;
+                    D_inverse_[i] = llt.solve(Matrix12d::Identity());
+                  }
+                });
+    if (std::find(ok.begin(), ok.end(), 0) != ok.end()) {
+      *error = "Power series: camera block not positive definite.";
+      return false;
     }
 
-    Eigen::VectorXd term(b * n);
+    Eigen::VectorXd term(kB * n);
     ApplyDInverse(rhs, &term);
     *x = term;
-    Eigen::VectorXd product(b * n);
+    Eigen::VectorXd product(kB * n);
     for (int k = 1; k < max_iterations_; ++k) {
-      ApplyM(system, term, &product);
+      ApplyM(system, term, &point_buffer_, &product);
       ApplyDInverse(product, &term);
       *x += term;
       const double term_norm = term.norm();
@@ -132,46 +178,88 @@ class PowerSeriesSolver : public ReducedCameraSolver {
 
  private:
   void ApplyDInverse(const Eigen::VectorXd& in, Eigen::VectorXd* out) const {
-    constexpr int b = ReducedCameraSystem::kBlockSize;
     for (size_t i = 0; i < D_inverse_.size(); ++i) {
-      out->segment<b>(b * i).noalias() = D_inverse_[i] * in.segment<b>(b * i);
-    }
-  }
-
-  // out = (W^T V^-1 W - O) in
-  static void ApplyM(const ReducedCameraSystem& system,
-                     const Eigen::VectorXd& in,
-                     Eigen::VectorXd* out) {
-    constexpr int b = ReducedCameraSystem::kBlockSize;
-    out->setZero();
-    for (size_t j = 0; j + 1 < system.point_offsets.size(); ++j) {
-      const int begin = system.point_offsets[j];
-      const int end = system.point_offsets[j + 1];
-      Eigen::Vector3d s = Eigen::Vector3d::Zero();
-      for (int k = begin; k < end; ++k) {
-        s.noalias() += system.W_blocks[k] * in.segment<b>(b * system.W_camera[k]);
-      }
-      const Eigen::Vector3d t = system.V_inverse[j] * s;
-      for (int k = begin; k < end; ++k) {
-        out->segment<b>(b * system.W_camera[k]).noalias() +=
-            system.W_blocks[k].transpose() * t;
-      }
-    }
-    for (const auto& pair : system.U_off_diagonal) {
-      out->segment<b>(b * pair.camera_a).noalias() -=
-          pair.block * in.segment<b>(b * pair.camera_b);
+      out->segment<kB>(kB * i).noalias() =
+          D_inverse_[i] * in.segment<kB>(kB * i);
     }
   }
 
   const int max_iterations_;
   const double tolerance_;
   std::vector<Matrix12d, Eigen::aligned_allocator<Matrix12d>> D_inverse_;
+  Eigen::Matrix3Xd point_buffer_;
 };
 
 }  // namespace
 
+void ReducedCameraSystem::BuildCameraIndex() {
+  camera_offsets.assign(num_cameras + 1, 0);
+  for (const int c : W_camera) {
+    ++camera_offsets[c + 1];
+  }
+  for (int i = 0; i < num_cameras; ++i) {
+    camera_offsets[i + 1] += camera_offsets[i];
+  }
+  camera_W_index.resize(W_camera.size());
+  std::vector<int> next(camera_offsets.begin(), camera_offsets.end() - 1);
+  for (size_t k = 0; k < W_camera.size(); ++k) {
+    camera_W_index[next[W_camera[k]]++] = static_cast<int>(k);
+  }
+}
+
+void ReducedCameraSystem::FormDenseSchurComplement(Eigen::MatrixXd* S) const {
+  S->setZero(Dimension(), Dimension());
+  // Every task writes only to the column block of its camera c, using the
+  // symmetric storage of U_off_diagonal and of W^T V^-1 W.
+  ParallelFor(
+      num_threads, num_cameras, 1, [&](const int begin, const int end, int) {
+        for (int c = begin; c < end; ++c) {
+          S->block<kB, kB>(kB * c, kB * c) = U_diagonal[c];
+          for (int p = off_diagonal_offsets[c];
+               p < off_diagonal_offsets[c + 1];
+               ++p) {
+            const CameraPairBlock& pair = U_off_diagonal[p];
+            // U_{b c} = U_{c b}^T.
+            S->block<kB, kB>(kB * pair.camera_b, kB * c) +=
+                pair.block.transpose();
+          }
+          for (int idx = camera_offsets[c]; idx < camera_offsets[c + 1];
+               ++idx) {
+            const int k = camera_W_index[idx];
+            const int j = W_point[k];
+            const Matrix3x12d VinvWk = V_inverse[j] * W_blocks[k];
+            for (int l = point_offsets[j]; l < point_offsets[j + 1]; ++l) {
+              S->block<kB, kB>(kB * W_camera[l], kB * c).noalias() -=
+                  W_blocks[l].transpose() * VinvWk;
+            }
+          }
+        }
+      });
+}
+
+void ReducedCameraSystem::MultiplyDamped(const double lambda,
+                                         const Eigen::VectorXd& x,
+                                         Eigen::VectorXd* out) const {
+  Eigen::Matrix3Xd buffer;
+  Eigen::VectorXd Mx;
+  ApplyM(*this, x, &buffer, &Mx);
+  out->resize(x.size());
+  for (int i = 0; i < num_cameras; ++i) {
+    out->segment<kB>(kB * i) = U_diagonal[i] * x.segment<kB>(kB * i) +
+                               lambda * x.segment<kB>(kB * i) -
+                               Mx.segment<kB>(kB * i);
+  }
+}
+
 std::unique_ptr<ReducedCameraSolver> CreateReducedCameraSolver(
     const VarProOptions& options, std::string* error) {
+  const bool power_series =
+      options.linear_solver_type == ReducedCameraSolverType::POWER_SERIES ||
+      options.linear_solver_type == ReducedCameraSolverType::CUDA_POWER_SERIES;
+  if (power_series && options.power_series_max_iterations < 1) {
+    *error = "power_series_max_iterations must be at least 1.";
+    return nullptr;
+  }
   switch (options.linear_solver_type) {
     case ReducedCameraSolverType::DENSE_CHOLESKY:
       return std::make_unique<DenseCholeskySolver>();
@@ -187,13 +275,19 @@ std::unique_ptr<ReducedCameraSolver> CreateReducedCameraSolver(
       *error = "SPARSE_CHOLESKY is not implemented yet.";
       return nullptr;
     case ReducedCameraSolverType::POWER_SERIES:
-      if (options.power_series_max_iterations < 1) {
-        *error = "power_series_max_iterations must be at least 1.";
-        return nullptr;
-      }
       return std::make_unique<PowerSeriesSolver>(
           options.power_series_max_iterations,
           options.power_series_tolerance);
+    case ReducedCameraSolverType::CUDA_POWER_SERIES:
+#if THEIA_WITH_CUDA_SOLVERS
+      return CreateCudaPowerSeriesSolver(options.power_series_max_iterations,
+                                         options.power_series_tolerance,
+                                         error);
+#else
+      *error =
+          "CUDA_POWER_SERIES needs a build with -DTHEIA_WITH_CUDA_SOLVERS=ON.";
+      return nullptr;
+#endif
   }
   *error = "Unknown reduced camera solver type.";
   return nullptr;

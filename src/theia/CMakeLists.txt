@@ -160,6 +160,7 @@ set(THEIA_SRC
   sfm/init_free/ose_problem.cc
   sfm/init_free/projective_refinement.cc
   sfm/init_free/reduced_camera_solver.cc
+  sfm/init_free/rotation_weighting.cc
   sfm/init_free/varpro_solver.cc
   sfm/localize_view_to_reconstruction.cc
   sfm/pose/build_upnp_action_matrix.cc
@@ -277,16 +278,17 @@ else (PYTHON_BUILD)
       ${THEIA_HDRS})
 endif (PYTHON_BUILD)
 
-# Optional CUDA backend for the init-free (OSE / VarPro) reduced camera solver.
-# Uses only the CUDA host libraries (cudart, cuBLAS, cuSOLVER), so no CUDA
-# compiler is needed. Off by default to keep the wheels portable.
+# Optional CUDA backends for the init-free (OSE / VarPro) reduced camera
+# solvers. Uses only the CUDA host libraries (cudart, cuBLAS, cuSPARSE,
+# cuSOLVER), so no CUDA compiler is needed. Off by default to keep the wheels
+# portable.
 option(THEIA_WITH_CUDA_SOLVERS
-  "Build cuSOLVER backends for the init-free reconstruction estimator" OFF)
+  "Build CUDA backends for the init-free reconstruction estimator" OFF)
 if (THEIA_WITH_CUDA_SOLVERS)
   find_package(CUDAToolkit REQUIRED)
-  list(APPEND THEIA_LIBRARY_SOURCE sfm/init_free/cuda_dense_cholesky_solver.cc)
+  list(APPEND THEIA_LIBRARY_SOURCE sfm/init_free/cuda_solvers.cc)
   list(APPEND THEIA_LIBRARY_DEPENDENCIES
-    CUDA::cudart CUDA::cublas CUDA::cusolver)
+    CUDA::cudart CUDA::cublas CUDA::cusparse CUDA::cusolver)
   message("-- Init-free CUDA solvers: ON (CUDA ${CUDAToolkit_VERSION})")
   set(THEIA_WITH_CUDA_SOLVERS_VALUE 1)
 else ()

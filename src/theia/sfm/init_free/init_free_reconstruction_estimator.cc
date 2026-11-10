@@ -40,6 +40,13 @@ bool RunProjectiveStages(const OseProblem& problem,
     return false;
   }
   const bool refine = options.projective_refinement.max_num_iterations > 0;
+  if (refine && formulation->IsRadial()) {
+    *error =
+        "Projective refinement needs full 3x4 cameras; the radial RPOSE "
+        "formulation estimates only two rows.";
+    return false;
+  }
+  const VarProOptions varpro = ResolvedVarProOptions(options);
   const int num_threads = std::max(1, options.num_threads);
   const int num_restarts = std::max(1, options.num_random_restarts);
   double best_score = std::numeric_limits<double>::infinity();
@@ -51,7 +58,7 @@ bool RunProjectiveStages(const OseProblem& problem,
         problem.NumCameras(), options.camera_init, seed);
     OseSolution solution;
     if (!SolveOseVarPro(
-            problem, *formulation, options.varpro, initial, &solution)) {
+            problem, *formulation, varpro, initial, &solution)) {
       *error = solution.message;
       return false;
     }
@@ -67,8 +74,11 @@ bool RunProjectiveStages(const OseProblem& problem,
     restart.converged = solution.converged;
     restart.solve_time_seconds = solution.solve_time_seconds;
     restart.message = solution.message;
+    // Radial cameras have no meaningful third row, so no projective RMS.
     restart.ose_rms_error =
-        ProjectiveRmsError(problem, candidate.cameras, candidate.points);
+        formulation->IsRadial()
+            ? -1.0
+            : ProjectiveRmsError(problem, candidate.cameras, candidate.points);
     double rms = restart.ose_rms_error;
 
     if (refine) {
@@ -97,7 +107,8 @@ bool RunProjectiveStages(const OseProblem& problem,
             << restart.ose_rms_error << " -> " << rms;
 
     const double score =
-        options.restart_selection == InitFreeRestartSelection::OSE_COST
+        options.restart_selection == InitFreeRestartSelection::OSE_COST ||
+                formulation->IsRadial()
             ? restart.final_cost
             : rms;
     if (std::isfinite(score) && score < best_score) {
@@ -163,6 +174,14 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
   diagnostics_.num_rotation_terms =
       static_cast<int>(problem.rotation_terms.size());
   diagnostics_.problem_build_time = timer.ElapsedTimeInSeconds();
+
+  if (opts.formulation == OseFormulationType::RPOSE &&
+      opts.metric_upgrade != MetricUpgradeType::NONE) {
+    summary.message =
+        "Init-free: RPOSE estimates radial (2x4) cameras; the metric upgrade "
+        "for radial cameras is not implemented. Use the stage-wise API.";
+    return summary;
+  }
 
   // 3. + 4. OSE stage and projective refinement for every random start.
   timer.Reset();

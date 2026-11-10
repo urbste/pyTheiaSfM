@@ -20,6 +20,7 @@
 #include "theia/sfm/init_free/ose_problem.h"
 #include "theia/sfm/init_free/projective_refinement.h"
 #include "theia/sfm/init_free/reduced_camera_solver.h"
+#include "theia/sfm/init_free/rotation_weighting.h"
 #include "theia/sfm/init_free/varpro_solver.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/view_graph/view_graph.h"
@@ -81,7 +82,14 @@ void pytheia_init_free(py::module& m) {
       .value("CUDA_DENSE_CHOLESKY",
              theia::ReducedCameraSolverType::CUDA_DENSE_CHOLESKY)
       .value("SPARSE_CHOLESKY", theia::ReducedCameraSolverType::SPARSE_CHOLESKY)
-      .value("POWER_SERIES", theia::ReducedCameraSolverType::POWER_SERIES);
+      .value("POWER_SERIES", theia::ReducedCameraSolverType::POWER_SERIES)
+      .value("CUDA_POWER_SERIES",
+             theia::ReducedCameraSolverType::CUDA_POWER_SERIES);
+
+  py::enum_<theia::RotationWeightingType>(m, "RotationWeightingType")
+      .value("SCALAR", theia::RotationWeightingType::SCALAR)
+      .value("TWO_VIEW_INFORMATION",
+             theia::RotationWeightingType::TWO_VIEW_INFORMATION);
 
   py::enum_<theia::InitFreeRestartSelection>(m, "InitFreeRestartSelection")
       .value("OSE_COST", theia::InitFreeRestartSelection::OSE_COST)
@@ -115,6 +123,7 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("power_series_tolerance", &VO::power_series_tolerance)
       .def_readwrite("robust_loss_type", &VO::robust_loss_type)
       .def_readwrite("robust_loss_scale", &VO::robust_loss_scale)
+      .def_readwrite("num_threads", &VO::num_threads)
       .def_readwrite("point_ridge", &VO::point_ridge)
       .def_readwrite("verbose", &VO::verbose);
 
@@ -132,6 +141,12 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("formulation", &IO::formulation)
       .def_readwrite("alpha", &IO::alpha)
       .def_readwrite("rotation_weight", &IO::rotation_weight)
+      .def_readwrite("rotation_weighting", &IO::rotation_weighting)
+      .def_readwrite("rotation_normal_weight", &IO::rotation_normal_weight)
+      .def_readwrite("min_rotation_information_points",
+                     &IO::min_rotation_information_points)
+      .def_readwrite("expose_warmup_iterations",
+                     &IO::expose_warmup_iterations)
       .def_readwrite("include_self_rotation_terms",
                      &IO::include_self_rotation_terms)
       .def_readwrite("observation_normalization",
@@ -156,7 +171,49 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("camera_b", &theia::OseRotationTerm::camera_b)
       .def_readwrite("relative_rotation",
                      &theia::OseRotationTerm::relative_rotation)
-      .def_readwrite("weight", &theia::OseRotationTerm::weight);
+      .def_readwrite("weight", &theia::OseRotationTerm::weight)
+      .def_readwrite("sqrt_weight_matrix",
+                     &theia::OseRotationTerm::sqrt_weight_matrix);
+
+  using TVW = theia::TwoViewRotationWeight;
+  py::class_<TVW>(m, "TwoViewRotationWeight")
+      .def(py::init<>())
+      .def_readonly("sqrt_weight", &TVW::sqrt_weight)
+      .def_readonly("rotation_information", &TVW::rotation_information)
+      .def_readonly("translation", &TVW::translation)
+      .def_readonly("num_points", &TVW::num_points);
+
+  m.def(
+      "ComputeTwoViewRotationWeight",
+      [](const Eigen::Matrix2Xd& m_a,
+         const Eigen::Matrix2Xd& m_b,
+         const Eigen::Matrix3d& R_ab,
+         const Eigen::Vector3d& t_ab,
+         double normal_weight,
+         int min_points) {
+        if (m_a.cols() != m_b.cols()) {
+          throw std::invalid_argument("m_a and m_b need the same size.");
+        }
+        std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d>>
+            a, b;
+        for (int k = 0; k < m_a.cols(); ++k) {
+          a.push_back(m_a.col(k));
+          b.push_back(m_b.col(k));
+        }
+        TVW weight;
+        const bool ok = theia::ComputeTwoViewRotationWeight(
+            a, b, R_ab, t_ab, normal_weight, min_points, &weight);
+        return std::make_tuple(ok, weight);
+      },
+      py::arg("m_a"),
+      py::arg("m_b"),
+      py::arg("R_ab"),
+      py::arg("t_ab"),
+      py::arg("normal_weight") = 1.0,
+      py::arg("min_points") = 10,
+      "9x9 rotation weight of Olsson & Nilsson for one view pair with "
+      "x_a = R_ab x_b + t_ab (2 x N normalized observations; t_ab = 0 "
+      "estimates the translation direction). Returns (success, weight).");
 
   using OP = theia::OseProblem;
   py::class_<OP>(m, "OseProblem")
@@ -230,7 +287,7 @@ void pytheia_init_free(py::module& m) {
         py::gil_scoped_release release;
         const bool ok = theia::SolveOseVarPro(problem,
                                               *formulation,
-                                              options.varpro,
+                                              theia::ResolvedVarProOptions(options),
                                               FromList(initial_cameras),
                                               &solution);
         return std::make_tuple(ok, solution);

@@ -20,7 +20,10 @@ struct OseSolution {
   OseCameraVector cameras;
   Eigen::Matrix3Xd points;
 
-  // 0.5 * sum of squared residuals.
+  // 0.5 * sum of squared residuals, or the robust cost with a robust loss.
+  // For formulations that are re-linearized during the solve (expOSE) and for
+  // robust losses, this is the cost of the current least-squares model, which
+  // changes when the model is updated; cost_history is then not monotone.
   double initial_cost = 0.0;
   double final_cost = 0.0;
   std::vector<double> cost_history;  // cost after every accepted step
@@ -45,12 +48,17 @@ bool SolveOseVarPro(const OseProblem& problem,
                     OseSolution* solution);
 
 // Solves every point exactly for fixed cameras and returns the cost
-// 0.5 * ||r||^2 (including rotation terms if the formulation uses them).
+// 0.5 * ||r||^2 (including rotation terms if the formulation uses them), with
+// unit weights and the formulation's initial state.
 double EvaluateOseCost(const OseProblem& problem,
                        const OseFormulation& formulation,
                        const OseCameraVector& cameras,
                        double point_ridge,
                        Eigen::Matrix3Xd* points);
+
+// options.varpro with num_threads resolved: varpro.num_threads if > 0, else
+// options.num_threads if > 0, else 1.
+VarProOptions ResolvedVarProOptions(const InitFreeOptions& options);
 
 }  // namespace theia
 
