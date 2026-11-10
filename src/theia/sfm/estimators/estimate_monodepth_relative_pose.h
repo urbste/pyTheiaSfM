@@ -78,12 +78,19 @@ struct MonoDepthRelativePoseResult {
 // camera intrinsics (principal point at origin, divided by focal length),
 // exactly like EstimateRelativePose(). Each correspondence's Feature must
 // carry a valid depth_prior_ (> 0) from a monocular depth estimator.
+//
+// The depths enter the minimal 3-point hypotheses. Inliers are always selected
+// with the Sampson error. depth_reprojection_weight is the weight of the
+// depth-based reprojection error in the local optimization (see
+// RefineMonoDepthRelativePose); with the default of 0, the local optimization
+// minimizes the Sampson error only and the scale is recovered afterwards.
 bool EstimateMonoDepthRelativePose(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
     const std::vector<FeatureCorrespondence>& normalized_correspondences,
     MonoDepthRelativePoseResult* result,
-    RansacSummary* ransac_summary);
+    RansacSummary* ransac_summary,
+    double depth_reprojection_weight = 0.0);
 
 // Uncalibrated variant assuming both cameras share one unknown focal length.
 // centered_correspondences must have the principal point subtracted (pixel

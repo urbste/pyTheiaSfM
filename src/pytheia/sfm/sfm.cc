@@ -1423,7 +1423,8 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("EstimateMonoDepthRelativePose",
         theia::EstimateMonoDepthRelativePoseWrapper,
         py::arg("ransac_params"), py::arg("ransac_type"),
-        py::arg("normalized_correspondences"));
+        py::arg("normalized_correspondences"),
+        py::arg("depth_reprojection_weight") = 0.0);
   m.def("EstimateMonoDepthRelativePoseSharedFocal",
         theia::EstimateMonoDepthRelativePoseSharedFocalWrapper,
         py::arg("ransac_params"), py::arg("ransac_type"),
@@ -1515,6 +1516,9 @@ void pytheia_sfm_classes(py::module& m) {
           "monodepth_shared_focal",
           &theia::EstimateTwoViewInfoOptions::monodepth_shared_focal)
       .def_readwrite("min_focal_length",
+      .def_readwrite(
+          "monodepth_reprojection_weight",
+          &theia::EstimateTwoViewInfoOptions::monodepth_reprojection_weight)
                      &theia::EstimateTwoViewInfoOptions::min_focal_length)
       .def_readwrite("max_focal_length",
                      &theia::EstimateTwoViewInfoOptions::max_focal_length);

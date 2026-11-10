@@ -100,6 +100,11 @@ struct EstimateTwoViewInfoOptions {
   // solve for two independent focal lengths (false).
   bool monodepth_shared_focal = true;
 
+  // Only relevant when use_monodepth is true and the views are calibrated:
+  // weight of the depth-based reprojection error in the local optimization
+  // (see EstimateMonoDepthRelativePose). 0 refines with the Sampson error only.
+  double monodepth_reprojection_weight = 0.0;
+
   // min and max focal length
   // this is very useful for the ransac loop, if we already
   // have a guess of the focal length of our cameras

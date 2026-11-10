@@ -206,7 +206,8 @@ bool EstimateTwoViewInfoCalibrated(
                                         options.ransac_type,
                                         normalized_correspondences,
                                         &monodepth_result,
-                                        &monodepth_summary)) {
+                                        &monodepth_summary,
+                                        options.monodepth_reprojection_weight)) {
         AngleAxisd rotation(monodepth_result.rotation);
         twoview_info->rotation_2 = rotation.angle() * rotation.axis();
         twoview_info->position_2 = monodepth_result.position;

@@ -819,6 +819,8 @@ The recovered `scale` is the relative scale between the two (possibly independen
     # result.rotation, result.position, result.scale
     ```
 
+In the calibrated estimator, the depths enter the minimal 3-point hypotheses, and the inliers are always selected with the Sampson error. The local optimization minimizes the Sampson error only by default; scale and shifts are then fitted to the depths of the inliers triangulated with the refined pose. The optional fourth argument `depth_reprojection_weight` adds the reprojection error of the points lifted with the scaled and shifted depths to the local optimization, with this weight relative to the Sampson error, and refines scale and shifts jointly with the pose. This only pays off if the depth errors are small compared with the image noise. With MoGe-3 depth on ETH3D image pairs, the depth term made the relative pose less accurate even with a small weight, while the Sampson-only refinement made the three-point estimator as accurate as the five-point estimator. The uncalibrated (shared/varying focal) estimators always use both terms, because the depths also constrain the focal lengths.
+
 The higher-level `pytheia.sfm.EstimateTwoViewInfo` entry point (see [RANSAC — monocular-depth-assisted two-view estimation](ransac.md)) dispatches to these automatically via `EstimateTwoViewInfoOptions.use_monodepth`, falling back to the standard 5-/8-point path when depth priors are missing; see `pyexamples/twoview/monodepth_two_view_estimation_example.py` for a full worked example. Batch equivalent: `BulkEstimateTwoViewInfo` with optional `depth_i` / `depth_j` and returned `scales` (1.1.0+).
 
 ### Dense LM pose refinement (RANSAC LO) {#section-dense-lm-pose-refinement}
@@ -838,7 +840,8 @@ bool RefineRelativePoseSampson(
     Eigen::Vector3d* position,
     LmStats* stats = nullptr);
 
-// Calibrated monodepth: Sampson + depth reprojection (7/9 DoF with shifts).
+// Calibrated monodepth: Sampson (5 DoF), plus reprojection_weight times the
+// depth reprojection error (9 DoF with scale and shifts) if it is positive.
 bool RefineMonoDepthRelativePose(
     const std::vector<Eigen::Vector2d>& x1,
     const std::vector<Eigen::Vector2d>& x2,
@@ -850,6 +853,7 @@ bool RefineMonoDepthRelativePose(
     double* scale,
     double* shift1,
     double* shift2,
+    double reprojection_weight = 0.0,
     LmStats* stats = nullptr);
 
 bool RefineMonoDepthSharedFocalRelativePose(

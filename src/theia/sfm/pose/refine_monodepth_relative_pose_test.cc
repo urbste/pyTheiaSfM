@@ -113,7 +113,8 @@ TEST(RefineMonoDepthRelativePose, ReducesCostFromPerturbedPose) {
 
   LmStats stats;
   const bool improved = RefineMonoDepthRelativePose(
-      x1, x2, d1, d2, 1e-3, &R, &position, &scale, &shift1, &shift2, &stats);
+      x1, x2, d1, d2, 1e-3, &R, &position, &scale, &shift1, &shift2,
+      /*reprojection_weight=*/1.0, &stats);
   EXPECT_TRUE(improved);
   EXPECT_LT(stats.final_cost, stats.initial_cost);
   EXPECT_NEAR(scale, scale_gt, 0.15);

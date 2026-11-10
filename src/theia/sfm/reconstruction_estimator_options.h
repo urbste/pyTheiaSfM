@@ -133,7 +133,7 @@ struct ReconstructionEstimatorOptions {
   int ransac_max_iterations = 10000;
   bool ransac_use_mle = true;
   bool ransac_use_lo = true;
-  int ransac_lo_start_iterations = 50;
+  int ransac_lo_start_iterations = 10;
 
   // --------------- Rotation Filtering Options --------------- //
 

@@ -65,7 +65,8 @@ struct RansacParameters {
         use_mle(false),
         use_Tdd_test(false),
         use_lo(false),
-        lo_start_iterations(50),
+        lo_start_iterations(10),
+        lo_max_refinements(5),
         use_sturm_5pt(true) {}
 
   // The random number generator used to compute random number during
@@ -116,9 +117,20 @@ struct RansacParameters {
   // Otherwise no local optimization is performed
   bool use_lo;
 
-  // Local optimizaton should not start directly at the beginning but
-  // rather after ransac has performed some sifting already
+  // Local optimization runs for every new best model found from this RANSAC
+  // iteration on. A short delay avoids refining the many short-lived best
+  // models of the first iterations; it must stay small, because RANSAC often
+  // terminates after a few dozen iterations on clean data. The final model is
+  // always refined, independent of this value.
   int lo_start_iterations;
+
+  // Maximum number of refinement rounds per local optimization. Each round
+  // refines the model on its inliers, rescores it on all data and re-selects
+  // the inliers; the refined model is kept only if it lowers the truncated
+  // (MSAC) cost, and the rounds stop once it no longer does (re-selection as
+  // in COLMAP's LORANSAC, acceptance as in PoseLib). The inlier ratio of the
+  // refined model drives the termination criterion.
+  int lo_max_refinements;
 
   // Whether to use the T_{d,d}, with d=1, test proposed in
   // Chum, O. and Matas, J.: Randomized RANSAC and T(d,d) test, BMVC 2002.
@@ -206,10 +218,22 @@ class SampleConsensusEstimator {
                            const double log_failure_prob,
                            const int total_num_samples) const;
 
+  // Local optimization: refines *model on the data indexed by *inlier_indices,
+  // rescores the refined model on all data and re-selects its inliers, for up
+  // to lo_max_refinements rounds. A refined model is accepted if it lowers the
+  // truncated (MSAC) cost sum_i min(r_i, error_thresh); the rounds stop when
+  // it no longer does. *model, *cost (the quality measurement's cost) and
+  // *inlier_indices are updated with the accepted model.
+  void LocallyOptimize(const std::vector<Datum>& data,
+                       Model* model,
+                       double* cost,
+                       std::vector<int>* inlier_indices,
+                       RansacSummary* summary);
+
   // Get inlier datum points (for LO)
   void GetInlierDatum(const std::vector<Datum>& data,
                       std::vector<Datum>& inlier_datum,
-                      std::vector<int> inlier_indices);
+                      const std::vector<int>& inlier_indices);
 
   // The sampling strategy.
   std::unique_ptr<Sampler> sampler_;
@@ -400,39 +424,40 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
           continue;
         }
 
-        if (summary->num_iterations >= ransac_params_.lo_start_iterations &&
-            ransac_params_.use_lo) {
-          std::vector<Datum> inliers;
-          GetInlierDatum(data, inliers, inlier_indices);
-          if (!estimator_.RefineModel(inliers, ransac_params_.error_thresh, best_model)) {
-            continue;
-          }
-          ++summary->num_lo_iterations;
+        if (ransac_params_.use_lo &&
+            summary->num_iterations >= ransac_params_.lo_start_iterations) {
+          LocallyOptimize(data, best_model, &best_cost, &inlier_indices,
+                          summary);
         }
+        const double refined_inlier_ratio =
+            static_cast<double>(inlier_indices.size()) /
+            static_cast<double>(data.size());
 
         // A better cost does not guarantee a higher inlier ratio (i.e, the MLE
         // case) so we only update the max iterations if the number decreases.
         max_iterations = std::min(
-            ComputeMaxIterations(
-                estimator_.SampleSize(), inlier_ratio, log_failure_prob, data.size()),
+            ComputeMaxIterations(estimator_.SampleSize(),
+                                 refined_inlier_ratio,
+                                 log_failure_prob,
+                                 data.size()),
             max_iterations);
 
-        VLOG(3) << "Inlier ratio = " << inlier_ratio
+        VLOG(3) << "Inlier ratio = " << refined_inlier_ratio
                 << " and max number of iterations = " << max_iterations;
       }
     }
   }
 
-  // Compute the final inliers for the best model.
+  // Compute the final inliers for the best model and refine it once more,
+  // re-selecting the inliers as long as the cost decreases.
   const std::vector<double> best_residuals =
       estimator_.Residuals(data, *best_model);
-  quality_measurement_->ComputeCost(best_residuals, &summary->inliers);
+  best_cost = quality_measurement_->ComputeCost(best_residuals,
+                                                &summary->inliers);
 
-  if (ransac_params_.use_lo) {
-    std::vector<Datum> inliers;
-    GetInlierDatum(data, inliers, summary->inliers);
-    estimator_.RefineModel(inliers, ransac_params_.error_thresh, best_model);
-    ++summary->num_lo_iterations;
+  if (ransac_params_.use_lo &&
+      summary->inliers.size() >= estimator_.SampleSize()) {
+    LocallyOptimize(data, best_model, &best_cost, &summary->inliers, summary);
   }
 
   const double inlier_ratio =
@@ -445,10 +470,62 @@ bool SampleConsensusEstimator<ModelEstimator>::Estimate(
 }
 
 template <class ModelEstimator>
+void SampleConsensusEstimator<ModelEstimator>::LocallyOptimize(
+    const std::vector<Datum>& data,
+    Model* model,
+    double* cost,
+    std::vector<int>* inlier_indices,
+    RansacSummary* summary) {
+  // Refined models are accepted by their truncated (MSAC) cost, as in
+  // PoseLib: the inlier count is too coarse and rejects refined models that
+  // are more accurate but lose a single inlier at the threshold.
+  const double threshold = ransac_params_.error_thresh;
+  const auto msac_cost = [threshold](const std::vector<double>& residuals) {
+    double total = 0.0;
+    for (const double residual : residuals) {
+      total += std::min(residual, threshold);
+    }
+    return total;
+  };
+  double current_msac = msac_cost(estimator_.Residuals(data, *model));
+
+  std::vector<Datum> inliers;
+  std::vector<int> refined_inlier_indices;
+  for (int round = 0; round < ransac_params_.lo_max_refinements; ++round) {
+    if (inlier_indices->size() < estimator_.SampleSize()) {
+      return;
+    }
+    GetInlierDatum(data, inliers, *inlier_indices);
+    Model refined_model = *model;
+    ++summary->num_lo_iterations;
+    if (!estimator_.RefineModel(
+            inliers, ransac_params_.error_thresh, &refined_model)) {
+      return;
+    }
+    const std::vector<double> residuals =
+        estimator_.Residuals(data, refined_model);
+    const double refined_msac = msac_cost(residuals);
+    if (!(refined_msac < current_msac)) {
+      return;
+    }
+    const bool converged = refined_msac > current_msac * (1.0 - 1e-6);
+    refined_inlier_indices.clear();
+    *cost =
+        quality_measurement_->ComputeCost(residuals, &refined_inlier_indices);
+    *model = refined_model;
+    current_msac = refined_msac;
+    inlier_indices->swap(refined_inlier_indices);
+    if (converged) {
+      return;
+    }
+  }
+}
+
+template <class ModelEstimator>
 void SampleConsensusEstimator<ModelEstimator>::GetInlierDatum(
     const std::vector<Datum>& data,
     std::vector<Datum>& inlier_datum,
-    std::vector<int> inlier_indices) {
+    const std::vector<int>& inlier_indices) {
   inlier_datum.resize(inlier_indices.size());
   for (int i = 0; i < inlier_indices.size(); i++) {
     inlier_datum[i] = data[inlier_indices[i]];

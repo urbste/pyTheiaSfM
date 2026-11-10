@@ -146,14 +146,16 @@ std::tuple<bool, MonoDepthRelativePoseResult, RansacSummary>
 EstimateMonoDepthRelativePoseWrapper(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
-    const std::vector<FeatureCorrespondence>& normalized_correspondences) {
+    const std::vector<FeatureCorrespondence>& normalized_correspondences,
+    double depth_reprojection_weight) {
   MonoDepthRelativePoseResult result;
   RansacSummary ransac_summary;
   const bool success = EstimateMonoDepthRelativePose(ransac_params,
                                                      ransac_type,
                                                      normalized_correspondences,
                                                      &result,
-                                                     &ransac_summary);
+                                                     &ransac_summary,
+                                                     depth_reprojection_weight);
   return std::make_tuple(success, result, ransac_summary);
 }
 

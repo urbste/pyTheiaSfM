@@ -98,7 +98,8 @@ void ExtractPointsAndDepths(
 class MonoDepthRelativePoseEstimator
     : public Estimator<FeatureCorrespondence, MonoDepthRelativePoseResult> {
  public:
-  MonoDepthRelativePoseEstimator() {}
+  explicit MonoDepthRelativePoseEstimator(double reprojection_weight)
+      : reprojection_weight_(reprojection_weight) {}
 
   double SampleSize() const { return 3; }
 
@@ -151,7 +152,8 @@ class MonoDepthRelativePoseEstimator
                                        &result->position,
                                        &result->scale,
                                        &result->shift1,
-                                       &result->shift2);
+                                       &result->shift2,
+                                       reprojection_weight_);
   }
 
   double Error(const FeatureCorrespondence& correspondence,
@@ -182,6 +184,7 @@ class MonoDepthRelativePoseEstimator
   }
 
  private:
+  const double reprojection_weight_;
   mutable Eigen::Matrix3Xd cached_x1_, cached_x2_;
   mutable const std::vector<FeatureCorrespondence>* cached_correspondences_ =
       nullptr;
@@ -391,8 +394,9 @@ bool EstimateMonoDepthRelativePose(
     const RansacType& ransac_type,
     const std::vector<FeatureCorrespondence>& normalized_correspondences,
     MonoDepthRelativePoseResult* result,
-    RansacSummary* ransac_summary) {
-  MonoDepthRelativePoseEstimator estimator;
+    RansacSummary* ransac_summary,
+    double depth_reprojection_weight) {
+  MonoDepthRelativePoseEstimator estimator(depth_reprojection_weight);
   std::unique_ptr<SampleConsensusEstimator<MonoDepthRelativePoseEstimator> >
       ransac = CreateAndInitializeRansacVariant(
           ransac_type, ransac_params, estimator);

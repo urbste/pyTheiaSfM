@@ -9,6 +9,7 @@
 
 #include "theia/sfm/pose/refine_monodepth_relative_pose.h"
 
+#include <Eigen/Cholesky>
 #include <Eigen/Geometry>
 #include <algorithm>
 #include <cmath>
@@ -150,6 +151,95 @@ void RecoverMetricTranslationAndScale(
   *translation = m * t_dir;
 }
 
+
+// Weighted least-squares fit of depth + shift = gain * triangulated_depth with
+// residuals relative to the depth, iteratively reweighted with a Huber loss.
+// Returns false if the fit is degenerate.
+bool FitDepthGainAndShift(const std::vector<double>& depth,
+                          const std::vector<double>& triangulated_depth,
+                          double* gain,
+                          double* shift) {
+  constexpr double kHuberRelative = 0.05;
+  std::vector<double> weight(depth.size(), 1.0);
+  for (int iteration = 0; iteration < 10; ++iteration) {
+    // Unknowns (gain, shift): gain * a - shift = d, divided by d.
+    Eigen::Matrix2d ata = Eigen::Matrix2d::Zero();
+    Eigen::Vector2d atb = Eigen::Vector2d::Zero();
+    for (size_t i = 0; i < depth.size(); ++i) {
+      const Eigen::Vector2d row(triangulated_depth[i] / depth[i],
+                                -1.0 / depth[i]);
+      ata += weight[i] * row * row.transpose();
+      atb += weight[i] * row;
+    }
+    Eigen::LDLT<Eigen::Matrix2d> ldlt(ata);
+    if (ldlt.info() != Eigen::Success || ldlt.rcond() < 1e-12) {
+      return false;
+    }
+    const Eigen::Vector2d solution = ldlt.solve(atb);
+    *gain = solution(0);
+    *shift = solution(1);
+    for (size_t i = 0; i < depth.size(); ++i) {
+      const double residual = std::abs(
+          (*gain * triangulated_depth[i] - *shift) / depth[i] - 1.0);
+      weight[i] = residual <= kHuberRelative ? 1.0 : kHuberRelative / residual;
+    }
+  }
+  return *gain > 0.0;
+}
+
+// Given a refined pose, triangulates the correspondences with a unit baseline
+// and fits the depth maps to the triangulated depths:
+//   depth1 + shift1 = baseline * a,   scale * (depth2 + shift2) = baseline * b,
+// where a and b are the depths of the triangulated point in both cameras for a
+// unit baseline. Points with less than 1 degree of parallax are ignored.
+// Leaves the outputs unchanged and returns false if too few points remain.
+bool FitScaleAndShiftsToPose(const std::vector<Eigen::Vector2d>& x1,
+                             const std::vector<Eigen::Vector2d>& x2,
+                             const std::vector<double>& depth1,
+                             const std::vector<double>& depth2,
+                             const Eigen::Matrix3d& rotation,
+                             const Eigen::Vector3d& position,
+                             double* scale,
+                             double* shift1,
+                             double* shift2) {
+  const Eigen::Vector3d t_dir = (-rotation * position).normalized();
+  const double min_parallax_cos = std::cos(1.0 * M_PI / 180.0);
+  std::vector<double> d1, d2, a, b;
+  for (size_t i = 0; i < x1.size(); ++i) {
+    if (depth1[i] <= 0.0 || depth2[i] <= 0.0) {
+      continue;
+    }
+    const Eigen::Vector3d ray1 = rotation * x1[i].homogeneous();
+    const Eigen::Vector3d ray2 = x2[i].homogeneous();
+    if (ray1.normalized().dot(ray2.normalized()) > min_parallax_cos) {
+      continue;
+    }
+    // ray2 * b = ray1 * a + t_dir  =>  [ray1, -ray2] [a; b] = -t_dir.
+    Eigen::Matrix<double, 3, 2> A;
+    A.col(0) = ray1;
+    A.col(1) = -ray2;
+    const Eigen::Vector2d ab = A.colPivHouseholderQr().solve(-t_dir);
+    if (ab(0) <= 0.0 || ab(1) <= 0.0) {
+      continue;
+    }
+    d1.push_back(depth1[i]);
+    d2.push_back(depth2[i]);
+    a.push_back(ab(0));
+    b.push_back(ab(1));
+  }
+  if (d1.size() < 3) {
+    return false;
+  }
+  double baseline, s1, gain2, s2;
+  if (!FitDepthGainAndShift(d1, a, &baseline, &s1) ||
+      !FitDepthGainAndShift(d2, b, &gain2, &s2)) {
+    return false;
+  }
+  *scale = baseline / gain2;
+  *shift1 = s1;
+  *shift2 = s2;
+  return true;
+}
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -731,6 +821,7 @@ bool RefineMonoDepthRelativePose(
     double* scale,
     double* shift1,
     double* shift2,
+    double reprojection_weight,
     LmStats* stats) {
   CHECK_NOTNULL(rotation);
   CHECK_NOTNULL(position);
@@ -753,12 +844,16 @@ bool RefineMonoDepthRelativePose(
                                    &state.translation, scale);
   state.scale = *scale;
 
-  // scale_reproj weights reprojection vs Sampson; match PoseLib defaults when
-  // only a Sampson threshold is available.
-  const double scale_reproj = 1.0;
-  const double weight_sampson = 1.0;
-  MonoDepthRelativePoseRefiner refiner(
-      x1, x2, depth1, depth2, scale_reproj, weight_sampson, /*refine_shift=*/true);
+  // Without the reprojection term, scale and shifts are unobserved; the
+  // additive LM damping leaves them unchanged.
+  const bool use_depths = reprojection_weight > 0.0;
+  MonoDepthRelativePoseRefiner refiner(x1,
+                                       x2,
+                                       depth1,
+                                       depth2,
+                                       std::max(reprojection_weight, 0.0),
+                                       /*weight_sampson=*/1.0,
+                                       /*refine_shift=*/use_depths);
 
   LmOptions opt;
   opt.max_iterations = 25;
@@ -775,9 +870,17 @@ bool RefineMonoDepthRelativePose(
     return false;
   }
   *position /= n;
-  *scale = state.scale;
   *shift1 = state.shift1;
   *shift2 = state.shift2;
+  if (use_depths) {
+    *scale = state.scale;
+  } else if (!FitScaleAndShiftsToPose(x1, x2, depth1, depth2, *rotation,
+                                      *position, scale, shift1, shift2)) {
+    Eigen::Vector3d metric_translation;
+    RecoverMetricTranslationAndScale(x1, x2, depth1, depth2, *rotation,
+                                     *position, *shift1, *shift2, 1.0, 1.0,
+                                     &metric_translation, scale);
+  }
   return local_stats.final_cost < local_stats.initial_cost;
 }
 

@@ -79,7 +79,8 @@ std::tuple<bool, MonoDepthRelativePoseResult, RansacSummary>
 EstimateMonoDepthRelativePoseWrapper(
     const RansacParameters& ransac_params,
     const RansacType& ransac_type,
-    const std::vector<FeatureCorrespondence>& normalized_correspondences);
+    const std::vector<FeatureCorrespondence>& normalized_correspondences,
+    double depth_reprojection_weight);
 
 std::tuple<bool, MonoDepthRelativePoseResult, RansacSummary>
 EstimateMonoDepthRelativePoseSharedFocalWrapper(

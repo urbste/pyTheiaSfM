@@ -120,6 +120,15 @@ class MonoDepthVaryingFocalRelativePoseRefiner {
 // Free functions used by estimators. Updates Theia (rotation, unit position)
 // plus monodepth extras in place. squared_error_thresh is the RANSAC Sampson
 // truncation threshold (squared residual units).
+//
+// The calibrated refinement minimizes the Sampson error plus
+// reprojection_weight times the reprojection error of the points lifted with
+// the (scaled and shifted) depths. With the default weight of 0, the depths do
+// not influence the pose; scale and shifts are then fitted afterwards to the
+// depths of the inliers triangulated with the refined pose (robust linear fit,
+// points with less than 1 degree of parallax ignored). A positive weight also refines scale and shifts, but only pays off
+// if the depth errors are small compared with the image noise: the depth term
+// is not robust to the relative errors of current monocular depth networks.
 bool RefineMonoDepthRelativePose(
     const std::vector<Eigen::Vector2d>& x1,
     const std::vector<Eigen::Vector2d>& x2,
@@ -131,6 +140,7 @@ bool RefineMonoDepthRelativePose(
     double* scale,
     double* shift1,
     double* shift2,
+    double reprojection_weight = 0.0,
     LmStats* stats = nullptr);
 
 bool RefineMonoDepthSharedFocalRelativePose(

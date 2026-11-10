@@ -116,6 +116,8 @@ void pytheia_solvers_classes(py::module& m) {
       .def_readwrite("use_lo", &theia::RansacParameters::use_lo)
       .def_readwrite("lo_start_iterations",
                      &theia::RansacParameters::lo_start_iterations)
+      .def_readwrite("lo_max_refinements",
+                     &theia::RansacParameters::lo_max_refinements)
       .def_readwrite("use_Tdd_test", &theia::RansacParameters::use_Tdd_test)
       .def_readwrite("use_sturm_5pt", &theia::RansacParameters::use_sturm_5pt);
   /*
