@@ -180,7 +180,7 @@ bool TriangulateNViewSVD(const std::vector<Matrix3x4d>& poses,
                          Vector4d* triangulated_point) {
   CHECK_EQ(poses.size(), points.size());
 
-  MatrixXd design_matrix(3 * points.size(), 4 + points.size());
+  MatrixXd design_matrix = MatrixXd::Zero(3 * points.size(), 4 + points.size());
 
   for (int i = 0; i < points.size(); i++) {
     design_matrix.block<3, 4>(3 * i, 0) = -poses[i].matrix();
