@@ -542,6 +542,19 @@ Incremental SfM is generally considered to be more robust than global SfM method
 
 To use the Incremental SfM pipeline, simply set the `reconstruction_estimator_type` to `ReconstructionEstimatorType::INCREMENTAL`. There are many more options that may be set to tune the incremental SfM pipeline that can be found in the `ReconstructionEstimatorOptions`.
 
+## Hybrid SfM Pipeline {#hybrid-sfm-pipeline}
+
+The hybrid pipeline (`HybridReconstructionEstimator`, `ReconstructionEstimatorType::HYBRID`) combines global rotation averaging with incremental estimation of the camera positions, in the spirit of HSfM (Cui et al., CVPR 2017):
+
+1.  Estimate global orientations of all cameras with the rotation estimator selected by `global_rotation_estimator_type`.
+2.  Choose an initial camera pair: candidates are ranked by the median parallax of their matched features (the angle between the world-frame rays, which is available because the orientations are known) and then by the number of verified matches. With known orientations, its relative position is estimated from the rotated rays (`EstimateRelativePoseWithKnownOrientation`); otherwise the `TwoViewInfo` is used. The pair must yield at least 100 triangulated tracks.
+3.  Localize new cameras one at a time. For cameras with a global orientation, only the position is estimated; the full absolute pose is the fallback.
+4.  Triangulate new points and run partial or full bundle adjustment as the model grows (same growth rules as the incremental pipeline). Camera orientations are held constant during these adjustments.
+5.  Repeat steps 3-4 until no more cameras can be localized.
+6.  Re-triangulate all tracks and run a final full bundle adjustment in which the orientations are optimized as well.
+
+Step 6 matters for accuracy: without it the orientations stay at the accuracy of rotation averaging and the positions and points absorb their errors.
+
 ## Global SfM Pipeline {#global-sfm-pipeline}
 
 A concise reference for rotation / position **implementations** and pyTheia classes lives in [Global pose estimation](global_pose_estimation.md).

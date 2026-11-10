@@ -74,21 +74,31 @@ struct AngularEpipolarError {
     const Eigen::Matrix<T, 3, 3> translation_term =
         Eigen::Matrix<T, 3, 3>::Identity() -
         translation_map * translation_map.transpose();
-    const T a =
-        feature1.dot(translation_term * feature1) +
-        (rotation_matrix * feature2)
-            .dot(translation_term * (rotation_matrix.transpose() * feature2));
-    const T b_sqrt = translation_map.dot(
-        feature1.cross(rotation_matrix.transpose() * feature2));
+    // Both rays in the frame of camera 1, normalized so that the error is an
+    // angle. The quadratic term must use the same rotated ray as the cross
+    // product; mixing R * f2 and R^T * f2 (as before) made the square root
+    // argument negative for most correct matches.
+    const Eigen::Matrix<T, 3, 1> ray1 = feature1.normalized();
+    const Eigen::Matrix<T, 3, 1> ray2 =
+        (rotation_matrix.transpose() * feature2).normalized();
+    const T a = ray1.dot(translation_term * ray1) +
+                ray2.dot(translation_term * ray2);
+    const T b_sqrt = translation_map.dot(ray1.cross(ray2));
 
     // Ensure the square root is real.
     const T sqrt_term = (a * a) / T(4.0) - b_sqrt * b_sqrt;
     if (sqrt_term < T(0.0)) {
-      angular_epipolar_error[0] = T(1000);
+      angular_epipolar_error[0] = T(1.0);
       return true;
     }
 
-    angular_epipolar_error[0] = a / T(2.0) - sqrt(sqrt_term);
+    // a / 2 - sqrt(a^2 / 4 - b^2) is the squared sine of the angular error
+    // (the smaller eigenvalue of the 2x2 problem). Use its square root as the
+    // residual so that least squares minimizes the sum of squared angles
+    // instead of the sum of their fourth powers; the small offset keeps the
+    // derivative finite at zero.
+    const T sin_sq = a / T(2.0) - sqrt(sqrt_term);
+    angular_epipolar_error[0] = sqrt(sin_sq + T(1e-18));
     return true;
   }
 

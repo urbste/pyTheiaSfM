@@ -145,8 +145,11 @@ class HybridReconstructionEstimator : public ReconstructionEstimator {
   // cameras (and the tracks observed in those views) are optimized.
   bool PartialBundleAdjustment();
 
-  // Performs full bundle adjustment on the model.
-  bool FullBundleAdjustment();
+  // Performs full bundle adjustment on the model. While the reconstruction is
+  // grown, the camera orientations from global rotation averaging are held
+  // constant; the final adjustment (constant_orientation = false) refines them
+  // together with positions and structure.
+  bool FullBundleAdjustment(const bool constant_orientation = true);
 
   // Chooses the next cameras to be localized according to which camera observes
   // the highest number of 3D points in the scene. This view is then localized

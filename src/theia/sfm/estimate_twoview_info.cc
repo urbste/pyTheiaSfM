@@ -384,6 +384,15 @@ bool EstimateTwoViewInfo(
   CHECK_NOTNULL(twoview_info);
   CHECK_NOTNULL(inlier_indices)->clear();
 
+  // RANSAC needs at least one minimal sample (5 correspondences for the
+  // calibrated, 8 for the uncalibrated case). Report failure for smaller sets
+  // instead of aborting in the sampler.
+  const bool calibrated =
+      intrinsics1.focal_length.is_set && intrinsics2.focal_length.is_set;
+  if (correspondences.size() < (calibrated ? 5u : 8u)) {
+    return false;
+  }
+
   // Case where both views are calibrated.
   if (intrinsics1.focal_length.is_set && intrinsics2.focal_length.is_set) {
     return EstimateTwoViewInfoCalibrated(options,

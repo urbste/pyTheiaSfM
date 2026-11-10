@@ -68,6 +68,7 @@
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/types.h"
 #include "theia/sfm/view_graph/orientations_from_maximum_spanning_tree.h"
+#include "theia/sfm/view_graph/remove_disconnected_view_pairs.h"
 #include "theia/sfm/view_graph/view_graph.h"
 #include "theia/sfm/visibility_pyramid.h"
 #include "theia/solvers/sample_consensus_estimator.h"
@@ -149,6 +150,11 @@ ReconstructionEstimatorSummary HybridReconstructionEstimator::Estimate(
       options_.view_graph_min_relative_inliers,
       options_.view_graph_max_cycle_rotation_error_degrees, view_graph_,
       reconstruction_);
+  // Only the largest connected component of the view graph can be
+  // reconstructed. Rotation averaging is initialized from a spanning tree of one
+  // component and aborts on views of other components (as in the global
+  // estimator).
+  RemoveDisconnectedViewPairs(view_graph_);
 
   // Initialize the unlocalized_views_ variable.
   const auto& view_ids = reconstruction_->ViewIds();
@@ -272,6 +278,27 @@ ReconstructionEstimatorSummary HybridReconstructionEstimator::Estimate(
         return summary_;
       }
     }
+  }
+
+  // Step 7: Final bundle adjustment with free camera orientations. The
+  // orientations from global rotation averaging are kept constant while views
+  // are added, so without this step they are never refined and the positions
+  // and points absorb their errors.
+  timer.Reset();
+  {
+    TrackEstimator track_estimator(triangulation_options_, reconstruction_);
+    track_estimator.EstimateAllTracks();
+  }
+  summary_.triangulation_time += timer.ElapsedTimeInSeconds();
+  timer.Reset();
+  const bool final_ba_success =
+      FullBundleAdjustment(/*constant_orientation=*/false);
+  summary_.bundle_adjustment_time += timer.ElapsedTimeInSeconds();
+  SetUnderconstrainedAsUnestimated();
+  if (!final_ba_success) {
+    LOG(WARNING) << "Final bundle adjustment failed!";
+    summary_.success = false;
+    return summary_;
   }
 
   // Set the output parameters.
@@ -400,46 +427,41 @@ double HybridReconstructionEstimator::ComputeMedianTriangulationAngle(
   const Camera& camera1 = view1->Camera();
   const Camera& camera2 = view2->Camera();
 
-  // Compute the angle between the viewing rays.
-  const Eigen::Vector2d camera1_principal_point(camera1.PrincipalPointX(),
-                                                camera1.PrincipalPointY());
-  const Eigen::Vector3d view1_ray =
-      camera1.PixelToUnitDepthRay(camera1_principal_point).normalized();
-  const Eigen::Vector2d camera2_principal_point(camera2.PrincipalPointX(),
-                                                camera2.PrincipalPointY());
-  const Eigen::Vector3d view2_ray =
-      camera2.PixelToUnitDepthRay(camera2_principal_point).normalized();
-  return std::abs(RadToDeg(std::acos(view1_ray.dot(view2_ray))));
-
-  // NOTE: Originally, csweeney used the median triangulation angle between
-  // matched features but this is fairly slow so instead I chose to use the
-  // angle between principal viewing rays as the angular constraint for the view
-  // pair. The code for using the median triangulation angle is below.
-  //
-  // std::vector<double> triangulation_angles;
-  // triangulation_angles.reserve(common_tracks.size());
-  // // Compute the triangulation angle for each view. We store the cosine of
-  // the
-  // // dot product to save computation.
-  // for (const TrackId track_id : common_tracks) {
-  //   const Feature* feature1 = view1->GetFeature(track_id);
-  //   const Eigen::Vector3d ray1 =
-  //       camera1.PixelToUnitDepthRay(*feature1).normalized();
-  //   const Feature* feature2 = view2->GetFeature(track_id);
-  //   const Eigen::Vector3d ray2 =
-  //       camera2.PixelToUnitDepthRay(*feature2).normalized();
-
-  //   // Store the dot product of the rays which is the cosine of triangulation
-  //   // angle.
-  //   triangulation_angles.emplace_back(ray1.dot(ray2));
-  // }
-
-  // // Return the median triangulation angle.
-  // const int median_index = triangulation_angles.size() / 2;
-  // std::nth_element(triangulation_angles.begin(),
-  //                  triangulation_angles.begin() + median_index,
-  //                  triangulation_angles.end());
-  // return RadToDeg(std::acos(triangulation_angles[median_index]));
+  // Median angle between the world-frame rays of the matched features. With the
+  // orientations from rotation averaging this is the parallax of the pair; it is
+  // close to zero for a (nearly) pure rotation even if the optical axes differ
+  // strongly. (The angle between the principal rays, used here before, ranked
+  // such pairs first and gave initial pairs without baseline.) At most
+  // kMaxTracks evenly spaced tracks are used to bound the cost.
+  static const int kMaxTracks = 500;
+  if (common_tracks.empty()) {
+    return 0.0;
+  }
+  const int stride =
+      std::max(1, static_cast<int>(common_tracks.size()) / kMaxTracks);
+  std::vector<double> cos_angles;
+  cos_angles.reserve(common_tracks.size() / stride + 1);
+  for (int i = 0; i < common_tracks.size(); i += stride) {
+    const Feature* feature1 = view1->GetFeature(common_tracks[i]);
+    const Feature* feature2 = view2->GetFeature(common_tracks[i]);
+    if (feature1 == nullptr || feature2 == nullptr) {
+      continue;
+    }
+    const Eigen::Vector3d ray1 =
+        camera1.PixelToUnitDepthRay(feature1->point_).normalized();
+    const Eigen::Vector3d ray2 =
+        camera2.PixelToUnitDepthRay(feature2->point_).normalized();
+    cos_angles.emplace_back(ray1.dot(ray2));
+  }
+  if (cos_angles.empty()) {
+    return 0.0;
+  }
+  // The median angle is the median of the cosines (acos is monotonic).
+  const int median_index = cos_angles.size() / 2;
+  std::nth_element(cos_angles.begin(),
+                   cos_angles.begin() + median_index,
+                   cos_angles.end());
+  return RadToDeg(std::acos(std::clamp(cos_angles[median_index], -1.0, 1.0)));
 }
 
 bool HybridReconstructionEstimator::InitializeCamerasFromTwoViewInfo(
@@ -457,6 +479,9 @@ bool HybridReconstructionEstimator::InitializeCamerasFromTwoViewInfo(
   // camera 2's pose.
   Camera* camera1 = view1->MutableCamera();
   camera1->SetFocalLength(info->focal_length_1);
+  // Reset the position explicitly: an earlier, rejected candidate pair may have
+  // moved this camera.
+  camera1->SetPosition(Eigen::Vector3d::Zero());
   Camera* camera2 = view2->MutableCamera();
   // The two view info position is in camera 1's coordinate system. We need to
   // transform this to the world coordinate system defined by the orientation.
@@ -472,12 +497,16 @@ bool HybridReconstructionEstimator::InitializeCamerasFromTwoViewInfo(
 
 bool HybridReconstructionEstimator::InitializeCamerasWithKnownOrientation(
     const ViewIdPair& view_ids) {
-  if (!ContainsKey(orientations_, view_ids.first) &&
+  // Both orientations are needed to rotate the rays into the world frame.
+  if (!ContainsKey(orientations_, view_ids.first) ||
       !ContainsKey(orientations_, view_ids.second)) {
     return false;
   }
 
   View* view1 = reconstruction_->MutableView(view_ids.first);
+  // The relative position below is camera 2 relative to camera 1, so camera 1
+  // must be at the origin; an earlier, rejected candidate pair may have moved it.
+  view1->MutableCamera()->SetPosition(Eigen::Vector3d::Zero());
   const Camera& camera1 = view1->Camera();
   View* view2 = reconstruction_->MutableView(view_ids.second);
   Camera* camera2 = view2->MutableCamera();
@@ -543,7 +572,8 @@ bool HybridReconstructionEstimator::InitializeCamerasWithKnownOrientation(
 }
 
 bool HybridReconstructionEstimator::ChooseInitialViewPair() {
-  static const int kMinNumInitialTracks = 200;
+  // Same threshold as the incremental estimator.
+  static const int kMinNumInitialTracks = 100;
 
   // Sort the view pairs by the number of geometrically verified matches.
   std::vector<ViewIdPair> candidate_initial_view_pairs;
@@ -724,7 +754,8 @@ double HybridReconstructionEstimator::UnoptimizedGrowthPercentage() {
          static_cast<double>(num_optimized_views_);
 }
 
-bool HybridReconstructionEstimator::FullBundleAdjustment() {
+bool HybridReconstructionEstimator::FullBundleAdjustment(
+    const bool constant_orientation) {
   // Full bundle adjustment.
   LOG(INFO) << "Running full bundle adjustment on the entire reconstruction.";
 
@@ -732,9 +763,9 @@ bool HybridReconstructionEstimator::FullBundleAdjustment() {
   bundle_adjustment_options_ =
       SetBundleAdjustmentOptions(options_, reconstructed_views_.size());
 
-  // Do not optimize the camera orientations since they are considered to be
-  // optimized.
-  bundle_adjustment_options_.constant_camera_orientation = true;
+  // While views are added, the orientations from global rotation averaging are
+  // held constant; the final adjustment refines them as well.
+  bundle_adjustment_options_.constant_camera_orientation = constant_orientation;
 
   // Inner iterations are not really needed for incremental SfM because we are
   // *hopefully* already starting at a good local minima. Inner iterations are
