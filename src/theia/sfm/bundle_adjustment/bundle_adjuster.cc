@@ -56,8 +56,12 @@
 #include "theia/sfm/bundle_adjustment/scaled_relative_pose_error.h"
 
 #include "theia/sfm/bundle_adjustment/analytic_reprojection_error.h"
+#include "theia/sfm/bundle_adjustment/rig_reprojection_error.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
+#include "theia/sfm/rig/camera_rig.h"
+#include "theia/sfm/rig/rig_capture.h"
+#include "theia/sfm/rig/rig_utils.h"
 #include "theia/sfm/types.h"
 #include "theia/util/map_util.h"
 #include "theia/util/timer.h"
@@ -125,6 +129,13 @@ BundleAdjuster::BundleAdjuster(const BundleAdjustmentOptions& options,
 
 void BundleAdjuster::AddView(const ViewId view_id) {
   View* view = CHECK_NOTNULL(reconstruction_->MutableView(view_id));
+
+  // Views of a rig capture are parametrized by the capture pose instead.
+  if (ContainsKey(rig_views_, view_id)) {
+    LOG(WARNING) << "View " << view_id
+                 << " belongs to a rig capture and is not added as a camera.";
+    return;
+  }
 
   // Only optimize estimated views.
   if (!view->IsEstimated() || ContainsKey(optimized_views_, view_id)) {
@@ -206,9 +217,26 @@ void BundleAdjuster::AddTrack(const TrackId track_id) {
     const Feature* feature = CHECK_NOTNULL(view->GetFeature(track_id));
     Camera* camera = view->MutableCamera();
 
+    // Views of a rig capture are constrained by the shared capture pose. Their
+    // intrinsics were registered in AddRigCapture().
+    const auto rig_view = rig_views_.find(view_id);
+    if (rig_view != rig_views_.end()) {
+      AddRigReprojectionErrorResidual(*feature, rig_view->second, camera, track);
+      if (options_.use_depth_priors && feature->depth_prior() != 0.0) {
+        problem_->AddResidualBlock(
+            WrapCostFunctionWithRigPose(DepthPriorError::Create(*feature),
+                                        rig_view->second.rotation_rig_to_cam,
+                                        rig_view->second.position_in_rig),
+            depth_prior_loss_function_.get(),
+            capture_poses_.at(rig_view->second.capture_id).data(),
+            track->MutablePoint()->data());
+      }
+      continue;
+    }
+
     // Add the reprojection error to the optimization.
     AddReprojectionErrorResidual(*feature, camera, track);
-  
+
     // Any camera that reaches this point was not added by AddView() and so we
     // want to mark it as constant.
     SetCameraExtrinsicsConstant(view_id);
@@ -348,6 +376,175 @@ bool BundleAdjuster::AddInvTrack(
   return true;
 }
 
+bool BundleAdjuster::AddRigCapture(const CaptureId capture_id) {
+  const RigCapture* capture = reconstruction_->GetRigCapture(capture_id);
+  if (capture == nullptr || !capture->IsEstimated() ||
+      ContainsKey(capture_poses_, capture_id)) {
+    return false;
+  }
+  const CameraRig* rig = reconstruction_->GetCameraRig(capture->GetRigId());
+  if (rig == nullptr) {
+    return false;
+  }
+
+  // Collect the estimated member views that have a sensor in the rig. Nothing
+  // is modified until all checks have passed.
+  struct RigMember {
+    ViewId view_id;
+    const RigSensor* sensor;
+  };
+  std::vector<RigMember> members;
+  for (const auto& sensor_and_view : capture->ViewIds()) {
+    const RigSensor* sensor = rig->GetSensor(sensor_and_view.first);
+    const ViewId view_id = sensor_and_view.second;
+    const View* view = reconstruction_->View(view_id);
+    if (sensor == nullptr || view == nullptr || !view->IsEstimated() ||
+        ContainsKey(rig_views_, view_id)) {
+      continue;
+    }
+    // The rig residual is only implemented for central cameras.
+    if (view->Camera().GetCameraIntrinsicsModelType() ==
+        CameraIntrinsicsModelType::ORTHOGRAPHIC) {
+      LOG(WARNING) << "Capture " << capture_id
+                   << " contains an orthographic view and is not "
+                      "rig-constrained in bundle adjustment.";
+      return false;
+    }
+    members.push_back({view_id, sensor});
+  }
+  if (members.empty()) {
+    return false;
+  }
+
+  // Shared capture pose in the Camera extrinsics layout.
+  std::array<double, 6> pose;
+  const Eigen::Vector3d position = capture->GetPosition();
+  const Eigen::Vector3d angle_axis = capture->GetOrientationAsAngleAxis();
+  for (int i = 0; i < 3; ++i) {
+    pose[Camera::POSITION + i] = position[i];
+    pose[Camera::ORIENTATION + i] = angle_axis[i];
+  }
+  capture_poses_[capture_id] = pose;
+  double* pose_block = capture_poses_[capture_id].data();
+  // Same Schur group as the camera extrinsics of AddView().
+  static const int kIntrinsicsParameterGroup = 1;
+  static const int kExtrinsicsParameterGroup = 2;
+  parameter_ordering_->AddElementToGroup(
+      pose_block,
+      options_.optimize_for_forward_facing_trajectory
+          ? kIntrinsicsParameterGroup
+          : kExtrinsicsParameterGroup);
+
+  for (const RigMember& member : members) {
+    View* view = reconstruction_->MutableView(member.view_id);
+    Camera* camera = view->MutableCamera();
+
+    RigViewInfo rig_view;
+    rig_view.capture_id = capture_id;
+    rig_view.rotation_rig_to_cam =
+        member.sensor->GetOrientationAsRotationMatrix();
+    rig_view.position_in_rig = member.sensor->position;
+    rig_views_[member.view_id] = rig_view;
+    AddRigViewPriors(view, rig_view);
+
+    // The intrinsics of a member view are optimized like those of AddView().
+    const CameraIntrinsicsGroupId intrinsics_group_id =
+        reconstruction_->CameraIntrinsicsGroupIdFromViewId(member.view_id);
+    optimized_camera_intrinsics_groups_.emplace(intrinsics_group_id);
+    parameter_ordering_->AddElementToGroup(camera->mutable_intrinsics(),
+                                           kIntrinsicsParameterGroup);
+  }
+  return true;
+}
+
+bool BundleAdjuster::IsViewInRigCapture(const ViewId view_id) const {
+  return ContainsKey(rig_views_, view_id);
+}
+
+void BundleAdjuster::UpdateRigCapturePoses() {
+  for (const auto& capture_and_pose : capture_poses_) {
+    const double* pose = capture_and_pose.second.data();
+    // Captures without any residual were never part of the problem.
+    if (!problem_->HasParameterBlock(pose)) {
+      continue;
+    }
+    RigCapture* capture =
+        reconstruction_->MutableRigCapture(capture_and_pose.first);
+    if (capture == nullptr) {
+      continue;
+    }
+    capture->SetPosition(Eigen::Vector3d(pose[Camera::POSITION],
+                                         pose[Camera::POSITION + 1],
+                                         pose[Camera::POSITION + 2]));
+    capture->SetOrientationFromAngleAxis(
+        Eigen::Vector3d(pose[Camera::ORIENTATION],
+                        pose[Camera::ORIENTATION + 1],
+                        pose[Camera::ORIENTATION + 2]));
+    PropagateCameraPosesForCapture(
+        capture_and_pose.first, reconstruction_, /*update_view_estimated=*/false);
+  }
+}
+
+void BundleAdjuster::AddRigReprojectionErrorResidual(const Feature& feature,
+                                                     const RigViewInfo& rig_view,
+                                                     Camera* camera,
+                                                     Track* track) {
+  // The standard (analytic or autodiff) reprojection error of the view's
+  // camera, composed with the fixed sensor extrinsics: the first parameter
+  // block becomes the pose of the rig body.
+  ceres::CostFunction* inner = nullptr;
+  if (options_.analytic_jacobians && !options_.orthographic_camera) {
+    inner = CreateAnalyticReprojectionErrorCostFunction(
+        camera->GetCameraIntrinsicsModelType(), feature);
+  }
+  if (inner == nullptr) {
+    inner = CreateReprojectionErrorCostFunction(
+        camera->GetCameraIntrinsicsModelType(), feature);
+  }
+  problem_->AddResidualBlock(
+      WrapCostFunctionWithRigPose(inner,
+                                  rig_view.rotation_rig_to_cam,
+                                  rig_view.position_in_rig),
+      loss_function_.get(),
+      capture_poses_.at(rig_view.capture_id).data(),
+      camera->mutable_intrinsics(),
+      track->MutablePoint()->data());
+}
+
+void BundleAdjuster::AddRigViewPriors(View* view, const RigViewInfo& rig_view) {
+  double* pose = capture_poses_.at(rig_view.capture_id).data();
+  const auto wrap = [&](ceres::CostFunction* cf) {
+    return WrapCostFunctionWithRigPose(
+        cf, rig_view.rotation_rig_to_cam, rig_view.position_in_rig);
+  };
+  if (options_.use_position_priors && view->HasPositionPrior()) {
+    problem_->AddResidualBlock(
+        wrap(PositionError::Create(view->GetPositionPrior(),
+                                   view->GetPositionPriorSqrtInformation())),
+        NULL, pose);
+  }
+  if (options_.use_gravity_priors && view->HasGravityPrior()) {
+    ceres::CostFunction* cf =
+        options_.gravity_prior_error_type ==
+                GravityPriorErrorType::DIRECTION_CROSS
+            ? GravityDirectionError::Create(
+                  options_.gravity_world_direction,
+                  view->GetGravityPrior(),
+                  view->GetGravityPriorSqrtInformation())
+            : GravityError::Create(options_.gravity_world_direction,
+                                   view->GetGravityPrior(),
+                                   view->GetGravityPriorSqrtInformation());
+    problem_->AddResidualBlock(wrap(cf), NULL, pose);
+  }
+  if (options_.use_orientation_priors && view->HasOrientationPrior()) {
+    problem_->AddResidualBlock(
+        wrap(OrientationPriorError::Create(
+            view->GetOrientationPrior(),
+            view->GetOrientationPriorSqrtInformation())),
+        NULL, pose);
+  }
+}
+
 void BundleAdjuster::AddViewPriors() {
 
   for (const auto vid : optimized_views_) {
@@ -439,6 +636,22 @@ void BundleAdjuster::RemoveBlocksNotInProblemFromOrdering() {
       parameter_ordering_->Remove(block);
     }
   }
+  // Member views of rig captures only contribute their intrinsics, and the
+  // capture poses are shared blocks.
+  for (const auto& rig_view : rig_views_) {
+    double* block =
+        reconstruction_->MutableView(rig_view.first)->MutableCamera()
+            ->mutable_intrinsics();
+    if (!problem_->HasParameterBlock(block)) {
+      parameter_ordering_->Remove(block);
+    }
+  }
+  for (auto& capture_and_pose : capture_poses_) {
+    double* block = capture_and_pose.second.data();
+    if (!problem_->HasParameterBlock(block)) {
+      parameter_ordering_->Remove(block);
+    }
+  }
 }
 
 void BundleAdjuster::SetCameraExtrinsicsParameterization() {
@@ -463,10 +676,18 @@ void BundleAdjuster::SetCameraExtrinsicsParameterization() {
     return;
   }
 
+  // Free camera poses and rig capture poses share the same parameter layout.
+  std::vector<double*> extrinsics_blocks;
   for (const ViewId view_id : optimized_views_) {
-    double* extrinsics =
+    extrinsics_blocks.push_back(
         reconstruction_->MutableView(view_id)->MutableCamera()
-            ->mutable_extrinsics();
+            ->mutable_extrinsics());
+  }
+  for (auto& capture_and_pose : capture_poses_) {
+    extrinsics_blocks.push_back(capture_and_pose.second.data());
+  }
+
+  for (double* extrinsics : extrinsics_blocks) {
     // Views without any residual (e.g. no estimated tracks) were never added
     // to the problem; Ceres aborts if we set a manifold on them.
     if (!problem_->HasParameterBlock(extrinsics)) {

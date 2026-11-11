@@ -61,6 +61,9 @@ BundleAdjustTracksWithCovWrapper(Reconstruction& reconstruction,
 BundleAdjustmentSummary BundleAdjustReconstructionWrapper(
     const BundleAdjustmentOptions& options, Reconstruction& reconstruction);
 
+BundleAdjustmentSummary BundleAdjustRigReconstructionWrapper(
+    const BundleAdjustmentOptions& options, Reconstruction& reconstruction);
+
 BundleAdjustmentSummary BundleAdjustPartialReconstructionWrapper(
     const BundleAdjustmentOptions& options,
     const std::unordered_set<ViewId>& views_to_optimize,

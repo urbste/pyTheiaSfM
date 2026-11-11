@@ -32,6 +32,8 @@ class GlomapPositionEstimator : public PositionEstimator {
     bool write_points_to_reconstruction = false;
     bool use_pairwise_scale_priors = false;
     double pairwise_scale_prior_weight = 1.0;
+    // Weight of the hard rig offset constraints (see RigOffsetConstraint).
+    double rig_constraint_weight = 1e3;
   };
 
   GlomapPositionEstimator(const Options& options,

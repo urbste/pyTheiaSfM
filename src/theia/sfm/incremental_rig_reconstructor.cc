@@ -5,6 +5,8 @@
 
 #include <Eigen/Core>
 #include <algorithm>
+#include <cmath>
+#include <unordered_map>
 #include <glog/logging.h>
 #include <unordered_set>
 #include <vector>
@@ -36,6 +38,37 @@ Camera CameraInRigFrame(const Camera& source_camera, const RigSensor& sensor) {
   camera.SetPosition(sensor.position);
   camera.SetOrientationFromAngleAxis(sensor.orientation);
   return camera;
+}
+
+// Triangulation angle (degrees) at the midpoint of two rays o1 + t d1 and
+// o2 + t d2 (unit d1, d2). Returns 0 for parallel rays or points behind a
+// camera, so such pairs never satisfy a positive minimum angle.
+double MidpointTriangulationAngleDegrees(const Eigen::Vector3d& o1,
+                                         const Eigen::Vector3d& d1,
+                                         const Eigen::Vector3d& o2,
+                                         const Eigen::Vector3d& d2) {
+  const double b = d1.dot(d2);
+  const double denom = 1.0 - b * b;
+  if (denom < 1e-12) {
+    return 0.0;
+  }
+  const Eigen::Vector3d w0 = o1 - o2;
+  const double d = d1.dot(w0);
+  const double e = d2.dot(w0);
+  const double t1 = (b * e - d) / denom;
+  const double t2 = (e - b * d) / denom;
+  if (t1 <= 0.0 || t2 <= 0.0) {
+    return 0.0;
+  }
+  const Eigen::Vector3d X = 0.5 * ((o1 + t1 * d1) + (o2 + t2 * d2));
+  const Eigen::Vector3d v1 = o1 - X;
+  const Eigen::Vector3d v2 = o2 - X;
+  if (v1.squaredNorm() < 1e-18 || v2.squaredNorm() < 1e-18) {
+    return 0.0;
+  }
+  const double cos_angle =
+      std::max(-1.0, std::min(1.0, v1.normalized().dot(v2.normalized())));
+  return std::acos(cos_angle) * 180.0 / 3.14159265358979323846;
 }
 
 }  // namespace
@@ -74,6 +107,12 @@ ReconstructionEstimatorSummary IncrementalRigReconstructor::Estimate(
     summary.bundle_adjustment_time += timer.ElapsedTimeInSeconds();
   }
 
+  // The full bundle adjustment runs only every N localized captures; the
+  // captures localized since the last one are tracked here.
+  const int ba_every_n = std::max(1, options_.bundle_adjust_every_n_captures);
+  int num_localized_total = 0;
+  int num_localized_since_ba = 0;
+
   std::vector<CaptureId> remaining = OrderedUnestimatedCaptures(*reconstruction);
   while (!remaining.empty()) {
     CaptureId best_capture = kInvalidCaptureId;
@@ -105,17 +144,30 @@ ReconstructionEstimatorSummary IncrementalRigReconstructor::Estimate(
       continue;
     }
 
+    // Triangulation runs after every localization, so tracks that failed the
+    // triangulation angle test at the (small-baseline) stereo seed are retried
+    // as soon as a larger baseline is available.
     timer.Reset();
     EstimateStructure(reconstruction);
     summary.triangulation_time += timer.ElapsedTimeInSeconds();
+    ++num_localized_total;
+    ++num_localized_since_ba;
 
-    if (options_.bundle_adjust_after_localize) {
+    if (options_.bundle_adjust_after_localize &&
+        num_localized_total % ba_every_n == 0) {
       timer.Reset();
       BundleAdjustAndPropagate(reconstruction);
       summary.bundle_adjustment_time += timer.ElapsedTimeInSeconds();
+      num_localized_since_ba = 0;
     }
 
     remaining = OrderedUnestimatedCaptures(*reconstruction);
+  }
+
+  if (options_.bundle_adjust_after_localize && num_localized_since_ba > 0) {
+    timer.Reset();
+    BundleAdjustAndPropagate(reconstruction);
+    summary.bundle_adjustment_time += timer.ElapsedTimeInSeconds();
   }
 
   for (const ViewId view_id : reconstruction->ViewIds()) {
@@ -156,36 +208,99 @@ bool IncrementalRigReconstructor::SeedInitialCapture(
                      reconstruction->GetRigCapture(b)->GetTimestamp();
             });
 
-  CaptureId seed = captures.front();
-  for (const CaptureId capture_id : captures) {
-    const RigCapture* capture = reconstruction->GetRigCapture(capture_id);
-    std::unordered_set<ViewId> capture_views(
-        capture->GetViewIds().begin(), capture->GetViewIds().end());
-    bool has_intra_rig_track = false;
-    for (const TrackId track_id : reconstruction->TrackIds()) {
-      const Track* track = reconstruction->Track(track_id);
-      int observations_in_capture = 0;
-      for (const ViewId view_id : track->ViewIds()) {
-        if (ContainsKey(capture_views, view_id)) {
-          ++observations_in_capture;
-        }
-      }
-      if (observations_in_capture >= 2) {
-        has_intra_rig_track = true;
+  // Stereo seed: among the first few captures pick the one with the most
+  // intra-capture tracks whose triangulation angle is large enough.
+  CaptureId seed = kInvalidCaptureId;
+  int best_count = 0;
+  const int num_candidates =
+      std::min(static_cast<int>(captures.size()),
+               std::max(1, options_.num_seed_candidates));
+  for (int i = 0; i < num_candidates; ++i) {
+    const int count = CountStereoTracksInCapture(
+        captures[i], *reconstruction, options_.min_triangulation_angle_degrees);
+    if (count > best_count) {
+      best_count = count;
+      seed = captures[i];
+    }
+  }
+
+  // Fallback: the first capture that has any intra-capture track.
+  if (seed == kInvalidCaptureId) {
+    seed = captures.front();
+    for (const CaptureId capture_id : captures) {
+      if (CountStereoTracksInCapture(capture_id, *reconstruction, 0.0) > 0) {
+        seed = capture_id;
         break;
       }
     }
-    if (has_intra_rig_track) {
-      seed = capture_id;
-      break;
-    }
   }
+  LOG(INFO) << "Seeding rig reconstruction with capture " << seed << " ("
+            << best_count << " stereo tracks with sufficient angle).";
 
   RigCapture* capture = reconstruction->MutableRigCapture(seed);
   capture->SetPosition(Eigen::Vector3d::Zero());
   capture->SetOrientationFromAngleAxis(Eigen::Vector3d::Zero());
   capture->SetEstimated(true);
   return PropagateCameraPosesForCapture(seed, reconstruction);
+}
+
+int IncrementalRigReconstructor::CountStereoTracksInCapture(
+    const CaptureId capture_id,
+    const Reconstruction& reconstruction,
+    const double min_angle_degrees) const {
+  const RigCapture* capture = reconstruction.GetRigCapture(capture_id);
+  if (capture == nullptr) {
+    return 0;
+  }
+  const CameraRig* rig = reconstruction.GetCameraRig(capture->GetRigId());
+  if (rig == nullptr) {
+    return 0;
+  }
+  // Rig-frame rays (centre, unit direction) of every observation in the
+  // capture, grouped by track. The capture pose itself is not needed.
+  struct Ray {
+    Eigen::Vector3d center;
+    Eigen::Vector3d direction;
+  };
+  std::unordered_map<TrackId, std::vector<Ray>> rays_by_track;
+  for (const auto& sensor_and_view : capture->ViewIds()) {
+    const RigSensor* sensor = rig->GetSensor(sensor_and_view.first);
+    const View* view = reconstruction.View(sensor_and_view.second);
+    if (sensor == nullptr || view == nullptr) {
+      continue;
+    }
+    const Camera camera = CameraInRigFrame(view->Camera(), *sensor);
+    for (const TrackId track_id : view->TrackIds()) {
+      const Feature* feature = view->GetFeature(track_id);
+      if (feature == nullptr) {
+        continue;
+      }
+      rays_by_track[track_id].push_back(
+          Ray{camera.GetPosition(),
+              camera.PixelToUnitDepthRay(feature->point_).normalized()});
+    }
+  }
+
+  int count = 0;
+  for (const auto& track_rays : rays_by_track) {
+    const std::vector<Ray>& rays = track_rays.second;
+    bool sufficient = false;
+    for (size_t i = 0; i < rays.size() && !sufficient; ++i) {
+      for (size_t j = i + 1; j < rays.size(); ++j) {
+        const double angle = MidpointTriangulationAngleDegrees(
+            rays[i].center, rays[i].direction, rays[j].center,
+            rays[j].direction);
+        if (angle >= min_angle_degrees) {
+          sufficient = true;
+          break;
+        }
+      }
+    }
+    if (sufficient) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 bool IncrementalRigReconstructor::LocalizeCapture(
@@ -344,6 +459,10 @@ void IncrementalRigReconstructor::EstimateStructure(
 void IncrementalRigReconstructor::BundleAdjustAndPropagate(
     Reconstruction* reconstruction) {
   BundleAdjustmentOptions ba_options = options_.ba_options;
+  if (options_.use_rig_constrained_ba) {
+    BundleAdjustRigReconstruction(ba_options, reconstruction);
+    return;
+  }
   BundleAdjustReconstruction(ba_options, reconstruction);
   // Independent view BA can drift sensors apart; snap back to shared body
   // poses by re-estimating each capture from its first sensor, then propagate.

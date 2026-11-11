@@ -81,6 +81,31 @@ bool CompareViewsPerTrack(const std::pair<TrackId, int>& t1,
   return t1.second > t2.second;
 }
 
+// Residual w * (c_view - c_anchor - delta) for a rigid rig offset.
+struct RigOffsetError {
+  RigOffsetError(const Vector3d& delta, double weight)
+      : delta_(delta), weight_(weight) {}
+
+  template <typename T>
+  bool operator()(const T* const view_position,
+                  const T* const anchor_position,
+                  T* residuals) const {
+    for (int i = 0; i < 3; ++i) {
+      residuals[i] = T(weight_) *
+                     (view_position[i] - anchor_position[i] - T(delta_[i]));
+    }
+    return true;
+  }
+
+  static ceres::CostFunction* Create(const Vector3d& delta, double weight) {
+    return new ceres::AutoDiffCostFunction<RigOffsetError, 3, 3, 3>(
+        new RigOffsetError(delta, weight));
+  }
+
+  Vector3d delta_;
+  double weight_;
+};
+
 }  // namespace
 
 NonlinearPositionEstimator::NonlinearPositionEstimator(
@@ -91,6 +116,7 @@ NonlinearPositionEstimator::NonlinearPositionEstimator(
   CHECK_GE(options_.min_num_points_per_view, 0);
   CHECK_GT(options_.point_to_camera_weight, 0);
   CHECK_GT(options_.robust_loss_width, 0);
+  CHECK_GT(options_.rig_constraint_weight, 0);
 
   if (options_.rng.get() == nullptr) {
     rng_ = std::make_shared<RandomNumberGenerator>();
@@ -156,12 +182,19 @@ bool NonlinearPositionEstimator::EstimatePositions(
     InitializeRandomPositions(orientations, positions);
   }
 
+  // Make sure rig-constrained views (and their anchors) have initial positions
+  // so that they are part of the problem even if they have few pairwise edges.
+  InitializeRigConstrainedPositions(orientations, positions);
+
   // Add the constraints to the problem.
   AddCameraToCameraConstraints(orientations, positions);
   if (options_.min_num_points_per_view > 0) {
     AddPointToCameraConstraints(orientations, positions);
     AddCamerasAndPointsToParameterGroups(positions);
   }
+  // Added after the pairwise/point constraints so that the point weighting
+  // (which depends on the residual count) is unchanged.
+  AddRigConstraintResiduals(positions);
 
   // If the user did not specify fixed cams set one camera to be at the
   // origin to remove the ambiguity of the origin.
@@ -221,6 +254,54 @@ void NonlinearPositionEstimator::InitializeRandomPositions(
       (*positions)[orientation.first] = 100.0 * rng_->RandVector3d();
     }
   }
+}
+
+void NonlinearPositionEstimator::InitializeRigConstrainedPositions(
+    const std::unordered_map<ViewId, Vector3d>& orientations,
+    std::unordered_map<ViewId, Vector3d>* positions) {
+  for (const auto& constraint : rig_constraints_) {
+    const ViewId view_id = constraint.first;
+    const RigOffsetConstraint& rig = constraint.second;
+    if (rig.anchor == view_id ||
+        !ContainsKey(orientations, view_id) ||
+        !ContainsKey(orientations, rig.anchor)) {
+      continue;
+    }
+
+    if (!ContainsKey(*positions, rig.anchor)) {
+      (*positions)[rig.anchor] = 100.0 * rng_->RandVector3d();
+    }
+    if (!ContainsKey(*positions, view_id)) {
+      (*positions)[view_id] = FindOrDie(*positions, rig.anchor) + rig.delta;
+    }
+  }
+}
+
+void NonlinearPositionEstimator::AddRigConstraintResiduals(
+    std::unordered_map<ViewId, Vector3d>* positions) {
+  int num_added = 0;
+  for (const auto& constraint : rig_constraints_) {
+    const ViewId view_id = constraint.first;
+    const RigOffsetConstraint& rig = constraint.second;
+    if (rig.anchor == view_id) {
+      continue;
+    }
+    Vector3d* view_position = FindOrNull(*positions, view_id);
+    Vector3d* anchor_position = FindOrNull(*positions, rig.anchor);
+    if (view_position == nullptr || anchor_position == nullptr) {
+      continue;
+    }
+
+    problem_->AddResidualBlock(
+        RigOffsetError::Create(rig.delta, options_.rig_constraint_weight),
+        nullptr,
+        view_position->data(),
+        anchor_position->data());
+    ++num_added;
+  }
+
+  VLOG(2) << num_added << " rig offset constraints were added to the position "
+          << "estimation problem.";
 }
 
 void NonlinearPositionEstimator::AddCameraToCameraConstraints(

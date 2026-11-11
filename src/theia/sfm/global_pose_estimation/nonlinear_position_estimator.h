@@ -79,6 +79,10 @@ class NonlinearPositionEstimator : public PositionEstimator {
     // The total weight of all point to camera correspondences compared to
     // camera to camera correspondences.
     double point_to_camera_weight = 0.5;
+
+    // Weight of the rig offset constraints (see RigOffsetConstraint). These
+    // residuals are hard-ish constraints without a robust loss.
+    double rig_constraint_weight = 1e3;
   };
 
   NonlinearPositionEstimator(const NonlinearPositionEstimator::Options& options,
@@ -121,6 +125,17 @@ class NonlinearPositionEstimator : public PositionEstimator {
   // Creates camera to camera constraints from relative translations.
   void AddCameraToCameraConstraints(
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
+      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
+
+  // Creates initial positions for rig-constrained views (and their anchors)
+  // that do not yet have a position: anchor + delta.
+  void InitializeRigConstrainedPositions(
+      const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
+      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
+
+  // Adds the rig offset residuals c_view - c_anchor - delta for all rig
+  // constraints whose view and anchor are both present in the problem.
+  void AddRigConstraintResiduals(
       std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
   // Creates point to camera constraints.

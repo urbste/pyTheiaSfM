@@ -130,6 +130,36 @@ Matrix3d AngleAxisToRotationMatrix(const Vector3d angle_axis) {
   return rotation_matrix;
 }
 
+// Follows the rig constraints of `view_id` (c_view = c_anchor + delta) until a
+// view without a constraint is reached, accumulating the offsets so that
+// c_view = c_root + offset. Returns true if that root is part of the system
+// (`in_system` has a count() for it). Cycles and broken chains return false.
+template <typename SystemViews>
+bool ResolveRigChain(
+    const std::unordered_map<ViewId, RigOffsetConstraint>& rig_constraints,
+    const ViewId view_id,
+    const SystemViews& in_system,
+    ViewId* root,
+    Vector3d* offset) {
+  ViewId current = view_id;
+  Vector3d total = Vector3d::Zero();
+  // A chain without a cycle has at most rig_constraints.size() links.
+  for (size_t step = 0; step <= rig_constraints.size(); ++step) {
+    const auto it = rig_constraints.find(current);
+    if (it == rig_constraints.end()) {
+      if (in_system.count(current) == 0) {
+        return false;
+      }
+      *root = current;
+      *offset = total;
+      return true;
+    }
+    total += it->second.delta;
+    current = it->second.anchor;
+  }
+  return false;
+}
+
 // Returns true if the vector R1 * (c2 - c1) is in the same direction as t_12.
 bool VectorsAreSameDirection(const Vector3d& position1,
                              const Vector3d& position2,
@@ -169,6 +199,7 @@ bool LiGTPositionEstimator::EstimatePositions(
 
   num_triplets_for_view_.clear();
   linear_system_index_.clear();
+  resolved_rig_constraints_.clear();
   BCDs_.clear();
   triplets_for_tracks_.clear();
   orientations_.clear();
@@ -185,43 +216,63 @@ bool LiGTPositionEstimator::EstimatePositions(
   VLOG(2) << "Finished extracting triplets from tracks and calculating BCDs.";
 
   BuildLinearSystemIndex();
-  if (linear_system_index_.size() < 3) {
+  // Rig-constrained views count too, although they have no unknowns.
+  const size_t num_system_views =
+      linear_system_index_.size() + resolved_rig_constraints_.size();
+  if (num_system_views < 3) {
     LOG(WARNING) << "LiGT needs tracks that connect at least 3 views, found "
-                 << linear_system_index_.size() << ".";
+                 << num_system_views << ".";
     return false;
   }
-  ComputeScaleConstraint();
+  // With rig constraints the scale is metric, so the scale constraint of
+  // ShapeFit is not needed.
+  if (resolved_rig_constraints_.empty()) {
+    ComputeScaleConstraint();
+  }
 
   VLOG(2) << "Building the constraint matrix...";
   // Create the linear system based on triplet constraints. One position is
-  // fixed at the origin, so the (N-1)*3 system gives the positions up to scale.
+  // fixed at the origin, so the (N-1)*3 system gives the positions up to scale
+  // (without rig constraints) or exactly (with them).
+  Eigen::VectorXd solution;
   Eigen::SparseMatrix<double> constraint_matrix;
-  CreateLinearSystem(&constraint_matrix);
-  Eigen::VectorXd solution = SolveLinearSystem(constraint_matrix);
-
-  // Robustification (IRLS): re-weight the track constraints with the residuals
-  // of the current solution and solve again.
-  for (int iter = 0; iter < options_.num_irls_iterations; ++iter) {
-    const double scale = UpdateConstraintWeights(solution);
-    if (!(scale > 0.0)) {
-      break;  // perfectly consistent (or degenerate) constraints
-    }
+  // With fewer than two free views there is no unknown left to solve for; the
+  // rig-constrained views then follow the origin view.
+  if (linear_system_index_.size() >= 2) {
     CreateLinearSystem(&constraint_matrix);
-    Eigen::VectorXd new_solution = SolveLinearSystem(constraint_matrix);
-    // The eigenvector sign is arbitrary: align it with the previous solution.
-    if (new_solution.dot(solution) < 0.0) {
-      new_solution *= -1.0;
+    solution = SolveLinearSystem(constraint_matrix);
+    if (solution.size() != constraint_matrix.cols()) {
+      return false;
     }
-    const double change = (new_solution - solution).norm();
-    solution = new_solution;
-    VLOG(2) << "LiGT IRLS iteration " << iter << ": robust scale " << scale
-            << ", solution change " << change;
-    if (change < options_.irls_convergence_threshold) {
-      break;
+
+    // Robustification (IRLS): re-weight the track constraints with the
+    // residuals of the current solution and solve again.
+    for (int iter = 0; iter < options_.num_irls_iterations; ++iter) {
+      const double scale = UpdateConstraintWeights(solution);
+      if (!(scale > 0.0)) {
+        break;  // perfectly consistent (or degenerate) constraints
+      }
+      CreateLinearSystem(&constraint_matrix);
+      Eigen::VectorXd new_solution = SolveLinearSystem(constraint_matrix);
+      if (new_solution.size() != constraint_matrix.cols()) {
+        break;  // keep the previous solution
+      }
+      // The eigenvector sign is arbitrary: align it with the previous solution.
+      // Inhomogeneous (rig) solutions have a fixed sign.
+      if (resolved_rig_constraints_.empty() &&
+          new_solution.dot(solution) < 0.0) {
+        new_solution *= -1.0;
+      }
+      const double change = (new_solution - solution).norm();
+      solution = new_solution;
+      VLOG(2) << "LiGT IRLS iteration " << iter << ": robust scale " << scale
+              << ", solution change " << change;
+      if (change < options_.irls_convergence_threshold) {
+        break;
+      }
     }
   }
 
-  // Compute with power iterations.
   // Add the solutions to the output. Set the position with an index of -1 to
   // be at the origin.
   for (const auto &view_index : linear_system_index_) {
@@ -233,7 +284,19 @@ bool LiGTPositionEstimator::EstimatePositions(
     }
   }
 
-  FlipSignOfPositionsIfNecessary(positions);
+  // Rig-constrained views are not unknowns: their center is the root center
+  // plus the known offset (c_view = c_root + offset). The root is always a
+  // system view, so its position has been set above.
+  for (const auto& resolved : resolved_rig_constraints_) {
+    (*positions)[resolved.first] =
+        (*positions)[resolved.second.root] + resolved.second.offset;
+  }
+
+  // The sign of the eigenvector is arbitrary, which is what the sign check
+  // corrects. A metric rig-constrained solution has no such ambiguity.
+  if (resolved_rig_constraints_.empty()) {
+    FlipSignOfPositionsIfNecessary(positions);
+  }
 
   return true;
 }
@@ -421,22 +484,48 @@ void LiGTPositionEstimator::BuildLinearSystemIndex() {
   }
   std::sort(view_ids.begin(), view_ids.end());
 
+  // Rig-constrained views are tied to a root view of the system. Only views
+  // whose anchor chain ends at a view of the system are resolved.
+  resolved_rig_constraints_.clear();
+  for (const auto& rig : rig_constraints_) {
+    ResolvedRigConstraint resolved;
+    if (ResolveRigChain(rig_constraints_, rig.first, num_triplets_for_view_,
+                        &resolved.root, &resolved.offset)) {
+      resolved_rig_constraints_[rig.first] = resolved;
+    }
+  }
+
   // The position at index -1 is held constant (and not part of the system).
-  // The best constrained view is the safest one to fix.
-  ViewId constant_view = view_ids.front();
+  // The best constrained view is the safest one to fix. Rig-constrained views
+  // are not candidates: they are not unknowns.
+  ViewId constant_view = kInvalidViewId;
   for (const ViewId view_id : view_ids) {
-    if (num_triplets_for_view_[view_id] >
-        num_triplets_for_view_[constant_view]) {
+    if (ContainsKey(resolved_rig_constraints_, view_id)) {
+      continue;
+    }
+    if (constant_view == kInvalidViewId ||
+        num_triplets_for_view_[view_id] >
+            num_triplets_for_view_[constant_view]) {
       constant_view = view_id;
     }
   }
   linear_system_index_[constant_view] = kConstantPositionIndex;
   int index = 0;
   for (const ViewId view_id : view_ids) {
-    if (view_id != constant_view) {
+    if (view_id != constant_view &&
+        !ContainsKey(resolved_rig_constraints_, view_id)) {
       linear_system_index_[view_id] = index++;
     }
   }
+}
+
+void LiGTPositionEstimator::ResolveViewBlock(const ViewId view_id, int* block,
+                                             Vector3d* offset) const {
+  const ResolvedRigConstraint* resolved =
+      FindOrNull(resolved_rig_constraints_, view_id);
+  const ViewId lookup = resolved == nullptr ? view_id : resolved->root;
+  *block = 3 * FindOrDie(linear_system_index_, lookup);
+  *offset = resolved == nullptr ? Vector3d::Zero() : resolved->offset;
 }
 
 void LiGTPositionEstimator::ComputeScaleConstraint() {
@@ -470,7 +559,8 @@ void LiGTPositionEstimator::CreateLinearSystem(
 
     std::unordered_map<std::pair<int, int>, double> sparse_matrix_entries;
     sparse_matrix_entries.reserve(27 * num_triplets_for_view_.size());
-    
+
+    rhs_ = Eigen::VectorXd::Zero(3 * (num_views - 1));
     for (const auto& triplet_vector : triplets_for_tracks_) {
         const TrackId t_id = triplet_vector.first;
         const std::vector<ViewIdTriplet> triplet_v = triplet_vector.second;
@@ -484,7 +574,7 @@ void LiGTPositionEstimator::CreateLinearSystem(
                                       : weights_it->second[i];
             AddTripletConstraintToSparseMatrix(view_id1, view_id2, view_id3,
                                                BCDs_[t_id][i], weight,
-                                               &sparse_matrix_entries);
+                                               &sparse_matrix_entries, &rhs_);
 
         }
     }
@@ -523,7 +613,8 @@ void LiGTPositionEstimator::AddTripletConstraintToSparseMatrix(
     const ViewId view_id2,
     const std::tuple<Matrix3d, Matrix3d, Matrix3d>& BCD,
     const double weight,
-    std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries) {
+    std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries,
+    Eigen::VectorXd* rhs) {
 //  // Weight each term by the inverse of the # of triplet that the nodes
 //  // participate in.
 //  const double w =
@@ -531,11 +622,14 @@ void LiGTPositionEstimator::AddTripletConstraintToSparseMatrix(
 //                                num_triplets_for_view_[view_id1],
 //                                num_triplets_for_view_[view_id2]}));
 
-  // Get the index of each camera in the sparse matrix.
-  const std::vector<int> view_indices = {
-      static_cast<int>(3 * FindOrDie(linear_system_index_, view_id0)),
-      static_cast<int>(3 * FindOrDie(linear_system_index_, view_id1)),
-      static_cast<int>(3 * FindOrDie(linear_system_index_, view_id2))};
+  // Get the index of each camera in the sparse matrix, and its rig offset.
+  // Rig-constrained views use the block of their root view.
+  int block0 = 0, block1 = 0, block2 = 0;
+  Vector3d offset0, offset1, offset2;
+  ResolveViewBlock(view_id0, &block0, &offset0);
+  ResolveViewBlock(view_id1, &block1, &offset1);
+  ResolveViewBlock(view_id2, &block2, &offset2);
+  const std::vector<int> view_indices = {block0, block1, block2};
 
   // important to use index 1 0 2 here.
   // 0 ist the central camera and equation 17 is using it that way
@@ -554,11 +648,37 @@ void LiGTPositionEstimator::AddTripletConstraintToSparseMatrix(
   }
   AddTripletConstraintToSymmetricMatrix(
       constraints, view_indices, w, sparse_matrix_entries);
+
+  // Substitution of rig-constrained views, c_i = c_root + offset_i: the residual
+  // of the triplet is A x + b with b = sum_i C_i offset_i. The normal equations
+  // M x = rhs get -w A^T b, i.e. -w C_i^T b in the block of view i's root.
+  const std::vector<Vector3d> offsets = {offset0, offset1, offset2};
+  Vector3d b = Vector3d::Zero();
+  for (int i = 0; i < 3; ++i) {
+    b += constraints[i] * offsets[i];
+  }
+  if (b.squaredNorm() > 0.0) {
+    for (int i = 0; i < 3; ++i) {
+      if (view_indices[i] >= 0) {
+        rhs->segment<3>(view_indices[i]) -= w * constraints[i].transpose() * b;
+      }
+    }
+  }
 }
 
 Eigen::VectorXd LiGTPositionEstimator::SolveLinearSystem(
     const Eigen::SparseMatrix<double>& constraint_matrix) const {
   Eigen::VectorXd solution;
+  if (!resolved_rig_constraints_.empty()) {
+    // The rig offsets make the system inhomogeneous: the metric solution is
+    // the least squares solution of M x = rhs_, no normalization needed.
+    if (SolveWithRigConstraints(constraint_matrix, &solution)) {
+      return solution;
+    }
+    LOG(WARNING) << "LiGT: the rig-constrained solve failed.";
+    return Eigen::VectorXd();
+  }
+
   if (options_.use_scale_constraint) {
     if (SolveWithScaleConstraint(constraint_matrix, &solution)) {
       return solution;
@@ -586,6 +706,30 @@ Eigen::VectorXd LiGTPositionEstimator::SolveLinearSystem(
     solution = svd.matrixV().col(svd.matrixV().cols() - 1);
   }
   return solution;
+}
+
+bool LiGTPositionEstimator::SolveWithRigConstraints(
+    const Eigen::SparseMatrix<double>& constraint_matrix,
+    Eigen::VectorXd* solution) const {
+  const int size = constraint_matrix.rows();
+  if (size == 0 || rhs_.size() != size) {
+    return false;
+  }
+
+  // Same regularization as in SolveWithScaleConstraint.
+  Eigen::SparseMatrix<double> identity(size, size);
+  identity.setIdentity();
+  const double trace = constraint_matrix.diagonal().sum();
+  const Eigen::SparseMatrix<double> regularized =
+      constraint_matrix + (1e-10 * trace / size) * identity;
+
+  SparseCholeskyLLt linear_solver;
+  linear_solver.Compute(regularized);
+  if (linear_solver.Info() != Eigen::Success) {
+    return false;
+  }
+  *solution = linear_solver.Solve(rhs_);
+  return linear_solver.Info() == Eigen::Success && solution->allFinite();
 }
 
 bool LiGTPositionEstimator::SolveWithScaleConstraint(
@@ -622,9 +766,13 @@ bool LiGTPositionEstimator::SolveWithScaleConstraint(
 double LiGTPositionEstimator::UpdateConstraintWeights(
     const Eigen::VectorXd& solution) {
   auto position_of = [&](const ViewId view_id) -> Vector3d {
-    const int index = FindOrDie(linear_system_index_, view_id);
-    return index < 0 ? Vector3d(Vector3d::Zero())
-                     : Vector3d(solution.segment<3>(3 * index));
+    int block = 0;
+    Vector3d offset;
+    ResolveViewBlock(view_id, &block, &offset);
+    if (block < 0) {
+      return offset;  // constant view (offset is zero unless rig-constrained)
+    }
+    return Vector3d(solution.segment<3>(block) + offset);
   };
 
   // Normalized residual of every constraint: |B c0 + C c1 + D c2| divided by

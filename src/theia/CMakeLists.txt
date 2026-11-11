@@ -84,6 +84,7 @@ set(THEIA_SRC
   sfm/bundle_adjustment/create_loss_function.cc
   sfm/bundle_adjustment/loss_functions.cc
   sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.cc
+  sfm/bundle_adjustment/rig_reprojection_error.cc
   sfm/camera/camera_intrinsics_model.cc
   sfm/camera/camera.cc
   sfm/camera/division_undistortion_camera_model.cc
@@ -201,6 +202,7 @@ set(THEIA_SRC
   sfm/rig/rig_capture.cc
   sfm/rig/rig_utils.cc
   sfm/rig/capture_view_graph.cc
+  sfm/rig/rig_edge_scales.cc
   sfm/select_good_tracks_for_bundle_adjustment.cc
   sfm/set_camera_intrinsics_from_priors.cc
   sfm/compute_mean_reprojection_error.cc

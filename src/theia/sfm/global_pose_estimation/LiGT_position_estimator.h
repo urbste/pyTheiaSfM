@@ -140,7 +140,8 @@ class LiGTPositionEstimator : public PositionEstimator {
    // Store the triplet.
   void AddTripletConstraint(const ViewIdTriplet& view_triplet);
   
-  // Sets up the linear system with the constraints that each triplet adds.
+  // Sets up the normal equations M x = rhs_ with the constraints that each
+  // triplet adds. rhs_ is zero unless rig constraints are present.
   void CreateLinearSystem(Eigen::SparseMatrix<double>* constraint_matrix);
 
   // Implements equation 29 from the paper. Get base views for point
@@ -159,24 +160,40 @@ class LiGTPositionEstimator : public PositionEstimator {
       const ViewId view_id3,
       const std::tuple<Matrix3d, Matrix3d, Matrix3d> &BCD,
       const double weight,
-      std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries);
+      std::unordered_map<std::pair<int, int>, double>* sparse_matrix_entries,
+      Eigen::VectorXd* rhs);
 
   void FindTripletsForTracks();
 
   // Keeps only the constraints of the largest connected set of views and
-  // assigns the linear system indices. The view with the most constraints is
-  // the one fixed at the origin. The result does not depend on thread order.
+  // assigns the linear system indices. Rig-constrained views get no indices;
+  // they follow their root view (see resolved_rig_constraints_). The view with
+  // the most constraints among the unconstrained views is the one fixed at the
+  // origin. The result does not depend on thread order.
   void BuildLinearSystemIndex();
 
   // Sums the two-view translation directions per view (see
   // Options::use_scale_constraint).
   void ComputeScaleConstraint();
 
-  // Solves the system with the scale constraint if requested. Otherwise, or if
-  // that fails, returns the smallest eigenvector of the constraint matrix
-  // (dense SVD for small problems, sparse shift-invert eigensolver otherwise).
+  // Block of a view in the linear system (3 * its index, -3 for the constant
+  // view) and its rig offset (zero unless the view is rig-constrained), so that
+  // the position of the view is x[block] + offset.
+  void ResolveViewBlock(const ViewId view_id, int* block,
+                        Eigen::Vector3d* offset) const;
+
+  // Solves the system. With rig constraints the system is inhomogeneous and
+  // M x = rhs_ is solved directly (metric scale). Otherwise the system is
+  // solved with the scale constraint if requested, or, if that fails, by
+  // returning the smallest eigenvector of the constraint matrix (dense SVD for
+  // small problems, sparse shift-invert eigensolver otherwise). Returns an
+  // empty vector if the solve fails.
   Eigen::VectorXd SolveLinearSystem(
       const Eigen::SparseMatrix<double>& constraint_matrix) const;
+
+  // Solves M x = rhs (regularized sparse Cholesky). Returns false on failure.
+  bool SolveWithRigConstraints(const Eigen::SparseMatrix<double>& constraint_matrix,
+                               Eigen::VectorXd* solution) const;
 
   // Computes the unit-norm x ~ M^-1 g. Returns false if that is not possible.
   bool SolveWithScaleConstraint(
@@ -217,6 +234,16 @@ class LiGTPositionEstimator : public PositionEstimator {
   std::unordered_map<ViewId, int> linear_system_index_;
   // The vector g of Options::use_scale_constraint.
   Eigen::VectorXd scale_constraint_;
+
+  // Rig-constrained views, keyed by the constrained view. Their position is
+  // root position + offset, so they have no unknowns of their own.
+  struct ResolvedRigConstraint {
+    ViewId root = kInvalidViewId;
+    Eigen::Vector3d offset = Eigen::Vector3d::Zero();
+  };
+  std::unordered_map<ViewId, ResolvedRigConstraint> resolved_rig_constraints_;
+  // Right-hand side of the normal equations (zero without rig constraints).
+  Eigen::VectorXd rhs_;
 
   DISALLOW_COPY_AND_ASSIGN(LiGTPositionEstimator);
 };

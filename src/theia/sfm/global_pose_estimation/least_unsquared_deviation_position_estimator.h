@@ -99,16 +99,31 @@ class LeastUnsquaredDeviationPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientations);
 
   // Creates camera to camera constraints from relative translations and the
-  // L1 right-hand side `b` (nonzero for fixed-scale edges).
+  // L1 right-hand side `b` (nonzero for fixed-scale edges and rig offsets).
   void SetupConstraintMatrix(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
       Eigen::VectorXd* b);
 
+  // A rig-constrained view (c_view = c_root + offset) that is tied to a root
+  // view of the linear system. It has no unknowns of its own.
+  struct ResolvedRigConstraint {
+    ViewId root = kInvalidViewId;
+    Eigen::Vector3d offset = Eigen::Vector3d::Zero();
+  };
+
+  // True if the view has unknowns in the system or is tied to one by a rig
+  // constraint (i.e. its edges are part of the system).
+  bool IsInLinearSystem(const ViewId view_id) const;
+
   const LeastUnsquaredDeviationPositionEstimator::Options options_;
 
   std::unordered_map<ViewIdPair, int> view_id_pair_to_index_;
   std::unordered_map<ViewId, int> view_id_to_index_;
+  // Rig-constrained views, keyed by the constrained view. Populated in
+  // InitializeIndexMapping; only views whose anchor chain ends at a view of
+  // the system are included.
+  std::unordered_map<ViewId, ResolvedRigConstraint> resolved_rig_constraints_;
   static const int kConstantViewIndex = -3;
 
   Eigen::SparseMatrix<double> constraint_matrix_;

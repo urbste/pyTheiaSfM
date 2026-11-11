@@ -89,8 +89,6 @@ set(CMAKE_DEBUG_POSTFIX "-debug")
 
 set(THEIA_ABI_VERSION ${PROJECT_VERSION})
 
-# THEIA data directory
-add_definitions(-DTHEIA_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
 
 #if (PYTHON_BUILD)
   # fPIC

@@ -234,6 +234,21 @@ struct BundleAdjustmentSummary {
 BundleAdjustmentSummary BundleAdjustReconstruction(
     const BundleAdjustmentOptions& options, Reconstruction* reconstruction);
 
+// Rig-constrained bundle adjustment of all estimated views and tracks. The views
+// of every estimated RigCapture (with a known CameraRig) share one 6-DoF capture
+// pose and their sensor extrinsics are held constant, so the views' poses are
+// composed from the capture pose instead of being free parameters
+// (RigReprojectionError). All other views are ordinary cameras, as in
+// BundleAdjustReconstruction. Intrinsics, points, the robust loss and point
+// priors follow the options. After the solve, the capture poses are written to
+// the RigCaptures and propagated to their views with
+// PropagateCameraPosesForCapture. The inverse depth parametrization is not used
+// (XYZ points only). The gauge is not fixed, as in BundleAdjustReconstruction.
+// Per-view position/orientation/gravity priors and depth priors are not applied
+// to rig member views.
+BundleAdjustmentSummary BundleAdjustRigReconstruction(
+    const BundleAdjustmentOptions& options, Reconstruction* reconstruction);
+
 // Bundle adjust the specified views and all tracks observed by those views.
 BundleAdjustmentSummary BundleAdjustPartialReconstruction(
     const BundleAdjustmentOptions& options,

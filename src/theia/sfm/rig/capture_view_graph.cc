@@ -119,7 +119,8 @@ bool BuildCaptureViewGraphFromViewEdges(
     const ViewGraph& view_graph,
     ViewGraph* capture_view_graph,
     int* num_added,
-    const bool only_if_missing) {
+    const bool only_if_missing,
+    const bool same_sensor_only) {
   const auto& edges = view_graph.GetAllEdges();
   for (const auto& edge : edges) {
     const ViewId view_id1 = edge.first.first;
@@ -146,6 +147,14 @@ bool BuildCaptureViewGraphFromViewEdges(
     const RigSensor* s1 = rig->GetSensor(m1->rig_camera_id);
     const RigSensor* s2 = rig->GetSensor(m2->rig_camera_id);
     if (s1 == nullptr || s2 == nullptr) {
+      continue;
+    }
+    // A two-view translation is a unit direction, so the metric sensor offset
+    // can only be removed consistently when both views use the same sensor
+    // (the offset then nearly cancels). Cross-sensor edges mix the scales and
+    // are used only to fill capture pairs without a same-sensor edge.
+    const bool same_sensor = m1->rig_camera_id == m2->rig_camera_id;
+    if (same_sensor_only != same_sensor) {
       continue;
     }
 
@@ -368,17 +377,23 @@ bool BuildCaptureViewGraph(const Reconstruction& reconstruction,
 
   if (options.fallback_to_twoview_strip) {
     // Fill missing pairs only — do not overwrite metric edges.
-    BuildCaptureViewGraphFromViewEdges(reconstruction,
-                                       view_graph,
-                                       capture_view_graph,
-                                       &num_added,
-                                       /*only_if_missing=*/true);
+    BuildCaptureViewGraphFromViewEdges(reconstruction, view_graph,
+                                       capture_view_graph, &num_added,
+                                       /*only_if_missing=*/true,
+                                       /*same_sensor_only=*/true);
+    BuildCaptureViewGraphFromViewEdges(reconstruction, view_graph,
+                                       capture_view_graph, &num_added,
+                                       /*only_if_missing=*/true,
+                                       /*same_sensor_only=*/false);
   } else if (!options.use_metric_relative_rig_pose) {
-    BuildCaptureViewGraphFromViewEdges(reconstruction,
-                                       view_graph,
-                                       capture_view_graph,
-                                       &num_added,
-                                       /*only_if_missing=*/false);
+    BuildCaptureViewGraphFromViewEdges(reconstruction, view_graph,
+                                       capture_view_graph, &num_added,
+                                       /*only_if_missing=*/false,
+                                       /*same_sensor_only=*/true);
+    BuildCaptureViewGraphFromViewEdges(reconstruction, view_graph,
+                                       capture_view_graph, &num_added,
+                                       /*only_if_missing=*/true,
+                                       /*same_sensor_only=*/false);
   }
 
   LOG(INFO) << "Built capture view graph with " << capture_view_graph->NumEdges()

@@ -120,6 +120,7 @@
 #include "theia/sfm/reconstruction_estimator_utils.h"
 #include "theia/sfm/rig/camera_rig.h"
 #include "theia/sfm/rig/rig_capture.h"
+#include "theia/sfm/rig/rig_edge_scales.h"
 #include "theia/sfm/rig/rig_utils.h"
 #include "theia/sfm/rig/capture_view_graph.h"
 #include "theia/sfm/track_builder.h"
@@ -2178,9 +2179,18 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("bundle_adjust_after_localize",
                      &theia::IncrementalRigReconstructorOptions::
                          bundle_adjust_after_localize)
+      .def_readwrite("bundle_adjust_every_n_captures",
+                     &theia::IncrementalRigReconstructorOptions::
+                         bundle_adjust_every_n_captures)
+      .def_readwrite("num_seed_candidates",
+                     &theia::IncrementalRigReconstructorOptions::
+                         num_seed_candidates)
       .def_readwrite("use_generalized_localization",
                      &theia::IncrementalRigReconstructorOptions::
                          use_generalized_localization)
+      .def_readwrite("use_rig_constrained_ba",
+                     &theia::IncrementalRigReconstructorOptions::
+                         use_rig_constrained_ba)
       .def_readwrite(
           "ba_options",
           &theia::IncrementalRigReconstructorOptions::ba_options);
@@ -2218,7 +2228,17 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite(
           "rescale_positions_to_metric_edges",
           &theia::GlobalRigReconstructorOptions::
-              rescale_positions_to_metric_edges);
+              rescale_positions_to_metric_edges)
+      .def_readwrite(
+          "use_rig_constraints_in_position_estimation",
+          &theia::GlobalRigReconstructorOptions::
+              use_rig_constraints_in_position_estimation)
+      .def_readwrite("use_rig_constrained_ba",
+                     &theia::GlobalRigReconstructorOptions::
+                         use_rig_constrained_ba)
+      .def_readwrite("use_rig_edge_scales",
+                     &theia::GlobalRigReconstructorOptions::
+                         use_rig_edge_scales);
 
   py::class_<theia::GlobalRigReconstructor>(m, "GlobalRigReconstructor")
       .def(py::init<theia::GlobalRigReconstructorOptions>(),
@@ -2697,7 +2717,15 @@ void pytheia_sfm_classes(py::module& m) {
   m.def("PropagateCameraPosesForCapture",
         &theia::PropagateCameraPosesForCapture,
         py::arg("capture_id"),
-        py::arg("reconstruction"));
+        py::arg("reconstruction"),
+        py::arg("update_view_estimated") = true);
+  m.def("EstimateMetricEdgeScales",
+        &theia::EstimateMetricEdgeScales,
+        py::arg("reconstruction"),
+        py::arg("view_graph"),
+        py::arg("min_points") = 10,
+        "Sets TwoViewInfo.scale_estimate on same-sensor capture edges from "
+        "rig geometry. Returns the number of edges that received a scale.");
   m.def("PropagateAllEstimatedCapturePoses",
         &theia::PropagateAllEstimatedCapturePoses,
         py::arg("reconstruction"));
@@ -2942,6 +2970,10 @@ void pytheia_sfm_classes(py::module& m) {
         py::arg("reconstruction"));
   m.def("BundleAdjustReconstruction",
         theia::BundleAdjustReconstructionWrapper,
+        py::arg("options"),
+        py::arg("reconstruction"));
+  m.def("BundleAdjustRigReconstruction",
+        theia::BundleAdjustRigReconstructionWrapper,
         py::arg("options"),
         py::arg("reconstruction"));
   m.def("BundleAdjustView",

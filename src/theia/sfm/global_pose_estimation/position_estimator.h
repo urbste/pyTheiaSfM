@@ -44,6 +44,17 @@
 
 namespace theia {
 
+// Rigid rig constraint for a view inside a calibrated multi-camera rig: with
+// known global orientations the camera centers of all views of one rig capture
+// are tied together by a known world-frame offset:
+//   c_view = c_anchor + delta.
+// Position estimators that support it add this as a (hard, high-weight)
+// constraint, which also fixes the metric scale of the reconstruction.
+struct RigOffsetConstraint {
+  ViewId anchor = kInvalidViewId;
+  Eigen::Vector3d delta = Eigen::Vector3d::Zero();
+};
+
 // A generic class defining the interface for global position estimation
 // methods. These methods take in as input the (global/absolute) orientation
 // estimated for each camera and pairwise translation directions between pairs
@@ -65,6 +76,21 @@ class PositionEstimator {
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation,
       std::unordered_map<ViewId, Eigen::Vector3d>* positions) = 0;
+
+  // Optional rig constraints keyed by the constrained view (the anchor view
+  // itself has no entry). Empty by default; estimators that do not support
+  // them ignore them.
+  void SetRigConstraints(
+      const std::unordered_map<ViewId, RigOffsetConstraint>& constraints) {
+    rig_constraints_ = constraints;
+  }
+  const std::unordered_map<ViewId, RigOffsetConstraint>& rig_constraints()
+      const {
+    return rig_constraints_;
+  }
+
+ protected:
+  std::unordered_map<ViewId, RigOffsetConstraint> rig_constraints_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(PositionEstimator);

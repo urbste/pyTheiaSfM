@@ -448,6 +448,41 @@ BundleAdjustmentSummary BundleAdjustReconstruction(
   return summary;
 }
 
+// Rig-constrained bundle adjustment of the entire reconstruction.
+BundleAdjustmentSummary BundleAdjustRigReconstruction(
+    const BundleAdjustmentOptions& options, Reconstruction* reconstruction) {
+  CHECK_NOTNULL(reconstruction);
+
+  // The rig residual only exists for XYZ points.
+  BundleAdjustmentOptions ba_options = options;
+  ba_options.use_inverse_depth_parametrization = false;
+
+  const auto& view_ids = reconstruction->ViewIds();
+  const auto& track_ids = reconstruction->TrackIds();
+
+  BundleAdjuster bundle_adjuster(ba_options, reconstruction);
+  // Register the rig captures before the views and tracks: member views are
+  // then excluded from AddView() and attached to the capture poses by AddTrack().
+  for (const CaptureId capture_id : reconstruction->CaptureIds()) {
+    bundle_adjuster.AddRigCapture(capture_id);
+  }
+  for (const ViewId view_id : view_ids) {
+    if (!bundle_adjuster.IsViewInRigCapture(view_id)) {
+      bundle_adjuster.AddView(view_id);
+    }
+  }
+  for (const TrackId track_id : track_ids) {
+    bundle_adjuster.AddTrack(track_id);
+  }
+
+  BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
+
+  bundle_adjuster.UpdateRigCapturePoses();
+  UpdateInverseDepth(track_ids, *reconstruction);
+
+  return summary;
+}
+
 // Bundle adjust a single view.
 BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
                                          const ViewId view_id,
@@ -461,7 +496,7 @@ BundleAdjustmentSummary BundleAdjustView(const BundleAdjustmentOptions& options,
   bundle_adjuster.AddView(view_id);
 
   BundleAdjustmentSummary summary = bundle_adjuster.Optimize();
-  
+
   UpdateInverseDepthViews({view_id}, *reconstruction);
 
   return summary;

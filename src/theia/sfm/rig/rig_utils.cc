@@ -63,7 +63,8 @@ void SetCameraPoseFromRig(const RigCapture& capture,
 }
 
 bool PropagateCameraPosesForCapture(const CaptureId capture_id,
-                                    Reconstruction* reconstruction) {
+                                    Reconstruction* reconstruction,
+                                    bool update_view_estimated) {
   CHECK_NOTNULL(reconstruction);
   RigCapture* capture = reconstruction->MutableRigCapture(capture_id);
   if (capture == nullptr) {
@@ -86,7 +87,9 @@ bool PropagateCameraPosesForCapture(const CaptureId capture_id,
       continue;
     }
     SetCameraPoseFromRig(*capture, *sensor, view->MutableCamera());
-    view->SetEstimated(capture->IsEstimated());
+    if (update_view_estimated) {
+      view->SetEstimated(capture->IsEstimated());
+    }
   }
   return true;
 }

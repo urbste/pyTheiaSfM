@@ -30,6 +30,7 @@
 #include "theia/sfm/rig/capture_view_graph.h"
 #include "theia/sfm/rig/camera_rig.h"
 #include "theia/sfm/rig/rig_capture.h"
+#include "theia/sfm/rig/rig_edge_scales.h"
 #include "theia/sfm/rig/rig_utils.h"
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
 #include "theia/sfm/set_outlier_tracks_to_unestimated.h"
@@ -54,6 +55,7 @@ ReconstructionEstimatorSummary GlobalRigReconstructor::Estimate(
   reconstruction_ = reconstruction;
   orientations_.clear();
   positions_.clear();
+  rig_constraints_applied_ = false;
 
   ReconstructionEstimatorSummary summary;
   Timer total_timer;
@@ -67,10 +69,18 @@ ReconstructionEstimatorSummary GlobalRigReconstructor::Estimate(
   LOG(INFO) << "Building the capture view graph.";
   timer.Reset();
   ViewGraph capture_graph;
+  // With rig offsets inside the position estimators the metric scale comes
+  // from the known sensor extrinsics, so the (slow, and on forward motion
+  // unreliable) 5+1 generalized-pose RANSAC edges are not needed.
+  BuildCaptureViewGraphOptions capture_options = options_.capture_graph_options;
+  if (options_.use_rig_constraints_in_position_estimation) {
+    capture_options.use_metric_relative_rig_pose = false;
+    capture_options.fallback_to_twoview_strip = true;
+  }
   if (!BuildCaptureViewGraph(*reconstruction_,
                              *view_graph,
                              &capture_graph,
-                             options_.capture_graph_options)) {
+                             capture_options)) {
     LOG(WARNING) << "Failed to build capture view graph from view matches.";
     summary.success = false;
     summary.message =
@@ -115,8 +125,12 @@ ReconstructionEstimatorSummary GlobalRigReconstructor::Estimate(
   LOG(INFO) << "Estimating the positions of all captures.";
   timer.Reset();
   bool positions_ok = false;
+  // The capture-graph LUD path does not use rig offsets or metric edge scales,
+  // so when rig constraints are requested go straight to the view-graph path,
+  // which does.
   if (opt.global_position_estimator_type ==
-      GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION) {
+          GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION &&
+      !options_.use_rig_constraints_in_position_estimation) {
     positions_ok = EstimateCapturePositions();
   }
   if (!positions_ok) {
@@ -135,7 +149,8 @@ ReconstructionEstimatorSummary GlobalRigReconstructor::Estimate(
   LOG(INFO) << positions_.size()
             << " capture positions were estimated successfully.";
 
-  if (options_.rescale_positions_to_metric_edges) {
+  if (options_.rescale_positions_to_metric_edges &&
+      !rig_constraints_applied_) {
     LOG(INFO) << "Rescaling capture positions to metric edge lengths.";
     RescaleCapturePositionsToMetricEdges();
   }
@@ -324,11 +339,43 @@ bool GlobalRigReconstructor::EstimateCapturePositionsFromViewGraph(
     view_orientations[view_id] = view->Camera().GetOrientationAsAngleAxis();
   }
 
+  // Metric per-edge scales from the rig geometry (same sensor, consecutive
+  // captures). Only the position estimators that consume scale_estimate are
+  // switched on, and only on local copies of the options.
+  LeastUnsquaredDeviationPositionEstimator::Options lud_options =
+      opt.least_unsquared_deviation_position_estimator_options;
+  GlomapPositionEstimator::Options glomap_options =
+      opt.glomap_position_estimator_options;
+  if (options_.use_rig_edge_scales &&
+      options_.use_rig_constraints_in_position_estimation) {
+    const int num_scales =
+        EstimateMetricEdgeScales(*reconstruction_, view_graph);
+    LOG(INFO) << "Estimated metric scales for " << num_scales
+              << " capture edges from rig geometry.";
+    if (num_scales > 0) {
+      std::vector<double> scales;
+      for (const auto& edge : view_graph->GetAllEdges()) {
+        if (edge.second.scale_estimate > 0.0) {
+          scales.push_back(edge.second.scale_estimate);
+        }
+      }
+      std::sort(scales.begin(), scales.end());
+      LOG(INFO) << "Metric edge scale percentiles 10/50/90: "
+                << scales[scales.size() / 10] << " / "
+                << scales[scales.size() / 2] << " / "
+                << scales[(9 * scales.size()) / 10];
+    }
+    if (num_scales > 0) {
+      lud_options.use_scale_estimates = true;
+      glomap_options.use_pairwise_scale_priors = true;
+    }
+  }
+
   std::unique_ptr<PositionEstimator> position_estimator;
   switch (opt.global_position_estimator_type) {
     case GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION: {
-      position_estimator.reset(new LeastUnsquaredDeviationPositionEstimator(
-          opt.least_unsquared_deviation_position_estimator_options));
+      position_estimator.reset(
+          new LeastUnsquaredDeviationPositionEstimator(lud_options));
       break;
     }
     case GlobalPositionEstimatorType::NONLINEAR: {
@@ -348,11 +395,49 @@ bool GlobalRigReconstructor::EstimateCapturePositionsFromViewGraph(
     }
     case GlobalPositionEstimatorType::GLOMAP: {
       position_estimator.reset(new GlomapPositionEstimator(
-          opt.glomap_position_estimator_options, reconstruction_));
+          glomap_options, reconstruction_));
       break;
     }
     default:
       LOG(FATAL) << "Unknown GlobalPositionEstimatorType.";
+  }
+
+  // Tie the camera centers of all views of a capture together with the known
+  // (fixed) rig extrinsics. With the capture orientations already propagated
+  // to the views (capture position = 0), the world-frame offset of a view to
+  // the capture's anchor (first) view is a constant. This makes the position
+  // problem metric and removes the free per-camera scale/offset.
+  if (options_.use_rig_constraints_in_position_estimation) {
+    std::unordered_map<ViewId, RigOffsetConstraint> constraints;
+    for (const CaptureId capture_id : reconstruction_->CaptureIds()) {
+      const RigCapture* capture = reconstruction_->GetRigCapture(capture_id);
+      if (capture == nullptr || capture->ViewIds().size() < 2 ||
+          !ContainsKey(orientations_, static_cast<ViewId>(capture_id))) {
+        continue;
+      }
+      const ViewId anchor = capture->ViewIds().begin()->second;
+      const View* anchor_view = reconstruction_->View(anchor);
+      if (anchor_view == nullptr || !anchor_view->IsEstimated()) {
+        continue;
+      }
+      for (const auto& sensor_and_view : capture->ViewIds()) {
+        const ViewId v = sensor_and_view.second;
+        if (v == anchor) {
+          continue;
+        }
+        const View* view = reconstruction_->View(v);
+        if (view == nullptr || !view->IsEstimated()) {
+          continue;
+        }
+        RigOffsetConstraint c;
+        c.anchor = anchor;
+        c.delta = view->Camera().GetPosition() -
+                  anchor_view->Camera().GetPosition();
+        constraints[v] = c;
+      }
+    }
+    position_estimator->SetRigConstraints(constraints);
+    rig_constraints_applied_ = !constraints.empty();
   }
 
   std::unordered_map<ViewId, Eigen::Vector3d> view_positions;
@@ -435,6 +520,14 @@ void GlobalRigReconstructor::EstimateStructure() {
 void GlobalRigReconstructor::BundleAdjustAndPropagate() {
   const auto& opt = options_.sfm_options;
   BundleAdjustmentOptions ba_options = SetBundleAdjustmentOptions(opt, 0);
+  if (options_.use_rig_constrained_ba) {
+    // One 6-DoF pose per capture; sensor extrinsics are fixed constants.
+    BundleAdjustRigReconstruction(ba_options, reconstruction_);
+    SetOutlierTracksToUnestimated(opt.max_reprojection_error_in_pixels,
+                                  opt.min_triangulation_angle_degrees,
+                                  reconstruction_);
+    return;
+  }
   BundleAdjustReconstruction(ba_options, reconstruction_);
 
   for (const CaptureId capture_id : reconstruction_->CaptureIds()) {

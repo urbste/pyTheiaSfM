@@ -32,6 +32,21 @@ struct GlobalRigReconstructorOptions {
   // After direction-based position averaging, rescale capture positions so
   // median edge lengths match metric TwoViewInfo.position_2 norms (from 5+1).
   bool rescale_positions_to_metric_edges = true;
+
+  // Tie the camera centers of the views of each capture with the fixed rig
+  // extrinsics in the view-graph position estimators (GLOMAP, nonlinear,
+  // LiGT, ...). Fixes the metric scale; the median rescale is then skipped.
+  bool use_rig_constraints_in_position_estimation = true;
+
+  // Fill TwoViewInfo::scale_estimate on same-sensor capture edges from the
+  // rig geometry (see EstimateMetricEdgeScales) before position estimation,
+  // so direction-only estimators get metric spacing along straight motion.
+  // Only used together with use_rig_constraints_in_position_estimation.
+  bool use_rig_edge_scales = true;
+
+  // Bundle adjust with one pose per capture (rig constraint enforced in the
+  // optimizer) instead of per-view BA followed by re-snapping to the rig.
+  bool use_rig_constrained_ba = true;
 };
 
 class GlobalRigReconstructor {
@@ -61,6 +76,7 @@ class GlobalRigReconstructor {
 
   std::unordered_map<ViewId, Eigen::Vector3d> orientations_;
   std::unordered_map<ViewId, Eigen::Vector3d> positions_;
+  bool rig_constraints_applied_ = false;
 };
 
 }  // namespace theia

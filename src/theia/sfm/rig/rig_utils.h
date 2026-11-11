@@ -41,8 +41,11 @@ void SetCameraPoseFromRig(const RigCapture& capture,
 
 // For every view in |capture_id|, set Camera extrinsics from the capture pose
 // and the parent CameraRig. Returns false if the capture/rig is missing.
+// With |update_view_estimated| (default) every view's estimated flag is set to
+// the capture's flag; pass false to leave the flags of the views untouched.
 bool PropagateCameraPosesForCapture(const CaptureId capture_id,
-                                    Reconstruction* reconstruction);
+                                    Reconstruction* reconstruction,
+                                    bool update_view_estimated = true);
 
 // Propagate poses for all estimated captures in the reconstruction.
 void PropagateAllEstimatedCapturePoses(Reconstruction* reconstruction);

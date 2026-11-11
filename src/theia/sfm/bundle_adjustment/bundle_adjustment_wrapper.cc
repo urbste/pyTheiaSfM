@@ -102,6 +102,13 @@ BundleAdjustmentSummary BundleAdjustReconstructionWrapper(
   return ba_summary;
 }
 
+BundleAdjustmentSummary BundleAdjustRigReconstructionWrapper(
+    const BundleAdjustmentOptions& options, Reconstruction& reconstruction) {
+  BundleAdjustmentSummary ba_summary =
+      BundleAdjustRigReconstruction(options, &reconstruction);
+  return ba_summary;
+}
+
 
 BundleAdjustmentSummary BundleAdjustPartialReconstructionWrapper(
         const BundleAdjustmentOptions& options,

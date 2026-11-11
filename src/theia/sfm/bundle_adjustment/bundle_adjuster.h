@@ -37,6 +37,8 @@
 
 #include <ceres/ceres.h>
 #include <ceres/types.h>
+#include <array>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
@@ -145,8 +147,36 @@ class BundleAdjuster {
       double translation_direction_sqrt_weight,
       double translation_magnitude_sqrt_weight);
 
+  // Rig-constrained BA. Registers the estimated views of |capture_id| (an
+  // estimated RigCapture whose CameraRig is known) as members of one shared
+  // 6-DoF capture pose. Their reprojection residuals are RigReprojectionError
+  // terms with the capture pose and the constant sensor extrinsics of the rig,
+  // so the view poses are never free parameters. Only the intrinsics of the
+  // member views are optimized here.
+  //
+  // Must be called before AddTrack() for the tracks observed by these views,
+  // and the member views must not be passed to AddView(). Returns false (and
+  // adds nothing) if the capture is not estimated, has no usable member view,
+  // or contains an orthographic view.
+  bool AddRigCapture(const CaptureId capture_id);
+
+  // True if the view is observed through a capture added with AddRigCapture().
+  bool IsViewInRigCapture(const ViewId view_id) const;
+
+  // Writes the optimized capture poses back into their RigCaptures and
+  // propagates them to the member views (PropagateCameraPosesForCapture). Only
+  // captures that were part of the problem are updated.
+  void UpdateRigCapturePoses();
 
  protected:
+  // Constant rig data of a view that belongs to a capture added with
+  // AddRigCapture(): the sensor extrinsics (Camera convention) of its RigSensor.
+  struct RigViewInfo {
+    CaptureId capture_id = kInvalidCaptureId;
+    Eigen::Matrix3d rotation_rig_to_cam = Eigen::Matrix3d::Identity();
+    Eigen::Vector3d position_in_rig = Eigen::Vector3d::Zero();
+  };
+
   // Add all camera extrinsics and intrinsics to the optimization problem.
   void SetCameraExtrinsicsParameterization();
   void SetCameraIntrinsicsParameterization();
@@ -178,6 +208,17 @@ class BundleAdjuster {
                                             Camera* camera,
                                             Track* track);
                                         
+  // Add the rig reprojection error residual of a view that belongs to a capture
+  // added with AddRigCapture(). The residual uses the capture pose block.
+  void AddRigReprojectionErrorResidual(const Feature& feature,
+                                       const RigViewInfo& rig_view,
+                                       Camera* camera,
+                                       Track* track);
+
+  // Position / gravity / orientation priors of a rig member view, expressed on
+  // the capture pose (the camera pose is composed with the sensor extrinsics).
+  void AddRigViewPriors(View* view, const RigViewInfo& rig_view);
+
   // Add the inverse depth reprojection error residual to the problem.
   virtual void AddInvReprojectionErrorResidual(const Feature& feature,
                                                const Eigen::Vector3d& ref_bearing,
@@ -249,6 +290,14 @@ class BundleAdjuster {
 
   // Covariance estimator
   ceres::Covariance::Options covariance_options_;
+
+  // Rig captures added with AddRigCapture(). Each capture owns one shared
+  // parameter block in the Camera extrinsics layout: [position(3),
+  // angle-axis(3)] of the rig body (see Camera::POSITION / Camera::ORIENTATION).
+  std::unordered_map<CaptureId, std::array<double, 6>> capture_poses_;
+
+  // Member views of the captures in |capture_poses_|, with their sensor data.
+  std::unordered_map<ViewId, RigViewInfo> rig_views_;
 };
 
 }  // namespace theia

@@ -9,6 +9,7 @@
 #include <ceres/rotation.h>
 #include <glog/logging.h>
 #include <limits>
+#include <queue>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -60,11 +61,40 @@ struct GlomapRayError {
   const double weight_;
 };
 
+// Residual enforcing c_view - c_anchor = delta for a rig constraint.
+struct RigOffsetError {
+  RigOffsetError(const Vector3d& delta, const double weight)
+      : delta_(delta), weight_(weight) {}
+
+  template <typename T>
+  bool operator()(const T* view_position,
+                  const T* anchor_position,
+                  T* residuals) const {
+    residuals[0] = T(weight_) *
+                   (view_position[0] - anchor_position[0] - T(delta_.x()));
+    residuals[1] = T(weight_) *
+                   (view_position[1] - anchor_position[1] - T(delta_.y()));
+    residuals[2] = T(weight_) *
+                   (view_position[2] - anchor_position[2] - T(delta_.z()));
+    return true;
+  }
+
+  static ceres::CostFunction* Create(const Vector3d& delta,
+                                     const double weight) {
+    return new ceres::AutoDiffCostFunction<RigOffsetError, 3, 3, 3>(
+        new RigOffsetError(delta, weight));
+  }
+
+  const Vector3d delta_;
+  const double weight_;
+};
+
 struct TrackObservation {
   ViewId view_id;
   TrackId track_id;
   Vector3d ray;
 };
+
 
 Matrix3d AngleAxisToRotationMatrix(const Vector3d& angle_axis) {
   Matrix3d rotation;
@@ -98,6 +128,64 @@ ViewId SmallestViewId(
   return smallest_view_id;
 }
 
+// Initial position for the scale-prior problem: chain the metric displacements
+// (scale * translation direction for scale-prior edges, rig offsets for rig
+// constraints) along a breadth-first tree rooted at |root|. Starting from the
+// metric chain instead of random positions avoids converging to a shrunken
+// solution. Views that are not reached keep their current position.
+void InitializePositionsFromMetricChain(
+    const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
+    const std::unordered_map<ViewId, Vector3d>& orientations,
+    const std::vector<std::pair<ViewId, RigOffsetConstraint>>& rig_constraints,
+    const ViewId root,
+    std::unordered_map<ViewId, Vector3d>* positions) {
+  // Edge (other, displacement): position(other) = position(self) + displacement.
+  std::unordered_map<ViewId, std::vector<std::pair<ViewId, Vector3d>>> edges;
+  for (const auto& view_pair : view_pairs) {
+    const ViewId first = view_pair.first.first;
+    const ViewId second = view_pair.first.second;
+    if (view_pair.second.scale_estimate <= 0.0 ||
+        !ContainsKey(*positions, first) || !ContainsKey(*positions, second) ||
+        !ContainsKey(orientations, first)) {
+      continue;
+    }
+    const Vector3d displacement =
+        view_pair.second.scale_estimate *
+        RotateRelativeTranslationIntoWorld(FindOrDie(orientations, first),
+                                           view_pair.second.position_2);
+    edges[first].emplace_back(second, displacement);
+    edges[second].emplace_back(first, -displacement);
+  }
+  for (const auto& constraint : rig_constraints) {
+    const ViewId view_id = constraint.first;
+    const RigOffsetConstraint& rig = constraint.second;
+    edges[rig.anchor].emplace_back(view_id, rig.delta);
+    edges[view_id].emplace_back(rig.anchor, -rig.delta);
+  }
+
+  std::unordered_set<ViewId> visited;
+  std::queue<ViewId> frontier;
+  visited.insert(root);
+  frontier.push(root);
+  while (!frontier.empty()) {
+    const ViewId current = frontier.front();
+    frontier.pop();
+    const auto it = edges.find(current);
+    if (it == edges.end()) {
+      continue;
+    }
+    const Vector3d current_position = FindOrDie(*positions, current);
+    for (const auto& edge : it->second) {
+      if (visited.count(edge.first) > 0) {
+        continue;
+      }
+      visited.insert(edge.first);
+      (*positions)[edge.first] = current_position + edge.second;
+      frontier.push(edge.first);
+    }
+  }
+}
+
 }  // namespace
 
 GlomapPositionEstimator::GlomapPositionEstimator(
@@ -108,6 +196,7 @@ GlomapPositionEstimator::GlomapPositionEstimator(
   CHECK_GT(options_.robust_loss_width, 0.0);
   CHECK_GE(options_.min_track_length, 2);
   CHECK_GT(options_.pairwise_scale_prior_weight, 0.0);
+  CHECK_GT(options_.rig_constraint_weight, 0.0);
 
   if (options_.rng.get() == nullptr) {
     rng_ = std::make_shared<RandomNumberGenerator>();
@@ -185,8 +274,42 @@ bool GlomapPositionEstimator::EstimatePositions(
     (*positions)[view_id] = rng_->RandVector3d(-1.0, 1.0);
   }
 
+  // Rig constraints: both the constrained view and its anchor must be
+  // optimized, even if they have few (or no) feature observations.
+  std::vector<std::pair<ViewId, RigOffsetConstraint>> valid_rig_constraints;
+  for (const auto& constraint : rig_constraints_) {
+    const ViewId view_id = constraint.first;
+    const RigOffsetConstraint& rig = constraint.second;
+    if (view_id == rig.anchor || reconstruction_->View(view_id) == nullptr ||
+        reconstruction_->View(rig.anchor) == nullptr) {
+      continue;
+    }
+    valid_rig_constraints.push_back(constraint);
+  }
+  for (const auto& constraint : valid_rig_constraints) {
+    if (!ContainsKey(*positions, constraint.first) &&
+        !ContainsKey(*positions, constraint.second.anchor)) {
+      (*positions)[constraint.second.anchor] = rng_->RandVector3d(-1.0, 1.0);
+    }
+  }
+  for (const auto& constraint : valid_rig_constraints) {
+    const ViewId view_id = constraint.first;
+    const RigOffsetConstraint& rig = constraint.second;
+    if (!ContainsKey(*positions, view_id)) {
+      (*positions)[view_id] =
+          FindOrDie(*positions, rig.anchor) + rig.delta;
+    } else if (!ContainsKey(*positions, rig.anchor)) {
+      (*positions)[rig.anchor] = FindOrDie(*positions, view_id) - rig.delta;
+    }
+  }
+
   const ViewId fixed_view_id = SmallestViewId(*positions);
   FindOrDie(*positions, fixed_view_id).setZero();
+  if (options_.use_pairwise_scale_priors) {
+    InitializePositionsFromMetricChain(
+        view_pairs, orientations, valid_rig_constraints, fixed_view_id,
+        positions);
+  }
 
   std::vector<double> inverse_depths(observations.size(), 1.0);
   ceres::Problem problem;
@@ -229,6 +352,19 @@ bool GlomapPositionEstimator::EstimatePositions(
           FindOrDie(*positions, view_pair.first.first).data(),
           FindOrDie(*positions, view_pair.first.second).data());
     }
+  }
+
+  // Hard (high-weight, no robust loss) rig offset constraints. No gauge
+  // normalization of the output is performed in this estimator, so the metric
+  // scale fixed by these constraints is preserved.
+  for (const auto& constraint : valid_rig_constraints) {
+    ceres::CostFunction* cost_function = RigOffsetError::Create(
+        constraint.second.delta, options_.rig_constraint_weight);
+    problem.AddResidualBlock(
+        cost_function,
+        nullptr,
+        FindOrDie(*positions, constraint.first).data(),
+        FindOrDie(*positions, constraint.second.anchor).data());
   }
 
   ceres::Solver::Options solver_options;
