@@ -153,6 +153,13 @@ def init_free_options(a, inp):
     if a.refine_huber_px > 0:
         # Normalized observations m = K^-1 p, so a pixel width becomes px / f.
         ifo.projective_refinement.robust_loss_width = a.refine_huber_px / inp.focal_px
+    if a.robust_refinement:
+        # Real tracks: Cauchy loss, and observations above 5 px are removed in up to
+        # three rounds; tracks with removed observations are left out of the metric BA.
+        ifo.projective_refinement.robust_loss_width = 3.0 / inp.focal_px
+        ifo.projective_refinement.loss_function_type = pt.sfm.LossFunctionType.CAUCHY
+        ifo.projective_refinement.outlier_rejection_rounds = 3
+        ifo.projective_refinement.outlier_threshold = 5.0 / inp.focal_px
     if a.min_fraction_in_front is not None:
         ifo.min_fraction_in_front = a.min_fraction_in_front
     if a.max_mean_orthogonality_error is not None:
@@ -194,6 +201,9 @@ def init_free_diagnostics(diag, focal_px):
             "upgrade_fraction_in_front": float(r.upgrade_fraction_in_front),
             "upgrade_mean_orthogonality_error": float(r.upgrade_mean_orthogonality_error),
             "upgrade_message": str(r.upgrade_message),
+            "upgrade_relative_rotation_error_deg": r.upgrade_relative_rotation_error_deg,
+            "upgrade_translation_direction_error_deg": r.upgrade_translation_direction_error_deg,
+            "upgrade_num_dropped_cameras": r.upgrade_num_dropped_cameras,
             "message": str(r.message)})
     if 0 <= diag.best_restart < len(diag.restarts):
         best = diag.restarts[diag.best_restart]
@@ -266,6 +276,10 @@ def main():
                     help="Huber width (px) of the projective refinement; 0 = plain LS "
                          "(the library default). Helps on facade 20-31 with 20%% outliers, "
                          "see docs/content/init_free.md")
+    ap.add_argument("--robust_refinement", action="store_true",
+                    help="Cauchy loss (3 px) and outlier rejection (5 px) in the projective "
+                         "refinement instead of --refine_huber_px; the setting used for real "
+                         "SIFT tracks, see docs/content/init_free.md")
     ap.add_argument("--min_fraction_in_front", type=float, default=None,
                     help="validity check of the metric upgrade (library default if unset)")
     ap.add_argument("--max_mean_orthogonality_error", type=float, default=None,
@@ -298,6 +312,7 @@ def main():
                   "rotation_weighting": a.rotation_weighting,
                   "rotation_weight": a.rotation_weight,
                   "refine_huber_px": a.refine_huber_px,
+                  "robust_refinement": a.robust_refinement,
                   "min_fraction_in_front": a.min_fraction_in_front,
                   "max_mean_orthogonality_error": a.max_mean_orthogonality_error}
         with open(a.json, "w") as f:

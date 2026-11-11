@@ -34,6 +34,8 @@
 //              Experimental Study." arXiv:2608.18028.
 //              Reference code: https://github.com/simonwebertum/InitFreeBA
 
+#include "theia/sfm/bundle_adjustment/create_loss_function.h"
+
 namespace theia {
 
 // The OSE objective minimized in the first stage.
@@ -186,6 +188,27 @@ struct ProjectiveRefinementOptions {
   // coordinates for CALIBRATED_RAYS, so ~ pixels / focal length). <= 0 means
   // plain least squares.
   double robust_loss_width = 0.0;
+  // Loss applied with robust_loss_width (ignored if the width is <= 0). Huber
+  // keeps a linear influence of gross outliers; real tracks contain a few
+  // percent of wrongly merged observations, for which a redescending loss
+  // (CAUCHY, TUKEY) is more robust.
+  LossFunctionType loss_function_type = LossFunctionType::HUBER;
+  // Outlier rejection: after each solve, observations whose reprojection
+  // error exceeds outlier_threshold (units of the observations) are removed
+  // and the problem is solved again, for at most this many rounds (fewer if
+  // no observation is removed). 0 disables it. Without it, wrongly merged
+  // track observations can pull the projective reconstruction far from the
+  // true one, because a projective camera (11 DOF) absorbs outliers that a
+  // metric camera cannot.
+  int outlier_rejection_rounds = 0;
+  double outlier_threshold = 0.0;
+  // Solve with one thread. The multithreaded Ceres evaluation sums in a
+  // varying order; the differences (1e-16 relative) grow through the outlier
+  // rejection, the restart ranking and the metric upgrade into different
+  // results between runs (ETH3D office with SIFT: 0.76 to 1.5 deg). One
+  // thread costs about a factor 2 in the refinement, which is a small part of
+  // the run time.
+  bool deterministic = true;
   bool verbose = false;
 };
 
@@ -269,6 +292,37 @@ struct InitFreeOptions {
   // 20 to 60 %. The threshold sits in the gap, about 5 times above the largest
   // critical value and 6 times below the smallest well-posed one.
   double min_upgrade_conditioning = 3e-3;
+
+  // If no refined restart passes the checks, upgrade the OSE solutions before
+  // projective refinement, in the same order, with the same checks. The OSE
+  // solution is biased towards an affine camera but is not pulled by outlier
+  // observations like the refinement is; the metric bundle adjustment then
+  // removes the bias. Has no effect without projective refinement.
+  bool upgrade_unrefined_fallback = false;
+
+  // Cameras whose own orthogonality error after the upgrade
+  // (MetricUpgradeResult::camera_orthogonality_errors) exceeds this value are
+  // dropped (left unestimated) instead of failing the restart, as long as at
+  // most max_fraction_dropped_cameras of the cameras are dropped. The mean
+  // orthogonality error and the fraction in front are then checked on the
+  // remaining cameras. A camera with few observations can collapse during
+  // projective refinement while all others are accurate (ETH3D relief and
+  // meadow with SIFT: one camera at 2e4 to 2e5, all others below 0.11).
+  // <= 0 disables dropping. Has no effect for radial cameras.
+  double max_camera_orthogonality_error = 1.0;
+  double max_fraction_dropped_cameras = 0.1;
+
+  // Maximum median angle (degrees) between the relative rotations of the
+  // upgraded cameras and the two-view relative rotations of the view graph
+  // (the rotation terms of the problem; the check is skipped without them).
+  // Independent of the projective fit: a wrong upgrade can reach a low
+  // orthogonality error but does not reproduce the two-view rotations. 0
+  // disables it.
+  double max_relative_rotation_error_deg = 5.0;
+  // The same for the direction of the camera centers: maximum median angle
+  // between the upgraded and the two-view translation directions. Catches
+  // upgrades with nearly right rotations but wrong centers. 0 disables it.
+  double max_translation_direction_error_deg = 0.0;
 
   // Threads for VarPro (unless varpro.num_threads > 0) and projective
   // refinement. <= 0 uses ReconstructionEstimatorOptions::num_threads inside

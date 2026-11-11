@@ -5160,16 +5160,40 @@ class ProjectiveRefinementOptions:
     def __init__(*args, **kwargs):
         ...
     @property
+    def deterministic(*args, **kwargs):
+        ...
+    @deterministic.setter
+    def deterministic(*args, **kwargs):
+        ...
+    @property
     def function_tolerance(*args, **kwargs):
         ...
     @function_tolerance.setter
     def function_tolerance(*args, **kwargs):
         ...
     @property
+    def loss_function_type(*args, **kwargs):
+        ...
+    @loss_function_type.setter
+    def loss_function_type(*args, **kwargs):
+        ...
+    @property
     def max_num_iterations(*args, **kwargs):
         ...
     @max_num_iterations.setter
     def max_num_iterations(*args, **kwargs):
+        ...
+    @property
+    def outlier_rejection_rounds(*args, **kwargs):
+        ...
+    @outlier_rejection_rounds.setter
+    def outlier_rejection_rounds(*args, **kwargs):
+        ...
+    @property
+    def outlier_threshold(*args, **kwargs):
+        ...
+    @outlier_threshold.setter
+    def outlier_threshold(*args, **kwargs):
         ...
     @property
     def robust_loss_width(*args, **kwargs):
@@ -5218,10 +5242,34 @@ class InitFreeOptions:
     def include_self_rotation_terms(*args, **kwargs):
         ...
     @property
+    def max_camera_orthogonality_error(*args, **kwargs):
+        ...
+    @max_camera_orthogonality_error.setter
+    def max_camera_orthogonality_error(*args, **kwargs):
+        ...
+    @property
+    def max_fraction_dropped_cameras(*args, **kwargs):
+        ...
+    @max_fraction_dropped_cameras.setter
+    def max_fraction_dropped_cameras(*args, **kwargs):
+        ...
+    @property
     def max_mean_orthogonality_error(*args, **kwargs):
         ...
     @max_mean_orthogonality_error.setter
     def max_mean_orthogonality_error(*args, **kwargs):
+        ...
+    @property
+    def max_relative_rotation_error_deg(*args, **kwargs):
+        ...
+    @max_relative_rotation_error_deg.setter
+    def max_relative_rotation_error_deg(*args, **kwargs):
+        ...
+    @property
+    def max_translation_direction_error_deg(*args, **kwargs):
+        ...
+    @max_translation_direction_error_deg.setter
+    def max_translation_direction_error_deg(*args, **kwargs):
         ...
     @property
     def metric_upgrade(*args, **kwargs):
@@ -5324,6 +5372,12 @@ class InitFreeOptions:
         ...
     @shared_focal_length.setter
     def shared_focal_length(*args, **kwargs):
+        ...
+    @property
+    def upgrade_unrefined_fallback(*args, **kwargs):
+        ...
+    @upgrade_unrefined_fallback.setter
+    def upgrade_unrefined_fallback(*args, **kwargs):
         ...
     @property
     def varpro(*args, **kwargs):
@@ -5475,7 +5529,13 @@ class InitFreeRestartDiagnostics:
     def ose_rms_error(*args, **kwargs):
         ...
     @property
+    def refined_num_outlier_observations(*args, **kwargs):
+        ...
+    @property
     def refined_rms_error(*args, **kwargs):
+        ...
+    @property
+    def refined_truncated_rms_error(*args, **kwargs):
         ...
     @property
     def refinement_iterations(*args, **kwargs):
@@ -5488,6 +5548,15 @@ class InitFreeRestartDiagnostics:
         ...
     @property
     def solve_time_seconds(*args, **kwargs):
+        ...
+    @property
+    def unrefined_upgrade_attempted(*args, **kwargs):
+        ...
+    @property
+    def unrefined_upgrade_message(*args, **kwargs):
+        ...
+    @property
+    def unrefined_upgrade_success(*args, **kwargs):
         ...
     @property
     def upgrade_attempted(*args, **kwargs):
@@ -5505,7 +5574,16 @@ class InitFreeRestartDiagnostics:
     def upgrade_message(*args, **kwargs):
         ...
     @property
+    def upgrade_num_dropped_cameras(*args, **kwargs):
+        ...
+    @property
+    def upgrade_relative_rotation_error_deg(*args, **kwargs):
+        ...
+    @property
     def upgrade_success(*args, **kwargs):
+        ...
+    @property
+    def upgrade_translation_direction_error_deg(*args, **kwargs):
         ...
 class InitFreeDiagnostics:
     @staticmethod
@@ -5516,6 +5594,9 @@ class InitFreeDiagnostics:
         ...
     @property
     def bundle_adjustment_time(*args, **kwargs):
+        ...
+    @property
+    def dropped_view_ids(*args, **kwargs):
         ...
     @property
     def focal_lengths(*args, **kwargs):
@@ -5556,6 +5637,9 @@ class InitFreeDiagnostics:
     @property
     def restarts(*args, **kwargs):
         ...
+    @property
+    def used_unrefined_fallback(*args, **kwargs):
+        ...
 class ProjectiveReconstruction:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -5577,7 +5661,13 @@ class ProjectiveRefinementResult:
     def converged(*args, **kwargs):
         ...
     @property
+    def final_inlier_rms_error(*args, **kwargs):
+        ...
+    @property
     def final_rms_error(*args, **kwargs):
+        ...
+    @property
+    def final_truncated_rms_error(*args, **kwargs):
         ...
     @property
     def initial_rms_error(*args, **kwargs):
@@ -5587,6 +5677,15 @@ class ProjectiveRefinementResult:
         ...
     @property
     def num_iterations(*args, **kwargs):
+        ...
+    @property
+    def num_outlier_observations(*args, **kwargs):
+        ...
+    @property
+    def num_rejection_rounds(*args, **kwargs):
+        ...
+    @property
+    def observation_inlier(*args, **kwargs):
         ...
     @property
     def points(*args, **kwargs):
@@ -5600,6 +5699,9 @@ class MetricUpgradeResult:
         ...
     @property
     def H(*args, **kwargs):
+        ...
+    @property
+    def camera_orthogonality_errors(*args, **kwargs):
         ...
     @property
     def conditioning(*args, **kwargs):
@@ -5634,6 +5736,12 @@ class MetricUpgradeResult:
 class MetricUpgradeOptions:
     @staticmethod
     def __init__(*args, **kwargs):
+        ...
+    @property
+    def camera_mask(*args, **kwargs):
+        ...
+    @camera_mask.setter
+    def camera_mask(*args, **kwargs):
         ...
     @property
     def max_num_iterations(*args, **kwargs):

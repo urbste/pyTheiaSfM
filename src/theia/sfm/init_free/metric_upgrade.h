@@ -27,6 +27,14 @@ struct MetricUpgradeOptions {
 
   // Iterations of the nonlinear refinement.
   int max_num_iterations = 100;
+
+  // Cameras used to estimate the dual quadric (and, for PIXEL_ISOTROPIC,
+  // refined jointly with it); empty means all. The upgrade is still applied
+  // to every camera. Used to re-estimate the upgrade without cameras that
+  // collapsed during projective refinement, which otherwise bias the quadric
+  // of all others (ETH3D office with SIFT: one flipped camera, 1 to 5 deg
+  // error on the remaining ones). Not used by the radial path.
+  std::vector<bool> camera_mask;
 };
 
 struct MetricUpgradeResult {
@@ -57,6 +65,14 @@ struct MetricUpgradeResult {
 
   // The same error for the linear estimate, before the nonlinear refinement.
   double linear_mean_orthogonality_error = 0.0;
+
+  // ||M M^T / s^2 - I||_F of every camera (not filled for radial cameras);
+  // infinity for a camera whose upgraded 3x3 block is singular (its rotation
+  // and translation are then meaningless). A single camera with few
+  // observations can collapse during projective refinement while all other
+  // cameras are accurate; InitFreeOptions::max_camera_orthogonality_error
+  // drops such cameras instead of rejecting the whole upgrade.
+  std::vector<double> camera_orthogonality_errors;
 
   // Conditioning of the self-calibration at the final upgrade (0 if it cannot
   // be computed). Let J be the Jacobian of the quadric residuals of the

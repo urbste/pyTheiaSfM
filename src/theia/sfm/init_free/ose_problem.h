@@ -36,6 +36,10 @@ struct OseRotationTerm {
   double weight = 1.0;
   Eigen::Matrix<double, 9, 9> sqrt_weight_matrix =
       Eigen::Matrix<double, 9, 9>::Identity();
+  // Center of camera a in the frame of camera b from the two-view estimate
+  // (TwoViewInfo::position_2, a direction; zero if unknown). Not used by the
+  // objectives; the estimator checks the metric upgrade against it.
+  Eigen::Vector3d center_a_in_b = Eigen::Vector3d::Zero();
 };
 
 // The data of an OSE problem in flat, index-based arrays. Cameras and points

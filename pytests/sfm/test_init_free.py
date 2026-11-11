@@ -477,6 +477,77 @@ def test_projective_refinement_removes_ose_bias(pixel_noise):
         assert res.final_rms_error * FOCAL < 1.5 * pixel_noise
 
 
+def test_projective_refinement_outlier_rejection():
+    # 5 % gross outliers, as in tracks merged from wrong matches.
+    recon, view_graph, _ = make_scene(n_views=15, pixel_noise=0.5, seed=2)
+    rng = np.random.default_rng(11)
+    bad = set()
+    for tid in sorted(recon.TrackIds()):
+        for vid in sorted(recon.Track(tid).ViewIds()):
+            if rng.uniform() < 0.05:
+                p = np.asarray(recon.View(vid).GetFeature(tid).point)
+                p = p + rng.choice([-1.0, 1.0], 2) * rng.uniform(30.0, 150.0, 2)
+                recon.MutableView(vid).UpdateFeature(tid, pt.sfm.Feature(p))
+                bad.add((vid, tid))
+    opts = init_free_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    is_bad = np.array([
+        (problem.view_ids[problem.observation_camera[k]],
+         problem.track_ids[problem.observation_point[k]]) in bad
+        for k in range(problem.NumObservations())])
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init, 0)
+    ok, sol = pt.sfm.SolveOse(problem, opts, init)
+    assert ok, sol.message
+
+    refine_opts = pt.sfm.ProjectiveRefinementOptions()
+    refine_opts.max_num_iterations = 50
+    refine_opts.robust_loss_width = 3.0 / FOCAL
+    ok, plain = pt.sfm.RefineProjectiveReconstruction(
+        problem, sol.cameras, sol.points, refine_opts)
+    assert ok, plain.message
+    assert plain.num_outlier_observations == 0
+    assert all(plain.observation_inlier)
+    assert plain.final_truncated_rms_error == plain.final_rms_error
+
+    refine_opts.loss_function_type = pt.sfm.LossFunctionType.CAUCHY
+    refine_opts.outlier_rejection_rounds = 3
+    refine_opts.outlier_threshold = 5.0 / FOCAL
+    ok, res = pt.sfm.RefineProjectiveReconstruction(
+        problem, sol.cameras, sol.points, refine_opts)
+    assert ok, res.message
+    inlier = np.array(res.observation_inlier)
+    assert res.num_rejection_rounds >= 1
+    assert res.num_outlier_observations == np.sum(~inlier)
+    # Nearly all outliers are found, and few inliers are removed.
+    assert np.mean(~inlier[is_bad]) > 0.95
+    assert np.mean(~inlier[~is_bad]) < 0.01
+    assert res.final_inlier_rms_error * FOCAL < 1.0
+    assert res.final_truncated_rms_error <= refine_opts.outlier_threshold
+    assert res.final_truncated_rms_error < res.final_rms_error
+
+
+def test_upgrade_reports_camera_orthogonality_errors():
+    recon, view_graph, _ = make_scene(n_views=12, pixel_noise=0.5, seed=4)
+    opts = init_free_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    ok, best, _, err = pt.sfm.RunProjectiveStages(problem, opts)
+    assert ok, err
+    upgrade_opts = pt.sfm.MetricUpgradeOptions()
+    upgrade_opts.nonlinear_refinement = True
+    ok, metric, err = pt.sfm.UpgradeToMetric(problem, best.cameras,
+                                             best.points, upgrade_opts)
+    assert ok, err
+    errors = np.array(metric.camera_orthogonality_errors)
+    assert errors.shape == (problem.NumCameras(),)
+    assert np.mean(errors) == pytest.approx(metric.mean_orthogonality_error,
+                                            rel=1e-9)
+    assert opts.max_camera_orthogonality_error == 1.0
+    assert opts.max_fraction_dropped_cameras == 0.1
+    assert not opts.upgrade_unrefined_fallback
+
+
 def test_run_projective_stages_selects_restart():
     recon, view_graph, _ = make_scene(n_views=12, pixel_noise=0.5, seed=4)
     opts = init_free_options()
@@ -550,6 +621,13 @@ def test_estimator_with_projective_refinement_on_noisy_scene():
     best = diag.restarts[diag.best_restart]
     assert 0.0 <= best.refined_rms_error < best.ose_rms_error
     assert diag.fraction_in_front > 0.99
+    # View-graph consistency of the accepted upgrade. The synthetic view graph
+    # has rotations only (no translation directions), so that check is -1.
+    assert 0.0 <= best.upgrade_relative_rotation_error_deg < 1.0
+    assert best.upgrade_translation_direction_error_deg == -1.0
+    assert best.upgrade_num_dropped_cameras == 0
+    assert list(diag.dropped_view_ids) == []
+    assert not diag.used_unrefined_fallback
 
     vids = sorted(gt)
     est_R = {v: np.asarray(recon.View(v).Camera().GetOrientationAsRotationMatrix())
@@ -642,8 +720,10 @@ def test_uncalibrated_upgrade_recovers_focal_lengths(pixel_noise):
     assert refined.nonlinear_refinement_run
     assert refined.fraction_in_front > 0.99
     f_err = np.abs(np.array(refined.focal_lengths) / scale / true_f - 1)
+    # The linear estimate is computed in the given and in a point-normalized
+    # frame; the better one starts the refinement, which still improves it.
     assert (refined.mean_orthogonality_error <
-            0.5 * refined.linear_mean_orthogonality_error)
+            refined.linear_mean_orthogonality_error)
     if pixel_noise == 0.0:
         assert f_err.max() < 1e-5
         assert rotation_errors(refined).max() < 1e-3
@@ -710,8 +790,11 @@ def test_calibrated_nonlinear_upgrade():
     ok, linear, err = pt.sfm.UpgradeToMetricCalibrated(problem, best.cameras,
                                                         best.points)
     assert ok, err
-    assert linear.mean_orthogonality_error == pytest.approx(
-        refined.linear_mean_orthogonality_error)
+    # Without refinement the frame with the lowest linear error is used; with
+    # refinement the one with the lowest refined error, so its linear error
+    # can only be larger.
+    assert (linear.mean_orthogonality_error <=
+            refined.linear_mean_orthogonality_error + 1e-12)
 
 
 def radial_options(normalization=pt.sfm.OseObservationNormalization.CALIBRATED_RAYS,

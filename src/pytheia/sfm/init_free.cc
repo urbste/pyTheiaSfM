@@ -133,6 +133,11 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("max_num_iterations", &PRO::max_num_iterations)
       .def_readwrite("function_tolerance", &PRO::function_tolerance)
       .def_readwrite("robust_loss_width", &PRO::robust_loss_width)
+      .def_readwrite("loss_function_type", &PRO::loss_function_type)
+      .def_readwrite("outlier_rejection_rounds",
+                     &PRO::outlier_rejection_rounds)
+      .def_readwrite("outlier_threshold", &PRO::outlier_threshold)
+      .def_readwrite("deterministic", &PRO::deterministic)
       .def_readwrite("verbose", &PRO::verbose);
 
   using IO = theia::InitFreeOptions;
@@ -165,6 +170,16 @@ void pytheia_init_free(py::module& m) {
                      &IO::max_mean_orthogonality_error)
       .def_readwrite("min_upgrade_conditioning",
                      &IO::min_upgrade_conditioning)
+      .def_readwrite("upgrade_unrefined_fallback",
+                     &IO::upgrade_unrefined_fallback)
+      .def_readwrite("max_camera_orthogonality_error",
+                     &IO::max_camera_orthogonality_error)
+      .def_readwrite("max_fraction_dropped_cameras",
+                     &IO::max_fraction_dropped_cameras)
+      .def_readwrite("max_relative_rotation_error_deg",
+                     &IO::max_relative_rotation_error_deg)
+      .def_readwrite("max_translation_direction_error_deg",
+                     &IO::max_translation_direction_error_deg)
       .def_readwrite("num_threads", &IO::num_threads)
       .def_readwrite("metric_upgrade", &IO::metric_upgrade)
       .def_readwrite("shared_focal_length", &IO::shared_focal_length)
@@ -338,6 +353,10 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("message", &RD::message)
       .def_readonly("ose_rms_error", &RD::ose_rms_error)
       .def_readonly("refined_rms_error", &RD::refined_rms_error)
+      .def_readonly("refined_num_outlier_observations",
+                    &RD::refined_num_outlier_observations)
+      .def_readonly("refined_truncated_rms_error",
+                    &RD::refined_truncated_rms_error)
       .def_readonly("refinement_iterations", &RD::refinement_iterations)
       .def_readonly("refinement_time_seconds",
                     &RD::refinement_time_seconds)
@@ -348,7 +367,19 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("upgrade_mean_orthogonality_error",
                     &RD::upgrade_mean_orthogonality_error)
       .def_readonly("upgrade_conditioning", &RD::upgrade_conditioning)
-      .def_readonly("upgrade_message", &RD::upgrade_message);
+      .def_readonly("upgrade_num_dropped_cameras",
+                    &RD::upgrade_num_dropped_cameras)
+      .def_readonly("upgrade_relative_rotation_error_deg",
+                    &RD::upgrade_relative_rotation_error_deg)
+      .def_readonly("upgrade_translation_direction_error_deg",
+                    &RD::upgrade_translation_direction_error_deg)
+      .def_readonly("upgrade_message", &RD::upgrade_message)
+      .def_readonly("unrefined_upgrade_attempted",
+                    &RD::unrefined_upgrade_attempted)
+      .def_readonly("unrefined_upgrade_success",
+                    &RD::unrefined_upgrade_success)
+      .def_readonly("unrefined_upgrade_message",
+                    &RD::unrefined_upgrade_message);
 
   using ID = theia::InitFreeDiagnostics;
   py::class_<ID>(m, "InitFreeDiagnostics")
@@ -360,6 +391,8 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("restarts", &ID::restarts)
       .def_readonly("best_restart", &ID::best_restart)
       .def_readonly("metric_upgrade_success", &ID::metric_upgrade_success)
+      .def_readonly("used_unrefined_fallback", &ID::used_unrefined_fallback)
+      .def_readonly("dropped_view_ids", &ID::dropped_view_ids)
       .def_readonly("fraction_in_front", &ID::fraction_in_front)
       .def_readonly("mean_orthogonality_error", &ID::mean_orthogonality_error)
       .def_readonly("linear_mean_orthogonality_error",
@@ -407,6 +440,13 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("points", &PRR::points)
       .def_readonly("initial_rms_error", &PRR::initial_rms_error)
       .def_readonly("final_rms_error", &PRR::final_rms_error)
+      .def_readonly("observation_inlier", &PRR::observation_inlier)
+      .def_readonly("num_outlier_observations",
+                    &PRR::num_outlier_observations)
+      .def_readonly("num_rejection_rounds", &PRR::num_rejection_rounds)
+      .def_readonly("final_inlier_rms_error", &PRR::final_inlier_rms_error)
+      .def_readonly("final_truncated_rms_error",
+                    &PRR::final_truncated_rms_error)
       .def_readonly("num_iterations", &PRR::num_iterations)
       .def_readonly("converged", &PRR::converged)
       .def_readonly("solve_time_seconds", &PRR::solve_time_seconds)
@@ -472,6 +512,8 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("linear_mean_orthogonality_error",
                     &MU::linear_mean_orthogonality_error)
       .def_readonly("conditioning", &MU::conditioning)
+      .def_readonly("camera_orthogonality_errors",
+                    &MU::camera_orthogonality_errors)
       .def_readonly("focal_lengths", &MU::focal_lengths)
       .def_readonly("nonlinear_refinement_run",
                     &MU::nonlinear_refinement_run);
@@ -482,7 +524,8 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("nonlinear_refinement", &MUO::nonlinear_refinement)
       .def_readwrite("shared_focal_length", &MUO::shared_focal_length)
       .def_readwrite("radial_cameras", &MUO::radial_cameras)
-      .def_readwrite("max_num_iterations", &MUO::max_num_iterations);
+      .def_readwrite("max_num_iterations", &MUO::max_num_iterations)
+      .def_readwrite("camera_mask", &MUO::camera_mask);
 
   m.def(
       "UpgradeToMetric",

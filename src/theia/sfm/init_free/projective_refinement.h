@@ -6,6 +6,7 @@
 
 #include <Eigen/Core>
 #include <string>
+#include <vector>
 
 #include "theia/sfm/init_free/init_free_options.h"
 #include "theia/sfm/init_free/ose_problem.h"
@@ -20,6 +21,18 @@ struct ProjectiveRefinementResult {
   // observations (normalized image coordinates for CALIBRATED_RAYS).
   double initial_rms_error = 0.0;
   double final_rms_error = 0.0;
+
+  // Outlier rejection (ProjectiveRefinementOptions::outlier_rejection_rounds).
+  // observation_inlier[k] is false for removed observations (all true if the
+  // rejection is disabled). final_truncated_rms_error is the RMS of
+  // min(error, outlier_threshold) over all observations; unlike the inlier
+  // RMS it cannot be lowered by removing more observations, so it is used to
+  // rank restarts. It equals final_rms_error if the rejection is disabled.
+  std::vector<bool> observation_inlier;
+  int num_outlier_observations = 0;
+  int num_rejection_rounds = 0;
+  double final_inlier_rms_error = 0.0;
+  double final_truncated_rms_error = 0.0;
 
   int num_iterations = 0;
   bool converged = false;
@@ -45,6 +58,12 @@ bool RefineProjectiveReconstruction(const OseProblem& problem,
 double ProjectiveRmsError(const OseProblem& problem,
                           const OseCameraVector& cameras,
                           const Eigen::Matrix4Xd& points);
+
+// Reprojection error of every observation (infinity for a projective depth of
+// exactly zero).
+Eigen::VectorXd ProjectiveReprojectionErrors(const OseProblem& problem,
+                                             const OseCameraVector& cameras,
+                                             const Eigen::Matrix4Xd& points);
 
 }  // namespace theia
 

@@ -31,6 +31,10 @@ struct InitFreeRestartDiagnostics {
 
   // Projective refinement (-1 / 0 when the stage is disabled).
   double refined_rms_error = -1.0;
+  // With outlier rejection: removed observations and the RMS of
+  // min(error, outlier_threshold) over all observations (the ranking score).
+  int refined_num_outlier_observations = 0;
+  double refined_truncated_rms_error = -1.0;
   int refinement_iterations = 0;
   double refinement_time_seconds = 0.0;
 
@@ -44,8 +48,23 @@ struct InitFreeRestartDiagnostics {
   double upgrade_mean_orthogonality_error = 0.0;
   // MetricUpgradeResult::conditioning (valid only if the upgrade succeeded).
   double upgrade_conditioning = 0.0;
+  // Cameras dropped by InitFreeOptions::max_camera_orthogonality_error.
+  int upgrade_num_dropped_cameras = 0;
+  // Median angle between the upgraded relative rotations and the two-view
+  // relative rotations (InitFreeOptions::max_relative_rotation_error_deg);
+  // -1 if not computed.
+  double upgrade_relative_rotation_error_deg = -1.0;
+  // Median angle between the upgraded and the two-view translation directions
+  // (InitFreeOptions::max_translation_direction_error_deg); -1 if not
+  // computed.
+  double upgrade_translation_direction_error_deg = -1.0;
   // The upgrade error, or the failed check ("rejected: ..."), or "ok".
   std::string upgrade_message;
+  // InitFreeOptions::upgrade_unrefined_fallback: outcome of upgrading the OSE
+  // solution of this restart without projective refinement.
+  bool unrefined_upgrade_attempted = false;
+  bool unrefined_upgrade_success = false;
+  std::string unrefined_upgrade_message;
 };
 
 // Per-run diagnostics. The study in arXiv:2608.18028 shows that a low OSE cost
@@ -60,6 +79,12 @@ struct InitFreeDiagnostics {
   int best_restart = -1;
 
   bool metric_upgrade_success = false;
+  // The used restart was upgraded from its unrefined OSE solution
+  // (InitFreeOptions::upgrade_unrefined_fallback).
+  bool used_unrefined_fallback = false;
+  // Views left unestimated because their upgraded camera was broken
+  // (InitFreeOptions::max_camera_orthogonality_error).
+  std::vector<ViewId> dropped_view_ids;
   double fraction_in_front = 0.0;
   double mean_orthogonality_error = 0.0;
   // Before the nonlinear refinement (equal to the above without it).
@@ -84,6 +109,13 @@ struct ProjectiveReconstruction {
 struct RankedProjectiveReconstruction {
   int restart = -1;  // index into InitFreeDiagnostics::restarts
   ProjectiveReconstruction reconstruction;
+  // The OSE solution before projective refinement (empty if the refinement is
+  // disabled, then `reconstruction` is the OSE solution).
+  ProjectiveReconstruction unrefined;
+  // Observations kept by the outlier rejection of the projective refinement
+  // (ProjectiveRefinementResult::observation_inlier); empty if the rejection
+  // is disabled or the refinement did not run.
+  std::vector<bool> observation_inlier;
 };
 
 // Runs the projective stages for options.num_random_restarts random starts:

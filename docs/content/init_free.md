@@ -4,9 +4,9 @@
 
 1. **Problem.** Tracks (and, for `POSE_ROT`, the relative rotations of the view graph) become an `OseProblem`.
 2. **OSE stage.** Random cameras are sampled, and an OSE objective is minimized with variable projection (VarPro). The result is a projective reconstruction.
-3. **Projective refinement** *(optional)*. Projective bundle adjustment with Ceres (cameras and homogeneous points on unit spheres) removes the bias that the α-weighted affine term of pOSE leaves in the OSE minimum. Optionally with a Huber loss (`robust_loss_width`). With several restarts, the restarts are ranked by the reprojection RMS after refinement (`restart_selection = REPROJECTION_ERROR`, the default) or by the OSE cost.
-4. **Metric upgrade with validity checks.** The restarts are upgraded in ranked order, and the first one whose metric upgrade succeeds and passes the checks is used (see *Restarts and validity checks*). The upgrade is self-calibration with the absolute dual quadric: known intrinsics for `CALIBRATED_RAYS`, one focal length per camera for `PIXEL_ISOTROPIC`. A linear estimate, optionally refined nonlinearly.
-5. **Metric bundle adjustment.** The standard pyTheia BA, configured by `ReconstructionEstimatorOptions`.
+3. **Projective refinement** *(optional)*. Projective bundle adjustment with Ceres (cameras and homogeneous points on unit spheres) removes the bias that the α-weighted affine term of pOSE leaves in the OSE minimum. Optionally with a robust loss (`robust_loss_width`, `loss_function_type`) and an outlier rejection that removes observations above a threshold and solves again (`outlier_rejection_rounds`, `outlier_threshold`); both are needed for real tracks (see *Real matches*). With several restarts, the restarts are ranked by the reprojection RMS after refinement (`restart_selection = REPROJECTION_ERROR`, the default; with outlier rejection, the RMS with every error capped at the threshold) or by the OSE cost.
+4. **Metric upgrade with validity checks.** The restarts are upgraded in ranked order, and the first one whose metric upgrade succeeds and passes the checks is used (see *Restarts and validity checks*). The upgrade is self-calibration with the absolute dual quadric: known intrinsics for `CALIBRATED_RAYS`, one focal length per camera for `PIXEL_ISOTROPIC`. A linear estimate, optionally refined nonlinearly. A few cameras that collapsed during the projective refinement are dropped instead of failing the restart.
+5. **Metric bundle adjustment.** The standard pyTheia BA, configured by `ReconstructionEstimatorOptions`. Tracks with an observation rejected in step 3 are left out. After the BA, outlier tracks are removed as in the global pipeline, and the BA runs again if any were removed.
 
 The module is a testing ground. Every stage is exposed to Python on its own, so that new formulations, solvers and upgrades can be compared with the same data and diagnostics.
 
@@ -67,13 +67,20 @@ Two runnable examples show the API:
 | | `SPARSE_CHOLESKY` | implemented (CPU, Eigen simplicial LLT; for sequences and sparse view graphs) |
 | `varpro.robust_loss_type` | `NONE` | implemented |
 | | `CAUCHY` | implemented (IRLS, `robust_loss_scale` in observation units) |
-| `projective_refinement.max_num_iterations` | `0` skips, `> 0` runs | implemented (`function_tolerance`, optional Huber `robust_loss_width`) |
+| `projective_refinement.max_num_iterations` | `0` skips, `> 0` runs | implemented (`function_tolerance`, optional robust loss) |
+| `projective_refinement.loss_function_type` | `HUBER` (default), `CAUCHY`, and the other `LossFunctionType` values | implemented (used with `robust_loss_width`) |
+| `projective_refinement.outlier_rejection_rounds`, `outlier_threshold` | `0` (off) | implemented (threshold in observation units; see *Real matches*) |
+| `projective_refinement.deterministic` | `True` | implemented (solves with one thread, so results do not change between runs) |
 | `varpro.num_threads` | `0` uses `num_threads` of `InitFreeOptions` | implemented; results do not depend on the thread count |
 | `rotation_weighting` | `SCALAR`, `TWO_VIEW_INFORMATION` | implemented (`POSE_ROT` only) |
 | `restart_selection` | `REPROJECTION_ERROR`, `OSE_COST` | implemented (sets the order in which the restarts are upgraded) |
 | `min_fraction_in_front`, `max_mean_orthogonality_error` | `0.9`, `0.3` | implemented (validity checks of the metric upgrade, see *Restarts and validity checks*) |
 | `min_upgrade_conditioning` | `0.003` (`0` disables) | implemented (rejects critical self-calibrations, see *Metric upgrade*) |
-| `projective_refinement.robust_loss_width` | `0` (plain least squares) | implemented (Huber loss in observation units; see *Real data (ETH3D)*) |
+| `max_camera_orthogonality_error`, `max_fraction_dropped_cameras` | `1.0`, `0.1` (`0` disables) | implemented (drops single broken cameras, see *Restarts and validity checks*) |
+| `max_relative_rotation_error_deg` | `5` (`0` disables) | implemented (`POSE_ROT` only: agreement with the two-view rotations) |
+| `max_translation_direction_error_deg` | `0` (disabled) | implemented, measured only (agreement with the two-view translation directions) |
+| `upgrade_unrefined_fallback` | `False` | implemented (upgrade the unrefined OSE solutions if no refined restart passes) |
+| `projective_refinement.robust_loss_width` | `0` (plain least squares) | implemented (width of `loss_function_type` in observation units; see *Real data (ETH3D)*) |
 | `metric_upgrade` | `LINEAR`, `LINEAR_AND_NONLINEAR` | implemented for both normalizations; `RPOSE` always uses the nonlinear refinement |
 | `shared_focal_length` | `False`, `True` | implemented (`PIXEL_ISOTROPIC` only) |
 
@@ -131,6 +138,10 @@ The linear `Ω` is truncated to rank 3. With `nonlinear_refinement` (`LINEAR_AND
 
 For calibrated rays, the linear estimate is already close, and the refinement changes little.
 
+**Projective frame.** The linear estimate depends on the projective frame. After projective refinement the frame can be badly scaled, and the linear quadric is then dominated by one eigenvalue and not rank-3 positive semidefinite although the reconstruction is accurate (ETH3D relief with SIFT matches). The upgrade therefore computes two candidates, one in the given frame and one in a frame normalized by the points (median centroid at the origin, median distance one), refines each, and keeps the one with the lower orthogonality error. On the synthetic scenes above the final result is the same, and the linear error of the chosen candidate is 5 to 10 times lower than in the given frame.
+
+**Single cameras.** `MetricUpgradeResult.camera_orthogonality_errors` holds the error of every camera (infinity for a camera whose upgraded 3×3 block is singular). `MetricUpgradeOptions.camera_mask` restricts the estimation of the quadric to some cameras; the upgrade is still applied to all of them. The estimator uses both to drop collapsed cameras (see *Restarts and validity checks*).
+
 **Conditioning (critical motions).** Some camera motions do not determine the self-calibration. For varying focal lengths the pure translation is one such motion (all cameras with the same orientation): the upgrade then fits the quadric and the focal lengths, but they are not unique. `MetricUpgradeResult::conditioning` measures this. It is the fifth smallest singular value of the Jacobian of the quadric residuals (with respect to the 12 entries of the normalized `B` and the estimated focal lengths) over the largest one. The four gauge directions of the residuals (`B` times an orthogonal matrix, and the scale of `B`) are excluded. Small values mean an extra ambiguity. Measured on synthetic scenes (noise 0 to 2 px): well-posed scenes 0.018 to 0.56 (calibrated, varying and shared focal lengths, RPOSE). Pure translation with varying focal lengths 1e-8 (noise free) to 6e-4 (2 px), with focal lengths off by 30 to 54 %, while its orthogonality error stays below 0.01, so the orthogonality check does not catch it. Rotation about one axis with the centres in a plane is not critical in this parametrization (conditioning 0.044, focal lengths recovered to 0.4 % at 0.5 px). `min_upgrade_conditioning` (default `0.003`, `0` disables) rejects a restart whose conditioning is below it, with the message `ill-conditioned self-calibration (critical motion?)`. The threshold lies between the two groups: about 5 times above the largest critical value and 6 times below the smallest well-posed one. On real data (ETH3D, calibrated) accepted restarts measured 0.09; the wrong restarts (orthogonality error 0.8 to 2.6) still measured 0.29 to 0.44, so this check flags only the critical ambiguity, not wrong restarts in general.
 
 ## CUDA backend
@@ -168,9 +179,14 @@ The checks are:
 | Synthetic, 1 px noise, 15 views | 0.005 to 0.011 | none |
 | ETH3D, 0.5 px, 0 % and 20 % outliers | 0.0005 to 0.17 | 0.63 to 14.5 |
 
-  The threshold 0.3 sits between the largest correct value (0.17) and the smallest wrong one (0.63), about 1.8 times and 2.1 times away. Two cases are not separated by it: one correct restart at 0.61 (courtyard 10–29, 20 % outliers) is rejected, which is the safe direction. One accepted restart is inaccurate (office 4–15, 0 % outliers: 0.08, 1.2° rotation error, 2 of 12 views dropped), which this check cannot exclude.
+  The threshold 0.3 sits between the largest correct value (0.17) and the smallest wrong one (0.63), about 1.8 times and 2.1 times away. These values were measured with the linear estimate in the given frame only. Since the upgrade also tries a normalized frame (see *Metric upgrade*), wrong restarts can reach lower values: on office 4–15 with 20 % outliers, wrong restarts now measure 0.14 to 0.23. The checks below were added for this reason. Two cases are not separated by it: one correct restart at 0.61 (courtyard 10–29, 20 % outliers) is rejected, which is the safe direction. One accepted restart is inaccurate (office 4–15, 0 % outliers: 0.08, 1.2° rotation error, 2 of 12 views dropped), which this check cannot exclude.
 
-- `min_upgrade_conditioning` (default `0.003`, `0` disables): `MetricUpgradeResult::conditioning` (see *Metric upgrade*). A restart below it is rejected as an ill-conditioned self-calibration (critical motion). The checks are written so that a NaN fails. The restart diagnostics record every attempt: `upgrade_attempted`, `upgrade_success` (the upgrade succeeded and passed the checks), `upgrade_fraction_in_front`, `upgrade_mean_orthogonality_error`, `upgrade_conditioning` and `upgrade_message` (the upgrade error, `rejected: ...` with the failed check, or `ok`).
+- `min_upgrade_conditioning` (default `0.003`, `0` disables): `MetricUpgradeResult::conditioning` (see *Metric upgrade*). A restart below it is rejected as an ill-conditioned self-calibration (critical motion).
+- `max_camera_orthogonality_error` (default `1.0`) and `max_fraction_dropped_cameras` (default `0.1`): a camera with few observations can collapse during the projective refinement while all others are accurate. On ETH3D with SIFT matches (relief, meadow, office) one camera reached 2.5 to 2·10⁵ while all others stayed below 0.11; on office it was also flipped by 180° and biased the quadric of the other cameras by 1 to 5°. Cameras above `max_camera_orthogonality_error` are dropped: the upgrade is estimated again without them (`MetricUpgradeOptions.camera_mask`), the mean orthogonality error and the fraction in front are checked on the remaining cameras, and the dropped views stay unestimated (`Diagnostics().dropped_view_ids`, `upgrade_num_dropped_cameras` per restart). If more than `max_fraction_dropped_cameras` of the cameras would be dropped, the restart is rejected. With fewer than 10 cameras, no camera may be dropped.
+- `max_relative_rotation_error_deg` (default `5`, `0` disables, `POSE_ROT` only): the median angle between the relative rotations of the upgraded cameras and the two-view rotations of the view graph. Accepted restarts on ETH3D with SIFT matches measured 0.06 to 0.93°, and on the ETH3D subsets 0.02 to 1.95° (4.5° for an inaccurate office 4–15 result without the Cauchy loss). It turned the wrong office 4–15 result at 20 % outliers with the library defaults into a failure (5.9°), but it also rejects one correct result (courtyard 30–37 at 20 % outliers, library defaults: 5.2°), and it does not catch the wrong result with robust refinement on the same subset (2.9°). The threshold is therefore a coarse check, not a separation.
+- `max_translation_direction_error_deg` (default `0`, disabled): the same for the direction of the camera centers. It is recorded for every attempted restart (`upgrade_translation_direction_error_deg`) but not used by default. On the office 4–15 subset the wrong upgrade at 20 % outliers (8.9° median) and the correct one at 0 % (7.0 to 9.2°) have the same distribution of per-edge errors, so no threshold separates them; on the 12 accepted ETH3D scenes with SIFT matches it is 0.13 to 2.7°.
+
+The checks are written so that a NaN fails. The restart diagnostics record every attempt: `upgrade_attempted`, `upgrade_success` (the upgrade succeeded and passed the checks), `upgrade_fraction_in_front`, `upgrade_mean_orthogonality_error`, `upgrade_conditioning`, `upgrade_num_dropped_cameras`, `upgrade_relative_rotation_error_deg`, `upgrade_translation_direction_error_deg` and `upgrade_message` (the upgrade error, `rejected: ...` with the failed check, or `ok`). With `upgrade_unrefined_fallback`, the unrefined OSE solutions are upgraded in the same order if no refined restart passes (`unrefined_upgrade_message`, `Diagnostics().used_unrefined_fallback`). On the ETH3D runs below it was never needed.
 
 ```python
 ifo.min_fraction_in_front = 0.9
@@ -182,62 +198,79 @@ for k, r in enumerate(estimator.Diagnostics().restarts):
 
 ### Ablation without the Cauchy loss
 
-Without the Cauchy loss in VarPro (`init_free_sfm.py --no_cauchy`, ETH3D), the checks do not catch every wrong result. Office 4–15 with 20 % outliers was accepted with a 26° median rotation error. The only restart tried had 99 % of the observations in front and an orthogonality error of 0.16, below the 0.3 threshold. Without the Cauchy loss the estimator also failed on delivery_area 12–23 (0 % and 20 % outliers) and office 4–15 (0 % outliers). So the checks reduce silently wrong results but do not exclude them. Keep the Cauchy loss on for real data.
+Without the Cauchy loss in VarPro (`init_free_sfm.py --no_cauchy`, ETH3D), the estimator fails on delivery_area 12–23 (0 % and 20 % outliers) and courtyard 10–29 (20 %). Office 4–15 is accepted with 3.2° at 0 % outliers (1.3° for the global pipeline), and at 20 % outliers it now fails; before the relative rotation check it was accepted with a 26° median rotation error. So the checks reduce silently wrong results but do not exclude them (see the robust refinement on office 4–15 below). Keep the Cauchy loss on for real data.
 
 ## Real data (ETH3D)
 
-`pyexamples/eth3d/init_free_sfm.py` runs the estimator on ETH3D subsets, with the observations, outliers and calibrated priors described in the script. Settings: `POSE_ROT`, `CALIBRATED_RAYS`, `LINEAR_AND_NONLINEAR` upgrade, metric BA, 3 restarts (seeds 42 to 44), 0.5 px pixel noise, outlier ratio 0 % and 20 %. Global SfM is correct in all of these. Rotation error is the median over the estimated views after a Sim(3) alignment of the centres. Times are 0.4 to 6.8 s per run.
+`pyexamples/eth3d/init_free_sfm.py` runs the estimator on ETH3D subsets, with the observations, outliers and calibrated priors described in the script. Settings: `POSE_ROT`, `CALIBRATED_RAYS`, `LINEAR_AND_NONLINEAR` upgrade, metric BA, 3 restarts (seeds 42 to 44), 0.5 px pixel noise, outlier ratio 0 % and 20 %. Rotation error is the median over the estimated views after a Sim(3) alignment of the centres. Times are 0.4 to 7.1 s per run. The columns are the projective refinement of the library default (plain least squares), the example default (Huber 3 px) and `--robust_refinement` (Cauchy 3 px, outlier rejection at 5 px, see *Real matches*).
 
-| Scene (views) | Outliers | Before | Library default (plain least squares) | Example default (Huber 3 px) |
-|---|---|---|---|---|
-| courtyard 30–37 (8) | 0 % | ok | ok, 0.16°, restart 2 | ok, 0.16°, restart 2 |
-| courtyard 30–37 (8) | 20 % | ok | ok, 0.18°, restart 2 | ok, 0.18°, restart 0 |
-| courtyard 10–29 (20) | 0 % | ok | ok, 0.14°, restart 2 | ok, 0.14°, restart 2 |
-| courtyard 10–29 (20) | 20 % | FAIL | **FAIL**, no restart passed | **FAIL**, no restart passed |
-| delivery_area 12–23 (12) | 0 % | ok | ok, 0.05°, restart 2 | ok, 0.05°, restart 1 |
-| delivery_area 12–23 (12) | 20 % | ok | ok, 0.25°, restart 1 | ok, 0.25°, restart 2 |
-| facade 20–31 (12) | 0 % | ok | ok, 0.07°, restart 1 | ok, 0.07°, restart 2 |
-| facade 20–31 (12) | 20 % | wrong, 178° | **FAIL**, no restart passed | ok, 0.05°, restart 1 |
-| office 4–15 (12) | 0 % | FAIL | ok, 1.21°, 10 of 12 views, restart 2 | ok, 0.96°, 10 of 12 views, restart 2 |
-| office 4–15 (12) | 20 % | wrong, 145° | **FAIL**, no restart passed | **FAIL**, no restart passed |
-
-"Before" is the estimator before this change: the top-ranked restart was used without a metric check. For office 4–15 at 0 % outliers, the top-ranked restart 0 failed the metric upgrade, so that run failed. Now the upgrade falls back to the next ranked restart. The restart index of each success is given.
+| Scene (views) | Outliers | Global SfM | Library default | Example default (Huber 3 px) | Robust refinement |
+|---|---|---|---|---|---|
+| courtyard 30–37 (8) | 0 % | 0.16° | 0.16° | 0.16° | 0.16° |
+| courtyard 30–37 (8) | 20 % | 0.16° | **FAIL** | 0.18° | 0.18° |
+| courtyard 10–29 (20) | 0 % | 0.15° | 0.14° | 0.14° | 0.14° |
+| courtyard 10–29 (20) | 20 % | 0.13° | **FAIL** | **FAIL** | 0.15° |
+| delivery_area 12–23 (12) | 0 % | 0.05° | 0.05° | 0.05° | 0.05° |
+| delivery_area 12–23 (12) | 20 % | 0.19° | 0.25° | 0.25° | 0.25° |
+| facade 20–31 (12) | 0 % | 0.09° | 0.07° | 0.07° | 0.07° |
+| facade 20–31 (12) | 20 % | 0.06° | **FAIL** | 0.05° | 0.05° |
+| office 4–15 (12) | 0 % | 1.28°, 10 views | 1.08°, 10 views | 0.62°, 10 views | 0.99°, 10 views |
+| office 4–15 (12) | 20 % | 0.17°, 7 views | **FAIL** | **FAIL** | **wrong, 136°**, 8 views |
 
 What this shows:
 
-- No run in this table reports success with a reconstruction that is wrong (rotation error above 1°), and the cases that were wrong before now fail or are correct (facade 20–31 with Huber).
-- Of the four former FAIL or WRONG cells, facade 20–31 at 20 % outliers is now correct with Huber 3 px (0.05°). Courtyard 10–29 and office 4–15, both at 20 % outliers, now fail with the per-restart reasons instead of being wrong. Office 4–15 at 0 % outliers now succeeds through the fallback (restarts 0 and 1 fail the upgrade, restart 2 passes), but with 1.2° (0.96° with Huber) rotation error and 2 views dropped. The other correct runs are at 0.05° to 0.25°. The checks accept it, so treat it as a lower-quality result.
-- Courtyard 10–29 at 20 % outliers: of its six first restarts, only restart 2 (0.26°) is correct, and its orthogonality error of 0.61 is rejected by the threshold. The others are wrong (0.63 to 0.91). Up to 12 restarts with both settings give no accepted restart.
-- Office 4–15 at 20 % outliers: none of the first six restarts is correct (rotation error 109° to 179°), and up to 12 restarts with both settings give no accepted restart.
-- Facade 20–31 at 20 % outliers with plain least squares: every one of the first six restarts sits at 1.28 to 1.32 orthogonality error, and up to 12 restarts give no accepted restart.
+- The robust refinement is correct in 9 of 10 cells and matches the global pipeline within 0.06° in all but office 4–15. It is the only setting that reconstructs courtyard 10–29 at 20 % outliers.
+- Office 4–15 at 20 % outliers with the robust refinement is the one silently wrong result: the accepted restart has 99 % of the observations in front, an orthogonality error of 0.14, and relative rotations within 2.9° of the view graph (median). On this subset of 8 usable views, no check separates it from the correct restarts (see *Restarts and validity checks*).
+- With the library default, courtyard 30–37 at 20 % outliers fails because of the relative rotation check (5.2°, a correct restart), and facade 20–31 and courtyard 10–29 at 20 % outliers fail because too many cameras are broken. Office 4–15 at 20 % outliers fails instead of being wrong (86.9° without the relative rotation check).
 
 ### Real matches (ETH3D, SIFT)
 
-The same settings were run on real SIFT matches of all 13 ETH3D training scenes, from the shared COLMAP database of the pyTheia paper benchmark: two-view estimation with a 2 px Sampson threshold, at least 30 inliers per pair, tracks of length 3 or more, calibrated intrinsics, one random seed, 8 threads. The global pipeline (robust L1/L2 rotations, LUD positions) on the same view graph is the reference. Errors are medians after a Sim(3) alignment to the ground truth.
+The estimator was run on real SIFT matches of all 13 ETH3D training scenes, from the shared COLMAP database of the pyTheia paper benchmark: two-view estimation with a 2 px Sampson threshold, at least 30 inliers per pair, tracks of length 3 or more, calibrated intrinsics, one random seed, 8 threads. The global pipeline (robust L1/L2 rotations, LUD positions) on the same view graph is the reference. Errors are medians after a Sim(3) alignment to the ground truth. Settings as above with the robust refinement (`run_pytheia.py --variant init_free` in the paper repository), and, as an ablation, with a Huber loss of 3 px and no outlier rejection (`--variant init_free_huber`).
 
-| Scene (views) | Global LUD | Init-free | Init-free outcome |
-|---|---|---|---|
-| delivery_area (44) | 44/44, 5.2 mm, 0.04° | 44/44, 19.7 mm, 0.13° | ok |
-| facade (76) | 76/76, 11.9 mm, 0.12° | 76/76, 443 mm, 4.4° | accepted, inaccurate (orthogonality 0.27) |
-| kicker (31) | 30/31, 4.1 mm, 0.06° | 30/31, 8.6 mm, 0.27° | ok |
-| office (26) | 26/26, 2.4 mm, 0.13° | 26/26, 6.3 mm, 0.29° | ok |
-| pipes (14) | 14/14, 9.8 mm, 0.48° | 14/14, 2.3 mm, 0.10° | ok |
-| terrace (23) | 23/23, 4.2 mm, 0.10° | 23/23, 6.9 mm, 0.09° | ok |
-| courtyard, meadow | ok | fail | all restarts: quadric not rank-3 PSD |
-| electro, playground, relief, relief_2 | ok | fail | all restarts: 50 to 64 % in front, orthogonality 0.9 to 3.7 |
-| terrains | ok | fail | all restarts: orthogonality 0.75 to 0.78 |
+| Scene (views) | Global LUD | Init-free, robust | Init-free, Huber 3 px | Time robust (LUD) | Rejected observations | Dropped views |
+|---|---|---|---|---|---|---|
+| courtyard (38) | 38, 6.1 mm, 0.06° | 37, 6.0 mm, 0.06° | fail | 46 s (1.6 s) | 2.6 % | 1 |
+| delivery_area (44) | 44, 5.2 mm, 0.04° | 44, 5.7 mm, 0.05° | 44, 5.7 mm, 0.05° | 18 s (0.8 s) | 1.1 % | 0 |
+| electro (45) | 43, 3.5 mm, 0.04° | 42, 3.3 mm, 0.04° | 43, 4.9 mm, 0.08° | 18 s (0.7 s) | 0.9 % | 1 |
+| facade (76) | 76, 11.9 mm, 0.12° | 76, 12.4 mm, 0.11° | 73, 181 mm, 1.07° | 205 s (6.4 s) | 4.7 % | 0 |
+| kicker (31) | 30, 4.1 mm, 0.06° | 30, 2.7 mm, 0.03° | 30, 3.2 mm, 0.03° | 14 s (0.5 s) | | 0 |
+| meadow (15) | 13, 66 mm, 1.07° | 14, 40 mm, 0.26° | fail | 1 s (0.1 s) | 4.2 % | 1 |
+| office (26) | 26, 2.4 mm, 0.13° | 25, 2.0 mm, 0.13° | 26, 2.7 mm, 0.15° | 3 s (0.2 s) | | 1 |
+| pipes (14) | 14, 9.8 mm, 0.48° | 14, 1.7 mm, 0.06° | 14, 1.5 mm, 0.06° | 1 s (0.1 s) | 2.7 % | 0 |
+| playground (38) | 38, 7.3 mm, 0.08° | **fail** | fail | 29 s (0.4 s) | | |
+| relief (31) | 31, 1.4 mm, 0.05° | 30, 1.3 mm, 0.03° | fail | 39 s (1.0 s) | 1.4 % | 1 |
+| relief_2 (31) | 31, 1.4 mm, 0.05° | 31, 1.6 mm, 0.05° | fail | 19 s (0.4 s) | 1.1 % | 0 |
+| terrace (23) | 23, 4.2 mm, 0.10° | 23, 3.4 mm, 0.07° | 23, 3.2 mm, 0.07° | 11 s (0.3 s) | | 0 |
+| terrains (42) | 42, 3.6 mm, 0.07° | 42, 3.6 mm, 0.06° | fail | 18 s (0.4 s) | 2.3 % | 0 |
 
-Init-free succeeds on 6 of 13 scenes and is accurate on 5 of them; it is less accurate than the global pipeline except on pipes, and 3 to 20 times slower (facade: 124 s, mostly the 200 VarPro iterations of each restart). On facade, a restart with 4.4° rotation error passed the checks with an orthogonality error of 0.27, just below the 0.3 threshold. On the failed scenes every restart reaches a low projective reprojection error but a wrong metric upgrade, as in the ETH3D subsets with outliers. The cause is not yet analysed (candidates: wrong track merges and outlier tracks that the verified pairs let through, the projective ambiguity of the OSE minimum, too few restarts). The harness is `experiments/bench/run_pytheia.py --variant init_free` in the paper repository.
+With the robust settings the estimator succeeds on 12 of 13 scenes, with errors close to those of the global pipeline (within 0.5 mm and 0.01° on 8 scenes, lower on pipes, kicker, meadow and terrace), but registers one view fewer on five scenes and is 10 to 50 times slower. With the Huber loss instead, it succeeds on 7 scenes and is inaccurate on facade (73 of 76 views, 1.07°). A first run, before the changes described below, succeeded on 6 scenes. The results are deterministic (`projective_refinement.deterministic`).
+
+**Why the first run failed.** Each failing scene was diagnosed against the ground truth: tracks triangulated with the ground-truth cameras, and the projective reconstruction of each restart compared with the ground truth by fundamental matrices of camera pairs, which do not depend on the projective frame.
+
+1. *Outliers in the tracks.* 2 to 12 % of the observations of the real tracks are more than 3 px from the ground-truth projection, mostly from wrongly merged tracks. A projective camera (11 degrees of freedom) can absorb such outliers, and the Huber loss of the projective refinement still gives them a linear influence: started from the ground-truth cameras, the refinement moved far away from them on courtyard, relief_2 and meadow. With the outlier tracks removed (using the ground truth), courtyard, relief_2, facade and electro reconstruct correctly. Without the ground truth, the Cauchy loss with outlier rejection gives the same result.
+2. *The projective frame of the linear self-calibration* (relief, see *Metric upgrade*).
+3. *A single collapsed camera* (relief, meadow, office; see `max_camera_orthogonality_error`).
+4. *The metric BA* included the tracks with outliers and made every scene worse (relief_2: 0.11° after the upgrade, 0.66° after BA). Tracks with a rejected observation are now left out of it. A reprojection filter before the BA would also remove good tracks, because the upgraded cameras are not yet accurate (office: 37 % of the tracks).
+5. *Playground* still fails: on every restart 13 to 20 of 38 cameras are broken after the refinement, and the unrefined OSE solutions do not pass the checks either. This is a wrong local minimum, not an outlier problem.
+
+The multithreaded Ceres evaluation in the refinement made the first runs differ between repetitions (office: 0.76 to 1.5°). The differences start at 1e-16 and grow through the outlier rejection, the ranking and the upgrade. `projective_refinement.deterministic` (default) solves with one thread; this doubles the refinement time, (facade: 205 instead of 127 s in total).
 
 ### Robust projective refinement
 
-`ProjectiveRefinementOptions.robust_loss_width` is a Huber width in observation units (normalized coordinates for `CALIBRATED_RAYS`, so about `pixels / focal`). The example sets it to 3 px by default. The library default stays at plain least squares, because the effect on individual restarts is mixed:
+`ProjectiveRefinementOptions.robust_loss_width` is the width of `loss_function_type` (Huber by default) in observation units (normalized coordinates for `CALIBRATED_RAYS`, so about `pixels / focal`). `outlier_rejection_rounds` and `outlier_threshold` add an outlier rejection: after each solve, observations above the threshold are removed and the problem is solved again, until no observation is removed or the rounds are used up. `ProjectiveRefinementResult.observation_inlier` marks the kept observations, and `final_truncated_rms_error` (each error capped at the threshold) ranks the restarts, since the inlier RMS would reward rejecting more. On a synthetic scene with 5 % gross outliers (30 to 150 px), the rejection at 5 px finds more than 95 % of them and removes less than 1 % of the inliers.
 
-- Facade 20–31, 20 % outliers: all six restarts go from about 1.3 to about 0.0006 orthogonality error, and from 178° to 0.05° after BA. This is the main gain.
-- Office 4–15, 0 % outliers: 1.21° to 0.96° after BA.
-- Courtyard 30–37 at 20 % outliers and delivery_area: the correct restarts stay correct, and courtyard's orthogonality error drops from 0.17 to 0.01. Delivery_area restart 0 at 0 % outliers gets 0.23° instead of 0.05°, so Huber does not help every restart.
-- Courtyard 10–29 at 20 % outliers: the correct restart 2 (plain least squares) fails the upgrade (not positive semidefinite) with Huber, and no other restart passes.
-- A 1 px Huber width was measured per restart only. It was not chosen.
+The library default stays at plain least squares without rejection, so that the stage remains the plain projective bundle adjustment of the study. For real tracks use
+
+```python
+pr = ifo.projective_refinement
+pr.max_num_iterations = 50
+pr.robust_loss_width = 3.0 / focal_px
+pr.loss_function_type = pt.sfm.LossFunctionType.CAUCHY
+pr.outlier_rejection_rounds = 3
+pr.outlier_threshold = 5.0 / focal_px
+```
+
+Measured per restart on the ETH3D SIFT tracks, starting from the same OSE solutions: Huber without rejection leaves the projective reconstruction far from the ground truth on 7 of the 10 scenes measured. Cauchy without rejection fixes most of them but keeps a huge RMS (outliers at their full error), and Huber with rejection removes up to 26 % of the observations on bad restarts. Cauchy with rejection at 5 px is consistently best (rejection at 10 px is similar but worse on terrains).
 
 ## Performance
 

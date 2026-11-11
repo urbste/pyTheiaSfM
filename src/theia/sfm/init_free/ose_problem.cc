@@ -301,6 +301,7 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
           info->rotation_2.data(),
           ceres::ColumnMajorAdapter3x3(term.relative_rotation.data()));
       term.weight = options.rotation_weight;
+      term.center_a_in_b = info->position_2;
       problem->rotation_terms.push_back(term);
       // position_2 is the center of the second camera in the frame of the
       // first, so X_second = R_rel (X_first - position_2).

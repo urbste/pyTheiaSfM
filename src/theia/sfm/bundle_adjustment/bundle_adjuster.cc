@@ -189,11 +189,25 @@ void BundleAdjuster::AddTrack(const TrackId track_id) {
     return;
   }
 
+  // A track without an estimated observing view has no residual, so its
+  // parameter block would not be part of the problem.
+  const auto& observed_view_ids = track->ViewIds();
+  bool has_estimated_view = false;
+  for (const ViewId view_id : observed_view_ids) {
+    const View* view = reconstruction_->View(view_id);
+    if (view != nullptr && view->IsEstimated()) {
+      has_estimated_view = true;
+      break;
+    }
+  }
+  if (!has_estimated_view) {
+    return;
+  }
+
   // Mark the track as optimized.
   optimized_tracks_.emplace(track_id);
 
   // Add all observations of the track to the problem.
-  const auto& observed_view_ids = track->ViewIds();
   for (const ViewId view_id : observed_view_ids) {
 
     View* view = CHECK_NOTNULL(reconstruction_->MutableView(view_id));
