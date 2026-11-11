@@ -1515,10 +1515,10 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite(
           "monodepth_shared_focal",
           &theia::EstimateTwoViewInfoOptions::monodepth_shared_focal)
-      .def_readwrite("min_focal_length",
       .def_readwrite(
           "monodepth_reprojection_weight",
           &theia::EstimateTwoViewInfoOptions::monodepth_reprojection_weight)
+      .def_readwrite("min_focal_length",
                      &theia::EstimateTwoViewInfoOptions::min_focal_length)
       .def_readwrite("max_focal_length",
                      &theia::EstimateTwoViewInfoOptions::max_focal_length);
