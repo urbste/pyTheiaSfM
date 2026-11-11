@@ -270,6 +270,9 @@ def test_list_options(capsys):
     out = capsys.readouterr().out
     assert "bundle_adjustment_loss_function_type = " in out
     assert "ligt_position_estimator_options.use_scale_constraint = " in out
+    assert "art_position_estimator_options.max_triplets_per_view = " in out
+    assert "refine_rotations_with_rotation_only_error = " in out
+    assert "rotation_only_refiner_options.tuple_gate_px = " in out
 
 
 def test_set_overrides_typed_values():
@@ -285,6 +288,28 @@ def test_set_overrides_typed_values():
     assert opts.bundle_adjust_tracks is False
     assert opts.global_position_estimator_type == pt.sfm.GlobalPositionEstimatorType.LIGT
     assert opts.ligt_position_estimator_options.use_scale_constraint is False
+
+
+def test_set_overrides_rotation_refiner():
+    opts = cli.build_estimator_options(None, [
+        "refine_rotations_with_rotation_only_error=true",
+        "rotation_only_refiner_options.max_reference_candidates=5",
+        "rotation_only_refiner_options.tuple_gate_px=4.5",
+        "rotation_only_refiner_options.use_two_view_tuples=false",
+    ])
+    assert opts.refine_rotations_with_rotation_only_error is True
+    assert opts.rotation_only_refiner_options.max_reference_candidates == 5
+    assert opts.rotation_only_refiner_options.tuple_gate_px == pytest.approx(4.5)
+    assert opts.rotation_only_refiner_options.use_two_view_tuples is False
+
+
+def test_set_overrides_art_estimator():
+    opts = cli.build_estimator_options(None, [
+        "global_position_estimator_type=ART",
+        "art_position_estimator_options.max_triplets_per_view=20",
+    ])
+    assert opts.global_position_estimator_type == pt.sfm.GlobalPositionEstimatorType.ART
+    assert opts.art_position_estimator_options.max_triplets_per_view == 20
 
 
 def test_config_file_then_set_override(tmp_path):

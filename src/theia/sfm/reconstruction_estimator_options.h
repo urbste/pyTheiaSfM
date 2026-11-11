@@ -40,6 +40,8 @@
 
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/estimate_track.h"
+#include "theia/sfm/global_pose_estimation/art_position_estimator.h"
+#include "theia/sfm/global_pose_estimation/rotation_only_refiner.h"
 #include "theia/sfm/global_pose_estimation/glomap_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h"
@@ -78,12 +80,15 @@ enum class GlobalRotationEstimatorType {
 //     enforce a loop/triangle constraint for triplets.
 //   LEAST_UNSQUARED_DEVIATION: This robust method uses the least unsquared
 //     deviation instead of least squares. It is essentially an L1 solver.
+//   ART: Analytical Rotation-guided Translation (track-based, rotation-only
+//     triplet solutions registered by one robust sparse solve).
 enum class GlobalPositionEstimatorType {
   NONLINEAR = 0,
   LINEAR_TRIPLET = 1,
   LEAST_UNSQUARED_DEVIATION = 2,
   LIGT = 3,
-  GLOMAP = 4
+  GLOMAP = 4,
+  ART = 5
 };
 
 // Track parametrization type:
@@ -193,10 +198,22 @@ struct ReconstructionEstimatorOptions {
   // Robust loss function scales for nonlinear estimation.
   double rotation_estimation_robust_loss_scale = 0.1;
 
+  // --------------- Rotation Refinement Options --------------- //
+
+  // Refine the global rotations after rotation filtering with the
+  // rotation-only reprojection error (MORE, Li, Cai, Wu, arXiv:2611.11770,
+  // Sec. 5.2 Eq. 21-23 and Alg. 2). The camera translations are eliminated
+  // analytically (Theorem 1 of ART), so only the rotations are optimized.
+  // Parameters of the optimizer, the tuple gate and the IRLS weights are
+  // pyTheia choices. Runs for all global position estimators.
+  bool refine_rotations_with_rotation_only_error = false;
+  RotationOnlyRefinerOptions rotation_only_refiner_options;
+
   // --------------- Global Position Estimation Options --------------- //
   NonlinearPositionEstimator::Options nonlinear_position_estimator_options;
   LinearPositionEstimator::Options linear_triplet_position_estimator_options;
   LiGTPositionEstimator::Options ligt_position_estimator_options;
+  ARTPositionEstimator::Options art_position_estimator_options;
   GlomapPositionEstimator::Options glomap_position_estimator_options;
   LeastUnsquaredDeviationPositionEstimator::Options
       least_unsquared_deviation_position_estimator_options;

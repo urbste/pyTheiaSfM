@@ -12,6 +12,9 @@
 ## ChatterjeeICCV13 {#ChatterjeeICCV13}
 :   Chatterjee, A. and Govindu, V. **Efficient and Robust Large-Scale Rotation Averaging** *International Conference on Computer Vision (ICCV)*, 2013.
 
+## CaiTPAMI2023 {#cai2023pose}
+:   Cai, Q. and Zhang, L. and Wu, Y. and Yu, W. and Hu, D. **A Pose-only Solution to Visual Reconstruction and Navigation**. *IEEE Transactions on Pattern Analysis and Machine Intelligence*, 45(1):73-86, 2023. arXiv:2103.01530.
+
 ## Cheng {#Cheng}
 :   Cheng, J. and Leng, C. and Wu, J. and Cui, H. **Hanqing LuFast and Accurate Image Matching with Cascade Hashing for 3D Reconstruction**. *Computer Vision and Pattern Recognition (CVPR)*, 2014.
 
@@ -68,6 +71,9 @@
 
 ## Leutenegger {#Leutenegger}
 :   S. Leutenegger, M. Chli and R. Siegwart, **BRISK: Binary Robust Invariant Scalable Keypoints**, *In Proceedings of the IEEE International Conference on Computer Vision (ICCV) 2011*
+
+## LiArXiv2026 {#li2026rotationonly}
+:   Li, X. and Cai, Q. and Wu, Y. **Towards Rotation-Only Imaging Geometry: Multi-View Pose Estimation**. *arXiv:2611.11770*, 2026.
 
 ## Lindstrom {#Lindstrom}
 :   Lindstrom, P. **Triangulation Made Easy**, *In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition*, 2010.

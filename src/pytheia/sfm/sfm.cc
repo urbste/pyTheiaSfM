@@ -87,6 +87,8 @@
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
 #include "theia/sfm/bundle_adjustment/optimize_relative_position_with_known_rotation.h"
 
+#include "theia/sfm/global_pose_estimation/art_position_estimator.h"
+#include "theia/sfm/global_pose_estimation/rotation_only_refiner.h"
 #include "theia/sfm/global_pose_estimation/LiGT_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/glomap_position_estimator.h"
 #include "theia/sfm/global_pose_estimation/global_pose_estimation_wrapper.h"
@@ -2299,6 +2301,7 @@ void pytheia_sfm_classes(py::module& m) {
              theia::GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION)
       .value("LIGT", theia::GlobalPositionEstimatorType::LIGT)
       .value("GLOMAP", theia::GlobalPositionEstimatorType::GLOMAP)
+      .value("ART", theia::GlobalPositionEstimatorType::ART)
       .export_values();
 
   py::enum_<theia::GlobalRotationEstimatorType>(m,
@@ -2382,6 +2385,15 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("ligt_position_estimator_options",
                      &theia::ReconstructionEstimatorOptions::
                          ligt_position_estimator_options)
+      .def_readwrite("art_position_estimator_options",
+                     &theia::ReconstructionEstimatorOptions::
+                         art_position_estimator_options)
+      .def_readwrite("refine_rotations_with_rotation_only_error",
+                     &theia::ReconstructionEstimatorOptions::
+                         refine_rotations_with_rotation_only_error)
+      .def_readwrite("rotation_only_refiner_options",
+                     &theia::ReconstructionEstimatorOptions::
+                         rotation_only_refiner_options)
       .def_readwrite("glomap_position_estimator_options",
                      &theia::ReconstructionEstimatorOptions::
                          glomap_position_estimator_options)
@@ -3210,7 +3222,10 @@ void pytheia_sfm_classes(py::module& m) {
           &theia::LiGTPositionEstimator::Options::irls_convergence_threshold)
       .def_readwrite(
           "use_scale_constraint",
-          &theia::LiGTPositionEstimator::Options::use_scale_constraint);
+          &theia::LiGTPositionEstimator::Options::use_scale_constraint)
+      .def_readwrite(
+          "min_tracks_per_view",
+          &theia::LiGTPositionEstimator::Options::min_tracks_per_view);
 
   py::class_<theia::LiGTPositionEstimator, theia::PositionEstimator>(
       m, "LiGTPositionEstimator")
@@ -3220,6 +3235,116 @@ void pytheia_sfm_classes(py::module& m) {
            py::arg("reconstruction"))
       .def("EstimatePositions",
            &theia::LiGTPositionEstimator::EstimatePositionsWrapper,
+           py::arg("view_pairs"),
+           py::arg("orientation"));
+
+  py::class_<theia::ARTPositionEstimator::Options>(
+      m, "ARTPositionEstimatorOptions")
+      .def(py::init<>())
+      .def_readwrite("num_threads",
+                     &theia::ARTPositionEstimator::Options::num_threads)
+      .def_readwrite(
+          "min_tracks_per_triplet",
+          &theia::ARTPositionEstimator::Options::min_tracks_per_triplet)
+      .def_readwrite(
+          "min_tracks_per_triplet_fallback",
+          &theia::ARTPositionEstimator::Options::min_tracks_per_triplet_fallback)
+      .def_readwrite(
+          "num_coverage_rounds",
+          &theia::ARTPositionEstimator::Options::num_coverage_rounds)
+      .def_readwrite(
+          "num_robust_samples",
+          &theia::ARTPositionEstimator::Options::num_robust_samples)
+      .def_readwrite(
+          "min_bridge_tracks",
+          &theia::ARTPositionEstimator::Options::min_bridge_tracks)
+      .def_readwrite(
+          "use_track_covisibility_triplets",
+          &theia::ARTPositionEstimator::Options::use_track_covisibility_triplets)
+      .def_readwrite(
+          "max_tracks_per_triplet",
+          &theia::ARTPositionEstimator::Options::max_tracks_per_triplet)
+      .def_readwrite(
+          "max_triplets_per_view",
+          &theia::ARTPositionEstimator::Options::max_triplets_per_view)
+      .def_readwrite("max_eigen_ratio",
+                     &theia::ARTPositionEstimator::Options::max_eigen_ratio)
+      .def_readwrite(
+          "min_c_conditioning",
+          &theia::ARTPositionEstimator::Options::min_c_conditioning)
+      .def_readwrite(
+          "num_obs_filter_iterations",
+          &theia::ARTPositionEstimator::Options::num_obs_filter_iterations)
+      .def_readwrite("obs_mad_factor",
+                     &theia::ARTPositionEstimator::Options::obs_mad_factor)
+      .def_readwrite("triplet_conf_factor",
+                     &theia::ARTPositionEstimator::Options::triplet_conf_factor)
+      .def_readwrite("num_irls_iterations",
+                     &theia::ARTPositionEstimator::Options::num_irls_iterations)
+      .def_readwrite(
+          "irls_scale_multiplier",
+          &theia::ARTPositionEstimator::Options::irls_scale_multiplier)
+      .def_readwrite("irls_scale",
+                     &theia::ARTPositionEstimator::Options::irls_scale)
+      .def_readwrite(
+          "irls_convergence_threshold",
+          &theia::ARTPositionEstimator::Options::irls_convergence_threshold);
+
+  py::class_<theia::RotationOnlyRefinerOptions>(m, "RotationOnlyRefinerOptions")
+      .def(py::init<>())
+      .def_readwrite("num_outer_iterations",
+                     &theia::RotationOnlyRefinerOptions::num_outer_iterations)
+      .def_readwrite("max_num_iterations",
+                     &theia::RotationOnlyRefinerOptions::max_num_iterations)
+      .def_readwrite("loss_scale_px",
+                     &theia::RotationOnlyRefinerOptions::loss_scale_px)
+      .def_readwrite("max_observations_per_view",
+                     &theia::RotationOnlyRefinerOptions::
+                         max_observations_per_view)
+      .def_readwrite("max_tracks_per_triplet",
+                     &theia::RotationOnlyRefinerOptions::max_tracks_per_triplet)
+      .def_readwrite("use_two_view_tuples",
+                     &theia::RotationOnlyRefinerOptions::use_two_view_tuples)
+      .def_readwrite("require_view_graph_edges",
+                     &theia::RotationOnlyRefinerOptions::
+                         require_view_graph_edges)
+      .def_readwrite("max_reference_candidates",
+                     &theia::RotationOnlyRefinerOptions::
+                         max_reference_candidates)
+      .def_readwrite("tuple_gate_px",
+                     &theia::RotationOnlyRefinerOptions::tuple_gate_px)
+      .def_readwrite(
+          "verify_observations_px",
+          &theia::RotationOnlyRefinerOptions::verify_observations_px)
+      .def_readwrite("num_threads",
+                     &theia::RotationOnlyRefinerOptions::num_threads);
+
+  // Returns (success, refined orientations). On failure the orientations are
+  // returned unchanged.
+  m.def(
+      "RefineRotationsWithRotationOnlyError",
+      [](const theia::RotationOnlyRefinerOptions& options,
+         const theia::Reconstruction& reconstruction,
+         const std::unordered_map<theia::ViewIdPair, theia::TwoViewInfo>&
+             view_pairs,
+         const std::unordered_map<theia::ViewId, Eigen::Vector3d>&
+             orientations) {
+        std::unordered_map<theia::ViewId, Eigen::Vector3d> refined = orientations;
+        const bool success = theia::RefineRotationsWithRotationOnlyError(
+            options, reconstruction, view_pairs, &refined);
+        return std::make_tuple(success, success ? refined : orientations);
+      },
+      py::arg("options"), py::arg("reconstruction"), py::arg("view_pairs"),
+      py::arg("orientations"));
+
+  py::class_<theia::ARTPositionEstimator, theia::PositionEstimator>(
+      m, "ARTPositionEstimator")
+      .def(py::init<const theia::ARTPositionEstimator::Options&,
+                    const theia::Reconstruction&>(),
+           py::arg("options"),
+           py::arg("reconstruction"))
+      .def("EstimatePositions",
+           &theia::ARTPositionEstimator::EstimatePositionsWrapper,
            py::arg("view_pairs"),
            py::arg("orientation"));
 

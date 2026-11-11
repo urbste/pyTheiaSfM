@@ -393,6 +393,11 @@ bool GlobalRigReconstructor::EstimateCapturePositionsFromViewGraph(
           opt.ligt_position_estimator_options, *reconstruction_));
       break;
     }
+    case GlobalPositionEstimatorType::ART: {
+      position_estimator.reset(new ARTPositionEstimator(
+          opt.art_position_estimator_options, *reconstruction_));
+      break;
+    }
     case GlobalPositionEstimatorType::GLOMAP: {
       position_estimator.reset(new GlomapPositionEstimator(
           glomap_options, reconstruction_));

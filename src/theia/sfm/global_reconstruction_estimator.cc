@@ -57,6 +57,7 @@
 #include "theia/sfm/global_pose_estimation/nonlinear_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/position_estimator.h"
 #include "theia/sfm/global_pose_estimation/robust_rotation_estimator.h"
+#include "theia/sfm/global_pose_estimation/rotation_only_refiner.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/reconstruction_estimator_options.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
@@ -83,6 +84,7 @@ struct GlobalReconstructionEstimatorTimings {
   double camera_intrinsics_calibration_time = 0.0;
   double rotation_estimation_time = 0.0;
   double rotation_filtering_time = 0.0;
+  double rotation_refinement_time = 0.0;
   double relative_translation_optimization_time = 0.0;
   double relative_translation_filtering_time = 0.0;
   double position_estimation_time = 0.0;
@@ -124,6 +126,8 @@ GlobalReconstructionEstimator::GlobalReconstructionEstimator(
       options_.num_threads;
   options_.glomap_position_estimator_options.num_threads =
       options_.num_threads;
+  options_.ligt_position_estimator_options.num_threads = options_.num_threads;
+  options_.art_position_estimator_options.num_threads = options_.num_threads;
   ransac_params_ = SetRansacParameters(options);
 }
 
@@ -191,12 +195,38 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
   global_estimator_timings.rotation_filtering_time =
       timer.ElapsedTimeInSeconds();
 
+  // Step 4b. Refine the rotations with the rotation-only reprojection error
+  // (MORE). On failure the unrefined rotations are kept.
+  if (options_.refine_rotations_with_rotation_only_error) {
+    LOG(INFO) << "Refining the rotations with the rotation-only error (MORE).";
+    timer.Reset();
+    RotationOnlyRefinerOptions refiner_options =
+        options_.rotation_only_refiner_options;
+    refiner_options.num_threads = options_.num_threads;
+    const bool refined = RefineRotationsWithRotationOnlyError(
+        refiner_options, *reconstruction_, view_graph_->GetAllEdges(),
+        &orientations_);
+    global_estimator_timings.rotation_refinement_time =
+        timer.ElapsedTimeInSeconds();
+    if (refined) {
+      LOG(INFO) << "Rotation refinement (MORE) finished in "
+                << global_estimator_timings.rotation_refinement_time
+                << " s for " << orientations_.size() << " rotations.";
+    } else {
+      LOG(WARNING) << "Rotation refinement (MORE) failed after "
+                   << global_estimator_timings.rotation_refinement_time
+                   << " s; continuing with the unrefined rotations.";
+    }
+  }
+
   const bool use_glomap_scale_priors =
       options_.global_position_estimator_type ==
           GlobalPositionEstimatorType::GLOMAP &&
       options_.glomap_position_estimator_options.use_pairwise_scale_priors;
   if (options_.global_position_estimator_type ==
           GlobalPositionEstimatorType::LIGT ||
+      options_.global_position_estimator_type ==
+          GlobalPositionEstimatorType::ART ||
       (options_.global_position_estimator_type ==
            GlobalPositionEstimatorType::GLOMAP &&
        !use_glomap_scale_priors)) {
@@ -233,6 +263,7 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
   summary.pose_estimation_time =
       global_estimator_timings.rotation_estimation_time +
       global_estimator_timings.rotation_filtering_time +
+      global_estimator_timings.rotation_refinement_time +
       global_estimator_timings.relative_translation_optimization_time +
       global_estimator_timings.relative_translation_filtering_time +
       global_estimator_timings.position_estimation_time;
@@ -301,6 +332,8 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
       << global_estimator_timings.rotation_estimation_time
       << "\n\tRotation filtering time = "
       << global_estimator_timings.rotation_filtering_time
+      << "\n\tRotation refinement time = "
+      << global_estimator_timings.rotation_refinement_time
       << "\n\tRelative translation optimization time = "
       << global_estimator_timings.relative_translation_optimization_time
       << "\n\tRelative translation filtering time = "
@@ -456,6 +489,11 @@ bool GlobalReconstructionEstimator::EstimatePosition() {
     case GlobalPositionEstimatorType::LIGT: {
       position_estimator.reset(new LiGTPositionEstimator(
           options_.ligt_position_estimator_options, *reconstruction_));
+      break;
+    }
+    case GlobalPositionEstimatorType::ART: {
+      position_estimator.reset(new ARTPositionEstimator(
+          options_.art_position_estimator_options, *reconstruction_));
       break;
     }
     case GlobalPositionEstimatorType::GLOMAP: {

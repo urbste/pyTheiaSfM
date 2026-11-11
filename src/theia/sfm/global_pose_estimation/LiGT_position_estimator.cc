@@ -58,10 +58,12 @@
 #include "theia/math/matrix/spectra_linear_operator.h"
 #include "theia/sfm/find_common_tracks_in_views.h"
 #include "theia/sfm/global_pose_estimation/compute_triplet_baseline_ratios.h"
+#include "theia/sfm/global_pose_estimation/ligt_constraints.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/types.h"
 #include "theia/sfm/view_triplet.h"
 #include "theia/util/map_util.h"
+#include "theia/util/parallel_for.h"
 #include "theia/util/threadpool.h"
 
 namespace theia {
@@ -70,29 +72,6 @@ using Matrix3d = Eigen::Matrix3d;
 using Vector3d = Eigen::Vector3d;
 
 namespace {
-
-Matrix3d GetSkew(const Vector3d& f) {
-  Matrix3d skew_mat;
-  skew_mat << 0.0, -f(2), f(1), f(2), 0.0, -f(0), -f(1), f(0), 0.0;
-  return skew_mat;
-}
-
-Matrix3d GetRij(const Matrix3d& i, const Matrix3d& j) {
-  return j * i.transpose();
-}
-
-double GetThetaSq(const Vector3d& feat_i,
-                  const Vector3d& feat_j,
-                  const Matrix3d& Rij) {
-  return (GetSkew(feat_j) * Rij * feat_i).squaredNorm();
-}
-
-Vector3d Get_aij(const Matrix3d& Rij,
-                        const Vector3d Xi,
-                        const Vector3d Xj) {
-  return (GetSkew(Rij * Xi) * Xj).transpose() * GetSkew(Xj);
-}
-
 
 void AddTripletConstraintToSymmetricMatrix(
     const std::vector<Matrix3d>& constraints,
@@ -160,29 +139,6 @@ bool ResolveRigChain(
   return false;
 }
 
-// Returns true if the vector R1 * (c2 - c1) is in the same direction as t_12.
-bool VectorsAreSameDirection(const Vector3d& position1,
-                             const Vector3d& position2,
-                             const Matrix3d& rotation1,
-                             const Vector3d& relative_position12) {
-  const Vector3d global_relative_position =
-      (position2 - position1).normalized();
-  Vector3d rotated_relative_position = rotation1 * global_relative_position;
-
-  return rotated_relative_position.dot(relative_position12) > 0;
-}
-
-// Returns the features as a unit-norm pixel ray after camera intrinsics
-// (i.e. focal length an principal point) have been removed.
-Feature GetNormalizedFeature(const View& view, const TrackId track_id) {
-  Feature feature = *view.GetFeature(track_id);
-  const Camera& camera = view.Camera();
-  Vector3d ray = camera.PixelToNormalizedCoordinates(feature.point_);
-  Feature normalized_Feature(ray.hnormalized());
-  // todo normalized covariance?
-  return normalized_Feature;
-}
-
 }  // namespace
 
 LiGTPositionEstimator::LiGTPositionEstimator(
@@ -211,6 +167,7 @@ bool LiGTPositionEstimator::EstimatePositions(
   }
 
   constraint_weights_.clear();
+  RemoveWeaklyConstrainedViews();
   VLOG(2) << "Extracting triplets from tracks and calculating BCDs for tracks.";
   FindTripletsForTracks();
   VLOG(2) << "Finished extracting triplets from tracks and calculating BCDs.";
@@ -303,37 +260,7 @@ bool LiGTPositionEstimator::EstimatePositions(
 
 std::pair<ViewId, ViewId> LiGTPositionEstimator::GetBestBaseViews(
     const TrackId& track_id) {
-
-    const Track* track = reconstruction_.Track(track_id);
-    std::vector<ViewId> view_ids;
-    for (const ViewId view_id : track->ViewIds()) {
-      if (ContainsKey(orientations_, view_id)) {
-        view_ids.push_back(view_id);
-      }
-    }
-    double theta_max = 0.0;
-    std::pair<ViewId, ViewId> base_views;
-    for (size_t i = 0; i < view_ids.size(); ++i) {     
-      ViewId id1 = view_ids[i];
-      const View* view1 = reconstruction_.View(id1);
-      const Vector3d feature1 = GetNormalizedFeature(*view1, track_id).point_.homogeneous();; 
-      const Matrix3d R1 = orientations_.at(id1);
-
-      for (size_t j = i+1; j < view_ids.size(); ++j) {
-        ViewId id2 = view_ids[j];
-        const View* view2 = reconstruction_.View(id2);
-        const Vector3d feature2 = GetNormalizedFeature(*view2, track_id).point_.homogeneous();; 
-
-        const Matrix3d R2 = orientations_.at(id2);
-        const Matrix3d R12 = GetRij(R1, R2);
-        const double theta = GetThetaSq(feature1, feature2, R12);
-        if (theta > theta_max) {
-            base_views = std::make_pair(id1, id2);
-            theta_max = theta;
-        }
-      }
-    }
-    return base_views;
+  return SelectBestBaseViews(reconstruction_, orientations_, track_id);
 }
 
 void LiGTPositionEstimator::CalculateBCDForTrack(
@@ -342,42 +269,34 @@ void LiGTPositionEstimator::CalculateBCDForTrack(
     const theia::ViewId& vid_3,
     const TrackId& track_id,
     std::tuple<Matrix3d, Matrix3d, Matrix3d>& BCD) {
-      
-  const auto view1 = reconstruction_.View(vid_1);
-  const auto view2 = reconstruction_.View(vid_2);
-  const auto view3 = reconstruction_.View(vid_3);
-
-  const Vector3d feature1 = GetNormalizedFeature(*view1, track_id).point_.homogeneous();
-  const Vector3d feature2 = GetNormalizedFeature(*view2, track_id).point_.homogeneous();
-  const Vector3d feature3 = GetNormalizedFeature(*view3, track_id).point_.homogeneous();
+  const Vector3d feature1 =
+      GetNormalizedFeatureRay(*reconstruction_.View(vid_1), track_id);
+  const Vector3d feature2 =
+      GetNormalizedFeatureRay(*reconstruction_.View(vid_2), track_id);
+  const Vector3d feature3 =
+      GetNormalizedFeatureRay(*reconstruction_.View(vid_3), track_id);
 
   const Matrix3d R1 = orientations_.at(vid_1);
   const Matrix3d R2 = orientations_.at(vid_2);
   const Matrix3d R3 = orientations_.at(vid_3);
 
-  const Matrix3d R31 = GetRij(R3, R1);
-  const Matrix3d R32 = GetRij(R3, R2);
-
-  const Vector3d a32 = Get_aij(R32, feature3, feature2);
-
-  const Matrix3d skew_feat1 = GetSkew(feature1);
-  // equation 18
-  std::get<0>(BCD) = skew_feat1 * R31 * feature3 * a32.transpose() * R2;
-
-  const double theta = GetThetaSq(feature3, feature2, R32);
-  std::get<1>(BCD) = theta * skew_feat1 * R1;
-
+  // Paper notation: j = vid_1, l = vid_2, i = vid_3 (the central view).
+  Matrix3d B, C;
+  ComputeLiGTBC(feature3, feature1, feature2, R3, R1, R2, &B, &C);
+  std::get<0>(BCD) = B;
+  std::get<1>(BCD) = C;
   std::get<2>(BCD) = -(std::get<0>(BCD) + std::get<1>(BCD));
 }
 
 void LiGTPositionEstimator::FindTripletsForTracks() {
-  auto track_ids = reconstruction_.TrackIds();
-
-  #pragma omp parallel for shared(triplets_for_tracks_, BCDs_)
-  for (size_t t = 0; t < track_ids.size(); ++t) {
-    // parallelize this loop
-    const auto t_id = track_ids[t];
-
+  const auto track_ids = reconstruction_.TrackIds();
+  using TrackConstraints =
+      std::vector<std::pair<ViewIdTriplet, std::tuple<Matrix3d, Matrix3d, Matrix3d>>>;
+  // Computed in parallel per track, inserted serially in track order, so the
+  // result does not depend on the thread count.
+  std::vector<TrackConstraints> per_track(track_ids.size());
+  ParallelFor(options_.num_threads, track_ids.size(), [&](const size_t t) {
+    const TrackId t_id = track_ids[t];
     // Views can lack an orientation, e.g. if they are not part of the view
     // graph any more.
     std::vector<ViewId> view_ids_for_track;
@@ -387,36 +306,71 @@ void LiGTPositionEstimator::FindTripletsForTracks() {
       }
     }
     if (view_ids_for_track.size() < 3) {
-      continue;
+      return;
     }
-    // implements equation 29 from paper. Get base views for point
-    std::pair<ViewId, ViewId> base_views = GetBestBaseViews(t_id);
-    // now iterate all other observations beside the base views
+    // Implements equation 29 of the paper: the base views of the point.
+    const std::pair<ViewId, ViewId> base_views = GetBestBaseViews(t_id);
+    // One constraint per remaining observation.
     for (const ViewId cur_id : view_ids_for_track) {
-      // check if the current id is one of the base views
       if (cur_id == base_views.first || cur_id == base_views.second) {
-          continue;
+        continue;
       }
-
       std::tuple<Matrix3d, Matrix3d, Matrix3d> BCD;
-      CalculateBCDForTrack(base_views.first, cur_id, base_views.second, t_id, BCD);
+      CalculateBCDForTrack(base_views.first, cur_id, base_views.second, t_id,
+                           BCD);
+      per_track[t].emplace_back(
+          std::make_tuple(base_views.first, cur_id, base_views.second), BCD);
+    }
+  });
+  for (size_t t = 0; t < track_ids.size(); ++t) {
+    for (const auto& constraint : per_track[t]) {
+      triplets_for_tracks_[track_ids[t]].push_back(constraint.first);
+      BCDs_[track_ids[t]].push_back(constraint.second);
+    }
+  }
+}
 
-      // const auto view1 = reconstruction_.View(base_views.first);
-      // const auto view2 = reconstruction_.View(cur_id);
-      // const auto view3 = reconstruction_.View(base_views.second);
-//      Vector3d shouldbezero = std::get<1>(BCD)*view1->Camera().GetPosition() +
-//              std::get<0>(BCD)*view2->Camera().GetPosition() +
-//              std::get<2>(BCD)*view3->Camera().GetPosition();
-//      std::cout<<"shouldbezero: "<<shouldbezero<<"\n";
-
-      
-      #pragma omp critical
-      {
-        const ViewIdTriplet triplet = std::make_tuple(base_views.first, cur_id, base_views.second);
-        triplets_for_tracks_[t_id].push_back(triplet);
-        BCDs_[t_id].push_back(BCD);
+void LiGTPositionEstimator::RemoveWeaklyConstrainedViews() {
+  if (options_.min_tracks_per_view <= 0) {
+    return;
+  }
+  const auto track_ids = reconstruction_.TrackIds();
+  std::vector<ViewId> oriented_views;
+  int num_removed = 0;
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    std::unordered_map<ViewId, int> num_tracks;
+    for (const TrackId t_id : track_ids) {
+      oriented_views.clear();
+      for (const ViewId view_id : reconstruction_.Track(t_id)->ViewIds()) {
+        if (ContainsKey(orientations_, view_id)) {
+          oriented_views.push_back(view_id);
+        }
+      }
+      if (oriented_views.size() < 3) {
+        continue;
+      }
+      for (const ViewId view_id : oriented_views) {
+        ++num_tracks[view_id];
       }
     }
+    for (auto it = orientations_.begin(); it != orientations_.end();) {
+      if (!ContainsKey(rig_constraints_, it->first) &&
+          FindWithDefault(num_tracks, it->first, 0) <
+              options_.min_tracks_per_view) {
+        it = orientations_.erase(it);
+        ++num_removed;
+        changed = true;
+      } else {
+        ++it;
+      }
+    }
+  }
+  if (num_removed > 0) {
+    VLOG(2) << "LiGT: removed " << num_removed
+            << " views with fewer than " << options_.min_tracks_per_view
+            << " tracks of length >= 3.";
   }
 }
 
@@ -831,38 +785,7 @@ double LiGTPositionEstimator::UpdateConstraintWeights(
 
 void LiGTPositionEstimator::FlipSignOfPositionsIfNecessary(
     std::unordered_map<ViewId, Vector3d>* positions) {
-  // If this value is below zero, then we should flip the sign.
-  int correct_sign_votes = 0;
-  for (const auto& view_pair : *view_pairs_) {
-    // Only count the votes for edges where both positions were successfully
-    // estimated.
-    const Vector3d* position1 = FindOrNull(*positions, view_pair.first.first);
-    const Vector3d* position2 = FindOrNull(*positions, view_pair.first.second);
-    if (position1 == nullptr || position2 == nullptr) {
-      continue;
-    }
-
-    // Check the relative translation of views 1 and 2 in the triplet.
-    if (VectorsAreSameDirection(
-            *position1,
-            *position2,
-            FindOrDieNoPrint(orientations_, view_pair.first.first),
-            view_pair.second.position_2)) {
-      correct_sign_votes += 1;
-    } else {
-      correct_sign_votes -= 1;
-    }
-  }
-
-  // If the sign of the votes is below zero, we must flip the sign of all
-  // position estimates.
-  if (correct_sign_votes < 0) {
-    const int num_correct_votes =
-        (view_pairs_->size() + correct_sign_votes) / 2;
-    VLOG(2) << "Sign of the positions was incorrect: " << num_correct_votes
-            << " of " << view_pairs_->size()
-            << " relative translations had the correct sign. "
-               "Flipping the sign of the camera positions.";
+  if (PositionsHaveWrongSign(*view_pairs_, orientations_, *positions)) {
     for (auto& position : *positions) {
       position.second *= -1.0;
     }

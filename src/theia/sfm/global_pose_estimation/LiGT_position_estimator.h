@@ -58,12 +58,13 @@ class View;
 // The constraints formed by each triplet are used to create a sparse
 // linear system to solve for the positions.
 
-// Implements the paper:
-//@article{cai2021pose,
+// Implements the paper (IEEE TPAMI 2023; the preprint is arXiv:2103.01530):
+//@article{cai2023pose,
 //  title={A Pose-only Solution to Visual Reconstruction and Navigation},
 //  author={Cai, Qi and Zhang, Lilian and Wu, Yuanxin and Yu, Wenxian and Hu, Dewen},
-//  journal={arXiv preprint arXiv:2103.01530},
-//  year={2021}
+//  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
+//  volume={45}, number={1}, pages={73--86}, year={2023},
+//  note={arXiv:2103.01530}
 //}
 class LiGTPositionEstimator : public PositionEstimator {
  public:
@@ -120,6 +121,16 @@ class LiGTPositionEstimator : public PositionEstimator {
     // constraint involves every view, so it cannot be met by one view alone.
     // Falls back to the eigenvector if the factorization fails.
     bool use_scale_constraint = true;
+
+    // Views that are observed in fewer than this many tracks with at least 3
+    // oriented views are removed before the system is built (repeatedly, as
+    // removing a view shortens the tracks of the others). Such a view has a
+    // nearly singular block in M, and the scale-constrained solution M^-1 g
+    // then puts almost all of its norm on that one view: on ETH3D kicker a
+    // view with one edge and 2 tracks ended up at distance 1 while the other
+    // 30 views were within 1e-4 of each other. Rig-constrained views are never
+    // removed. 0 disables the check.
+    int min_tracks_per_view = 5;
   };
 
   LiGTPositionEstimator(const Options& options,
@@ -164,6 +175,10 @@ class LiGTPositionEstimator : public PositionEstimator {
       Eigen::VectorXd* rhs);
 
   void FindTripletsForTracks();
+
+  // Removes the views with too little track support from orientations_ (see
+  // Options::min_tracks_per_view).
+  void RemoveWeaklyConstrainedViews();
 
   // Keeps only the constraints of the largest connected set of views and
   // assigns the linear system indices. Rig-constrained views get no indices;

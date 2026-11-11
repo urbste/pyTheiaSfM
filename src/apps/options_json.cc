@@ -378,7 +378,8 @@ Fields BuildFields(ReconstructionEstimatorOptions* o) {
        {"LINEAR_TRIPLET", GlobalPositionEstimatorType::LINEAR_TRIPLET},
        {"LEAST_UNSQUARED_DEVIATION", GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION},
        {"LIGT", GlobalPositionEstimatorType::LIGT},
-       {"GLOMAP", GlobalPositionEstimatorType::GLOMAP}});
+       {"GLOMAP", GlobalPositionEstimatorType::GLOMAP},
+       {"ART", GlobalPositionEstimatorType::ART}});
   AddInt(&f, "num_threads", &o->num_threads);
   AddDouble(&f, "max_reprojection_error_in_pixels", &o->max_reprojection_error_in_pixels);
   AddInt(&f, "min_num_two_view_inliers", &o->min_num_two_view_inliers);
@@ -396,6 +397,8 @@ Fields BuildFields(ReconstructionEstimatorOptions* o) {
             &o->rotation_filtering_max_difference_degrees);
   AddBool(&f, "refine_relative_translations_after_rotation_estimation",
           &o->refine_relative_translations_after_rotation_estimation);
+  AddBool(&f, "refine_rotations_with_rotation_only_error",
+          &o->refine_rotations_with_rotation_only_error);
   AddBool(&f, "extract_maximal_rigid_subgraph", &o->extract_maximal_rigid_subgraph);
   AddBool(&f, "filter_relative_translations_with_1dsfm",
           &o->filter_relative_translations_with_1dsfm);
@@ -437,6 +440,45 @@ Fields BuildFields(ReconstructionEstimatorOptions* o) {
     AddDouble(&f, p + "irls_scale_multiplier", &g.irls_scale_multiplier);
     AddDouble(&f, p + "irls_convergence_threshold", &g.irls_convergence_threshold);
     AddBool(&f, p + "use_scale_constraint", &g.use_scale_constraint);
+    AddInt(&f, p + "min_tracks_per_view", &g.min_tracks_per_view);
+  }
+  {
+    const std::string p = "art_position_estimator_options.";
+    auto& g = o->art_position_estimator_options;
+    AddInt(&f, p + "num_threads", &g.num_threads);
+    AddInt(&f, p + "min_tracks_per_triplet", &g.min_tracks_per_triplet);
+    AddInt(&f, p + "max_tracks_per_triplet", &g.max_tracks_per_triplet);
+    AddInt(&f, p + "max_triplets_per_view", &g.max_triplets_per_view);
+    AddInt(&f, p + "min_tracks_per_triplet_fallback",
+           &g.min_tracks_per_triplet_fallback);
+    AddInt(&f, p + "num_coverage_rounds", &g.num_coverage_rounds);
+    AddInt(&f, p + "num_robust_samples", &g.num_robust_samples);
+    AddInt(&f, p + "min_bridge_tracks", &g.min_bridge_tracks);
+    AddBool(&f, p + "use_track_covisibility_triplets",
+            &g.use_track_covisibility_triplets);
+    AddDouble(&f, p + "max_eigen_ratio", &g.max_eigen_ratio);
+    AddDouble(&f, p + "min_c_conditioning", &g.min_c_conditioning);
+    AddInt(&f, p + "num_obs_filter_iterations", &g.num_obs_filter_iterations);
+    AddDouble(&f, p + "obs_mad_factor", &g.obs_mad_factor);
+    AddDouble(&f, p + "triplet_conf_factor", &g.triplet_conf_factor);
+    AddInt(&f, p + "num_irls_iterations", &g.num_irls_iterations);
+    AddDouble(&f, p + "irls_scale_multiplier", &g.irls_scale_multiplier);
+    AddDouble(&f, p + "irls_scale", &g.irls_scale);
+    AddDouble(&f, p + "irls_convergence_threshold", &g.irls_convergence_threshold);
+  }
+  {
+    const std::string p = "rotation_only_refiner_options.";
+    auto& g = o->rotation_only_refiner_options;
+    AddInt(&f, p + "num_outer_iterations", &g.num_outer_iterations);
+    AddInt(&f, p + "max_num_iterations", &g.max_num_iterations);
+    AddDouble(&f, p + "loss_scale_px", &g.loss_scale_px);
+    AddInt(&f, p + "max_observations_per_view", &g.max_observations_per_view);
+    AddInt(&f, p + "max_tracks_per_triplet", &g.max_tracks_per_triplet);
+    AddBool(&f, p + "use_two_view_tuples", &g.use_two_view_tuples);
+    AddBool(&f, p + "require_view_graph_edges", &g.require_view_graph_edges);
+    AddInt(&f, p + "max_reference_candidates", &g.max_reference_candidates);
+    AddDouble(&f, p + "tuple_gate_px", &g.tuple_gate_px);
+    AddDouble(&f, p + "verify_observations_px", &g.verify_observations_px);
   }
   {
     const std::string p = "glomap_position_estimator_options.";

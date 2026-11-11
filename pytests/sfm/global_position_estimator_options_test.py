@@ -19,3 +19,13 @@ def test_ligt_position_estimator_options_are_bound_on_reconstruction_options():
     options.ligt_position_estimator_options.max_num_views_svd = 123
 
     assert options.ligt_position_estimator_options.max_num_views_svd == 123
+
+
+def test_art_position_estimator_options_are_bound_on_reconstruction_options():
+    options = pt.sfm.ReconstructionEstimatorOptions()
+
+    options.global_position_estimator_type = pt.sfm.GlobalPositionEstimatorType.ART
+    options.art_position_estimator_options.max_triplets_per_view = 17
+
+    assert options.global_position_estimator_type == pt.sfm.GlobalPositionEstimatorType.ART
+    assert options.art_position_estimator_options.max_triplets_per_view == 17

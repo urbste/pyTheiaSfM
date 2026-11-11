@@ -124,6 +124,7 @@ def _parse_args() -> argparse.Namespace:
             "LINEAR_TRIPLET",
             "LIGT",
             "GLOMAP",
+            "ART",
         ),
     )
     p.add_argument("--out_reconstruction", type=str, default="")

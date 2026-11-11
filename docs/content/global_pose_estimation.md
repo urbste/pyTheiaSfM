@@ -61,6 +61,16 @@ Implementations derive from `RotationEstimator`. In **`ReconstructionEstimatorOp
 
 **`RobustRotationEstimator`** (pyTheia) also exposes `AddRelativeRotationConstraint` and `SetFixedGlobalRotations` for specialized setups.
 
+### Rotation refinement: MORE {#rotation-refinement-more}
+
+After rotation filtering, the global pipeline can refine the orientations with the rotation-only reprojection error of MORE (Li, Cai, Wu, arXiv:2611.11770, Sec. 5.2, Eq. 21-23 and Alg. 2). The camera translations are eliminated analytically: each triplet's baselines are the ART closed-form solution (Theorem 1) evaluated inside the residual, so only the rotations are optimized. Two-view tuples use the same residual with the two-view translation (TRRM, Eq. 11).
+
+- Enable it with `ReconstructionEstimatorOptions.refine_rotations_with_rotation_only_error = True` (default `False`). It runs for every global position estimator. On failure the unrefined rotations are kept and a warning is logged.
+- Parameters are in `ReconstructionEstimatorOptions.rotation_only_refiner_options` (`RotationOnlyRefinerOptions`): `num_outer_iterations`, `max_num_iterations`, `loss_scale_px`, `max_reference_candidates`, `tuple_gate_px`, `max_tracks_per_triplet` (default 50; ART's own option keeps 200, since every track adds to each Ceres residual evaluation of its triplet), `max_observations_per_view`, `use_two_view_tuples`, `require_view_graph_edges`, `num_threads` (parallelizes the tuple build and the Ceres evaluation; the result does not depend on it).
+- Before the refinement the observations are verified against the initial rotations (`verify_observations_px`, default 4 px, 0 disables it): per view pair a robust (least median) two-view translation, and an observation is dropped if its epipolar distance exceeds `max(verify_observations_px, 5 * median distance of the pair)` for most of the other views of its track. Matches that passed two-view RANSAC rarely fail it; unverified mismatches would otherwise enter the Theorem 1 solves inside the residuals and make the refinement worse (synthetic test with 10% random-pixel outliers: 1.00° → 1.23° without, 1.00° → 0.13° with the verification).
+- The standalone function is `pt.sfm.RefineRotationsWithRotationOnlyError(options, reconstruction, view_pairs, orientations)`; it returns `(success, refined_orientations)`.
+- The optimizer schedule (outer iterations, Cauchy IRLS weights from `loss_scale_px`, tuple selection with the residual gate, and the observation filter) is a pyTheia choice. The paper does not specify these parameters.
+
 ---
 
 ## Global camera positions {#global-position-estimators}
@@ -72,8 +82,20 @@ Implementations derive from `PositionEstimator`. **`GlobalPositionEstimatorType`
 | [`NonlinearPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/nonlinear_position_estimator.h) | `NONLINEAR` | Robust nonlinear alignment to pairwise translation directions; *Robust Global Translations with 1DSfM*, Wilson & Snavely (ECCV 2014). Uses `Reconstruction` for optional point–camera constraints. |
 | [`LinearPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/linear_position_estimator.h) | `LINEAR_TRIPLET` | Linear system from **view triplets** and baseline ratios; Jiang et al. (ICCV 2013). |
 | [`LeastUnsquaredDeviationPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/least_unsquared_deviation_position_estimator.h) | `LEAST_UNSQUARED_DEVIATION` (default) | L1-style via IRLS / ADMM; Ozyesil & Singer (CVPR 2015). Optional fixed metric edges via `Options::use_scale_estimates` and `TwoViewInfo::scale_estimate`. |
-| [`LiGTPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/LiGT_position_estimator.h) | `LIGT` | Linear formulation using **pose-only** / triplet constraints (Cai et al., arXiv:2103.01530). Requires `Reconstruction`. Robustified with a scale constraint and Huber IRLS (see [Releases](releases.md)). |
+| [`LiGTPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/LiGT_position_estimator.h) | `LIGT` | Linear formulation using **pose-only** / triplet constraints (Cai et al., IEEE TPAMI 2023, arXiv:2103.01530). Requires `Reconstruction`. Robustified with a scale constraint and Huber IRLS (see [Releases](releases.md)). |
+| [`ARTPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/art_position_estimator.h) | `ART` | Analytical Rotation-guided Translation: closed-form LiGT-based triplet translations (Theorem 1) registered by one sparse weighted least-squares solve with per-triplet scales and Huber IRLS (Li, Cai, Wu, arXiv:2611.11770). Requires `Reconstruction`. Screening/IRLS parameters are pyTheia choices (the paper defers them to an unpublished supplement). See [ART view coverage](#art-coverage). |
 | [`GlomapPositionEstimator`](https://github.com/urbste/pyTheiaSfM/blob/master/src/theia/sfm/global_pose_estimation/glomap_position_estimator.h) | `GLOMAP` | Track-based global positioning following GLOMAP (Pan et al., ECCV 2024). Requires `Reconstruction` with tracks and fixed global rotations. |
+
+### ART view coverage {#art-coverage}
+
+ART solves for one scale per triplet, so a triplet only fixes positions relative to others if they share at least two views. The paper keeps the triplets that are edge-connected to the reference. pyTheia keeps more views, with these steps (all pyTheia additions):
+
+- **Rigid components.** Triplets that share an edge are linked, and two linked groups that share at least two views are merged: the two common centers fix their relative scale and translation. After selection, valid triplets that attach a new view rigidly to the main component are added back, also ones the confidence test rejected.
+- **Bridging triplets** (`num_coverage_rounds`, default 3): views outside the main component get candidate triplets with an edge of it, sharing at least `min_tracks_per_triplet_fallback` tracks.
+- **Track constraints** (`min_bridge_tracks`, default 10, 0 disables it): views that triplets still cannot attach, e.g. a group of views that shares a single view with the main component, are attached with the LiGT constraints of the tracks they share with it. These are linear in the centers without a scale unknown and get their own Huber scale in the IRLS. On ETH3D `office` 6 of 26 views were lost without this step.
+- **Robust triplet start** (`num_robust_samples`, default 20): the observation filter of each triplet starts from the least-median-of-squares solution over random 8-track subsets if its median residual is less than half of the least-squares one (gross outliers); otherwise from the least-squares solution as before.
+
+LiGT drops views that are seen in fewer than `LiGTPositionEstimatorOptions.min_tracks_per_view` (default 5) tracks of length three or more. Such a view has a nearly singular block in the LiGT system, and the scale-constrained solution then puts almost all of its norm on that view (ETH3D `kicker`: one view with 2 tracks at distance 1, all others within 1e-4).
 
 ---
 
