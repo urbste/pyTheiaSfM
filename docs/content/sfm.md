@@ -326,6 +326,8 @@ DEFAULT: `ReconstructionEstimatorType::GLOBAL`
 
 Type of reconstruction estimation to use. Options are `ReconstructionEstimatorType::GLOBAL` or `ReconstructionEstimatorType::INCREMENTAL`. Incremental SfM is the standard sequential SfM (see below) that adds on one image at a time to gradually grow the reconstruction. This method is robust but not scalable. Global SfM, on the other hand, is very scalable but is considered to be not as robust as incremental SfM. This is not a limitation of the Theia implementations, but a currently fundamental limitation of Global SfM pipelines in general.
 
+`ReconstructionEstimatorType::INIT_FREE` (experimental) is a third choice. It estimates cameras and points jointly from random starts, without rotation averaging, position estimation or registration. Its settings are in `ReconstructionEstimatorOptions.init_free_options`. See [Initialization-free SfM](init_free.md).
+
 - GlobalRotationEstimationType ReconstructorEstimatorOptions::global_rotation_estimator_type
 
 DEFAULT: `GlobalRotationEstimatorType::ROBUST_L1L2`

@@ -33,6 +33,7 @@
 // Author: Steffen Urban (urbse@googlemail.com), Shengyu Yin
 
 #include "pytheia/sfm/sfm.h"
+#include "pytheia/sfm/init_free.h"
 
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
@@ -2290,6 +2291,7 @@ void pytheia_sfm_classes(py::module& m) {
       .value("GLOBAL", theia::ReconstructionEstimatorType::GLOBAL)
       .value("INCREMENTAL", theia::ReconstructionEstimatorType::INCREMENTAL)
       .value("HYBRID", theia::ReconstructionEstimatorType::HYBRID)
+      .value("INIT_FREE", theia::ReconstructionEstimatorType::INIT_FREE)
       .export_values();
 
   py::enum_<theia::GlobalPositionEstimatorType>(m,
@@ -2480,7 +2482,9 @@ void pytheia_sfm_classes(py::module& m) {
       .def_readwrite("max_num_iterations",
                      &theia::ReconstructionEstimatorOptions::max_num_iterations)
       .def_readwrite("optimize_for_forward_facing_trajectory",
-                     &theia::ReconstructionEstimatorOptions::optimize_for_forward_facing_trajectory);
+                     &theia::ReconstructionEstimatorOptions::optimize_for_forward_facing_trajectory)
+      .def_readwrite("init_free_options",
+                     &theia::ReconstructionEstimatorOptions::init_free_options);
   // Reconstruction class
   py::class_<theia::Reconstruction>(m, "Reconstruction")
       .def(py::init<>())
@@ -3463,6 +3467,7 @@ void pytheia_sfm_classes(py::module& m) {
 void pytheia_sfm(py::module& m) {
   py::module m_submodule = m.def_submodule("sfm");
   pytheia_sfm_classes(m_submodule);
+  pytheia_init_free(m_submodule);
 }
 
 }  // namespace sfm

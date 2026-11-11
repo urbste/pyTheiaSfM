@@ -4,6 +4,16 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
+## Unreleased {#release-unreleased}
+
+### Features
+
+- **Initialization-free SfM (experimental).** `ReconstructionEstimatorType.INIT_FREE` (`InitFreeReconstructionEstimator`, options in `ReconstructionEstimatorOptions.init_free_options`) estimates cameras and points jointly from random starts, without rotation averaging, position estimation or incremental registration. Formulations: pOSE, pOSE with rotation terms (`POSE_ROT`), rOSE, RpOSE and expOSE, solved by variable projection with dense or sparse Cholesky, power series or optional CUDA solvers (`-DTHEIA_WITH_CUDA_SOLVERS=ON`). Options include a Cauchy robust loss (IRLS), two-view rotation weighting, projective refinement with an optional Huber loss, and a metric upgrade by self-calibration for calibrated rays, per-camera or shared focal lengths, and radial cameras. Each restart is checked (fraction in front, orthogonality error, conditioning) before one is accepted. New examples: `pyexamples/sfm/init_free_synthetic.py` (synthetic data, no download) and `pyexamples/eth3d/init_free_sfm.py`. See [Initialization-free SfM](init_free.md).
+
+  For real tracks, which contain wrongly merged observations, the projective refinement offers a choice of loss (`loss_function_type`, e.g. Cauchy) and an outlier rejection (`outlier_rejection_rounds`, `outlier_threshold`); tracks with rejected observations are left out of the metric bundle adjustment. The metric upgrade also estimates the dual quadric in a point-normalized frame and keeps the better candidate, drops single cameras that collapsed during refinement (`max_camera_orthogonality_error`, `max_fraction_dropped_cameras`) and estimates the upgrade again without them, and checks the relative rotations of the upgraded cameras against the view graph (`max_relative_rotation_error_deg`, `POSE_ROT`). The projective refinement solves with one thread by default (`deterministic`), so that results do not change between runs. On real SIFT matches of the 13 ETH3D training scenes the estimator now succeeds on 12 (before: 6), with errors close to the global pipeline.
+
+---
+
 ## 1.4.1 (2026-11-11) {#release-1-4-1}
 
 Global pose estimation (ART positions, MORE rotation refinement, rig-aware global SfM), faster and more accurate bundle adjustment and RANSAC, and many fixes. Also contains the changes listed under 1.4.0, which was not tagged separately.

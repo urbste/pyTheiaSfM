@@ -8,6 +8,7 @@ set(PY_ALL_SOURCE_FILES
     mvs/mvs.cc
     solvers/solvers.cc
     sfm/sfm.cc
+    sfm/init_free.cc
     io/io.cc)
 
 set(PY_ALL_HEADER_FILES
@@ -17,6 +18,7 @@ set(PY_ALL_HEADER_FILES
     mvs/mvs.h
     solvers/solvers.h
     sfm/sfm.h
+    sfm/init_free.h
     io/io.h)
 
 

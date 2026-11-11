@@ -317,6 +317,7 @@ Full concepts and pose composition: [Rigs](rigs.md). Runnable script: [`pyexampl
 | Robust sequential growth, smaller sets | `IncrementalReconstructionEstimator` |
 | Speed / whole-graph posing | `GlobalReconstructionEstimator` (+ rotation/position estimator enums) |
 | Mix of both | `HybridReconstructionEstimator` |
+| Experimental, no initialization (joint estimate from random starts) | `InitFreeReconstructionEstimator` (`ReconstructionEstimatorType.INIT_FREE`); see [Initialization-free SfM](init_free.md) and `pyexamples/sfm/init_free_synthetic.py` |
 | Calibrated multi-camera body trajectory | `IncrementalRigReconstructor` / `GlobalRigReconstructor` |
 | Fuse two existing reconstructions | [Cross-run alignment](cross_run_alignment.md) (Sim(3) / relative pose BA) |
 

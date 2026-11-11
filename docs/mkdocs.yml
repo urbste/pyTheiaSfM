@@ -65,6 +65,7 @@ nav:
       - Pose: pose.md
       - Estimators: estimators.md
       - Global pose estimation: global_pose_estimation.md
+      - Initialization-free SfM: init_free.md
       - Math: math.md
       - Cameras: cameras.md
       - SfM: sfm.md
