@@ -10,6 +10,7 @@ vismatch / Rerun demos live under [`examples/`](../examples/).
 | [`common/`](common/) | Shared helpers (`image_utils`, geometry plots) |
 | [`preprocess/`](preprocess/) | Frame extraction (video, image sequence, **ZED SVO**) |
 | [`sfm/`](sfm/) | Monocular SfM pipelines (OpenCV, Kornia, LoFTR) |
+| [`sfm/init_free_synthetic.py`](sfm/init_free_synthetic.py) | Initialization-free SfM (`INIT_FREE`) and its stages on a synthetic scene (no data, a few seconds) |
 | [`stereo/`](stereo/) | Calibrated multi-camera / stereo rig reconstruction |
 | [`twoview/`](twoview/) | Two-view estimators (e.g. monodepth-assisted) |
 | [`transform/`](transform/) | Sim(3) alignment demos |

@@ -11,7 +11,7 @@
 The module is a testing ground. Every stage is exposed to Python on its own, so that new formulations, solvers and upgrades can be compared with the same data and diagnostics.
 
 !!! warning "Experimental"
-    The interface can still change. The calibrated pipeline (`POSE`, `POSE_ROT`, `ROSE` or `EXPOSE` with `CALIBRATED_RAYS` and the linear upgrade) works end to end, and so does `RPOSE` (radial metric upgrade, no projective refinement). Options marked *not implemented* below fail with a clear message instead of silently falling back.
+    The interface can still change. All formulations (`POSE`, `POSE_ROT`, `ROSE`, `EXPOSE`, `RPOSE`) and both observation normalizations (`CALIBRATED_RAYS`, `PIXEL_ISOTROPIC`) work end to end, with the linear or the nonlinear metric upgrade. `POSE_ROT` needs `CALIBRATED_RAYS`. `RPOSE` skips projective refinement and always uses the nonlinear upgrade. Unsupported combinations fail with a clear message instead of falling back silently.
 
 ## Usage
 
@@ -45,6 +45,11 @@ ok, metric, err = pt.sfm.UpgradeToMetric(problem, ref.cameras, ref.points, uo)
 ```
 
 `RunProjectiveStages(problem, ifo)` runs all restarts of the OSE stage and the refinement and returns `(ok, best, diagnostics, err)`. `ProjectiveRmsError(problem, cameras, points)` gives the RMS reprojection error in observation units (normalized image coordinates for `CALIBRATED_RAYS`). Functions that take points accept 3 × N Cartesian or 4 × N homogeneous arrays.
+
+Two runnable examples show the API:
+
+- `pyexamples/sfm/init_free_synthetic.py` runs the estimator, the stages and a self-calibration variant on a synthetic scene. It needs no data and takes a few seconds.
+- `pyexamples/eth3d/init_free_sfm.py` runs the estimator on ETH3D subsets against global SfM (see *Real data (ETH3D)*).
 
 ## Options and status
 
@@ -175,6 +180,10 @@ for k, r in enumerate(estimator.Diagnostics().restarts):
     print(k, r.upgrade_attempted, r.upgrade_success, r.upgrade_message)
 ```
 
+### Ablation without the Cauchy loss
+
+Without the Cauchy loss in VarPro (`init_free_sfm.py --no_cauchy`, ETH3D), the checks do not catch every wrong result. Office 4–15 with 20 % outliers was accepted with a 26° median rotation error. The only restart tried had 99 % of the observations in front and an orthogonality error of 0.16, below the 0.3 threshold. Without the Cauchy loss the estimator also failed on delivery_area 12–23 (0 % and 20 % outliers) and office 4–15 (0 % outliers). So the checks reduce silently wrong results but do not exclude them. Keep the Cauchy loss on for real data.
+
 ## Real data (ETH3D)
 
 `pyexamples/eth3d/init_free_sfm.py` runs the estimator on ETH3D subsets, with the observations, outliers and calibrated priors described in the script. Settings: `POSE_ROT`, `CALIBRATED_RAYS`, `LINEAR_AND_NONLINEAR` upgrade, metric BA, 3 restarts (seeds 42 to 44), 0.5 px pixel noise, outlier ratio 0 % and 20 %. Global SfM is correct in all of these. Rotation error is the median over the estimated views after a Sim(3) alignment of the centres. Times are 0.4 to 6.8 s per run.
@@ -201,6 +210,24 @@ What this shows:
 - Courtyard 10–29 at 20 % outliers: of its six first restarts, only restart 2 (0.26°) is correct, and its orthogonality error of 0.61 is rejected by the threshold. The others are wrong (0.63 to 0.91). Up to 12 restarts with both settings give no accepted restart.
 - Office 4–15 at 20 % outliers: none of the first six restarts is correct (rotation error 109° to 179°), and up to 12 restarts with both settings give no accepted restart.
 - Facade 20–31 at 20 % outliers with plain least squares: every one of the first six restarts sits at 1.28 to 1.32 orthogonality error, and up to 12 restarts give no accepted restart.
+
+### Real matches (ETH3D, SIFT)
+
+The same settings were run on real SIFT matches of all 13 ETH3D training scenes, from the shared COLMAP database of the pyTheia paper benchmark: two-view estimation with a 2 px Sampson threshold, at least 30 inliers per pair, tracks of length 3 or more, calibrated intrinsics, one random seed, 8 threads. The global pipeline (robust L1/L2 rotations, LUD positions) on the same view graph is the reference. Errors are medians after a Sim(3) alignment to the ground truth.
+
+| Scene (views) | Global LUD | Init-free | Init-free outcome |
+|---|---|---|---|
+| delivery_area (44) | 44/44, 5.2 mm, 0.04° | 44/44, 19.7 mm, 0.13° | ok |
+| facade (76) | 76/76, 11.9 mm, 0.12° | 76/76, 443 mm, 4.4° | accepted, inaccurate (orthogonality 0.27) |
+| kicker (31) | 30/31, 4.1 mm, 0.06° | 30/31, 8.6 mm, 0.27° | ok |
+| office (26) | 26/26, 2.4 mm, 0.13° | 26/26, 6.3 mm, 0.29° | ok |
+| pipes (14) | 14/14, 9.8 mm, 0.48° | 14/14, 2.3 mm, 0.10° | ok |
+| terrace (23) | 23/23, 4.2 mm, 0.10° | 23/23, 6.9 mm, 0.09° | ok |
+| courtyard, meadow | ok | fail | all restarts: quadric not rank-3 PSD |
+| electro, playground, relief, relief_2 | ok | fail | all restarts: 50 to 64 % in front, orthogonality 0.9 to 3.7 |
+| terrains | ok | fail | all restarts: orthogonality 0.75 to 0.78 |
+
+Init-free succeeds on 6 of 13 scenes and is accurate on 5 of them; it is less accurate than the global pipeline except on pipes, and 3 to 20 times slower (facade: 124 s, mostly the 200 VarPro iterations of each restart). On facade, a restart with 4.4° rotation error passed the checks with an orthogonality error of 0.27, just below the 0.3 threshold. On the failed scenes every restart reaches a low projective reprojection error but a wrong metric upgrade, as in the ETH3D subsets with outliers. The cause is not yet analysed (candidates: wrong track merges and outlier tracks that the verified pairs let through, the projective ambiguity of the OSE minimum, too few restarts). The harness is `experiments/bench/run_pytheia.py --variant init_free` in the paper repository.
 
 ### Robust projective refinement
 
