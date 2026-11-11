@@ -63,7 +63,7 @@ Seeds the first capture at identity, triangulates (intra-rig matches are metric)
 
 1. `BuildCaptureViewGraph` — from the verified view-graph edges (same-sensor preferred); with `use_rig_constraints_in_position_estimation = False` the metric 5+1 edges are built first  
 2. **Rotation averaging** on captures — any `GlobalRotationEstimatorType` (`ROBUST_L1L2`, `NONLINEAR`, `LINEAR`, `LAGRANGE_DUAL`, `HYBRID`)  
-3. **Position averaging** with **rig offsets** (below) — `LEAST_UNSQUARED_DEVIATION`, `NONLINEAR`, `LIGT`, `GLOMAP` via the View graph after propagating orientations (`LINEAR_TRIPLET` ignores the rig offsets); without rig constraints a median rescale to the metric edge lengths is applied  
+3. **Position averaging** with **rig offsets** (below) — `LEAST_UNSQUARED_DEVIATION`, `NONLINEAR`, `LIGT`, `GLOMAP` via the View graph after propagating orientations (`LINEAR_TRIPLET` and `ART` ignore the rig offsets); without rig constraints a median rescale to the metric edge lengths is applied  
 4. Propagate → triangulate → **rig-constrained BA** (`use_rig_constrained_ba`)
 
 ### Rig offsets in the position estimators (1.4.1)

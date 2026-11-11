@@ -30,6 +30,7 @@ Compared to the original TheiaSfM:
 
 * Global SfM algorithms:
   * LiGT position solver
+  * ART position solver and MORE rotation refinement (Li, Cai, Wu, arXiv:2611.11770)
   * Lagrange Dual rotation estimator
   * Hybrid rotation estimator
   * Possibility to fix multiple views in Robust_L1L2 solver

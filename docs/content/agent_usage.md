@@ -237,6 +237,8 @@ Putative matches (OpenCV BF/FLANN, LightGlue, vismatch, …) → `FeatureCorresp
         estimator.Estimate(&view_graph, &reconstruction);
     ```
 
+The track-based position estimators `LIGT`, `ART` and `GLOMAP` need the tracks in `recon`. To refine the rotations with the rotation-only reprojection error (MORE) before the positions are estimated, set `options.refine_rotations_with_rotation_only_error = True`. See [Global pose estimation](global_pose_estimation.md#rotation-refinement-more).
+
 ### 4.5 Export
 
 === "Python"
