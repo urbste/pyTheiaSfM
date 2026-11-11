@@ -39,10 +39,13 @@ file(GLOB_RECURSE THEIA_HDRS *.h)
 set(THEIA_SRC
   io/bundler_file_reader.cc
   io/import_nvm_file.cc
+  io/imported_reconstruction.cc
   io/populate_image_sizes.cc
   io/read_1dsfm.cc
   io/read_bundler_files.cc
   io/read_calibration.cc
+  io/read_colmap_files.cc
+  io/read_openmvg_sfm_data.cc
   io/read_strecha_dataset.cc
   io/reconstruction_reader.cc
   io/reconstruction_writer.cc

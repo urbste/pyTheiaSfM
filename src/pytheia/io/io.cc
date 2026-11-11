@@ -110,6 +110,23 @@ void pytheia_io_classes(py::module& m) {
         py::arg("dataset_directory"));
   m.def("ReadReconstruction", theia::ReadReconstructionWrapper,
         py::arg("input_file"));
+
+  py::class_<theia::ImportMessages>(m, "ImportMessages")
+      .def(py::init<>())
+      .def_readwrite("error", &theia::ImportMessages::error)
+      .def_readwrite("file_not_found", &theia::ImportMessages::file_not_found)
+      .def_readwrite("warnings", &theia::ImportMessages::warnings);
+  m.def("ReadColmapFiles", theia::ReadColmapFilesWrapper, py::arg("path"),
+        py::arg("pixel_offset") = 0.0,
+        "Read a COLMAP sparse model (cameras, images, points3D as .txt or "
+        ".bin) from path or a folder below it. Returns (success, "
+        "reconstruction, messages). pixel_offset is subtracted from the "
+        "observations and the principal point (0.5 gives the OpenCV "
+        "convention). See theia/io/read_colmap_files.h.");
+  m.def("ReadOpenMVGSfMData", theia::ReadOpenMVGSfMDataWrapper,
+        py::arg("json_path"),
+        "Read an OpenMVG sfm_data.json. Returns (success, reconstruction, "
+        "messages). See theia/io/read_openmvg_sfm_data.h.");
   m.def(
       "WriteReconstruction",
       [](const theia::Reconstruction& reconstruction,

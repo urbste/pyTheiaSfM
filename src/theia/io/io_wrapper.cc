@@ -4,6 +4,8 @@
 #include "theia/io/populate_image_sizes.h"
 #include "theia/io/read_1dsfm.h"
 #include "theia/io/read_bundler_files.h"
+#include "theia/io/read_colmap_files.h"
+#include "theia/io/read_openmvg_sfm_data.h"
 #include "theia/io/read_strecha_dataset.h"
 #include "theia/io/reconstruction_reader.h"
 
@@ -51,6 +53,23 @@ std::tuple<bool, Reconstruction> ReadReconstructionWrapper(
   Reconstruction reconstr = Reconstruction();
   const bool success = ReadReconstruction(input_file, &reconstr);
   return std::make_tuple(success, reconstr);
+}
+
+std::tuple<bool, Reconstruction, ImportMessages> ReadColmapFilesWrapper(
+    const std::string& path, const double pixel_offset) {
+  Reconstruction reconstr = Reconstruction();
+  ImportMessages messages;
+  const bool success =
+      ReadColmapFiles(path, &reconstr, pixel_offset, &messages);
+  return std::make_tuple(success, reconstr, messages);
+}
+
+std::tuple<bool, Reconstruction, ImportMessages> ReadOpenMVGSfMDataWrapper(
+    const std::string& json_path) {
+  Reconstruction reconstr = Reconstruction();
+  ImportMessages messages;
+  const bool success = ReadOpenMVGSfMData(json_path, &reconstr, &messages);
+  return std::make_tuple(success, reconstr, messages);
 }
 
 }  // namespace theia

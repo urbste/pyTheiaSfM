@@ -43,6 +43,8 @@
 #include "theia/io/read_1dsfm.h"
 #include "theia/io/read_bundler_files.h"
 #include "theia/io/read_calibration.h"
+#include "theia/io/read_colmap_files.h"
+#include "theia/io/read_openmvg_sfm_data.h"
 #include "theia/io/read_strecha_dataset.h"
 #include "theia/io/reconstruction_reader.h"
 #include "theia/io/reconstruction_writer.h"

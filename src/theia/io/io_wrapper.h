@@ -3,6 +3,7 @@
 #include <string>
 #include <tuple>
 
+#include "theia/io/imported_reconstruction.h"
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/view_graph/view_graph.h"
 
@@ -20,5 +21,9 @@ std::tuple<bool, Reconstruction> ReadStrechaDatasetWrapper(
     const std::string& dataset_directory);
 std::tuple<bool, Reconstruction> ReadReconstructionWrapper(
     const std::string& input_file);
+std::tuple<bool, Reconstruction, ImportMessages> ReadColmapFilesWrapper(
+    const std::string& path, const double pixel_offset);
+std::tuple<bool, Reconstruction, ImportMessages> ReadOpenMVGSfMDataWrapper(
+    const std::string& json_path);
 
 }  // namespace theia

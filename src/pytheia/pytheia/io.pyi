@@ -1,5 +1,5 @@
 from __future__ import annotations
-__all__: list[str] = ['BundlerCamera', 'BundlerFileReader', 'BundlerObservation', 'BundlerPoint', 'ImportNVMFile', 'ListImgEntry', 'PopulateImageSizesAndPrincipalPoints', 'Read1DSFM', 'ReadBundlerFiles', 'ReadReconstruction', 'ReadStrechaDataset', 'WriteBundlerFiles', 'WriteColmapFiles', 'WriteNVMFile', 'WriteNerfStudio', 'WritePlyFile', 'WriteReconstruction', 'WriteReconstructionJson', 'WriteRigPlyFile', 'WriteSdfStudio', 'WriteTransformsJson']
+__all__: list[str] = ['BundlerCamera', 'BundlerFileReader', 'BundlerObservation', 'BundlerPoint', 'ImportMessages', 'ImportNVMFile', 'ListImgEntry', 'PopulateImageSizesAndPrincipalPoints', 'Read1DSFM', 'ReadBundlerFiles', 'ReadColmapFiles', 'ReadOpenMVGSfMData', 'ReadReconstruction', 'ReadStrechaDataset', 'WriteBundlerFiles', 'WriteColmapFiles', 'WriteNVMFile', 'WriteNerfStudio', 'WritePlyFile', 'WriteReconstruction', 'WriteReconstructionJson', 'WriteRigPlyFile', 'WriteSdfStudio', 'WriteTransformsJson']
 class BundlerObservation:
     @staticmethod
     def __init__(*args, **kwargs):
@@ -125,6 +125,28 @@ class ListImgEntry:
     @second_entry.setter
     def second_entry(*args, **kwargs):
         ...
+class ImportMessages:
+    @staticmethod
+    def __init__(*args, **kwargs):
+        ...
+    @property
+    def error(*args, **kwargs):
+        ...
+    @error.setter
+    def error(*args, **kwargs):
+        ...
+    @property
+    def file_not_found(*args, **kwargs):
+        ...
+    @file_not_found.setter
+    def file_not_found(*args, **kwargs):
+        ...
+    @property
+    def warnings(*args, **kwargs):
+        ...
+    @warnings.setter
+    def warnings(*args, **kwargs):
+        ...
 def ImportNVMFile(*args, **kwargs):
     ...
 def PopulateImageSizesAndPrincipalPoints(*args, **kwargs):
@@ -133,6 +155,14 @@ def Read1DSFM(*args, **kwargs):
     ...
 def ReadBundlerFiles(*args, **kwargs):
     ...
+def ReadColmapFiles(*args, **kwargs):
+    """
+    Read a COLMAP sparse model (cameras, images, points3D as .txt or .bin) from path or a folder below it. Returns (success, reconstruction, messages). pixel_offset is subtracted from the observations and the principal point (0.5 gives the OpenCV convention). See theia/io/read_colmap_files.h.
+    """
+def ReadOpenMVGSfMData(*args, **kwargs):
+    """
+    Read an OpenMVG sfm_data.json. Returns (success, reconstruction, messages). See theia/io/read_openmvg_sfm_data.h.
+    """
 def ReadReconstruction(*args, **kwargs):
     ...
 def ReadStrechaDataset(*args, **kwargs):

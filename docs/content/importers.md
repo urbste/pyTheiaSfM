@@ -1,6 +1,6 @@
 # Importers
 
-`pytheia.importers` reads the output of other SfM tools, so that pyTheia tools (the [viewer](viewer.md), [`pytheia info`](cli.md), the evaluation scripts) can work on it. It is pure Python: numpy and the standard library only, no rebuild.
+`pytheia.importers` reads the output of other SfM tools, so that pyTheia tools (the [viewer](viewer.md), [`pytheia info`](cli.md), the evaluation scripts) can work on it. The COLMAP model and OpenMVG readers are implemented in C++ (`theia/io/read_colmap_files.h`, `theia/io/read_openmvg_sfm_data.h`) and also available as `pt.io.ReadColmapFiles` and `pt.io.ReadOpenMVGSfMData`; the Python functions wrap them and raise exceptions and warnings. The COLMAP database reader is pure Python (`sqlite3`), so the C++ library does not depend on SQLite.
 
 | Function | Input | Returns |
 |----------|-------|---------|
@@ -19,6 +19,25 @@ db = read_colmap_database("scene/database.db")
 db["keypoints"][1]                 # float32 (N, 2|4|6) for image id 1
 db["matches"][(1, 2)]              # uint32 (M, 2) keypoint index pairs
 db["two_view_geometries"][(1, 2)]["F"]   # 3x3 float64, or None
+```
+
+From C++, or from Python without exceptions:
+
+```cpp
+#include <theia/theia.h>
+
+theia::Reconstruction recon;
+theia::ImportMessages messages;
+if (!theia::ReadColmapFiles("scene", &recon, /*pixel_offset=*/0.0, &messages)) {
+  LOG(ERROR) << messages.error;  // messages.file_not_found tells a missing model apart
+}
+theia::ReadOpenMVGSfMData("out/sfm_data.json", &recon, &messages);
+```
+
+```python
+success, recon, messages = pt.io.ReadColmapFiles("scene", pixel_offset=0.0)
+success, recon, messages = pt.io.ReadOpenMVGSfMData("out/sfm_data.json")
+print(messages.error, messages.warnings)
 ```
 
 ## COLMAP sparse model
