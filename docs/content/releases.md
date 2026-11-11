@@ -4,7 +4,9 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
-## 1.4.1 (unreleased) {#release-1-4-1}
+## 1.4.1 (2026-11-11) {#release-1-4-1}
+
+Global pose estimation (ART positions, MORE rotation refinement, rig-aware global SfM), faster and more accurate bundle adjustment and RANSAC, and many fixes. Also contains the changes listed under 1.4.0, which was not tagged separately.
 
 ### Features
 
@@ -48,7 +50,9 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 ---
 
-## 1.4.0 (unreleased) {#release-1-4-0}
+## 1.4.0 {#release-1-4-0}
+
+Not tagged separately; first released as part of 1.4.1.
 
 Tooling around the library: command line, browser viewer and exporters for Gaussian splatting.
 
