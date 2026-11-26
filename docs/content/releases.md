@@ -18,6 +18,10 @@ This page records **pyTheia** releases. It no longer mirrors the historical [The
 
 Global pose estimation (ART positions, MORE rotation refinement, rig-aware global SfM), faster and more accurate bundle adjustment and RANSAC, and many fixes. Also contains the changes listed under 1.4.0, which was not tagged separately.
 
+### Compatibility
+
+- **`.recon` files written by 1.4.x cannot be read by 1.3.x or older.** Two serialized classes gained fields: `CameraIntrinsicsPrior` is version 5 (`radial_distortion_6` and `thin_prism_distortion`, for the COLMAP camera models) and `Track` is version 2 (the 3D point prior). An older reader treats the new versions like the old ones, reads too few fields and fails further on, usually with `Cannot load a polymorphic type that is not default constructable and does not have a load_and_construct function` or `Failed to read ... bytes from input stream`. `Track` version 2 came after the untagged 1.4.0 release commit, so that commit cannot read files from 1.4.1 either; use 1.4.1 or later for every reader. Files written by 1.3.x still load in 1.4.x. Upgrade every reader (for example worker images) before you write reconstructions with 1.4.x.
+
 ### Features
 
 - **`GlobalPositionEstimatorType.ART`** (`ARTPositionEstimator`, `ReconstructionEstimatorOptions.art_position_estimator_options`): Analytical Rotation-guided Translation, a track-based global position estimator from Li, Cai and Wu (arXiv:2611.11770). Closed-form triplet translations (LiGT-based, Theorem 1) are registered by one sparse weighted least-squares solve with per-triplet scales and Huber IRLS. Views that the triplets cannot attach are kept with rigid-component merging, bridging triplets and LiGT track constraints (`num_coverage_rounds`, `min_bridge_tracks`), and each triplet's observation filter has a robust start (`num_robust_samples`); see [ART view coverage](global_pose_estimation.md#art-coverage). The LiGT constraint construction moved into a shared `ligt_constraints` helper.
