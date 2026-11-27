@@ -11,7 +11,9 @@
 #include <cmath>
 #include <memory>
 #include <numeric>
+#include <string>
 
+#include "theia/sfm/init_free/ose_formulation.h"
 #include "theia/sfm/init_free/parallel_for.h"
 #include "theia/sfm/init_free/reduced_camera_solver.h"
 #include "theia/util/timer.h"
@@ -102,6 +104,7 @@ double EvaluateCost(const OseProblem& problem,
             formulation.ObservationModel(
                 cameras[problem.observation_camera[k]],
                 problem.observations.col(k),
+                problem.ObservationDepth(k),
                 context.State(k),
                 &model);
             const double w = context.Weight(k);
@@ -115,6 +118,7 @@ double EvaluateCost(const OseProblem& problem,
             formulation.ObservationModel(
                 cameras[problem.observation_camera[k]],
                 problem.observations.col(k),
+                problem.ObservationDepth(k),
                 context.State(k),
                 &model);
             cost += context.Cost((model.G * X - model.z).squaredNorm());
@@ -153,13 +157,15 @@ bool UpdateObservationContext(const OseProblem& problem,
                ++k) {
             const OseCamera& P = cameras[problem.observation_camera[k]];
             const Eigen::Vector2d m = problem.observations.col(k);
+            const double depth = problem.ObservationDepth(k);
             if (update_weights) {
-              formulation.ObservationModel(P, m, context->State(k), &model);
+              formulation.ObservationModel(
+                  P, m, depth, context->State(k), &model);
               context->weights[k] = context->RobustWeight(
                   (model.G * X - model.z).squaredNorm());
             }
             if (update_states) {
-              context->states[k] = formulation.UpdatedState(P, m, X);
+              context->states[k] = formulation.UpdatedState(P, m, depth, X);
             }
           }
         }
@@ -193,6 +199,17 @@ void BuildReducedSystem(const OseProblem& problem,
   system->W_blocks.resize(problem.NumObservations());
   ++system->revision;
 
+  // Tangent bases of a Euclidean formulation (OseFormulation::IsEuclidean);
+  // camera 0 is fixed, so its basis is zero. Read-only in the loops below.
+  const bool euclidean = formulation.IsEuclidean();
+  std::vector<Matrix12d, Eigen::aligned_allocator<Matrix12d>> tangent_basis;
+  if (euclidean) {
+    tangent_basis.assign(n, Matrix12d::Zero());
+    for (int c = 1; c < n; ++c) {
+      formulation.CameraTangentBasis(cameras[c], &tangent_basis[c]);
+    }
+  }
+
   Eigen::Matrix3Xd Vinv_gv(3, num_points);
   ParallelFor(
       num_threads,
@@ -212,8 +229,12 @@ void BuildReducedSystem(const OseProblem& problem,
             const Eigen::Vector2d m = problem.observations.col(k);
             const double state = context.State(k);
             const double w = context.Weight(k);
-            formulation.ObservationModel(cameras[c], m, state, &model);
-            formulation.CameraJacobian(cameras[c], m, X, state, &J);
+            const double depth = problem.ObservationDepth(k);
+            formulation.ObservationModel(cameras[c], m, depth, state, &model);
+            formulation.CameraJacobian(cameras[c], m, depth, X, state, &J);
+            if (euclidean) {
+              J = (J * tangent_basis[c]).eval();
+            }
             const auto r = (model.G * X - model.z).eval();
             system->W_blocks[k].noalias() = w * model.G.transpose() * J;
             V.noalias() += w * model.G.transpose() * model.G;
@@ -245,8 +266,12 @@ void BuildReducedSystem(const OseProblem& problem,
             const Eigen::Vector2d m = problem.observations.col(k);
             const double state = context.State(k);
             const double w = context.Weight(k);
-            formulation.ObservationModel(cameras[c], m, state, &model);
-            formulation.CameraJacobian(cameras[c], m, X, state, &J);
+            const double depth = problem.ObservationDepth(k);
+            formulation.ObservationModel(cameras[c], m, depth, state, &model);
+            formulation.CameraJacobian(cameras[c], m, depth, X, state, &J);
+            if (euclidean) {
+              J = (J * tangent_basis[c]).eval();
+            }
             const auto r = (model.G * X - model.z).eval();
             U.noalias() += w * J.transpose() * J;
             gc.noalias() += w * J.transpose() * r;
@@ -267,6 +292,10 @@ void BuildReducedSystem(const OseProblem& problem,
       const int c = term.camera_b;
       OseFormulation::EvaluateRotationTerm(
           term, cameras[a], cameras[c], &r, &Ja, &Jb);
+      if (euclidean) {
+        Ja = (Ja * tangent_basis[a]).eval();
+        Jb = (Jb * tangent_basis[c]).eval();
+      }
       system->U_diagonal[a].noalias() += Ja.transpose() * Ja;
       g.segment<kB>(kB * a).noalias() += Ja.transpose() * r;
       if (a == c) {
@@ -435,10 +464,8 @@ bool SolveOseVarPro(const OseProblem& problem,
         continue;
       }
       for (size_t i = 0; i < cameras.size(); ++i) {
-        Eigen::Matrix<double, 3, 4, Eigen::RowMajor> delta =
-            Eigen::Map<const Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(
-                step.data() + kB * i);
-        candidate[i] = cameras[i] + delta;
+        candidate[i] = formulation.RetractCamera(cameras[i],
+                                                 step.segment<kB>(kB * i));
       }
       const double candidate_cost = EvaluateCost(problem,
                                                  formulation,
@@ -496,6 +523,77 @@ bool SolveOseVarPro(const OseProblem& problem,
   solution->num_iterations = iteration;
   solution->message = termination;
   solution->solve_time_seconds = timer.ElapsedTimeInSeconds();
+  return true;
+}
+
+bool SolveDoseVarPro(const OseProblem& problem,
+                     const InitFreeOptions& options,
+                     const VarProOptions& varpro,
+                     const OseCameraVector& initial_cameras,
+                     OseSolution* solution) {
+  CHECK_NOTNULL(solution);
+  *solution = OseSolution();
+  const std::vector<double>& schedule = options.dose_depth_weight_schedule;
+  if (schedule.empty()) {
+    solution->message = "dose_depth_weight_schedule must not be empty.";
+    return false;
+  }
+  if (options.dose_iterations_per_stage <= 0) {
+    solution->message = "dose_iterations_per_stage must be positive.";
+    return false;
+  }
+  if (!(options.dose_depth_weight >= 0.0)) {
+    solution->message = "dose_depth_weight must be non-negative.";
+    return false;
+  }
+  if (!(options.dose_depth_huber_width > 0.0)) {
+    solution->message = "dose_depth_huber_width must be positive.";
+    return false;
+  }
+  for (const double scale : schedule) {
+    if (!(scale >= 0.0)) {
+      solution->message =
+          "dose_depth_weight_schedule values must be non-negative.";
+      return false;
+    }
+  }
+
+  VarProOptions stage_varpro = varpro;
+  stage_varpro.max_num_iterations = options.dose_iterations_per_stage;
+
+  OseCameraVector cameras = initial_cameras;
+  OseSolution stage_solution;
+  for (size_t s = 0; s < schedule.size(); ++s) {
+    const int stage = static_cast<int>(s);
+    const std::unique_ptr<OseFormulation> formulation = CreateDoseFormulation(
+        options.dose_depth_weight * schedule[s],
+        options.dose_depth_huber_width,
+        stage >= options.dose_robust_from_stage);
+    if (!SolveOseVarPro(
+            problem, *formulation, stage_varpro, cameras, &stage_solution)) {
+      solution->message =
+          "DOSE stage " + std::to_string(stage) + ": " + stage_solution.message;
+      return false;
+    }
+    if (stage == 0) {
+      solution->initial_cost = stage_solution.initial_cost;
+    }
+    solution->cost_history.insert(solution->cost_history.end(),
+                                  stage_solution.cost_history.begin(),
+                                  stage_solution.cost_history.end());
+    solution->num_iterations += stage_solution.num_iterations;
+    solution->solve_time_seconds += stage_solution.solve_time_seconds;
+    // The next stage starts from this stage's cameras.
+    cameras = stage_solution.cameras;
+  }
+
+  solution->cameras = std::move(stage_solution.cameras);
+  solution->points = std::move(stage_solution.points);
+  solution->final_cost = stage_solution.final_cost;
+  solution->converged = stage_solution.converged;
+  solution->message =
+      "DOSE stage " + std::to_string(schedule.size() - 1) + ": " +
+      stage_solution.message;
   return true;
 }
 

@@ -11,7 +11,7 @@
 The module is a testing ground. Every stage is exposed to Python on its own, so that new formulations, solvers and upgrades can be compared with the same data and diagnostics.
 
 !!! warning "Experimental"
-    The interface can still change. All formulations (`POSE`, `POSE_ROT`, `ROSE`, `EXPOSE`, `RPOSE`) and both observation normalizations (`CALIBRATED_RAYS`, `PIXEL_ISOTROPIC`) work end to end, with the linear or the nonlinear metric upgrade. `POSE_ROT` needs `CALIBRATED_RAYS`. `RPOSE` skips projective refinement and always uses the nonlinear upgrade. Unsupported combinations fail with a clear message instead of falling back silently.
+    The interface can still change. All formulations (`POSE`, `POSE_ROT`, `ROSE`, `EXPOSE`, `RPOSE`) and both observation normalizations (`CALIBRATED_RAYS`, `PIXEL_ISOTROPIC`) work end to end, with the linear or the nonlinear metric upgrade. `POSE_ROT` needs `CALIBRATED_RAYS`. `RPOSE` skips projective refinement and always uses the nonlinear upgrade. `DOSE` (depth-augmented OSE, *experimental*) needs calibrated rays and depth priors; it produces Euclidean cameras directly, without projective refinement or metric upgrade (see *Depth-augmented OSE (DOSE)*). Unsupported combinations fail with a clear message instead of falling back silently.
 
 ## Usage
 
@@ -57,9 +57,11 @@ Two runnable examples show the API:
 |---|---|---|
 | `formulation` | `POSE`, `POSE_ROT`, `ROSE`, `EXPOSE` | implemented |
 | | `RPOSE` | implemented end to end (radial 2×4 cameras; radial metric upgrade, no projective refinement) |
+| | `DOSE` | experimental (Euclidean cameras with depth priors; no projective refinement, no metric upgrade; see *Depth-augmented OSE (DOSE)*) |
 | `observation_normalization` | `CALIBRATED_RAYS` | implemented (needed by `POSE_ROT` and the upgrade) |
 | | `PIXEL_ISOTROPIC` | implemented (not with `POSE_ROT`); the upgrade estimates the focal lengths |
 | `camera_init` | `NORMAL`, `UNIFORM`, `UNIT_CIRCLE` | implemented |
+| | `EUCLIDEAN_RANDOM` | experimental (random `[R | t]` for `DOSE`) |
 | `varpro.linear_solver_type` | `DENSE_CHOLESKY` | implemented (CPU, Eigen) |
 | | `CUDA_DENSE_CHOLESKY` | implemented, needs `-DTHEIA_WITH_CUDA_SOLVERS=ON` |
 | | `POWER_SERIES` | implemented (CPU, matrix-free; `power_series_max_iterations`, `power_series_tolerance`) |
@@ -95,6 +97,8 @@ With `m` the normalized observation, `P` the 3 × 4 camera, `X̃` the homogeneou
 - **`RPOSE`**: the radial version, `(1−α)(m⊥ᵀP₁₂X̃)²/|m|² + α‖P₁₂X̃ − m‖²` with `m⊥ = (−m₂, m₁)`. Only the first two camera rows are determined. The estimator runs the radial metric upgrade (`radial_cameras`, see *Metric upgrade*) with the nonlinear refinement, whatever `metric_upgrade` says: the linear radial estimate is biased by the RPOSE affine term (up to 13° on the test scene), so `LINEAR` is overridden with a log message. It skips projective refinement, which is not defined for radial cameras; the metric bundle adjustment then refines the full cameras. The restart diagnostics report `ose_rms_error = −1`.
 
 With `robust_loss_type = CAUCHY`, every VarPro iteration recomputes the IRLS weights `w = 1/(1 + ‖r‖²/c²)` of the observation residuals (`c = robust_loss_scale`), and the cost is `Σ ½c² log(1 + ‖r‖²/c²)`. The rotation terms are not robustified. With 10 % of the observations displaced by up to 150 px, the inlier median error after the OSE stage falls from 12.3 px to 1.1 px (`c` = 5 px). For robust or state-dependent formulations, the cost history is not monotone, because the weights change between iterations.
+
+- **`DOSE`**: the OSE residuals of `POSE` on Euclidean cameras `P = [R | t]`, plus a relative depth residual per observation with a depth prior. See *Depth-augmented OSE (DOSE)*.
 
 ### Rotation weighting
 
@@ -143,6 +147,189 @@ For calibrated rays, the linear estimate is already close, and the refinement ch
 **Single cameras.** `MetricUpgradeResult.camera_orthogonality_errors` holds the error of every camera (infinity for a camera whose upgraded 3×3 block is singular). `MetricUpgradeOptions.camera_mask` restricts the estimation of the quadric to some cameras; the upgrade is still applied to all of them. The estimator uses both to drop collapsed cameras (see *Restarts and validity checks*).
 
 **Conditioning (critical motions).** Some camera motions do not determine the self-calibration. For varying focal lengths the pure translation is one such motion (all cameras with the same orientation): the upgrade then fits the quadric and the focal lengths, but they are not unique. `MetricUpgradeResult::conditioning` measures this. It is the fifth smallest singular value of the Jacobian of the quadric residuals (with respect to the 12 entries of the normalized `B` and the estimated focal lengths) over the largest one. The four gauge directions of the residuals (`B` times an orthogonal matrix, and the scale of `B`) are excluded. Small values mean an extra ambiguity. Measured on synthetic scenes (noise 0 to 2 px): well-posed scenes 0.018 to 0.56 (calibrated, varying and shared focal lengths, RPOSE). Pure translation with varying focal lengths 1e-8 (noise free) to 6e-4 (2 px), with focal lengths off by 30 to 54 %, while its orthogonality error stays below 0.01, so the orthogonality check does not catch it. Rotation about one axis with the centres in a plane is not critical in this parametrization (conditioning 0.044, focal lengths recovered to 0.4 % at 0.5 px). `min_upgrade_conditioning` (default `0.003`, `0` disables) rejects a restart whose conditioning is below it, with the message `ill-conditioned self-calibration (critical motion?)`. The threshold lies between the two groups: about 5 times above the largest critical value and 6 times below the smallest well-posed one. On real data (ETH3D, calibrated) accepted restarts measured 0.09; the wrong restarts (orthogonality error 0.8 to 2.6) still measured 0.29 to 0.44, so this check flags only the critical ambiguity, not wrong restarts in general.
+
+## Depth-augmented OSE (DOSE)
+
+!!! warning "Experimental"
+    DOSE follows the OSE stage and the joint metric refinement of InitFree-SfM. The metric pairwise translation and log-scale terms and the depth-consistent pair filtering are not implemented (see *Differences to the paper*).
+
+DOSE (arXiv:2611.31516, InitFree-SfM) adds a monocular depth prior to OSE. The OSE term only constrains the direction of each observation's ray. The depth term fixes the position along the ray and therefore the metric scale. The paper uses MoGe-2 depths.
+
+With `m` the normalized observation, `m̃ = [m; 1]`, `y = R X + t` (Euclidean camera `P = [R | t]`) and `d` the depth prior of the observation (camera-frame z), the objective is
+
+```
+Σ_ij ‖ y_{1:2} − m y_3 ‖²  +  λ_d Σ_ij ρ( m̃ᵀy / (‖m̃‖² d) − 1 )
+```
+
+with `λ_d` the depth weight (`dose_depth_weight`) and `ρ` the Huber loss of width `dose_depth_huber_width`. The first term is the OSE residual. The second compares the depth of the point along the ray with the prior. Its residual is dimensionless: 0.1 means a 10 % depth error.
+
+**Inputs**
+
+- `CALIBRATED_RAYS` observations (`observation_normalization`). `PIXEL_ISOTROPIC` is rejected.
+- A view graph. Its two-view rotations are not part of the OSE objective. They enter the validity check of the restarts (`max_relative_rotation_error_deg`) and the pairwise terms of the joint metric refinement.
+- Depth priors on the features: `pt.sfm.Feature(pixel, depth)` with the camera-frame z depth in metric units. A depth `<= 0` means no depth for that observation, which then has only the OSE residual. `BuildOseProblem` fails if no observation has a positive depth.
+- `camera_init = EUCLIDEAN_RANDOM`: `R` uniform on SO(3) (normalized Gaussian quaternion), `t ~ N(0, 0.5²)` per coordinate, camera 0 fixed to `[I | 0]`. Other initializations are projected to the nearest rotation.
+
+**Solver.** Rotations are updated on SO(3) with a left exponential-map step, translations additively. Camera 0 is held fixed, which removes the gauge freedom, and the depth term fixes the scale. The objective is minimized with the continuation of the paper: three stages with `λ_d` scaled by 5 %, 25 % and 100 % of `dose_depth_weight`, 20 VarPro iterations each, each stage starting from the previous one. The Huber loss is applied from the second stage on (IRLS, `dose_robust_from_stage = 1`).
+
+**Output.** The cameras are Euclidean, so DOSE runs no projective refinement and no metric upgrade. Each restart is refined jointly (see *Joint metric refinement*), and the estimator writes the best restart after that.
+
+### Usage
+
+Estimator:
+
+```python
+import pytheia as pt
+
+opts = pt.sfm.ReconstructionEstimatorOptions()
+opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+ifo = opts.init_free_options
+ifo.formulation = pt.sfm.OseFormulationType.DOSE
+ifo.observation_normalization = pt.sfm.OseObservationNormalization.CALIBRATED_RAYS
+ifo.camera_init = pt.sfm.InitFreeCameraInitType.EUCLIDEAN_RANDOM
+ifo.num_random_restarts = 3
+
+estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+summary = estimator.Estimate(view_graph, reconstruction)
+diag = estimator.Diagnostics()
+```
+
+#### Stage-wise use
+
+```python
+import pytheia as pt
+
+ok, problem, err = pt.sfm.BuildOseProblem(reconstruction, view_graph, ifo)
+cams0 = pt.sfm.SampleInitialCameras(problem.NumCameras(), ifo.camera_init, seed=0)
+ok, sol = pt.sfm.SolveOse(problem, ifo, cams0)   # Euclidean cameras (3 x 4) + points (3 x N)
+```
+
+For `DOSE`, `SolveOse` runs the staged continuation (`SolveDoseVarPro` in C++), the same as the estimator. `sol.cost_history` concatenates the stages; the cost jumps between stages because `λ_d` changes.
+
+**Accuracy on synthetic data** (10 cameras, `pytests/sfm/test_init_free.py`): with exact depths the OSE stage recovers the poses exactly (rotation error 1e-6°, scale error below 1e-6). With 5 % per-observation depth noise, 20 % missing depths and 0.5 px pixel noise, the depth term dominates: the worst relative rotation error after the OSE stage is 2 to 4° (seeds 0 to 5; 0.05° from the pixel noise alone), and the scale is within 1 %. The metric bundle adjustment of the estimator then brings it to 0.1°.
+
+**Synthetic comparison** (same scene, seeds 0 to 5, worst relative rotation error and centre-fit scale): the DOSE stage alone gives 1.95 to 3.84° (scale within 1.1 %); with the joint refinement 0.073 to 0.098° (scale within 1.2 %); the estimator with refinement and bundle adjustment 0.067 to 0.106° (scale within 1.2 %), and the estimator without refinement and with bundle adjustment 0.067 to 0.106° (scale within 1.0 %). After the bundle adjustment the refinement therefore changes the final rotation accuracy only marginally on this scene; its effect is on the stage-wise result and the restart ranking.
+
+### Results on ETH3D
+
+Settings: 3 restarts, `EUCLIDEAN_RANDOM`, default DOSE options; SIFT matches and MoGe-3 depth maps sampled at the keypoints; the harness is the paper's benchmark script. Each cell gives registered views, median camera-centre error after Sim(3) alignment (mm) and median rotation error (deg). `fail`: no restart passed the checks.
+
+| Scene (views) | global LUD | init-free (pOSE+rot) | DOSE stage + BA | DOSE + refinement + BA (defaults) |
+|---|---|---|---|---|
+| courtyard (38) | 38, 6.1, 0.06 | 37, 6.0, 0.06 | fail | fail |
+| delivery_area (44) | 44, 5.2, 0.04 | 44, 5.7, 0.05 | 44, 5.4, 0.05 | 44, 5.5, 0.05 |
+| electro (45) | 43, 3.5, 0.04 | 42, 3.3, 0.04 | 43, 3.7, 0.05 | 43, 3.3, 0.05 |
+| facade (76) | 76, 11.9, 0.12 | 76, 12.4, 0.11 | fail | fail |
+| kicker (31) | 30, 4.1, 0.06 | 30, 2.7, 0.03 | 30, 3.2, 0.04 | 30, 3.0, 0.04 |
+| meadow (15) | 13, 66.4, 1.07 | 14, 40.0, 0.26 | fail | fail |
+| office (26) | 26, 2.4, 0.13 | 25, 2.0, 0.13 | 26, 2.4, 0.14 | 26, 1.9, 0.13 |
+| pipes (14) | 14, 9.8, 0.48 | 14, 1.7, 0.06 | 14, 1.7, 0.06 | 14, 1.7, 0.06 |
+| playground (38) | 38, 7.3, 0.08 | fail | 38, 6.4, 0.09 | 38, 6.3, 0.10 |
+| relief (31) | 31, 1.4, 0.05 | 30, 1.3, 0.03 | 31, 3.2, 0.23 | 31, 4.0, 0.23 |
+| relief_2 (31) | 31, 1.4, 0.05 | 31, 1.6, 0.05 | 31, 17.4, 0.24 | 31, 2.7, 0.05 |
+| terrace (23) | 23, 4.2, 0.10 | 23, 3.4, 0.07 | 23, 3.3, 0.07 | 23, 3.5, 0.07 |
+| terrains (42) | 42, 3.6, 0.07 | 42, 3.6, 0.06 | 42, 4.6, 0.12 | 42, 3.4, 0.07 |
+
+DOSE with refinement solves 10 of the 13 scenes, including playground, on which the pOSE+rot estimator fails. On courtyard, facade and meadow the DOSE solutions of all three restarts fail the relative-rotation check and are rejected, so no wrong result is returned. With the refinement the errors are close to the global pipeline on most scenes (relief_2: 17.4 mm before, 2.7 mm after the refinement). Fixing the per-image scales (`optimize_depth_scales = False`) was mixed: relief 1.7 mm, relief_2 4.5 mm, electro 6.4 mm (defaults: 4.0, 2.7 and 3.3 mm).
+
+### Options
+
+All fields are in `InitFreeOptions`.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `dose_depth_weight` | `30.0` | `λ_d` of the depth term (paper: 30). Multiplied by each entry of the schedule. |
+| `dose_depth_huber_width` | `0.1` | Huber width of the relative depth residual (dimensionless). The paper does not state its value; this default is ours. |
+| `dose_depth_weight_schedule` | `[0.05, 0.25, 1.0]` | Continuation of `λ_d`, one stage per entry (paper: 5 %, 25 %, 100 %). |
+| `dose_iterations_per_stage` | `20` | Maximum VarPro iterations per stage (paper: 20). |
+| `dose_robust_from_stage` | `1` | First stage with the Huber loss (IRLS); earlier stages are least squares. |
+| `dose_check_before_refinement` | `True` | Apply the restart checks to the DOSE solution before the joint refinement; failing restarts are not refined and not ranked (see *Pre-refinement check*). |
+
+The per-observation confidence `c_ij` of the paper is not defined there. Here it is 1 for every observation.
+
+### Joint metric refinement
+
+After the DOSE stage, each restart that passes the pre-refinement check (see below) is refined jointly as a metric reconstruction (`RefineDoseReconstruction`, Levenberg-Marquardt in Ceres). The restarts are ranked by the RMS reprojection error after the refinement. The unknowns are the Euclidean cameras `P_i = [R_i | t_i]` (camera 0 fixed), the points `X_j` and one depth scale `α_i` per image, because the monocular depth priors are only known up to a scale per image. With `y = R_i X_j + t_i`, `m̃ = [m; 1]`, `q = m̃ / ‖m̃‖²`, the focal length `f_i` in pixels and `D = α_i d_ij` (the depth prior `d_ij` scaled by the image's `α_i`), the residuals are
+
+```
+image:       f_i (y_{1:2} / y_3 − m)                               Huber, width image_huber_width_px [px]
+depth:       log(qᵀy / D)                                          Huber, width depth_huber_width, weight depth_weight
+rotation:    ‖R_a R_bᵀ − R_ab‖²_F                                  per pairwise rotation term of the view graph, weight rotation_weight
+direction:   ‖u(t_a − R_a R_bᵀ t_b) − u(−R_ab c_ab)‖²              u(v) = v / ‖v‖, weight translation_direction_weight
+cheirality:  cheirality_tau / |O| Σ softplus(−y_3 / (cheirality_tau · max(D, 10⁻⁴)))   weight cheirality_weight
+scale:       scale_regularization_weight / (n − 1) Σ_i (log α_i)²  (α_i starts at 1)
+```
+
+The image residual is in pixels. The default image residual is the reprojection error. `reprojection_image_residual = False` selects the object-space form of the paper (Eq. 13), `f_i (y_{1:2} − m y_3) / D'`, with `D' = d_ij` (the fixed depth prior) or, if `image_residual_uses_depth_scale = True`, `D' = D`. The default depth residual is the log ratio `log(qᵀy / D)`; `log_ratio_depth_residual = False` selects the relative error `(qᵀy − D) / D` of the paper. The log ratio is approximately dimensionless (`log 1.1 ≈ 0.095` for a 10 % depth error). The depth residual exists only for observations with a depth prior. Observations without a depth prior use the median depth prior of their image for `d_ij`. `c_ab` is the camera centre of the view graph edge; the direction term is skipped if it is zero.
+
+**Outliers.** After the refinement, an observation whose reprojection error exceeds `outlier_threshold_px` (default 5 px) is marked as an outlier. Its track is left out of the following metric bundle adjustment. This happens only if at least one observation is an outlier. The standard bundle adjustment after the refinement uses reprojection errors only; the depth priors enter the metric stage through the joint refinement with the per-image scales.
+
+**Pre-refinement check.** With `dose_check_before_refinement` (default `True`), the checks that `Estimate()` applies after the refinement are applied to the DOSE solution before it: `min_fraction_in_front`, `max_mean_orthogonality_error`, `max_relative_rotation_error_deg`, `max_translation_direction_error_deg`, and dropping of broken cameras. A restart that fails is not refined and is not ranked. Its reason is recorded in `InitFreeRestartDiagnostics.pre_refinement_check_message` (`"rejected: <failure>"`; `"ok"` for a restart that passes; empty if the check did not run). The check comes first because the refinement's pairwise rotation and translation-direction terms can pull a wrong DOSE solution into agreement with the view-graph rotations, so that it would pass the checks afterwards.
+
+#### Options
+
+All fields are in `DoseRefinementOptions`, available as `InitFreeOptions.dose_refinement`.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `max_num_iterations` | `100` | Maximum Ceres iterations. `0` disables the stage; the DOSE solution then goes directly to the metric bundle adjustment. |
+| `function_tolerance` | `1e-10` | Ceres function tolerance. |
+| `parameter_tolerance` | `1e-8` | Ceres parameter tolerance. |
+| `image_huber_width_px` | `2.0` | Huber width of the image residual (pixels). |
+| `reprojection_image_residual` | `True` | Image residual is the reprojection error `f (y_{1:2} / y_3 − m)`. `False`: the object-space form of Eq. 13 (see `image_residual_uses_depth_scale`). |
+| `image_residual_uses_depth_scale` | `False` | Only if `reprojection_image_residual = False`: divide the object-space residual by `α_i d_ij` (`True`, Eq. 13) instead of the fixed `d_ij` (`False`). |
+| `depth_weight` | `100.0` | Weight of the depth residual. 100 balances a 10 % depth error against 1 px. |
+| `depth_huber_width` | `0.1` | Huber width of the depth residual (dimensionless). |
+| `log_ratio_depth_residual` | `True` | Depth residual `log(qᵀy / D)`. `False`: the relative error `(qᵀy − D) / D` of the paper (Eq. 14). |
+| `optimize_depth_scales` | `True` | If `False`, the depth scales `α_i` stay at 1. |
+| `rotation_weight` | `100.0` | Weight of the pairwise rotation terms. |
+| `translation_direction_weight` | `100.0` | Weight of the pairwise translation-direction terms. |
+| `cheirality_tau` | `0.05` | `τ` of the cheirality penalty (paper: 0.05). |
+| `cheirality_weight` | `1.0` | Weight of the cheirality penalty; its paper weight is `τ / |O|`. |
+| `scale_regularization_weight` | `1.0` | Weight of the log-scale regularizer. |
+| `outlier_threshold_px` | `5.0` | Reprojection error (pixels) above which an observation is an outlier. `<= 0` disables it. |
+| `verbose` | `False` | Print the solver progress. |
+
+The weights are relative to the image residual in pixels. `num_threads` is an argument of `RefineDoseReconstruction`, not an option.
+
+#### Stage-wise use
+
+```python
+import pytheia as pt
+
+ok, problem, err = pt.sfm.BuildOseProblem(reconstruction, view_graph, ifo)
+cams0 = pt.sfm.SampleInitialCameras(problem.NumCameras(), ifo.camera_init, ifo.seed)
+ok, sol = pt.sfm.SolveOse(problem, ifo, cams0)
+ok, res = pt.sfm.RefineDoseReconstruction(problem, sol.cameras, sol.points,
+                                          ifo.dose_refinement, 1)
+# res.rotations, res.translations (per problem camera), res.points (3 x N),
+# res.depth_scales (alpha_i, camera 0 is 1), res.rms_reprojection_error_px,
+# res.median_relative_depth_error, res.observation_inlier, res.message
+```
+
+`RefineDoseReconstruction` takes the Euclidean cameras `sol.cameras` (3 x 4) and the Cartesian points `sol.points` (3 x N) in the numbering of `problem`. It needs the focal lengths (`problem.focal_lengths`) and depth priors (`problem.observation_depths`) that `BuildOseProblem` fills for DOSE.
+
+#### Diagnostics
+
+The estimator reports the refinement of the selected restart in `InitFreeDiagnostics`:
+
+- `dose_depth_scales`: the depth scales `α_i` per problem camera. Empty if the refinement did not run.
+- `dose_rms_reprojection_error_px`: RMS reprojection error after the refinement (pixels). `-1` if the refinement did not run.
+- `dose_median_relative_depth_error`: median of `|m̃ᵀy / (‖m̃‖² D) − 1|` over the observations with a depth prior. `-1` if the refinement did not run.
+
+### Differences to the paper
+
+The following parts of the paper are not implemented or are changed:
+
+- The metric pairwise translation terms and the pairwise log-scale terms (Eq. 16, 17). The joint refinement uses the pairwise rotation and translation-direction terms and the cheirality penalty instead.
+- The depth-consistent pair filtering (depth similarity RANSAC and epipolar cross-check at 15°).
+- The image residual is the reprojection error by default instead of the object-space form of Eq. 13: with `α_i` in the denominator, increasing `α_i` shrinks the image residuals of cameras with many wrongly merged observations, and with the fixed `d_ij` the image cost decreases when the whole scene shrinks, which biases the scale (5 % too small on the synthetic test scene).
+- The depth residual is the log ratio `log(qᵀy / D)` instead of the relative error of Eq. 14, because the relative error saturates at −1 for large `α_i`, so a camera with inconsistent depth priors can raise its scale at bounded cost.
+- A check of the restarts before the refinement (`dose_check_before_refinement`), which the paper does not have: the refinement's pairwise rotation terms can pull a wrong DOSE solution into agreement with the view-graph rotations, so it would pass the checks afterwards.
+
+The joint refinement with per-image depth scales, the pairwise rotation and translation-direction terms and the cheirality penalty are implemented (see *Joint metric refinement*). The depth prior enters the metric stage through this refinement; the standard bundle adjustment after it uses reprojection errors only.
+
+The Huber width and the unit confidence are our choices, not the paper's.
 
 ## CUDA backend
 
@@ -331,3 +518,4 @@ All runs reach the same final cost. At these sizes, most of the time goes into t
 - S. Weber, J. H. Hong, D. Cremers. *Power Variable Projection for Initialization-Free Large-Scale Bundle Adjustment.* ECCV 2024.
 - C. Olsson, A. Nilsson. *Towards Initialization-free Calibrated Bundle Adjustment.* [arXiv:2506.23808](https://arxiv.org/abs/2506.23808).
 - S. Weber, M. de Mayo, J. H. Hong, C. Olsson, D. Cremers, R. Clark. *Initialization-Free Bundle Adjustment Revisited: A Controlled Experimental Study.* [arXiv:2608.18028](https://arxiv.org/abs/2608.18028). Code: [InitFreeBA](https://github.com/simonwebertum/InitFreeBA).
+- S. Weber, M. de Mayo, J. H. Hong, C. Olsson, D. Cremers, R. Clark. *InitFree-SfM: When Initialization-Free Bundle Adjustment Meets Learned Structure-from-Motion.* [arXiv:2611.31516](https://arxiv.org/abs/2611.31516). DOSE.

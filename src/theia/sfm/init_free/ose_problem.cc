@@ -8,6 +8,7 @@
 #include <glog/logging.h>
 
 #include <algorithm>
+#include <cmath>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -117,6 +118,14 @@ void SetTwoViewRotationWeights(const InitFreeOptions& options,
           << num_terms << " pairs.";
 }
 
+// One usable observation of a track, before the observations are flattened.
+struct TrackObservation {
+  int camera;
+  Eigen::Vector2d m;
+  // Feature::depth_prior() sanitized to 0 if not finite or <= 0.
+  double depth;
+};
+
 }  // namespace
 
 bool BuildOseProblem(const Reconstruction& reconstruction,
@@ -131,6 +140,7 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
 
   const bool needs_rotations =
       options.formulation == OseFormulationType::POSE_ROT;
+  const bool is_dose = options.formulation == OseFormulationType::DOSE;
   if (needs_rotations && options.observation_normalization !=
                              OseObservationNormalization::CALIBRATED_RAYS) {
     *error = "POSE_ROT needs CALIBRATED_RAYS observations.";
@@ -138,6 +148,15 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
   }
   if (needs_rotations && view_graph == nullptr) {
     *error = "POSE_ROT needs a view graph with relative rotations.";
+    return false;
+  }
+  if (is_dose && options.observation_normalization !=
+                     OseObservationNormalization::CALIBRATED_RAYS) {
+    *error = "DOSE needs CALIBRATED_RAYS observations.";
+    return false;
+  }
+  if (is_dose && view_graph == nullptr) {
+    *error = "DOSE needs a view graph.";
     return false;
   }
   if (options.min_track_length < 2) {
@@ -218,6 +237,11 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
                 OseObservationNormalization::PIXEL_ISOTROPIC
             ? IsotropicNormalization(reconstruction.View(view_id)->Camera())
             : Eigen::Matrix3d::Identity());
+    if (options.observation_normalization ==
+        OseObservationNormalization::CALIBRATED_RAYS) {
+      problem->focal_lengths.push_back(
+          reconstruction.View(view_id)->Camera().FocalLength());
+    }
   }
 
   // Observations, grouped by point. A track is kept only if enough of its
@@ -225,8 +249,8 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
   std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d>>
       measurements;
   problem->point_offsets.push_back(0);
-  std::vector<std::pair<int, Eigen::Vector2d>,
-              Eigen::aligned_allocator<std::pair<int, Eigen::Vector2d>>>
+  std::vector<TrackObservation,
+              Eigen::aligned_allocator<TrackObservation>>
       track_observations;
   for (const TrackId track_id : active_tracks) {
     const Track* track = reconstruction.Track(track_id);
@@ -249,7 +273,11 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
                                 &m)) {
         continue;
       }
-      track_observations.emplace_back(it->second, m);
+      double depth = feature->depth_prior();
+      if (!std::isfinite(depth) || depth <= 0.0) {
+        depth = 0.0;
+      }
+      track_observations.push_back(TrackObservation{it->second, m, depth});
     }
     if (static_cast<int>(track_observations.size()) <
         options.min_track_length) {
@@ -257,13 +285,18 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
     }
     std::sort(track_observations.begin(),
               track_observations.end(),
-              [](const auto& a, const auto& b) { return a.first < b.first; });
+              [](const TrackObservation& a, const TrackObservation& b) {
+                return a.camera < b.camera;
+              });
     const int point = problem->NumPoints();
     problem->track_ids.push_back(track_id);
-    for (const auto& [camera, m] : track_observations) {
-      problem->observation_camera.push_back(camera);
+    for (const TrackObservation& obs : track_observations) {
+      problem->observation_camera.push_back(obs.camera);
       problem->observation_point.push_back(point);
-      measurements.push_back(m);
+      measurements.push_back(obs.m);
+      if (is_dose) {
+        problem->observation_depths.push_back(obs.depth);
+      }
     }
     problem->point_offsets.push_back(
         static_cast<int>(problem->observation_camera.size()));
@@ -277,8 +310,21 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
   for (size_t k = 0; k < measurements.size(); ++k) {
     problem->observations.col(k) = measurements[k];
   }
+  if (is_dose) {
+    const bool any_depth =
+        std::any_of(problem->observation_depths.begin(),
+                    problem->observation_depths.end(),
+                    [](const double d) { return d > 0.0; });
+    if (!any_depth) {
+      *error =
+          "DOSE needs depth priors (Feature::depth_prior) for the "
+          "observations.";
+      return false;
+    }
+  }
 
-  if (needs_rotations) {
+  // DOSE uses the view graph rotations only for the validity check.
+  if (needs_rotations || is_dose) {
     // TwoViewInfo convention: R_second = R_rel * R_first, so the term for the
     // pair is A_second * A_first^T ~ R_rel.
     std::vector<ViewIdPair> pairs;
@@ -307,7 +353,7 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
       // first, so X_second = R_rel (X_first - position_2).
       pair_translations.push_back(-term.relative_rotation * info->position_2);
     }
-    if (problem->rotation_terms.empty()) {
+    if (needs_rotations && problem->rotation_terms.empty()) {
       *error = "POSE_ROT: no view graph edge connects two problem cameras.";
       return false;
     }
@@ -315,7 +361,7 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
         RotationWeightingType::TWO_VIEW_INFORMATION) {
       SetTwoViewRotationWeights(options, pair_translations, problem);
     }
-    if (options.include_self_rotation_terms) {
+    if (!is_dose && options.include_self_rotation_terms) {
       for (int i = 0; i < problem->NumCameras(); ++i) {
         OseRotationTerm term;
         term.camera_a = i;

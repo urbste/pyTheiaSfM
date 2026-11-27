@@ -4,6 +4,7 @@
 #include "theia/sfm/init_free/ose_formulation.h"
 
 #include <Eigen/Geometry>
+#include <Eigen/SVD>
 #include <glog/logging.h>
 
 #include <algorithm>
@@ -58,6 +59,7 @@ class PoseFormulation : public OseFormulation {
 
   void ObservationModel(const OseCamera& P,
                         const Eigen::Vector2d& m,
+                        double /*depth*/,
                         double /*state*/,
                         OseObservationModel* model) const override {
     model->G.resize(4, 3);
@@ -71,6 +73,7 @@ class PoseFormulation : public OseFormulation {
 
   void CameraJacobian(const OseCamera& P,
                       const Eigen::Vector2d& m,
+                      double /*depth*/,
                       const Eigen::Vector3d& X,
                       double /*state*/,
                       OseCameraJacobian* jacobian) const override {
@@ -101,6 +104,7 @@ class RoseFormulation : public OseFormulation {
 
   void ObservationModel(const OseCamera& P,
                         const Eigen::Vector2d& m,
+                        double /*depth*/,
                         double /*state*/,
                         OseObservationModel* model) const override {
     model->G.resize(3, 3);
@@ -112,6 +116,7 @@ class RoseFormulation : public OseFormulation {
 
   void CameraJacobian(const OseCamera& P,
                       const Eigen::Vector2d& m,
+                      double /*depth*/,
                       const Eigen::Vector3d& X,
                       double /*state*/,
                       OseCameraJacobian* jacobian) const override {
@@ -156,6 +161,7 @@ class ExposeFormulation : public OseFormulation {
 
   double UpdatedState(const OseCamera& P,
                       const Eigen::Vector2d& m,
+                      double /*depth*/,
                       const Eigen::Vector3d& X) const override {
     const Eigen::Vector3d mh = m.homogeneous();
     return mh.dot(P * X.homogeneous()) / mh.norm();
@@ -171,6 +177,7 @@ class ExposeFormulation : public OseFormulation {
 
   void ObservationModel(const OseCamera& P,
                         const Eigen::Vector2d& m,
+                        double /*depth*/,
                         const double state,
                         OseObservationModel* model) const override {
     model->G.resize(3, 3);
@@ -185,6 +192,7 @@ class ExposeFormulation : public OseFormulation {
 
   void CameraJacobian(const OseCamera& P,
                       const Eigen::Vector2d& m,
+                      double /*depth*/,
                       const Eigen::Vector3d& X,
                       const double state,
                       OseCameraJacobian* jacobian) const override {
@@ -230,6 +238,7 @@ class RposeFormulation : public OseFormulation {
 
   void ObservationModel(const OseCamera& P,
                         const Eigen::Vector2d& m,
+                        double /*depth*/,
                         double /*state*/,
                         OseObservationModel* model) const override {
     model->G.resize(3, 3);
@@ -246,6 +255,7 @@ class RposeFormulation : public OseFormulation {
 
   void CameraJacobian(const OseCamera& P,
                       const Eigen::Vector2d& m,
+                      double /*depth*/,
                       const Eigen::Vector3d& X,
                       double /*state*/,
                       OseCameraJacobian* jacobian) const override {
@@ -271,6 +281,171 @@ class RposeFormulation : public OseFormulation {
 
   const double w_rad_;
   const double w_aff_;
+};
+
+// Cross-product matrix [v]_x, so that [v]_x u = v x u.
+Eigen::Matrix3d SkewSymmetric(const Eigen::Vector3d& v) {
+  Eigen::Matrix3d S;
+  S << 0.0, -v[2], v[1],
+       v[2], 0.0, -v[0],
+       -v[1], v[0], 0.0;
+  return S;
+}
+
+// DOSE (arXiv:2611.31516) on Euclidean cameras P = [R | t]. With y = R X + t,
+// m~ = [m; 1], q = m~ / |m~|^2 and the depth prior d of the observation:
+//   r_0,1 = y_{0,1} - m_{0,1} y_2
+//   r_2   = sqrt(lambda_d * w) * (q^T y / d - 1)
+// w is the Huber IRLS weight of the depth residual (the state, if robust), and
+// r_2 is absent (zero rows) if the depth prior is not positive and finite.
+class DoseFormulation : public OseFormulation {
+ public:
+  DoseFormulation(const double depth_weight,
+                  const double huber_width,
+                  const bool robust)
+      : depth_weight_(depth_weight),
+        huber_width_(huber_width),
+        robust_(robust) {}
+
+  OseFormulationType Type() const override { return OseFormulationType::DOSE; }
+
+  int NumResidualsPerObservation() const override { return 3; }
+
+  bool IsEuclidean() const override { return true; }
+
+  bool UsesRotationTerms() const override { return false; }
+
+  bool HasState() const override { return robust_; }
+
+  double InitialState(const Eigen::Vector2d& /*m*/) const override {
+    return 1.0;
+  }
+
+  int UpdateStateFromIteration() const override { return 0; }
+
+  void ObservationModel(const OseCamera& P,
+                        const Eigen::Vector2d& m,
+                        const double depth,
+                        const double state,
+                        OseObservationModel* model) const override {
+    model->G.resize(3, 3);
+    model->z.resize(3);
+    OseRows(1.0, P, m, model);
+    model->G.row(2).setZero();
+    model->z[2] = 0.0;
+    if (DepthValid(depth)) {
+      const double s = DepthScale(depth, state);
+      const Eigen::Vector3d q = QVector(m);
+      model->G.row(2) = s * q.transpose() * P.leftCols<3>();
+      model->z[2] = s * (depth - q.dot(P.col(3)));
+    }
+  }
+
+  void CameraJacobian(const OseCamera& P,
+                      const Eigen::Vector2d& m,
+                      const double depth,
+                      const Eigen::Vector3d& X,
+                      const double state,
+                      OseCameraJacobian* jacobian) const override {
+    const Eigen::Vector4d Xh = X.homogeneous();
+    jacobian->setZero(3, kOseCameraParameters);
+    OseJacobianRows(1.0, m, Xh, jacobian);
+    if (DepthValid(depth)) {
+      const double s = DepthScale(depth, state);
+      const Eigen::Vector3d q = QVector(m);
+      for (int r = 0; r < 3; ++r) {
+        jacobian->block<1, 4>(2, 4 * r) = s * q[r] * Xh.transpose();
+      }
+    }
+  }
+
+  double UpdatedState(const OseCamera& P,
+                      const Eigen::Vector2d& m,
+                      const double depth,
+                      const Eigen::Vector3d& X) const override {
+    if (!robust_ || !DepthValid(depth)) {
+      return 1.0;
+    }
+    const Eigen::Vector3d y = P.leftCols<3>() * X + P.col(3);
+    const double e = std::abs(QVector(m).dot(y) / depth - 1.0);
+    return e <= huber_width_ ? 1.0 : huber_width_ / e;
+  }
+
+  void NormalizeInitialCamera(OseCamera* P) const override {
+    // Nearest rotation to the left 3x3 block (Procrustes via SVD).
+    const Eigen::Matrix3d A = P->leftCols<3>();
+    Eigen::Matrix3d R = Eigen::Matrix3d::Identity();
+    if (A.allFinite() && !A.isZero()) {
+      const Eigen::JacobiSVD<Eigen::Matrix3d> svd(
+          A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+      Eigen::Matrix3d U = svd.matrixU();
+      const Eigen::Matrix3d V = svd.matrixV();
+      R = U * V.transpose();
+      if (R.determinant() < 0.0) {
+        U.col(2) *= -1.0;
+        R = U * V.transpose();
+      }
+    }
+    P->leftCols<3>() = R;
+  }
+
+  void CameraTangentBasis(const OseCamera& P,
+                          Eigen::Matrix<double, 12, 12>* B) const override {
+    // Left perturbation dR = [e_k]_x R for the rotation part; translation
+    // perturbations dt = e_k. Columns 6..11 are unused and stay zero.
+    B->setZero();
+    const Eigen::Matrix3d R = P.leftCols<3>();
+    for (int k = 0; k < 3; ++k) {
+      Eigen::Vector3d e = Eigen::Vector3d::Zero();
+      e[k] = 1.0;
+      const Eigen::Matrix3d E = SkewSymmetric(e) * R;
+      for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+          (*B)(4 * r + c, k) = E(r, c);
+        }
+      }
+    }
+    for (int k = 0; k < 3; ++k) {
+      (*B)(4 * k + 3, 3 + k) = 1.0;
+    }
+  }
+
+  OseCamera RetractCamera(
+      const OseCamera& P,
+      const Eigen::Matrix<double, 12, 1>& delta) const override {
+    const Eigen::Vector3d omega = delta.head<3>();
+    const Eigen::Vector3d dt = delta.segment<3>(3);
+    const double angle = omega.norm();
+    Eigen::Matrix3d dR = Eigen::Matrix3d::Identity();
+    if (angle > 0.0) {
+      dR = Eigen::AngleAxisd(angle, omega / angle).toRotationMatrix();
+    }
+    OseCamera out;
+    out.leftCols<3>() = dR * P.leftCols<3>();
+    out.col(3) = P.col(3) + dt;
+    return out;
+  }
+
+ private:
+  static bool DepthValid(const double depth) {
+    return std::isfinite(depth) && depth > 0.0;
+  }
+
+  // q = m~ / |m~|^2 with m~ = [m; 1].
+  static Eigen::Vector3d QVector(const Eigen::Vector2d& m) {
+    const Eigen::Vector3d mt = m.homogeneous();
+    return mt / mt.squaredNorm();
+  }
+
+  // s = sqrt(lambda_d * w) / depth, the scale of the depth row (G and z).
+  double DepthScale(const double depth, const double state) const {
+    const double w = robust_ ? state : 1.0;
+    return std::sqrt(depth_weight_ * w) / depth;
+  }
+
+  const double depth_weight_;
+  const double huber_width_;
+  const bool robust_;
 };
 
 }  // namespace
@@ -338,9 +513,27 @@ std::unique_ptr<OseFormulation> CreateOseFormulation(
     case OseFormulationType::EXPOSE:
       return std::make_unique<ExposeFormulation>(
           options.alpha, options.expose_warmup_iterations);
+    case OseFormulationType::DOSE:
+      if (!(options.dose_depth_weight >= 0.0)) {
+        *error = "dose_depth_weight must be non-negative.";
+        return nullptr;
+      }
+      if (!(options.dose_depth_huber_width > 0.0)) {
+        *error = "dose_depth_huber_width must be positive.";
+        return nullptr;
+      }
+      return CreateDoseFormulation(options.dose_depth_weight,
+                                   options.dose_depth_huber_width,
+                                   true);
   }
   *error = "Unknown OSE formulation.";
   return nullptr;
+}
+
+std::unique_ptr<OseFormulation> CreateDoseFormulation(double depth_weight,
+                                                      double huber_width,
+                                                      bool robust) {
+  return std::make_unique<DoseFormulation>(depth_weight, huber_width, robust);
 }
 
 }  // namespace theia

@@ -47,6 +47,22 @@ bool SolveOseVarPro(const OseProblem& problem,
                     const OseCameraVector& initial_cameras,
                     OseSolution* solution);
 
+// DOSE with the depth-weight continuation of arXiv:2611.31516: for every
+// stage s of options.dose_depth_weight_schedule, runs SolveOseVarPro with
+// CreateDoseFormulation(options.dose_depth_weight * schedule[s],
+// options.dose_depth_huber_width, s >= options.dose_robust_from_stage) and
+// max_num_iterations = options.dose_iterations_per_stage, starting from the
+// cameras of the previous stage. `varpro` supplies all other solver options.
+// The solution holds the last stage's cameras, points and final cost, the
+// first stage's initial cost, the concatenated cost history, the total number
+// of iterations and run time; converged and message are those of the last
+// stage. Returns false if a stage fails or the schedule is empty.
+bool SolveDoseVarPro(const OseProblem& problem,
+                     const InitFreeOptions& options,
+                     const VarProOptions& varpro,
+                     const OseCameraVector& initial_cameras,
+                     OseSolution* solution);
+
 // Solves every point exactly for fixed cameras and returns the cost
 // 0.5 * ||r||^2 (including rotation terms if the formulation uses them), with
 // unit weights and the formulation's initial state.

@@ -161,6 +161,7 @@ set(THEIA_SRC
   sfm/incremental_reconstruction_estimator.cc
   sfm/incremental_rig_reconstructor.cc
   sfm/init_free/camera_sampler.cc
+  sfm/init_free/dose_refinement.cc
   sfm/init_free/init_free_reconstruction_estimator.cc
   sfm/init_free/metric_upgrade.cc
   sfm/init_free/ose_formulation.cc

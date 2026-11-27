@@ -14,6 +14,7 @@
 
 #include "theia/sfm/init_free/camera_sampler.h"
 #include "theia/sfm/init_free/init_free_options.h"
+#include "theia/sfm/init_free/dose_refinement.h"
 #include "theia/sfm/init_free/init_free_reconstruction_estimator.h"
 #include "theia/sfm/init_free/metric_upgrade.h"
 #include "theia/sfm/init_free/ose_formulation.h"
@@ -63,7 +64,8 @@ void pytheia_init_free(py::module& m) {
       .value("ROSE", theia::OseFormulationType::ROSE)
       .value("RPOSE", theia::OseFormulationType::RPOSE)
       .value("EXPOSE", theia::OseFormulationType::EXPOSE)
-      .value("POSE_ROT", theia::OseFormulationType::POSE_ROT);
+      .value("POSE_ROT", theia::OseFormulationType::POSE_ROT)
+      .value("DOSE", theia::OseFormulationType::DOSE);
 
   py::enum_<theia::OseObservationNormalization>(m,
                                                 "OseObservationNormalization")
@@ -75,7 +77,9 @@ void pytheia_init_free(py::module& m) {
   py::enum_<theia::InitFreeCameraInitType>(m, "InitFreeCameraInitType")
       .value("NORMAL", theia::InitFreeCameraInitType::NORMAL)
       .value("UNIFORM", theia::InitFreeCameraInitType::UNIFORM)
-      .value("UNIT_CIRCLE", theia::InitFreeCameraInitType::UNIT_CIRCLE);
+      .value("UNIT_CIRCLE", theia::InitFreeCameraInitType::UNIT_CIRCLE)
+      .value("EUCLIDEAN_RANDOM",
+             theia::InitFreeCameraInitType::EUCLIDEAN_RANDOM);
 
   py::enum_<theia::ReducedCameraSolverType>(m, "ReducedCameraSolverType")
       .value("DENSE_CHOLESKY", theia::ReducedCameraSolverType::DENSE_CHOLESKY)
@@ -140,6 +144,30 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("deterministic", &PRO::deterministic)
       .def_readwrite("verbose", &PRO::verbose);
 
+  using DRO = theia::DoseRefinementOptions;
+  py::class_<DRO>(m, "DoseRefinementOptions")
+      .def(py::init<>())
+      .def_readwrite("max_num_iterations", &DRO::max_num_iterations)
+      .def_readwrite("function_tolerance", &DRO::function_tolerance)
+      .def_readwrite("parameter_tolerance", &DRO::parameter_tolerance)
+      .def_readwrite("image_huber_width_px", &DRO::image_huber_width_px)
+      .def_readwrite("depth_weight", &DRO::depth_weight)
+      .def_readwrite("depth_huber_width", &DRO::depth_huber_width)
+      .def_readwrite("optimize_depth_scales", &DRO::optimize_depth_scales)
+      .def_readwrite("log_ratio_depth_residual", &DRO::log_ratio_depth_residual)
+      .def_readwrite("reprojection_image_residual", &DRO::reprojection_image_residual)
+      .def_readwrite("image_residual_uses_depth_scale",
+                     &DRO::image_residual_uses_depth_scale)
+      .def_readwrite("rotation_weight", &DRO::rotation_weight)
+      .def_readwrite("translation_direction_weight",
+                     &DRO::translation_direction_weight)
+      .def_readwrite("cheirality_tau", &DRO::cheirality_tau)
+      .def_readwrite("cheirality_weight", &DRO::cheirality_weight)
+      .def_readwrite("scale_regularization_weight",
+                     &DRO::scale_regularization_weight)
+      .def_readwrite("outlier_threshold_px", &DRO::outlier_threshold_px)
+      .def_readwrite("verbose", &DRO::verbose);
+
   using IO = theia::InitFreeOptions;
   py::class_<IO>(m, "InitFreeOptions")
       .def(py::init<>())
@@ -152,6 +180,13 @@ void pytheia_init_free(py::module& m) {
                      &IO::min_rotation_information_points)
       .def_readwrite("expose_warmup_iterations",
                      &IO::expose_warmup_iterations)
+      .def_readwrite("dose_depth_weight", &IO::dose_depth_weight)
+      .def_readwrite("dose_depth_huber_width", &IO::dose_depth_huber_width)
+      .def_readwrite("dose_depth_weight_schedule",
+                     &IO::dose_depth_weight_schedule)
+      .def_readwrite("dose_iterations_per_stage",
+                     &IO::dose_iterations_per_stage)
+      .def_readwrite("dose_robust_from_stage", &IO::dose_robust_from_stage)
       .def_readwrite("include_self_rotation_terms",
                      &IO::include_self_rotation_terms)
       .def_readwrite("observation_normalization",
@@ -164,6 +199,9 @@ void pytheia_init_free(py::module& m) {
       .def_readwrite("seed", &IO::seed)
       .def_readwrite("varpro", &IO::varpro)
       .def_readwrite("projective_refinement", &IO::projective_refinement)
+      .def_readwrite("dose_refinement", &IO::dose_refinement)
+      .def_readwrite("dose_check_before_refinement",
+                     &IO::dose_check_before_refinement)
       .def_readwrite("restart_selection", &IO::restart_selection)
       .def_readwrite("min_fraction_in_front", &IO::min_fraction_in_front)
       .def_readwrite("max_mean_orthogonality_error",
@@ -250,6 +288,8 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("point_offsets", &OP::point_offsets)
       .def_readonly("normalizations", &OP::normalizations)
       .def_readonly("normalization", &OP::normalization)
+      .def_readonly("observation_depths", &OP::observation_depths)
+      .def_readonly("focal_lengths", &OP::focal_lengths)
       .def_readonly("rotation_terms", &OP::rotation_terms);
 
   m.def(
@@ -266,8 +306,9 @@ void pytheia_init_free(py::module& m) {
       py::arg("reconstruction"),
       py::arg("view_graph"),
       py::arg("options"),
-      "Builds an OseProblem. view_graph may be None (not for POSE_ROT). "
-      "Returns (success, problem, error).");
+      "Builds an OseProblem. view_graph may be None (not for POSE_ROT or "
+      "DOSE). DOSE needs a positive depth prior on at least one observation "
+      "(Feature(pixel, depth)). Returns (success, problem, error).");
 
   using OS = theia::OseSolution;
   py::class_<OS>(m, "OseSolution")
@@ -306,17 +347,29 @@ void pytheia_init_free(py::module& m) {
           return std::make_tuple(false, solution);
         }
         py::gil_scoped_release release;
-        const bool ok = theia::SolveOseVarPro(problem,
-                                              *formulation,
-                                              theia::ResolvedVarProOptions(options),
-                                              FromList(initial_cameras),
-                                              &solution);
+        bool ok;
+        if (options.formulation == theia::OseFormulationType::DOSE) {
+          ok = theia::SolveDoseVarPro(problem,
+                                      options,
+                                      theia::ResolvedVarProOptions(options),
+                                      FromList(initial_cameras),
+                                      &solution);
+        } else {
+          ok = theia::SolveOseVarPro(problem,
+                                     *formulation,
+                                     theia::ResolvedVarProOptions(options),
+                                     FromList(initial_cameras),
+                                     &solution);
+        }
         return std::make_tuple(ok, solution);
       },
       py::arg("problem"),
       py::arg("options"),
       py::arg("initial_cameras"),
-      "Runs VarPro from the given 3x4 cameras. Returns (success, solution).");
+      "Runs VarPro from the given 3x4 cameras. For DOSE it runs the staged "
+      "depth-weight continuation (dose_depth_weight_schedule, "
+      "dose_iterations_per_stage) and returns the last stage. Returns "
+      "(success, solution).");
 
   m.def(
       "EvaluateOseCost",
@@ -379,7 +432,9 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("unrefined_upgrade_success",
                     &RD::unrefined_upgrade_success)
       .def_readonly("unrefined_upgrade_message",
-                    &RD::unrefined_upgrade_message);
+                    &RD::unrefined_upgrade_message)
+      .def_readonly("pre_refinement_check_message",
+                    &RD::pre_refinement_check_message);
 
   using ID = theia::InitFreeDiagnostics;
   py::class_<ID>(m, "InitFreeDiagnostics")
@@ -393,6 +448,11 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("metric_upgrade_success", &ID::metric_upgrade_success)
       .def_readonly("used_unrefined_fallback", &ID::used_unrefined_fallback)
       .def_readonly("dropped_view_ids", &ID::dropped_view_ids)
+      .def_readonly("dose_depth_scales", &ID::dose_depth_scales)
+      .def_readonly("dose_rms_reprojection_error_px",
+                    &ID::dose_rms_reprojection_error_px)
+      .def_readonly("dose_median_relative_depth_error",
+                    &ID::dose_median_relative_depth_error)
       .def_readonly("fraction_in_front", &ID::fraction_in_front)
       .def_readonly("mean_orthogonality_error", &ID::mean_orthogonality_error)
       .def_readonly("linear_mean_orthogonality_error",
@@ -480,6 +540,65 @@ void pytheia_init_free(py::module& m) {
       py::arg("num_threads") = 1,
       "Projective bundle adjustment. points: 3 x N (Cartesian) or 4 x N "
       "(homogeneous). Returns (success, result).");
+
+  using DRR = theia::DoseRefinementResult;
+  py::class_<DRR>(m, "DoseRefinementResult")
+      .def(py::init<>())
+      .def_readonly("rotations", &DRR::rotations)
+      .def_readonly("translations", &DRR::translations)
+      .def_readonly("points", &DRR::points)
+      .def_readonly("depth_scales", &DRR::depth_scales)
+      .def_readonly("initial_cost", &DRR::initial_cost)
+      .def_readonly("final_cost", &DRR::final_cost)
+      .def_readonly("num_iterations", &DRR::num_iterations)
+      .def_readonly("rms_reprojection_error_px",
+                    &DRR::rms_reprojection_error_px)
+      .def_readonly("median_reprojection_error_px",
+                    &DRR::median_reprojection_error_px)
+      .def_readonly("median_relative_depth_error",
+                    &DRR::median_relative_depth_error)
+      .def_property_readonly(
+          "observation_inlier",
+          [](const DRR& r) {
+            return std::vector<bool>(r.observation_inlier.begin(),
+                                     r.observation_inlier.end());
+          })
+      .def_readonly("num_outlier_observations",
+                    &DRR::num_outlier_observations)
+      .def_readonly("solve_time_seconds", &DRR::solve_time_seconds)
+      .def_readonly("message", &DRR::message);
+
+  m.def(
+      "RefineDoseReconstruction",
+      [](const theia::OseProblem& problem,
+         const std::vector<Eigen::Matrix<double, 3, 4>>& cameras,
+         const Eigen::Matrix3Xd& points,
+         const theia::DoseRefinementOptions& options,
+         int num_threads) {
+        theia::DoseRefinementResult result;
+        bool ok;
+        {
+          py::gil_scoped_release release;
+          ok = theia::RefineDoseReconstruction(problem,
+                                               FromList(cameras),
+                                               points,
+                                               options,
+                                               num_threads,
+                                               &result);
+        }
+        return std::make_tuple(ok, result);
+      },
+      py::arg("problem"),
+      py::arg("cameras"),
+      py::arg("points"),
+      py::arg("options"),
+      py::arg("num_threads") = 1,
+      "Joint metric refinement after DOSE with per-image depth scales "
+      "(Euclidean cameras, camera 0 fixed). cameras: 3x4 [R | t] per problem "
+      "camera; points: 3 x N Cartesian. Requires problem.focal_lengths and "
+      "problem.observation_depths. Returns (success, result); result.depth_scales "
+      "are the alpha_i with D = alpha_i * d_ij, result.observation_inlier marks "
+      "observations with reprojection error <= outlier_threshold_px.");
 
   m.def(
       "ProjectiveRmsError",
