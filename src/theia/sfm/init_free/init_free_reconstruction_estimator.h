@@ -65,6 +65,11 @@ struct InitFreeRestartDiagnostics {
   bool unrefined_upgrade_attempted = false;
   bool unrefined_upgrade_success = false;
   std::string unrefined_upgrade_message;
+
+  // DOSE with refinement and InitFreeOptions::dose_check_before_refinement: the
+  // checks of the metric upgrade applied to the DOSE solution before the
+  // refinement. "ok", "rejected: <failure>", or empty if not run.
+  std::string pre_refinement_check_message;
 };
 
 // Per-run diagnostics. The study in arXiv:2608.18028 shows that a low OSE cost
@@ -92,6 +97,11 @@ struct InitFreeDiagnostics {
   // Estimated focal lengths in pixels (PIXEL_ISOTROPIC only), in the order of
   // the OSE problem cameras.
   std::vector<double> focal_lengths;
+  // DOSE with refinement: per-camera depth scales alpha_i of the used restart
+  // (problem camera order), and its refinement statistics.
+  std::vector<double> dose_depth_scales;
+  double dose_rms_reprojection_error_px = -1.0;
+  double dose_median_relative_depth_error = -1.0;
 
   double problem_build_time = 0.0;
   double ose_time = 0.0;  // OSE and projective refinement of all restarts
@@ -116,6 +126,12 @@ struct RankedProjectiveReconstruction {
   // (ProjectiveRefinementResult::observation_inlier); empty if the rejection
   // is disabled or the refinement did not run.
   std::vector<bool> observation_inlier;
+  // DOSE with joint refinement (DoseRefinementOptions): per-camera depth
+  // scales and the refinement statistics of this restart; empty / -1 if the
+  // refinement did not run.
+  std::vector<double> dose_depth_scales;
+  double dose_rms_px = -1.0;
+  double dose_median_depth_error = -1.0;
 };
 
 // Runs the projective stages for options.num_random_restarts random starts:

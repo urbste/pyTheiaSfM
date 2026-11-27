@@ -26,6 +26,8 @@ camera-frame depth of the GT sparse point projected into that view (the GT
 point's z in the camera frame). Those priors inherit the GT reconstruction's
 accuracy, and they are exact unless noise is added explicitly
 (`relative_pose.py --depth_noise`, `bundle_adjustment_priors.py` uses 2 %).
+The one exception is `init_free_dose_sfm.py`, which needs real per-image depth
+maps (`--depth_dir`, or MoGe via `--predict_depth`); see the Files table.
 
 **No IMU or gravity data exists.** Gravity-based examples assume the world -z
 axis is gravity (pyTheia's BA default `gravity_world_direction = (0,0,-1)`).
@@ -46,6 +48,7 @@ the GT, not as a physical gravity test.
 | `global_sfm.py` | `EstimateTwoViewInfo` -> `ViewGraph` + `TrackBuilder` -> `GlobalReconstructionEstimator` | camera centre and rotation after Sim(3) alignment |
 | `bundle_adjustment_priors.py` | `BundleAdjustReconstruction` with position, orientation, gravity, depth and 3D point priors | camera centre, rotation, point error after Sim(3) alignment |
 | `init_free_sfm.py` | `INIT_FREE` (experimental, random-start OSE + VarPro, projective refinement, metric upgrade) vs `GlobalReconstructionEstimator` on identical matches | camera centre and rotation after Sim(3) alignment, per-restart diagnostics |
+| `init_free_dose_sfm.py` | `INIT_FREE` with `DOSE` (depth-augmented OSE, experimental): Euclidean cameras from per-observation depth priors, no projective refinement or upgrade. Depth maps from `--depth_dir/<image>.npy` (resized to the image size if needed) or predicted with MoGe (`--predict_depth`, needs the `moge` package) | camera centre and rotation after Sim(3) alignment, per-restart diagnostics |
 
 Every script accepts `--help`. Defaults are small, single-threaded, and finish
 in seconds (`bundle_adjustment_priors.py` in about 5 s).

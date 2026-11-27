@@ -15,6 +15,7 @@
 #include "theia/sfm/bundle_adjustment/bundle_adjustment.h"
 #include "theia/sfm/filter_view_graph_by_relative_inliers.h"
 #include "theia/sfm/init_free/camera_sampler.h"
+#include "theia/sfm/init_free/dose_refinement.h"
 #include "theia/sfm/init_free/metric_upgrade.h"
 #include "theia/sfm/init_free/ose_formulation.h"
 #include "theia/sfm/init_free/projective_refinement.h"
@@ -269,6 +270,36 @@ bool EuclideanMetricResult(const OseProblem& problem,
   return true;
 }
 
+// The checks that Estimate() applies to the DOSE upgrade, applied to the DOSE
+// solution before the joint refinement (InitFreeOptions::
+// dose_check_before_refinement). Empty if the solution passes, otherwise the
+// failure ("rejected: ..." is added by the caller).
+std::string DosePreRefinementCheck(const OseProblem& problem,
+                                   const ProjectiveReconstruction& solution,
+                                   const InitFreeOptions& options) {
+  MetricUpgradeResult metric;
+  std::string error;
+  if (!EuclideanMetricResult(problem, solution, &metric, &error)) {
+    return error;
+  }
+  std::vector<char> camera_used;
+  std::string failure =
+      DropBrokenCameras(problem, options, &metric, &camera_used);
+  const double rotation_error =
+      camera_used.empty()
+          ? -1.0
+          : MedianRelativeRotationError(problem, metric, camera_used);
+  const double direction_error =
+      camera_used.empty()
+          ? -1.0
+          : MedianTranslationDirectionError(problem, metric, camera_used);
+  if (failure.empty()) {
+    failure = MetricCheckFailure(metric, rotation_error, direction_error,
+                                 options);
+  }
+  return failure;
+}
+
 }  // namespace
 
 bool RunProjectiveStagesRanked(
@@ -314,6 +345,10 @@ bool RunProjectiveStagesRanked(
   std::vector<ProjectiveReconstruction> unrefined_candidates;
   std::vector<std::vector<bool>> candidate_inliers;
   std::vector<double> scores;
+  std::vector<std::vector<double>> candidate_dose_depth_scales;
+  std::vector<double> candidate_dose_rms_px;
+  std::vector<double> candidate_dose_median_depth_error;
+  int num_pre_refinement_rejected = 0;
   for (int k = 0; k < num_restarts; ++k) {
     const unsigned int seed = options.seed + k;
     const OseCameraVector initial = SampleInitialCameras(
@@ -378,6 +413,62 @@ bool RunProjectiveStagesRanked(
       restart.refinement_iterations = refined.num_iterations;
       restart.refinement_time_seconds = refined.solve_time_seconds;
     }
+    // DOSE: joint metric refinement of the Euclidean solution, with per-image
+    // depth scales. Its RMS is converted to observation units for ranking.
+    std::vector<double> dose_depth_scales;
+    double dose_rms_px = -1.0;
+    double dose_median_depth_error = -1.0;
+    // A DOSE solution that fails the checks is not refined and not ranked.
+    const bool dose_refinement_enabled =
+        euclidean && options.dose_refinement.max_num_iterations > 0;
+    bool pre_refinement_rejected = false;
+    if (dose_refinement_enabled && options.dose_check_before_refinement) {
+      const std::string failure =
+          DosePreRefinementCheck(problem, candidate, options);
+      if (failure.empty()) {
+        restart.pre_refinement_check_message = "ok";
+      } else {
+        restart.pre_refinement_check_message = "rejected: " + failure;
+        pre_refinement_rejected = true;
+        LOG(WARNING) << "DOSE solution of restart " << k
+                     << " rejected before the refinement: " << failure;
+      }
+    }
+    if (dose_refinement_enabled && !pre_refinement_rejected) {
+      DoseRefinementResult dose;
+      if (RefineDoseReconstruction(problem,
+                                   candidate.cameras,
+                                   solution.points,
+                                   options.dose_refinement,
+                                   num_threads,
+                                   &dose)) {
+        double mean_focal = 0.0;
+        for (const double f : problem.focal_lengths) mean_focal += f;
+        mean_focal /= problem.NumCameras();
+        OseCameraVector cameras(problem.NumCameras());
+        for (int i = 0; i < problem.NumCameras(); ++i) {
+          cameras[i].leftCols<3>() = dose.rotations[i];
+          cameras[i].col(3) = dose.translations[i];
+        }
+        candidate.cameras = std::move(cameras);
+        candidate.points = dose.points.colwise().homogeneous();
+        restart.refined_rms_error = dose.rms_reprojection_error_px / mean_focal;
+        restart.refined_num_outlier_observations = dose.num_outlier_observations;
+        restart.refined_truncated_rms_error = restart.refined_rms_error;
+        restart.refinement_iterations = dose.num_iterations;
+        restart.refinement_time_seconds = dose.solve_time_seconds;
+        rms = restart.refined_rms_error;
+        if (dose.num_outlier_observations > 0) {
+          inliers = std::move(dose.observation_inlier);
+        }
+        dose_depth_scales = std::move(dose.depth_scales);
+        dose_rms_px = dose.rms_reprojection_error_px;
+        dose_median_depth_error = dose.median_relative_depth_error;
+      } else {
+        LOG(WARNING) << "DOSE refinement of restart " << k
+                     << " failed: " << dose.message;
+      }
+    }
     diagnostics->restarts.push_back(restart);
     VLOG(1) << "Restart " << k << " (seed " << seed << "): OSE cost "
             << restart.initial_cost << " -> " << restart.final_cost << " in "
@@ -392,9 +483,17 @@ bool RunProjectiveStagesRanked(
     candidates.push_back(std::move(candidate));
     unrefined_candidates.push_back(std::move(unrefined));
     candidate_inliers.push_back(std::move(inliers));
-    scores.push_back(std::isfinite(score)
-                         ? score
-                         : std::numeric_limits<double>::infinity());
+    candidate_dose_depth_scales.push_back(std::move(dose_depth_scales));
+    candidate_dose_rms_px.push_back(dose_rms_px);
+    candidate_dose_median_depth_error.push_back(dose_median_depth_error);
+    if (pre_refinement_rejected) {
+      ++num_pre_refinement_rejected;
+      scores.push_back(std::numeric_limits<double>::infinity());
+    } else {
+      scores.push_back(std::isfinite(score)
+                           ? score
+                           : std::numeric_limits<double>::infinity());
+    }
   }
 
   // Stable sort: ties keep the restart order.
@@ -410,10 +509,26 @@ bool RunProjectiveStagesRanked(
     entry.reconstruction = std::move(candidates[k]);
     entry.unrefined = std::move(unrefined_candidates[k]);
     entry.observation_inlier = std::move(candidate_inliers[k]);
+    entry.dose_depth_scales = std::move(candidate_dose_depth_scales[k]);
+    entry.dose_rms_px = candidate_dose_rms_px[k];
+    entry.dose_median_depth_error = candidate_dose_median_depth_error[k];
     ranked->push_back(std::move(entry));
   }
   if (ranked->empty()) {
-    *error = "No restart produced a finite result.";
+    if (num_pre_refinement_rejected == num_restarts) {
+      std::ostringstream message;
+      message << "The DOSE solutions of all " << num_restarts
+              << " restart(s) failed the checks before the refinement (see "
+                 "dose_check_before_refinement):";
+      for (int k = 0; k < num_restarts; ++k) {
+        message << " restart " << k << " (seed "
+                << diagnostics->restarts[k].seed << "): "
+                << diagnostics->restarts[k].pre_refinement_check_message << ";";
+      }
+      *error = message.str();
+    } else {
+      *error = "No restart produced a finite result.";
+    }
     return false;
   }
   diagnostics->best_restart = ranked->front().restart;
@@ -675,6 +790,10 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
     return summary;
   }
   diagnostics_.best_restart = ranked[used].restart;
+  diagnostics_.dose_depth_scales = ranked[used].dose_depth_scales;
+  diagnostics_.dose_rms_reprojection_error_px = ranked[used].dose_rms_px;
+  diagnostics_.dose_median_relative_depth_error =
+      ranked[used].dose_median_depth_error;
   diagnostics_.metric_upgrade_success = true;
   diagnostics_.fraction_in_front = metric.fraction_in_front;
   diagnostics_.mean_orthogonality_error = metric.mean_orthogonality_error;

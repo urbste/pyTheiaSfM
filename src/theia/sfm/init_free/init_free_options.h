@@ -232,6 +232,55 @@ struct ProjectiveRefinementOptions {
   bool verbose = false;
 };
 
+// Joint metric refinement after DOSE (see dose_refinement.h for the
+// residuals). Weights are relative to the image residual in pixels.
+struct DoseRefinementOptions {
+  // 0 disables the stage (the DOSE solution then goes directly to the metric
+  // bundle adjustment).
+  int max_num_iterations = 100;
+  double function_tolerance = 1e-10;
+  double parameter_tolerance = 1e-8;
+  double image_huber_width_px = 2.0;
+  // Weight of the relative depth residual: 100 balances a 10 % depth error
+  // against 1 px.
+  double depth_weight = 100.0;
+  double depth_huber_width = 0.1;
+  bool optimize_depth_scales = true;
+  // Normalize the image residual by alpha_i d_ij (Eq. 13 of the paper) instead
+  // of d_ij. With alpha_i in the denominator, increasing alpha_i shrinks the
+  // image residuals of camera i, which on real tracks with wrongly merged
+  // observations drives the scales of outlier-heavy cameras up (ETH3D relief:
+  // 28 mm median center error instead of 1.7 mm). Without it, alpha_i only
+  // enters the depth residual.
+  bool image_residual_uses_depth_scale = false;
+  // Use the reprojection error f (y_{0,1} / y_2 - m) as the image residual
+  // (for y_2 > 1e-6 d_ij; the object space form otherwise). The object space
+  // form divided by the fixed d_ij (image_residual_uses_depth_scale = false)
+  // decreases when the whole scene shrinks, which biases the scale (synthetic
+  // scene with 5 % depth noise: 5 % too small); with alpha_i d_ij it has the
+  // degeneracy described above. The reprojection error has neither. The
+  // refinement starts from a DOSE solution with the points in front of the
+  // cameras (see dose_check_before_refinement), so the division is safe.
+  bool reprojection_image_residual = true;
+  // Depth residual log(q^T y / (alpha_i d_ij)) instead of the relative
+  // error (q^T y - alpha_i d_ij) / (alpha_i d_ij) of the paper. The relative
+  // error saturates at -1 for large alpha_i, so a camera with inconsistent
+  // depth priors can increase its scale at a bounded cost; the log ratio is
+  // symmetric in over- and underestimation.
+  bool log_ratio_depth_residual = true;
+  double rotation_weight = 100.0;
+  double translation_direction_weight = 100.0;
+  // Paper: tau = 0.05, weight tau / |O| (cheirality_weight = 1).
+  double cheirality_tau = 0.05;
+  double cheirality_weight = 1.0;
+  double scale_regularization_weight = 1.0;
+  // Observations with a final reprojection error above this (pixels) are
+  // marked as outliers; their tracks are left out of the metric bundle
+  // adjustment. <= 0 disables it.
+  double outlier_threshold_px = 5.0;
+  bool verbose = false;
+};
+
 struct InitFreeOptions {
   OseFormulationType formulation = OseFormulationType::POSE_ROT;
 
@@ -269,6 +318,21 @@ struct InitFreeOptions {
   // DOSE: first stage with the Huber loss on the depth residual (IRLS,
   // weights updated every iteration); earlier stages are least squares.
   int dose_robust_from_stage = 1;
+  // DOSE: joint metric refinement with per-image depth scales, run on every
+  // restart before ranking (restarts are then ranked by its RMS reprojection
+  // error).
+  DoseRefinementOptions dose_refinement;
+  // DOSE: the refinement pulls the solution towards the view-graph rotations
+  // (pairwise rotation terms), so a wrong DOSE solution can be brought into
+  // agreement with them and then pass the checks applied after the refinement
+  // (ETH3D facade: accepted with 1 m error). If true, the checks of Estimate()
+  // (min_fraction_in_front, max_mean_orthogonality_error,
+  // max_relative_rotation_error_deg, max_translation_direction_error_deg, and
+  // dropping of broken cameras) are applied to the DOSE solution before the
+  // refinement. A restart that fails is not refined and is excluded from the
+  // ranking; its reason is recorded in
+  // InitFreeRestartDiagnostics::pre_refinement_check_message.
+  bool dose_check_before_refinement = true;
 
   // Add R_i R_i^T = I terms for every camera (POSE_ROT only), as in
   // Olsson & Nilsson.

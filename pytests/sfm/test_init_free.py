@@ -1,5 +1,7 @@
 """Tests for the experimental initialization-free (OSE / VarPro) module."""
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
@@ -1323,3 +1325,185 @@ def test_dose_rejects_projective_refinement_stage_wise():
     opts.projective_refinement.max_num_iterations = 5
     ok, _, _, err = pt.sfm.RunProjectiveStages(problem, opts)
     assert not ok and "Projective refinement" in err
+
+
+def refined_cameras(result):
+    """[R | t] per camera of a DoseRefinementResult, as a pose-error input."""
+    cams = [np.hstack([np.asarray(R), np.asarray(t)[:, None]])
+            for R, t in zip(result.rotations, result.translations)]
+    return SimpleNamespace(cameras=cams)
+
+
+def test_dose_refinement_options_exposed():
+    opts = pt.sfm.DoseRefinementOptions()
+    assert opts.max_num_iterations == 100
+    assert opts.function_tolerance == pytest.approx(1e-10)
+    assert opts.parameter_tolerance == pytest.approx(1e-8)
+    assert opts.image_huber_width_px == pytest.approx(2.0)
+    assert opts.depth_weight == pytest.approx(100.0)
+    assert opts.depth_huber_width == pytest.approx(0.1)
+    assert opts.optimize_depth_scales is True
+    assert opts.rotation_weight == pytest.approx(100.0)
+    assert opts.translation_direction_weight == pytest.approx(100.0)
+    assert opts.cheirality_tau == pytest.approx(0.05)
+    assert opts.cheirality_weight == pytest.approx(1.0)
+    assert opts.scale_regularization_weight == pytest.approx(1.0)
+    assert opts.outlier_threshold_px == pytest.approx(5.0)
+    assert opts.verbose is False
+    assert opts.log_ratio_depth_residual is True
+    assert opts.image_residual_uses_depth_scale is False
+
+    init_opts = pt.sfm.InitFreeOptions()
+    assert init_opts.dose_refinement.max_num_iterations == 100
+    assert init_opts.dose_check_before_refinement is True
+    init_opts.dose_check_before_refinement = False
+    assert init_opts.dose_check_before_refinement is False
+    init_opts.dose_check_before_refinement = True
+    # def_readwrite on a struct member returns a reference: writes persist.
+    init_opts.dose_refinement.depth_weight = 5.0
+    init_opts.dose_refinement.max_num_iterations = 7
+    assert init_opts.dose_refinement.depth_weight == pytest.approx(5.0)
+    assert init_opts.dose_refinement.max_num_iterations == 7
+    # Assigning a modified copy back works as well.
+    dro = init_opts.dose_refinement
+    dro.outlier_threshold_px = 0.0
+    init_opts.dose_refinement = dro
+    assert init_opts.dose_refinement.outlier_threshold_px == 0.0
+
+
+def test_dose_refinement_stage_wise():
+    recon, view_graph, gt = make_depth_scene(depth_noise=0.05, missing=0.2,
+                                             seed=3, pixel_noise=0.5)
+    opts = dose_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init,
+                                       opts.seed)
+    ok, sol = pt.sfm.SolveOse(problem, opts, init)
+    assert ok, sol.message
+    before_worst = dose_pose_errors(problem, sol, gt)[0]
+
+    ok, res = pt.sfm.RefineDoseReconstruction(problem, sol.cameras, sol.points,
+                                              opts.dose_refinement, 1)
+    assert ok, res.message
+    assert res.depth_scales[0] == pytest.approx(1.0)
+    assert len(res.depth_scales) == problem.NumCameras()
+    assert res.rms_reprojection_error_px < 1.5, res.rms_reprojection_error_px
+    assert res.median_relative_depth_error < 0.06
+    assert res.final_cost <= res.initial_cost
+
+    worst, ortho, s, _ = dose_pose_errors(problem, refined_cameras(res), gt)
+    assert ortho < 1e-9, ortho
+    assert worst < 0.5, worst
+    assert worst < before_worst, (worst, before_worst)
+    assert abs(s - 1.0) < 0.05, s
+
+
+def test_dose_refinement_recovers_per_image_depth_scale():
+    # View i reports depths s_i * z_true; view 0 is the gauge (s_0 = 1).
+    rng = np.random.default_rng(11)
+    view_scale = {0: 1.0}
+    for v in range(1, 10):
+        view_scale[v] = rng.uniform(0.7, 1.4)
+
+    def depth_fn(vid, xyz, R, c):
+        return view_scale[vid] * (R @ (xyz - c))[2]
+
+    recon, view_graph, gt = make_scene(seed=3, depth_fn=depth_fn)
+    assert sorted(recon.ViewIds()) == list(range(10))
+    opts = dose_options()
+    ok, problem, err = pt.sfm.BuildOseProblem(recon, view_graph, opts)
+    assert ok, err
+    init = pt.sfm.SampleInitialCameras(problem.NumCameras(), opts.camera_init,
+                                       opts.seed)
+    ok, sol = pt.sfm.SolveOse(problem, opts, init)
+    assert ok, sol.message
+
+    ok, res = pt.sfm.RefineDoseReconstruction(problem, sol.cameras, sol.points,
+                                              opts.dose_refinement, 1)
+    assert ok, res.message
+    alpha = np.asarray(res.depth_scales)
+    s = np.array([view_scale[v] for v in problem.view_ids])
+    # D = alpha_i * s_i * z_true must equal z_true up to the gauge of view 0,
+    # so alpha_i * s_i is constant (= 1).
+    ratio = alpha * s
+    assert np.max(np.abs(ratio / ratio[0] - 1.0)) < 0.02, ratio
+    worst, _, _, _ = dose_pose_errors(problem, refined_cameras(res), gt)
+    assert worst < 0.1, worst
+
+
+def test_dose_estimator_reports_refinement():
+    recon, view_graph, _ = make_depth_scene(depth_noise=0.05, seed=3,
+                                            pixel_noise=0.5)
+    opts = pt.sfm.ReconstructionEstimatorOptions()
+    opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+    opts.init_free_options = dose_options()
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
+    opts.min_num_two_view_inliers = 10
+
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert summary.success, summary.message
+    diag = estimator.Diagnostics()
+    assert len(diag.dose_depth_scales) == diag.num_cameras
+    assert diag.dose_depth_scales[0] == pytest.approx(1.0)
+    assert diag.dose_rms_reprojection_error_px > 0.0
+    assert diag.dose_median_relative_depth_error >= 0.0
+
+    # Without the refinement stage nothing is reported.
+    recon, view_graph, _ = make_depth_scene(depth_noise=0.05, seed=3,
+                                            pixel_noise=0.5)
+    opts.init_free_options.dose_refinement.max_num_iterations = 0
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert summary.success, summary.message
+    diag = estimator.Diagnostics()
+    assert len(diag.dose_depth_scales) == 0
+    assert diag.dose_rms_reprojection_error_px == -1.0
+    assert diag.dose_median_relative_depth_error == -1.0
+
+
+def test_dose_pre_refinement_check_rejects_wrong_solution():
+    # A single VarPro iteration with zero depth weight (no depth term) leaves
+    # the DOSE solution far off (median relative rotation error 100 deg and
+    # 130 deg on seeds 42 and 43), so the checks of the metric upgrade fail
+    # before the joint refinement runs. With the default depth schedule one
+    # iteration is not enough to make the solution wrong (seed 42 passes).
+    # Without the check the refinement pulls both to RMS 0.00077 px and the
+    # estimator succeeds.
+    recon, view_graph, _ = make_depth_scene(depth_noise=0.05, seed=3,
+                                            pixel_noise=0.5)
+    opts = pt.sfm.ReconstructionEstimatorOptions()
+    opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+    opts.init_free_options = dose_options()
+    opts.init_free_options.dose_iterations_per_stage = 1
+    opts.init_free_options.dose_depth_weight_schedule = [0.0]
+    opts.init_free_options.num_random_restarts = 2
+    assert opts.init_free_options.dose_check_before_refinement is True
+    assert opts.init_free_options.max_relative_rotation_error_deg == pytest.approx(5.0)
+    opts.intrinsics_to_optimize = pt.sfm.OptimizeIntrinsicsType.NONE
+    opts.min_num_two_view_inliers = 10
+
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    summary = estimator.Estimate(view_graph, recon)
+    assert not summary.success
+    diag = estimator.Diagnostics()
+    assert len(diag.restarts) == 2
+    for restart in diag.restarts:
+        assert restart.pre_refinement_check_message.startswith("rejected"), (
+            restart.pre_refinement_check_message)
+        # Rejected restarts are not refined.
+        assert restart.refined_rms_error == pytest.approx(-1.0)
+    assert "failed the checks before the refinement" in summary.message
+    assert "rejected" in summary.message
+
+    # Without the check the messages stay empty.
+    recon, view_graph, _ = make_depth_scene(depth_noise=0.05, seed=3,
+                                            pixel_noise=0.5)
+    opts.init_free_options.dose_check_before_refinement = False
+    estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+    estimator.Estimate(view_graph, recon)
+    diag = estimator.Diagnostics()
+    assert len(diag.restarts) == 2
+    for restart in diag.restarts:
+        assert restart.pre_refinement_check_message == ""

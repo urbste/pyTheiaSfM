@@ -60,6 +60,10 @@ struct OseProblem {
   // "no depth": the observation then has no depth residual.
   std::vector<double> observation_depths;
 
+  // Focal length in pixels per camera (Camera::FocalLength()), filled for
+  // CALIBRATED_RAYS; used to express DOSE refinement residuals in pixels.
+  std::vector<double> focal_lengths;
+
   // Maps a pixel x of camera i to the coordinates used in `observations` as
   // m ~ normalizations[i] * [x; 1]. Only meaningful for PIXEL_ISOTROPIC; for
   // CALIBRATED_RAYS the mapping is the (nonlinear) camera undistortion and

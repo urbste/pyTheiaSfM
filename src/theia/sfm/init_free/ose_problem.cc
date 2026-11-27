@@ -237,6 +237,11 @@ bool BuildOseProblem(const Reconstruction& reconstruction,
                 OseObservationNormalization::PIXEL_ISOTROPIC
             ? IsotropicNormalization(reconstruction.View(view_id)->Camera())
             : Eigen::Matrix3d::Identity());
+    if (options.observation_normalization ==
+        OseObservationNormalization::CALIBRATED_RAYS) {
+      problem->focal_lengths.push_back(
+          reconstruction.View(view_id)->Camera().FocalLength());
+    }
   }
 
   // Observations, grouped by point. A track is kept only if enough of its
