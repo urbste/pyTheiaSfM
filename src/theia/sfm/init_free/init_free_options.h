@@ -33,6 +33,11 @@
 //              "Initialization-Free Bundle Adjustment Revisited: A Controlled
 //              Experimental Study." arXiv:2608.18028.
 //              Reference code: https://github.com/simonwebertum/InitFreeBA
+//   dOSE:      Weber, de Mayo, Hong, Olsson, Cremers, Clark. "InitFree-SfM:
+//              When Initialization-Free Bundle Adjustment Meets Learned
+//              Structure-from-Motion." arXiv:2611.31516.
+
+#include <vector>
 
 #include "theia/sfm/bundle_adjustment/create_loss_function.h"
 
@@ -53,12 +58,23 @@ namespace theia {
 //                     rows of P are estimated (the third row keeps its initial
 //                     value), so no projective refinement; the metric upgrade
 //                     is the radial one (MetricUpgradeOptions::radial_cameras).
+//   DOSE (calibrated, Euclidean cameras P = [R | t], y = R X + t, m~ = [m; 1],
+//   d the depth prior of the observation, Feature::depth_prior()):
+//                     (y_{1:2} - m y_3)
+//                     + sqrt(lambda_d * w) * (m~^T y / (|m~|^2 d) - 1)
+//                     with w the Huber IRLS weight of the depth residual.
+//                     Rotations are updated on SO(3), translations
+//                     additively; the first camera is held fixed (gauge),
+//                     and the depth term fixes the scale. No projective
+//                     refinement and no metric upgrade.
 enum class OseFormulationType {
   POSE = 0,      // Pseudo object space error (affine regularizer).
   ROSE = 1,      // OSE with a depth regularizer (p_3^T X_h ~ 1).
   RPOSE = 2,     // Radial pOSE (1D radial cameras).
   EXPOSE = 3,    // Exponential regularization.
   POSE_ROT = 4,  // pOSE + pairwise relative rotation terms (calibrated).
+  DOSE = 5,      // Depth-augmented OSE with Euclidean cameras (calibrated,
+                 // needs depth priors).
 };
 
 // How the pairwise rotation terms of POSE_ROT are weighted.
@@ -89,6 +105,10 @@ enum class InitFreeCameraInitType {
   NORMAL = 0,       // All 12 entries of P ~ N(0, 1).
   UNIFORM = 1,      // All 12 entries of P ~ U(-1, 1).
   UNIT_CIRCLE = 2,  // Cameras on the unit circle, looking at the origin.
+  // Euclidean cameras [R | t]: R uniform on SO(3) (normalized Gaussian
+  // quaternion), t ~ N(0, 0.5^2) per coordinate; camera 0 is [I | 0]
+  // (arXiv:2611.31516). Intended for DOSE.
+  EUCLIDEAN_RANDOM = 3,
 };
 
 // Linear solver for the damped reduced camera system of each VarPro step.
@@ -234,6 +254,21 @@ struct InitFreeOptions {
   // EXPOSE: iterations with the regularizer expanded around unit depths
   // before it is re-linearized around the current depths (InitFreeBA: 5).
   int expose_warmup_iterations = 5;
+
+  // DOSE: weight lambda_d of the depth term (arXiv:2611.31516: 30).
+  double dose_depth_weight = 30.0;
+  // DOSE: Huber width of the relative depth residual m~^T y / (|m~|^2 d) - 1.
+  // The paper does not state its value.
+  double dose_depth_huber_width = 0.1;
+  // DOSE: continuation of lambda_d. Stage s minimizes the objective with
+  // dose_depth_weight * dose_depth_weight_schedule[s] for at most
+  // dose_iterations_per_stage VarPro iterations, starting from the cameras of
+  // stage s - 1 (paper: 5 %, 25 %, 100 %, 20 iterations each).
+  std::vector<double> dose_depth_weight_schedule = {0.05, 0.25, 1.0};
+  int dose_iterations_per_stage = 20;
+  // DOSE: first stage with the Huber loss on the depth residual (IRLS,
+  // weights updated every iteration); earlier stages are least squares.
+  int dose_robust_from_stage = 1;
 
   // Add R_i R_i^T = I terms for every camera (POSE_ROT only), as in
   // Olsson & Nilsson.

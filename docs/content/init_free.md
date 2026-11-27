@@ -11,7 +11,7 @@
 The module is a testing ground. Every stage is exposed to Python on its own, so that new formulations, solvers and upgrades can be compared with the same data and diagnostics.
 
 !!! warning "Experimental"
-    The interface can still change. All formulations (`POSE`, `POSE_ROT`, `ROSE`, `EXPOSE`, `RPOSE`) and both observation normalizations (`CALIBRATED_RAYS`, `PIXEL_ISOTROPIC`) work end to end, with the linear or the nonlinear metric upgrade. `POSE_ROT` needs `CALIBRATED_RAYS`. `RPOSE` skips projective refinement and always uses the nonlinear upgrade. Unsupported combinations fail with a clear message instead of falling back silently.
+    The interface can still change. All formulations (`POSE`, `POSE_ROT`, `ROSE`, `EXPOSE`, `RPOSE`) and both observation normalizations (`CALIBRATED_RAYS`, `PIXEL_ISOTROPIC`) work end to end, with the linear or the nonlinear metric upgrade. `POSE_ROT` needs `CALIBRATED_RAYS`. `RPOSE` skips projective refinement and always uses the nonlinear upgrade. `DOSE` (depth-augmented OSE, *experimental*) needs calibrated rays and depth priors; it produces Euclidean cameras directly, without projective refinement or metric upgrade (see *Depth-augmented OSE (DOSE)*). Unsupported combinations fail with a clear message instead of falling back silently.
 
 ## Usage
 
@@ -57,9 +57,11 @@ Two runnable examples show the API:
 |---|---|---|
 | `formulation` | `POSE`, `POSE_ROT`, `ROSE`, `EXPOSE` | implemented |
 | | `RPOSE` | implemented end to end (radial 2×4 cameras; radial metric upgrade, no projective refinement) |
+| | `DOSE` | experimental (Euclidean cameras with depth priors; no projective refinement, no metric upgrade; see *Depth-augmented OSE (DOSE)*) |
 | `observation_normalization` | `CALIBRATED_RAYS` | implemented (needed by `POSE_ROT` and the upgrade) |
 | | `PIXEL_ISOTROPIC` | implemented (not with `POSE_ROT`); the upgrade estimates the focal lengths |
 | `camera_init` | `NORMAL`, `UNIFORM`, `UNIT_CIRCLE` | implemented |
+| | `EUCLIDEAN_RANDOM` | experimental (random `[R | t]` for `DOSE`) |
 | `varpro.linear_solver_type` | `DENSE_CHOLESKY` | implemented (CPU, Eigen) |
 | | `CUDA_DENSE_CHOLESKY` | implemented, needs `-DTHEIA_WITH_CUDA_SOLVERS=ON` |
 | | `POWER_SERIES` | implemented (CPU, matrix-free; `power_series_max_iterations`, `power_series_tolerance`) |
@@ -95,6 +97,8 @@ With `m` the normalized observation, `P` the 3 × 4 camera, `X̃` the homogeneou
 - **`RPOSE`**: the radial version, `(1−α)(m⊥ᵀP₁₂X̃)²/|m|² + α‖P₁₂X̃ − m‖²` with `m⊥ = (−m₂, m₁)`. Only the first two camera rows are determined. The estimator runs the radial metric upgrade (`radial_cameras`, see *Metric upgrade*) with the nonlinear refinement, whatever `metric_upgrade` says: the linear radial estimate is biased by the RPOSE affine term (up to 13° on the test scene), so `LINEAR` is overridden with a log message. It skips projective refinement, which is not defined for radial cameras; the metric bundle adjustment then refines the full cameras. The restart diagnostics report `ose_rms_error = −1`.
 
 With `robust_loss_type = CAUCHY`, every VarPro iteration recomputes the IRLS weights `w = 1/(1 + ‖r‖²/c²)` of the observation residuals (`c = robust_loss_scale`), and the cost is `Σ ½c² log(1 + ‖r‖²/c²)`. The rotation terms are not robustified. With 10 % of the observations displaced by up to 150 px, the inlier median error after the OSE stage falls from 12.3 px to 1.1 px (`c` = 5 px). For robust or state-dependent formulations, the cost history is not monotone, because the weights change between iterations.
+
+- **`DOSE`**: the OSE residuals of `POSE` on Euclidean cameras `P = [R | t]`, plus a relative depth residual per observation with a depth prior. See *Depth-augmented OSE (DOSE)*.
 
 ### Rotation weighting
 
@@ -143,6 +147,93 @@ For calibrated rays, the linear estimate is already close, and the refinement ch
 **Single cameras.** `MetricUpgradeResult.camera_orthogonality_errors` holds the error of every camera (infinity for a camera whose upgraded 3×3 block is singular). `MetricUpgradeOptions.camera_mask` restricts the estimation of the quadric to some cameras; the upgrade is still applied to all of them. The estimator uses both to drop collapsed cameras (see *Restarts and validity checks*).
 
 **Conditioning (critical motions).** Some camera motions do not determine the self-calibration. For varying focal lengths the pure translation is one such motion (all cameras with the same orientation): the upgrade then fits the quadric and the focal lengths, but they are not unique. `MetricUpgradeResult::conditioning` measures this. It is the fifth smallest singular value of the Jacobian of the quadric residuals (with respect to the 12 entries of the normalized `B` and the estimated focal lengths) over the largest one. The four gauge directions of the residuals (`B` times an orthogonal matrix, and the scale of `B`) are excluded. Small values mean an extra ambiguity. Measured on synthetic scenes (noise 0 to 2 px): well-posed scenes 0.018 to 0.56 (calibrated, varying and shared focal lengths, RPOSE). Pure translation with varying focal lengths 1e-8 (noise free) to 6e-4 (2 px), with focal lengths off by 30 to 54 %, while its orthogonality error stays below 0.01, so the orthogonality check does not catch it. Rotation about one axis with the centres in a plane is not critical in this parametrization (conditioning 0.044, focal lengths recovered to 0.4 % at 0.5 px). `min_upgrade_conditioning` (default `0.003`, `0` disables) rejects a restart whose conditioning is below it, with the message `ill-conditioned self-calibration (critical motion?)`. The threshold lies between the two groups: about 5 times above the largest critical value and 6 times below the smallest well-posed one. On real data (ETH3D, calibrated) accepted restarts measured 0.09; the wrong restarts (orthogonality error 0.8 to 2.6) still measured 0.29 to 0.44, so this check flags only the critical ambiguity, not wrong restarts in general.
+
+## Depth-augmented OSE (DOSE)
+
+!!! warning "Experimental"
+    DOSE follows the first stage of InitFree-SfM; the paper's joint metric refinement and pair filtering are not implemented (see *Differences to the paper*).
+
+DOSE (arXiv:2611.31516, InitFree-SfM) adds a monocular depth prior to OSE. The OSE term only constrains the direction of each observation's ray. The depth term fixes the position along the ray and therefore the metric scale. The paper uses MoGe-2 depths.
+
+With `m` the normalized observation, `m̃ = [m; 1]`, `y = R X + t` (Euclidean camera `P = [R | t]`) and `d` the depth prior of the observation (camera-frame z), the objective is
+
+```
+Σ_ij ‖ y_{1:2} − m y_3 ‖²  +  λ_d Σ_ij ρ( m̃ᵀy / (‖m̃‖² d) − 1 )
+```
+
+with `λ_d` the depth weight (`dose_depth_weight`) and `ρ` the Huber loss of width `dose_depth_huber_width`. The first term is the OSE residual. The second compares the depth of the point along the ray with the prior. Its residual is dimensionless: 0.1 means a 10 % depth error.
+
+**Inputs**
+
+- `CALIBRATED_RAYS` observations (`observation_normalization`). `PIXEL_ISOTROPIC` is rejected.
+- A view graph. Its two-view rotations enter only the validity check of the restarts (`max_relative_rotation_error_deg`), not the objective.
+- Depth priors on the features: `pt.sfm.Feature(pixel, depth)` with the camera-frame z depth in metric units. A depth `<= 0` means no depth for that observation, which then has only the OSE residual. `BuildOseProblem` fails if no observation has a positive depth.
+- `camera_init = EUCLIDEAN_RANDOM`: `R` uniform on SO(3) (normalized Gaussian quaternion), `t ~ N(0, 0.5²)` per coordinate, camera 0 fixed to `[I | 0]`. Other initializations are projected to the nearest rotation.
+
+**Solver.** Rotations are updated on SO(3) with a left exponential-map step, translations additively. Camera 0 is held fixed, which removes the gauge freedom, and the depth term fixes the scale. The objective is minimized with the continuation of the paper: three stages with `λ_d` scaled by 5 %, 25 % and 100 % of `dose_depth_weight`, 20 VarPro iterations each, each stage starting from the previous one. The Huber loss is applied from the second stage on (IRLS, `dose_robust_from_stage = 1`).
+
+**Output.** The cameras are Euclidean and metric, so DOSE runs no projective refinement and no metric upgrade. The estimator writes the best restart directly.
+
+### Usage
+
+Estimator:
+
+```python
+import pytheia as pt
+
+opts = pt.sfm.ReconstructionEstimatorOptions()
+opts.reconstruction_estimator_type = pt.sfm.ReconstructionEstimatorType.INIT_FREE
+ifo = opts.init_free_options
+ifo.formulation = pt.sfm.OseFormulationType.DOSE
+ifo.observation_normalization = pt.sfm.OseObservationNormalization.CALIBRATED_RAYS
+ifo.camera_init = pt.sfm.InitFreeCameraInitType.EUCLIDEAN_RANDOM
+ifo.num_random_restarts = 3
+
+estimator = pt.sfm.InitFreeReconstructionEstimator(opts)
+summary = estimator.Estimate(view_graph, reconstruction)
+diag = estimator.Diagnostics()
+```
+
+#### Stage-wise use
+
+```python
+import pytheia as pt
+
+ok, problem, err = pt.sfm.BuildOseProblem(reconstruction, view_graph, ifo)
+cams0 = pt.sfm.SampleInitialCameras(problem.NumCameras(), ifo.camera_init, seed=0)
+ok, sol = pt.sfm.SolveOse(problem, ifo, cams0)   # Euclidean cameras (3 x 4) + points (3 x N)
+```
+
+For `DOSE`, `SolveOse` runs the staged continuation (`SolveDoseVarPro` in C++), the same as the estimator. `sol.cost_history` concatenates the stages; the cost jumps between stages because `λ_d` changes.
+
+**Accuracy on synthetic data** (10 cameras, `pytests/sfm/test_init_free.py`): with exact depths the OSE stage recovers the poses exactly (rotation error 1e-6°, scale error below 1e-6). With 5 % per-observation depth noise, 20 % missing depths and 0.5 px pixel noise, the depth term dominates: the worst relative rotation error after the OSE stage is 2 to 4° (seeds 0 to 5; 0.05° from the pixel noise alone), and the scale is within 1 %. The metric bundle adjustment of the estimator then brings it to 0.1°.
+
+### Options
+
+All fields are in `InitFreeOptions`.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `dose_depth_weight` | `30.0` | `λ_d` of the depth term (paper: 30). Multiplied by each entry of the schedule. |
+| `dose_depth_huber_width` | `0.1` | Huber width of the relative depth residual (dimensionless). The paper does not state its value; this default is ours. |
+| `dose_depth_weight_schedule` | `[0.05, 0.25, 1.0]` | Continuation of `λ_d`, one stage per entry (paper: 5 %, 25 %, 100 %). |
+| `dose_iterations_per_stage` | `20` | Maximum VarPro iterations per stage (paper: 20). |
+| `dose_robust_from_stage` | `1` | First stage with the Huber loss (IRLS); earlier stages are least squares. |
+
+The per-observation confidence `c_ij` of the paper is not defined there. Here it is 1 for every observation.
+
+### Differences to the paper
+
+The following parts of the paper are not implemented:
+
+- The joint metric refinement with per-image depth scales `α_i`.
+- The pairwise relative pose and log-scale constraints.
+- The cheirality softplus penalty.
+- The depth-consistent pair filtering (depth similarity RANSAC and epipolar cross-check at 15°).
+
+Instead, the result goes directly to the usual metric bundle adjustment. The estimator does not enable the depth priors there: `BundleAdjustmentOptions.use_depth_priors` (default `False`, in `theia/sfm/bundle_adjustment/bundle_adjustment.h`) adds them to a bundle adjustment, but the estimator's bundle adjustment options, built from `ReconstructionEstimatorOptions`, do not set it.
+
+The Huber width and the unit confidence are our choices, not the paper's.
 
 ## CUDA backend
 
@@ -331,3 +422,4 @@ All runs reach the same final cost. At these sizes, most of the time goes into t
 - S. Weber, J. H. Hong, D. Cremers. *Power Variable Projection for Initialization-Free Large-Scale Bundle Adjustment.* ECCV 2024.
 - C. Olsson, A. Nilsson. *Towards Initialization-free Calibrated Bundle Adjustment.* [arXiv:2506.23808](https://arxiv.org/abs/2506.23808).
 - S. Weber, M. de Mayo, J. H. Hong, C. Olsson, D. Cremers, R. Clark. *Initialization-Free Bundle Adjustment Revisited: A Controlled Experimental Study.* [arXiv:2608.18028](https://arxiv.org/abs/2608.18028). Code: [InitFreeBA](https://github.com/simonwebertum/InitFreeBA).
+- S. Weber, M. de Mayo, J. H. Hong, C. Olsson, D. Cremers, R. Clark. *InitFree-SfM: When Initialization-Free Bundle Adjustment Meets Learned Structure-from-Motion.* [arXiv:2611.31516](https://arxiv.org/abs/2611.31516). DOSE.

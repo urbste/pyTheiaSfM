@@ -191,6 +191,84 @@ std::string MetricCheckFailure(const MetricUpgradeResult& metric,
   return failure;
 }
 
+// Metric result of a Euclidean (DOSE) solution: the cameras are already metric,
+// so H is the identity and no self-calibration is run. Points are dehomogenized
+// and marked invalid if their w is (numerically) zero or they are not finite.
+bool EuclideanMetricResult(const OseProblem& problem,
+                           const ProjectiveReconstruction& rec,
+                           MetricUpgradeResult* result,
+                           std::string* error) {
+  const int n = problem.NumCameras();
+  if (n == 0) {
+    *error = "No cameras in the problem.";
+    return false;
+  }
+  if (static_cast<int>(rec.cameras.size()) != n) {
+    *error = "Euclidean result: camera count does not match the problem.";
+    return false;
+  }
+  if (rec.points.cols() != problem.NumPoints()) {
+    *error = "Euclidean result: point count does not match the problem.";
+    return false;
+  }
+  for (int i = 0; i < n; ++i) {
+    if (!rec.cameras[i].allFinite()) {
+      *error = "Euclidean result: camera " + std::to_string(i) +
+               " is not finite.";
+      return false;
+    }
+  }
+
+  result->H = Eigen::Matrix4d::Identity();
+  result->rotations.resize(n);
+  result->translations.resize(n);
+  result->focal_lengths.assign(n, 1.0);
+  result->camera_orthogonality_errors.resize(n);
+  double sum = 0.0;
+  for (int i = 0; i < n; ++i) {
+    result->rotations[i] = rec.cameras[i].leftCols<3>();
+    result->translations[i] = rec.cameras[i].col(3);
+    const Eigen::Matrix3d& R = result->rotations[i];
+    result->camera_orthogonality_errors[i] =
+        (R * R.transpose() - Eigen::Matrix3d::Identity()).norm();
+    sum += result->camera_orthogonality_errors[i];
+  }
+  result->mean_orthogonality_error = sum / n;
+  result->linear_mean_orthogonality_error = result->mean_orthogonality_error;
+  result->conditioning = 1.0;
+
+  const int num_points = problem.NumPoints();
+  result->points.resize(3, num_points);
+  result->point_valid.assign(num_points, 0);
+  for (int j = 0; j < num_points; ++j) {
+    const double w = rec.points(3, j);
+    Eigen::Vector3d cartesian = Eigen::Vector3d::Zero();
+    bool valid = false;
+    if (std::abs(w) > 1e-12) {
+      cartesian = rec.points.col(j).head<3>() / w;
+      valid = cartesian.allFinite();
+    }
+    if (!valid) cartesian.setZero();
+    result->point_valid[j] = valid;
+    result->points.col(j) = cartesian;
+  }
+
+  int in_front = 0, total = 0;
+  for (int k = 0; k < problem.NumObservations(); ++k) {
+    const int c = problem.observation_camera[k];
+    const int j = problem.observation_point[k];
+    if (!result->point_valid[j]) continue;
+    const double depth =
+        (result->rotations[c] * result->points.col(j) + result->translations[c])
+            .z();
+    in_front += depth > 0.0;
+    ++total;
+  }
+  result->fraction_in_front =
+      total > 0 ? static_cast<double>(in_front) / total : 0.0;
+  return true;
+}
+
 }  // namespace
 
 bool RunProjectiveStagesRanked(
@@ -219,6 +297,13 @@ bool RunProjectiveStagesRanked(
         "formulation estimates only two rows.";
     return false;
   }
+  const bool euclidean = formulation->IsEuclidean();
+  if (euclidean && options.projective_refinement.max_num_iterations > 0) {
+    *error =
+        "Projective refinement would destroy the Euclidean DOSE cameras; set "
+        "projective_refinement.max_num_iterations = 0.";
+    return false;
+  }
   const VarProOptions varpro = ResolvedVarProOptions(options);
   const int num_threads = std::max(1, options.num_threads);
   const int num_restarts = std::max(1, options.num_random_restarts);
@@ -234,8 +319,11 @@ bool RunProjectiveStagesRanked(
     const OseCameraVector initial = SampleInitialCameras(
         problem.NumCameras(), options.camera_init, seed);
     OseSolution solution;
-    if (!SolveOseVarPro(
-            problem, *formulation, varpro, initial, &solution)) {
+    const bool solved =
+        euclidean
+            ? SolveDoseVarPro(problem, options, varpro, initial, &solution)
+            : SolveOseVarPro(problem, *formulation, varpro, initial, &solution);
+    if (!solved) {
       *error = solution.message;
       return false;
     }
@@ -397,7 +485,9 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
       static_cast<int>(problem.rotation_terms.size());
   diagnostics_.problem_build_time = timer.ElapsedTimeInSeconds();
 
-  if (opts.metric_upgrade == MetricUpgradeType::NONE) {
+  // DOSE cameras are metric already, so it needs no upgrade.
+  const bool dose = opts.formulation == OseFormulationType::DOSE;
+  if (opts.metric_upgrade == MetricUpgradeType::NONE && !dose) {
     summary.message =
         "Init-free: metric_upgrade is NONE, so no metric reconstruction can "
         "be written. Use the stage-wise API (BuildOseProblem, SolveOse) for "
@@ -414,6 +504,11 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
   if (radial && stage_opts.projective_refinement.max_num_iterations > 0) {
     LOG(INFO) << "Init-free: projective refinement is skipped for RPOSE "
                  "(radial cameras).";
+    stage_opts.projective_refinement.max_num_iterations = 0;
+  }
+  if (dose && stage_opts.projective_refinement.max_num_iterations > 0) {
+    LOG(INFO) << "Init-free: projective refinement is skipped for DOSE "
+                 "(Euclidean cameras).";
     stage_opts.projective_refinement.max_num_iterations = 0;
   }
   timer.Reset();
@@ -456,12 +551,16 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
     attempted = true;
     MetricUpgradeResult candidate;
     std::string upgrade_error;
-    if (!UpgradeToMetric(problem,
-                         projective.cameras,
-                         projective.points,
-                         upgrade_options,
-                         &candidate,
-                         &upgrade_error)) {
+    const bool upgraded =
+        dose ? EuclideanMetricResult(problem, projective, &candidate,
+                                     &upgrade_error)
+             : UpgradeToMetric(problem,
+                               projective.cameras,
+                               projective.points,
+                               upgrade_options,
+                               &candidate,
+                               &upgrade_error);
+    if (!upgraded) {
       upgrade_message = upgrade_error;
       VLOG(1) << "Init-free: metric upgrade of restart " << k
               << (use_unrefined ? " (unrefined)" : "")
@@ -471,7 +570,7 @@ ReconstructionEstimatorSummary InitFreeReconstructionEstimator::Estimate(
     std::vector<char> candidate_cameras;
     std::string failure =
         DropBrokenCameras(problem, opts, &candidate, &candidate_cameras);
-    if (failure.empty() &&
+    if (failure.empty() && !dose &&
         std::count(candidate_cameras.begin(), candidate_cameras.end(), 0) >
             0) {
       // The broken cameras also bias the quadric of the others, so the

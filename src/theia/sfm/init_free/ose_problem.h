@@ -55,6 +55,11 @@ struct OseProblem {
   Eigen::Matrix2Xd observations;        // normalized measurements, 2 x N
   std::vector<int> point_offsets;       // size num_points + 1
 
+  // Depth prior (camera-frame z, Feature::depth_prior()) per observation.
+  // Filled for DOSE only; empty otherwise. Values <= 0 or not finite mean
+  // "no depth": the observation then has no depth residual.
+  std::vector<double> observation_depths;
+
   // Maps a pixel x of camera i to the coordinates used in `observations` as
   // m ~ normalizations[i] * [x; 1]. Only meaningful for PIXEL_ISOTROPIC; for
   // CALIBRATED_RAYS the mapping is the (nonlinear) camera undistortion and
@@ -67,6 +72,10 @@ struct OseProblem {
 
   int NumCameras() const { return static_cast<int>(view_ids.size()); }
   int NumPoints() const { return static_cast<int>(track_ids.size()); }
+  // Depth prior of observation k, or 0 if there is none.
+  double ObservationDepth(const int k) const {
+    return observation_depths.empty() ? 0.0 : observation_depths[k];
+  }
   int NumObservations() const {
     return static_cast<int>(observation_camera.size());
   }
@@ -75,8 +84,11 @@ struct OseProblem {
 // Builds an OseProblem from the tracks of `reconstruction`. Views must have
 // camera intrinsics set when CALIBRATED_RAYS is used. If `view_graph` is not
 // null, only views in the view graph are used, and its edges provide the
-// relative rotations for POSE_ROT. Returns false and sets `error` if the
-// resulting problem is empty or the options are inconsistent.
+// relative rotations for POSE_ROT (and, for DOSE, for the validity check;
+// DOSE gets no self terms). DOSE copies Feature::depth_prior() into
+// observation_depths and fails if no observation has a positive depth.
+// Returns false and sets `error` if the resulting problem is empty or the
+// options are inconsistent.
 bool BuildOseProblem(const Reconstruction& reconstruction,
                      const ViewGraph* view_graph,
                      const InitFreeOptions& options,

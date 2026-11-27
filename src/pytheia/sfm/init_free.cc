@@ -63,7 +63,8 @@ void pytheia_init_free(py::module& m) {
       .value("ROSE", theia::OseFormulationType::ROSE)
       .value("RPOSE", theia::OseFormulationType::RPOSE)
       .value("EXPOSE", theia::OseFormulationType::EXPOSE)
-      .value("POSE_ROT", theia::OseFormulationType::POSE_ROT);
+      .value("POSE_ROT", theia::OseFormulationType::POSE_ROT)
+      .value("DOSE", theia::OseFormulationType::DOSE);
 
   py::enum_<theia::OseObservationNormalization>(m,
                                                 "OseObservationNormalization")
@@ -75,7 +76,9 @@ void pytheia_init_free(py::module& m) {
   py::enum_<theia::InitFreeCameraInitType>(m, "InitFreeCameraInitType")
       .value("NORMAL", theia::InitFreeCameraInitType::NORMAL)
       .value("UNIFORM", theia::InitFreeCameraInitType::UNIFORM)
-      .value("UNIT_CIRCLE", theia::InitFreeCameraInitType::UNIT_CIRCLE);
+      .value("UNIT_CIRCLE", theia::InitFreeCameraInitType::UNIT_CIRCLE)
+      .value("EUCLIDEAN_RANDOM",
+             theia::InitFreeCameraInitType::EUCLIDEAN_RANDOM);
 
   py::enum_<theia::ReducedCameraSolverType>(m, "ReducedCameraSolverType")
       .value("DENSE_CHOLESKY", theia::ReducedCameraSolverType::DENSE_CHOLESKY)
@@ -152,6 +155,13 @@ void pytheia_init_free(py::module& m) {
                      &IO::min_rotation_information_points)
       .def_readwrite("expose_warmup_iterations",
                      &IO::expose_warmup_iterations)
+      .def_readwrite("dose_depth_weight", &IO::dose_depth_weight)
+      .def_readwrite("dose_depth_huber_width", &IO::dose_depth_huber_width)
+      .def_readwrite("dose_depth_weight_schedule",
+                     &IO::dose_depth_weight_schedule)
+      .def_readwrite("dose_iterations_per_stage",
+                     &IO::dose_iterations_per_stage)
+      .def_readwrite("dose_robust_from_stage", &IO::dose_robust_from_stage)
       .def_readwrite("include_self_rotation_terms",
                      &IO::include_self_rotation_terms)
       .def_readwrite("observation_normalization",
@@ -250,6 +260,7 @@ void pytheia_init_free(py::module& m) {
       .def_readonly("point_offsets", &OP::point_offsets)
       .def_readonly("normalizations", &OP::normalizations)
       .def_readonly("normalization", &OP::normalization)
+      .def_readonly("observation_depths", &OP::observation_depths)
       .def_readonly("rotation_terms", &OP::rotation_terms);
 
   m.def(
@@ -266,8 +277,9 @@ void pytheia_init_free(py::module& m) {
       py::arg("reconstruction"),
       py::arg("view_graph"),
       py::arg("options"),
-      "Builds an OseProblem. view_graph may be None (not for POSE_ROT). "
-      "Returns (success, problem, error).");
+      "Builds an OseProblem. view_graph may be None (not for POSE_ROT or "
+      "DOSE). DOSE needs a positive depth prior on at least one observation "
+      "(Feature(pixel, depth)). Returns (success, problem, error).");
 
   using OS = theia::OseSolution;
   py::class_<OS>(m, "OseSolution")
@@ -306,17 +318,29 @@ void pytheia_init_free(py::module& m) {
           return std::make_tuple(false, solution);
         }
         py::gil_scoped_release release;
-        const bool ok = theia::SolveOseVarPro(problem,
-                                              *formulation,
-                                              theia::ResolvedVarProOptions(options),
-                                              FromList(initial_cameras),
-                                              &solution);
+        bool ok;
+        if (options.formulation == theia::OseFormulationType::DOSE) {
+          ok = theia::SolveDoseVarPro(problem,
+                                      options,
+                                      theia::ResolvedVarProOptions(options),
+                                      FromList(initial_cameras),
+                                      &solution);
+        } else {
+          ok = theia::SolveOseVarPro(problem,
+                                     *formulation,
+                                     theia::ResolvedVarProOptions(options),
+                                     FromList(initial_cameras),
+                                     &solution);
+        }
         return std::make_tuple(ok, solution);
       },
       py::arg("problem"),
       py::arg("options"),
       py::arg("initial_cameras"),
-      "Runs VarPro from the given 3x4 cameras. Returns (success, solution).");
+      "Runs VarPro from the given 3x4 cameras. For DOSE it runs the staged "
+      "depth-weight continuation (dose_depth_weight_schedule, "
+      "dose_iterations_per_stage) and returns the last stage. Returns "
+      "(success, solution).");
 
   m.def(
       "EvaluateOseCost",

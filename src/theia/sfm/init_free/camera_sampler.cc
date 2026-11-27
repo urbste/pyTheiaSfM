@@ -28,6 +28,27 @@ OseCameraVector SampleInitialCameras(const int num_cameras,
           P(k / 4, k % 4) = rng.RandDouble(-1.0, 1.0);
         }
         break;
+      case InitFreeCameraInitType::EUCLIDEAN_RANDOM: {
+        // Camera 0 is the identity; the others get a random rotation and a
+        // translation with 0.5 standard deviation per coordinate.
+        if (i == 0) {
+          P.leftCols<3>().setIdentity();
+          P.col(3).setZero();
+          break;
+        }
+        Eigen::Quaterniond q;
+        do {
+          q.coeffs() << rng.RandGaussian(0.0, 1.0),
+              rng.RandGaussian(0.0, 1.0), rng.RandGaussian(0.0, 1.0),
+              rng.RandGaussian(0.0, 1.0);
+        } while (q.norm() < 1e-12);
+        q.normalize();
+        P.leftCols<3>() = q.toRotationMatrix();
+        for (int k = 0; k < 3; ++k) {
+          P(k, 3) = rng.RandGaussian(0.0, 0.5);
+        }
+        break;
+      }
       case InitFreeCameraInitType::UNIT_CIRCLE: {
         const double angle =
             2.0 * M_PI * i / std::max(1, num_cameras) +

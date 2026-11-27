@@ -4926,7 +4926,10 @@ class OseFormulationType:
       EXPOSE
     
       POSE_ROT
+    
+      DOSE
     """
+    DOSE: typing.ClassVar[OseFormulationType]
     EXPOSE: typing.ClassVar[OseFormulationType]
     POSE: typing.ClassVar[OseFormulationType]
     POSE_ROT: typing.ClassVar[OseFormulationType]
@@ -5025,7 +5028,10 @@ class InitFreeCameraInitType:
       UNIFORM
     
       UNIT_CIRCLE
+    
+      EUCLIDEAN_RANDOM
     """
+    EUCLIDEAN_RANDOM: typing.ClassVar[InitFreeCameraInitType]
     NORMAL: typing.ClassVar[InitFreeCameraInitType]
     UNIFORM: typing.ClassVar[InitFreeCameraInitType]
     UNIT_CIRCLE: typing.ClassVar[InitFreeCameraInitType]
@@ -5482,6 +5488,36 @@ class InitFreeOptions:
     def camera_init(*args, **kwargs):
         ...
     @property
+    def dose_depth_huber_width(*args, **kwargs):
+        ...
+    @dose_depth_huber_width.setter
+    def dose_depth_huber_width(*args, **kwargs):
+        ...
+    @property
+    def dose_depth_weight(*args, **kwargs):
+        ...
+    @dose_depth_weight.setter
+    def dose_depth_weight(*args, **kwargs):
+        ...
+    @property
+    def dose_depth_weight_schedule(*args, **kwargs):
+        ...
+    @dose_depth_weight_schedule.setter
+    def dose_depth_weight_schedule(*args, **kwargs):
+        ...
+    @property
+    def dose_iterations_per_stage(*args, **kwargs):
+        ...
+    @dose_iterations_per_stage.setter
+    def dose_iterations_per_stage(*args, **kwargs):
+        ...
+    @property
+    def dose_robust_from_stage(*args, **kwargs):
+        ...
+    @dose_robust_from_stage.setter
+    def dose_robust_from_stage(*args, **kwargs):
+        ...
+    @property
     def expose_warmup_iterations(*args, **kwargs):
         ...
     @expose_warmup_iterations.setter
@@ -5714,6 +5750,9 @@ class OseProblem:
         ...
     @property
     def observation_camera(*args, **kwargs):
+        ...
+    @property
+    def observation_depths(*args, **kwargs):
         ...
     @property
     def observation_point(*args, **kwargs):
@@ -6061,7 +6100,7 @@ def BuildCaptureViewGraph(*args, **kwargs):
     ...
 def BuildOseProblem(*args, **kwargs):
     """
-    Builds an OseProblem. view_graph may be None (not for POSE_ROT). Returns (success, problem, error).
+    Builds an OseProblem. view_graph may be None (not for POSE_ROT or DOSE). DOSE needs a positive depth prior on at least one observation (Feature(pixel, depth)). Returns (success, problem, error).
     """
 def BulkAddViewGraphEdgesAndCorrespondences(*args, **kwargs):
     ...
@@ -6325,7 +6364,7 @@ def SimTransformPartialRotation(*args, **kwargs):
     ...
 def SolveOse(*args, **kwargs):
     """
-    Runs VarPro from the given 3x4 cameras. Returns (success, solution).
+    Runs VarPro from the given 3x4 cameras. For DOSE it runs the staged depth-weight continuation (dose_depth_weight_schedule, dose_iterations_per_stage) and returns the last stage. Returns (success, solution).
     """
 def SufficientTriangulationAngle(*args, **kwargs):
     ...
