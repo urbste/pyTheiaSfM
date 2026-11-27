@@ -46,10 +46,11 @@ ok, metric, err = pt.sfm.UpgradeToMetric(problem, ref.cameras, ref.points, uo)
 
 `RunProjectiveStages(problem, ifo)` runs all restarts of the OSE stage and the refinement and returns `(ok, best, diagnostics, err)`. `ProjectiveRmsError(problem, cameras, points)` gives the RMS reprojection error in observation units (normalized image coordinates for `CALIBRATED_RAYS`). Functions that take points accept 3 × N Cartesian or 4 × N homogeneous arrays.
 
-Two runnable examples show the API:
+Three runnable examples show the API:
 
 - `pyexamples/sfm/init_free_synthetic.py` runs the estimator, the stages and a self-calibration variant on a synthetic scene. It needs no data and takes a few seconds.
 - `pyexamples/eth3d/init_free_sfm.py` runs the estimator on ETH3D subsets against global SfM (see *Real data (ETH3D)*).
+- `pyexamples/eth3d/init_free_dose_sfm.py` runs DOSE on ETH3D subsets with monocular depth maps (`--depth_dir`, or `--predict_depth` with MoGe; see *Depth-augmented OSE (DOSE)*).
 
 ## Options and status
 
